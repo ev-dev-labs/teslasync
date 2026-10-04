@@ -42,6 +42,16 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+it('rejects non-finite and out-of-range GPS records before density clustering', () => {
+  expect(clusterPositions([
+    { latitude: NaN, longitude: 10 },
+    { latitude: 91, longitude: 10 },
+    { latitude: 30, longitude: Infinity },
+    { latitude: 30, longitude: 181 },
+    { latitude: 51.48, longitude: 0 },
+  ], 500)).toEqual([{ lat: 51.48, lon: 0, count: 1, intensity: 1 }]);
+});
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -116,6 +126,7 @@ vi.mock('react-i18next', async () => {
 // Inert leaflet barrel — capture props, never touch canvas/leaflet. The real
 // WidgetMapView (from ./shared) renders through these mocks.
 vi.mock('@/components/maps', () => ({
+  MapInvalidator: () => null,
   MapContainer: ({
     children,
     center,
@@ -167,6 +178,11 @@ import PositionHeatmapWidget, {
   intensityColor,
   type ClusterPoint,
 } from './PositionHeatmapWidget';
+
+it.each([1, 2, 3])('identifies the position heatmap at %i columns', (cols) => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Position heatmap' })).toBeInTheDocument();
+});
 import type { WidgetSize } from './types';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
@@ -209,11 +225,13 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <PositionHeatmapWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Position heatmap');
+  return view;
 }
 
 const radii = () => captured.markers.map((m) => m.radius);
@@ -365,10 +383,10 @@ describe('PositionHeatmapWidget — wide layout', () => {
 /* ── Component — compact layout ───────────────────────────────────── */
 
 describe('PositionHeatmapWidget — compact layout', () => {
-  it('drops the title + badge and renders a static, coarser-grid map', () => {
+  it('identifies the static coarser-grid map without adding the standard badge', () => {
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.queryByText('Position heatmap')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Position heatmap' })).toBeInTheDocument();
     expect(screen.queryByText(/\bpositions\b/)).not.toBeInTheDocument();
 
     expect(screen.getAllByTestId('marker')).toHaveLength(2);

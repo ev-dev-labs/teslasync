@@ -273,7 +273,7 @@ vi.mock('../feedback/InstallPrompt', () => ({ default: () => <div data-testid="i
 vi.mock('../feedback/OfflineBanner', () => ({ OfflineBanner: () => null }))
 vi.mock('../feedback/NewVersionBanner', () => ({ NewVersionBanner: () => null }))
 vi.mock('../feedback/TeslaReauthBanner', () => ({ TeslaReauthBanner: () => null }))
-vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => null }))
+vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => <div data-testid="rate-limit-banner-stub" /> }))
 vi.mock('../feedback/MaintenanceBanner', () => ({ MaintenanceBanner: () => null }))
 vi.mock('../feedback/ImpersonationBanner', () => ({ ImpersonationBanner: () => null }))
 vi.mock('../feedback/TopProgress', () => ({ TopProgress: () => null }))
@@ -768,6 +768,24 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
+  it('keeps rate-limit notices inside the report column instead of consuming horizontal page space', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+    expect(main?.parentElement).toContainElement(screen.getByTestId('rate-limit-banner-stub'))
+  })
+
+  it('keeps the outer shell out of native anchor scrolling', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+
+    expect(main?.parentElement).toHaveClass(
+      'min-h-0',
+      'min-w-0',
+      'overflow-hidden',
+      'supports-[overflow:clip]:overflow-clip',
+    )
+  })
+
   it('places the install affordance in the scrollable page flow, not over page content', () => {
     const { container } = renderLayout('/')
     const main = container.querySelector('[data-role="main-content"]')

@@ -35,17 +35,18 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { SharedDriveData, SharedDriveDataV1, SharedSessionData } from '@/types/sharing'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 
 /* ── Hoisted mutable state shared with the (hoisted) vi.mock factories ────── */
 const h = vi.hoisted(() => ({
   query: {
     current: { data: undefined as unknown, isLoading: false, error: null as Error | null },
   },
-  unit: { current: 'km' as 'km' | 'mi' },
+  unit: { current: 'km' as 'km' | 'mi', precision: 2, locale: 'en-US' },
   maps: {
     containerCenters: [] as unknown[],
     containerZooms: [] as number[],
@@ -126,12 +127,17 @@ vi.mock('@/hooks/useSettings', async () => {
   return {
     ...actual,
     useSettings: () => ({
-      settings: { ...base, unit_of_length: h.unit.current },
+      settings: {
+        ...base,
+        unit_of_length: h.unit.current,
+        decimal_precision: h.unit.precision,
+        locale: h.unit.locale,
+      },
       isMiles: h.unit.current === 'mi',
       isFahrenheit: false,
       isPSI: false,
-      decimals: 2,
-      locale: 'en-US',
+      decimals: h.unit.precision,
+      locale: h.unit.locale,
       density: 'comfortable' as const,
       rangeType: 'rated' as const,
     }),
@@ -325,6 +331,8 @@ function renderPage(token = 'abc123') {
 beforeEach(() => {
   h.query.current = { data: undefined, isLoading: false, error: null }
   h.unit.current = 'km'
+  h.unit.precision = 2
+  h.unit.locale = 'en-US'
   h.maps.containerCenters = []
   h.maps.containerZooms = []
   h.maps.polylines = []
@@ -405,13 +413,40 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     setData(makeV2())
     renderPage()
 
-    expect(screen.getByText('5.0 km')).toBeInTheDocument() // 5000 m
+    expect(screen.getByText('5.00 km')).toBeInTheDocument() // 5000 m
     expect(screen.getByText('10m')).toBeInTheDocument() // 600 s
-    expect(screen.getByText('150 Wh/km')).toBeInTheDocument() // 0.15 Wh/m
-    expect(screen.getByText('80% → 65%')).toBeInTheDocument()
-    expect(screen.getByText('108 km/h')).toBeInTheDocument() // 30 m/s
-    expect(screen.getByText('72 km/h')).toBeInTheDocument() // 20 m/s
-    expect(screen.getByText('120 m')).toBeInTheDocument() // elevation gain
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument() // 0.15 Wh/m
+    expect(screen.getByText('80.00% → 65.00%')).toBeInTheDocument()
+    expect(screen.getByText('108.00 km/h')).toBeInTheDocument() // 30 m/s
+    expect(screen.getByText('72.00 km/h')).toBeInTheDocument() // 20 m/s
+    expect(screen.getByText('120.00 m')).toBeInTheDocument() // elevation gain
+  })
+
+  it('updates mounted measurement cards for locale and precision without mutating SI data', () => {
+    const data = makeV2()
+    const snapshot = structuredClone(data)
+    Object.freeze(data.drive)
+    setData(data)
+    const view = renderPage()
+    try {
+      expect(screen.getByText('5.00 km')).toBeInTheDocument()
+      act(() => {
+        h.unit.precision = 3
+        h.unit.locale = 'de-DE'
+        setGlobalPrecision(3)
+        setGlobalLocale('de-DE')
+      })
+      expect(screen.getByText('5,000 km')).toBeInTheDocument()
+      expect(screen.getByText('108,000 km/h')).toBeInTheDocument()
+      expect(screen.getByText('150,000 Wh/km')).toBeInTheDocument()
+      expect(screen.getByText('80,000% → 65,000%')).toBeInTheDocument()
+      expect(screen.getByText('120,000 m')).toBeInTheDocument()
+      expect(data).toEqual(snapshot)
+    } finally {
+      view.unmount()
+      setGlobalPrecision(2)
+      setGlobalLocale('en-US')
+    }
   })
 
   it('renders the vehicle badge with the model and colour', () => {
@@ -486,11 +521,11 @@ describe('SharedDrivePage — imperial boundary', () => {
     setData(makeV2())
     renderPage()
 
-    expect(screen.getByText('3.1 mi')).toBeInTheDocument() // 5000 m
-    expect(screen.getByText('241 Wh/mi')).toBeInTheDocument() // 150 Wh/km * 1.609
-    expect(screen.getByText('67 mph')).toBeInTheDocument() // 30 m/s max
-    expect(screen.getByText('45 mph')).toBeInTheDocument() // 20 m/s avg
-    expect(screen.getByText('394 ft')).toBeInTheDocument() // 120 m elevation gain
+    expect(screen.getByText('3.11 mi')).toBeInTheDocument() // 5000 m
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument()
+    expect(screen.getByText('67.11 mph')).toBeInTheDocument() // 30 m/s max
+    expect(screen.getByText('44.74 mph')).toBeInTheDocument() // 20 m/s avg
+    expect(screen.getByText('393.70 ft')).toBeInTheDocument() // 120 m elevation gain
     // Elevation chart converts metres → feet for imperial viewers.
     expect(h.charts.areaData.map((p) => Math.round(p.elevation))).toEqual([328, 492])
   })
@@ -505,8 +540,8 @@ describe('SharedDrivePage — payload discriminator + legacy normalisation', () 
     setData(makeV2({ payload_version: 'v1' }))
     renderPage()
 
-    expect(screen.getByText('5.0 km')).toBeInTheDocument()
-    expect(screen.getByText('108 km/h')).toBeInTheDocument()
+    expect(screen.getByText('5.00 km')).toBeInTheDocument()
+    expect(screen.getByText('108.00 km/h')).toBeInTheDocument()
     expect(screen.queryByText('—')).toBeNull()
   })
 
@@ -515,11 +550,11 @@ describe('SharedDrivePage — payload discriminator + legacy normalisation', () 
     renderPage()
 
     expect(screen.getByRole('heading', { level: 1, name: 'Legacy Trip' })).toBeInTheDocument()
-    expect(screen.getByText('5.0 km')).toBeInTheDocument() // 5 km
+    expect(screen.getByText('5.00 km')).toBeInTheDocument() // 5 km
     expect(screen.getByText('10m')).toBeInTheDocument() // 10 min
-    expect(screen.getByText('150 Wh/km')).toBeInTheDocument() // efficiency_wh_km
-    expect(screen.getByText('108 km/h')).toBeInTheDocument() // max_speed_kmh
-    expect(screen.getByText('72 km/h')).toBeInTheDocument() // avg_speed_kmh
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument() // efficiency_wh_km
+    expect(screen.getByText('108.00 km/h')).toBeInTheDocument() // max_speed_kmh
+    expect(screen.getByText('72.00 km/h')).toBeInTheDocument() // avg_speed_kmh
     expect(screen.getByText('Tesla Model Y')).toBeInTheDocument()
     // Profiles are re-based to SI then reconverted for display.
     expect(h.charts.areaData.map((p) => p.elevation)).toEqual([50, 80])
@@ -546,7 +581,7 @@ describe('SharedDrivePage — optional cards + empty states', () => {
 
     // Always-on cards remain.
     expect(screen.getByText('Distance')).toBeInTheDocument()
-    expect(screen.getByText('5.0 km')).toBeInTheDocument()
+    expect(screen.getByText('5.00 km')).toBeInTheDocument()
     expect(screen.getByText('Duration')).toBeInTheDocument()
     // Nullable cards are withheld (never rendered blank).
     expect(screen.queryByText('Battery')).toBeNull()
@@ -567,7 +602,7 @@ describe('SharedDrivePage — optional cards + empty states', () => {
     expect(screen.queryByTestId('map-container')).toBeNull()
     expect(screen.queryByTestId('area-chart')).toBeNull()
     expect(screen.queryByTestId('line-chart')).toBeNull()
-    expect(screen.getByText('5.0 km')).toBeInTheDocument()
+    expect(screen.getByText('5.00 km')).toBeInTheDocument()
   })
 
   it('falls back to the empty state for a single map point that cannot draw a polyline', () => {

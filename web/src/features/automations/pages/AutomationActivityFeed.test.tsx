@@ -225,7 +225,7 @@ describe('AutomationActivityFeed — history rows', () => {
     });
     expect(screen.getByText('Nightly Charge')).toBeInTheDocument();
     expect(screen.getByText('Just now')).toBeInTheDocument();
-    expect(screen.getByText('1.5s')).toBeInTheDocument();
+    expect(screen.getByText('1.50s')).toBeInTheDocument();
   });
 
   it('renders the action ratio only when actions_total > 0', () => {

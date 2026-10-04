@@ -34,7 +34,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
@@ -156,7 +158,7 @@ function renderWidget(size: WidgetSize) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <ExportStatusWidget size={size} />
+      <MemoryRouter><ExportStatusWidget size={size} /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -166,6 +168,8 @@ const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 const WIDE: WidgetSize = { cols: 3, rows: 2 };
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   exSeq = 0;
   adSeq = 0;
   vi.clearAllMocks();
@@ -178,14 +182,14 @@ beforeEach(() => {
 describe('fmtBytes', () => {
   it('formats each size tier with one decimal above bytes', () => {
     expect(fmtBytes(512)).toBe('512 B');
-    expect(fmtBytes(1024)).toBe('1.0 KB');
-    expect(fmtBytes(1536)).toBe('1.5 KB');
-    expect(fmtBytes(5 * 1024 * 1024)).toBe('5.0 MB');
-    expect(fmtBytes(2 * 1024 * 1024 * 1024)).toBe('2.0 GB');
+    expect(fmtBytes(1024)).toBe('1.00 KB');
+    expect(fmtBytes(1536)).toBe('1.50 KB');
+    expect(fmtBytes(5 * 1024 * 1024)).toBe('5.00 MB');
+    expect(fmtBytes(2 * 1024 * 1024 * 1024)).toBe('2.00 GB');
   });
 
   it('guards zero / negative / non-finite sizes with an em-dash (never "NaN GB")', () => {
-    expect(fmtBytes(0)).toBe('—');
+    expect(fmtBytes(0)).toBe('0 B');
     expect(fmtBytes(-1)).toBe('—');
     expect(fmtBytes(Number.NaN)).toBe('—');
     expect(fmtBytes(Number.POSITIVE_INFINITY)).toBe('—');
@@ -232,9 +236,9 @@ describe('normaliseStatusFromExport', () => {
 
   it('defaults unknown / empty / undefined states to queued', () => {
     expect(normaliseStatusFromExport('queued')).toBe('queued');
-    expect(normaliseStatusFromExport('')).toBe('queued');
-    expect(normaliseStatusFromExport(undefined)).toBe('queued');
-    expect(normaliseStatusFromExport('mystery')).toBe('queued');
+    expect(normaliseStatusFromExport('')).toBe('unknown');
+    expect(normaliseStatusFromExport(undefined)).toBe('unknown');
+    expect(normaliseStatusFromExport('mystery')).toBe('unknown');
   });
 });
 
@@ -247,8 +251,8 @@ describe('normaliseStatusFromAdmin', () => {
 
   it('defaults unknown / empty / undefined statuses to queued', () => {
     expect(normaliseStatusFromAdmin('queued')).toBe('queued');
-    expect(normaliseStatusFromAdmin('')).toBe('queued');
-    expect(normaliseStatusFromAdmin(undefined)).toBe('queued');
+    expect(normaliseStatusFromAdmin('')).toBe('unknown');
+    expect(normaliseStatusFromAdmin(undefined)).toBe('unknown');
   });
 });
 
@@ -313,12 +317,12 @@ describe('mergeExportJobs', () => {
 // ── Component: async states ─────────────────────────────────────────────────
 
 describe('ExportStatusWidget states', () => {
-  it('renders a skeleton (no title / empty copy) while either source is loading', () => {
+  it('reports partial without replacing a resolved sibling source while one loads', () => {
     mockUseExports.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
     expect(screen.queryByText('Export status')).toBeInTheDocument();
-    expect(screen.queryByText('No export jobs')).toBeNull();
+    expect(screen.queryByText('No export jobs')).toBeInTheDocument();
   });
 
   it('shows an empty state (never a blank panel) with the title when there are no jobs', () => {
@@ -334,13 +338,76 @@ describe('ExportStatusWidget states', () => {
     expect(screen.getByText('No export jobs')).toBeInTheDocument();
   });
 
-  it('degrades to the empty panel (never blank) but keeps refresh when both queries error', () => {
+  it('owns initial failure rather than saying there are no jobs', () => {
     mockUseExports.mockReturnValue(qr({ data: undefined, isError: true }));
     mockUseExportJobs.mockReturnValue(qr({ data: undefined, isError: true }));
     renderWidget(STANDARD);
     expect(screen.getByText('Export status')).toBeInTheDocument();
-    expect(screen.getByText('No export jobs')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No export jobs')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
+  });
+
+  describe('ExportStatusWidget — trust and responsive recovery', () => {
+    it.each([COMPACT, STANDARD, WIDE])('retains real jobs during failed refresh at $cols columns', (size) => {
+      mockUseExports.mockReturnValue(qr({ data: [makeExport({ fsmState: 'processing' })], error: new Error('offline'), isError: true }));
+      const { container } = renderWidget(size);
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByText('Running')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    it('preserves usable downloads and retries both sources when one initially fails', () => {
+      const exportsRefetch = vi.fn();
+      const adminRefetch = vi.fn();
+      mockUseExports.mockReturnValue(qr({ data: [makeExport()], refetch: exportsRefetch }));
+      mockUseExportJobs.mockReturnValue(qr({ data: undefined, error: new Error('offline'), refetch: adminRefetch }));
+      renderWidget(WIDE);
+      expect(screen.getByRole('link', { name: 'Download' })).toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+      expect(exportsRefetch).toHaveBeenCalledOnce();
+      expect(adminRefetch).toHaveBeenCalledOnce();
+    });
+
+    it('shows initial skeleton only when neither source resolved', () => {
+      mockUseExports.mockReturnValue(qr({ data: undefined, isLoading: true }));
+      mockUseExportJobs.mockReturnValue(qr({ data: undefined, isLoading: true }));
+      const { container } = renderWidget(STANDARD);
+      expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+    });
+
+    it('does not pretend unknown status is queued or unknown size is zero', () => {
+      mockUseExports.mockReturnValue(qr({ data: [makeExport({ fsmState: undefined, fileSize: undefined } as unknown as Partial<ExportJobExport>)] }));
+      renderWidget(STANDARD);
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+      expect(screen.queryByText('Queued')).not.toBeInTheDocument();
+      expect(screen.queryByText('0 B')).not.toBeInTheDocument();
+    });
+
+    it('does not claim an idle fleet of exports when every job status is unknown', () => {
+      mockUseExports.mockReturnValue(qr({ data: [makeExport({ fsmState: undefined } as unknown as Partial<ExportJobExport>)] }));
+      renderWidget(COMPACT);
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+      expect(screen.queryByText('0')).not.toBeInTheDocument();
+    });
+
+    it('safely handles nullable source lists', () => {
+      mockUseExports.mockReturnValue(qr({ data: null }));
+      mockUseExportJobs.mockReturnValue(qr({ data: null }));
+      renderWidget(STANDARD);
+      expect(screen.getByText('No export jobs')).toBeInTheDocument();
+    });
+
+    it('reformats retained rows on locale and precision changes', () => {
+      mockUseExports.mockReturnValue(qr({ data: [makeExport({ fileSize: 1536 })] }));
+      renderWidget(STANDARD);
+      expect(screen.getByText('1.50 KB')).toBeInTheDocument();
+      act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+      expect(screen.getByText('1,5 KB')).toBeInTheDocument();
+    });
   });
 });
 
@@ -355,7 +422,7 @@ describe('ExportStatusWidget standard layout', () => {
 
     expect(screen.getByText('Export status')).toBeInTheDocument();
     expect(screen.getByText('CSV')).toBeInTheDocument();
-    expect(screen.getByText('2.0 KB')).toBeInTheDocument();
+    expect(screen.getByText('2.00 KB')).toBeInTheDocument();
     expect(screen.getByText('Done')).toBeInTheDocument();
   });
 

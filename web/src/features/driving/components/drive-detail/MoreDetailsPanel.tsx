@@ -6,6 +6,7 @@ import { useUnits } from '@/hooks/useUnits';
 import type { DriveDetail } from '@/types/driving';
 import type { ChartDataPoint, DriveStats } from './types';
 import { driveEnergyEvidence } from './energyEvidence';
+import { driveOdometerEvidence } from './odometerEvidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
@@ -18,6 +19,7 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { energyWh: used, regenWh: recovered } = driveEnergyEvidence(drive, stats);
+  const odometer = driveOdometerEvidence(drive, stats, unitPrefs.distance, chartData);
   const reported = t('driveDetail.report.persisted', 'Persisted drive aggregate');
   const sampled = t('driveDetail.report.sampled', 'Recorded telemetry samples');
   const missing = t('common.unknown', 'Unknown');
@@ -58,10 +60,13 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
         : recovered != null ? t('driveDetail.report.regenEstimate', 'Estimate: negative-power sample mean × duration; assumes uniform sampling') : missing,
     },
     {
-      id: 'odometer', label: t('driveDetail.odometer', 'Odometer (from → to)'),
-      value: stats.odometerStart > 0 || stats.odometerEnd > 0
-        ? `${stats.odometerStart > 0 ? fmtNumber(stats.odometerStart) : '—'} → ${stats.odometerEnd > 0 ? fmtNumber(stats.odometerEnd) : '—'} ${unitPrefs.distance}` : '—',
-      source: sampled,
+      id: 'odometer', label: drive.endTs == null
+        ? t('driveDetail.report.ongoingOdometer', 'Odometer (start → latest)')
+        : t('driveDetail.odometer', 'Odometer (from → to)'),
+      value: odometer.start != null || odometer.end != null
+        ? `${odometer.start != null ? fmtNumber(odometer.start) : '—'} → ${odometer.end != null ? fmtNumber(odometer.end) : '—'} ${unitPrefs.distance}` : '—',
+      source: odometer.source === 'aggregate' ? reported : odometer.source === 'sampled' ? sampled
+        : t('driveDetail.report.odometerMixed', 'Recorded endpoints with telemetry fallback'),
     },
     ...(chartData != null ? rangeRows : [{
       id: 'range', label: t('driveDetail.rangeStartEnd', 'Range (start → end)'),
@@ -90,7 +95,7 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
     <FadeIn className="h-full">
       <GlassPanel className="h-full space-y-3 p-4 sm:p-5" data-testid="drive-energy-evidence">
         <PanelTitle>{t('driveDetail.report.energyEvidence', 'Energy and range evidence')}</PanelTitle>
-        <Table aria-label={t('driveDetail.report.energyEvidence', 'Energy and range evidence')}>
+        <Table variant="embedded" aria-label={t('driveDetail.report.energyEvidence', 'Energy and range evidence')}>
           <thead><tr>
             <th scope="col">{t('driveDetail.report.metric', 'Metric')}</th>
             <th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>

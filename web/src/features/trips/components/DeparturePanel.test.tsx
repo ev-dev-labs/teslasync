@@ -102,7 +102,7 @@ describe('DeparturePanel', () => {
   it('recommends the calm slot with charge context and evidence', () => {
     renderPanel();
     expect(screen.getByText(/Leave /)).toBeInTheDocument();
-    expect(screen.getByText('Battery 82% now')).toBeInTheDocument();
+    expect(screen.getByText('Battery 82.00% now')).toBeInTheDocument();
     expect(screen.getByText(/6 slots scored, 2 warning, 1 watch/)).toBeInTheDocument();
   });
 

@@ -70,7 +70,7 @@ export function FleetStatsBar({
         <GlassPanel role="group" aria-label={distanceLabel} className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-2xs sm:text-xs">{distanceLabel}</p>
           <p className="text-xl sm:text-2xl font-bold text-cyan-300">
-            <AnimatedNumber value={toDistanceDisplay(totalDistance)} suffix={` ${distanceUnit}`} />
+            <AnimatedNumber value={toDistanceDisplay(totalDistance)} kind="measurement" suffix={` ${distanceUnit}`} />
           </p>
           <MiniChart data={driveSparkline} color="#00f0ff" height={24} width={60} />
         </GlassPanel>
@@ -80,7 +80,7 @@ export function FleetStatsBar({
         <GlassPanel role="group" aria-label={energyLabel} className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-2xs sm:text-xs">{energyLabel}</p>
           <p className="text-xl sm:text-2xl font-bold text-emerald-300">
-            <AnimatedNumber value={totalEnergy} decimals={displayPrecision} suffix=" kWh" />
+            <AnimatedNumber value={totalEnergy} kind="measurement" decimals={displayPrecision} suffix=" kWh" />
           </p>
           <MiniChart data={chargeSparkline} color="#10b981" height={24} width={60} />
         </GlassPanel>
@@ -90,7 +90,7 @@ export function FleetStatsBar({
         <GlassPanel role="group" aria-label={efficiencyLabel} className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-2xs sm:text-xs">{efficiencyLabel}</p>
           <p className="text-xl sm:text-2xl font-bold text-amber-300">
-            <AnimatedNumber value={toEfficiencyDisplay(avgEfficiency)} suffix={` ${efficiencyUnit}`} />
+            <AnimatedNumber value={toEfficiencyDisplay(avgEfficiency)} kind="measurement" suffix={` ${efficiencyUnit}`} />
           </p>
           <p className="text-2xs text-[var(--text-muted)] mt-1">{t('fleet.average', 'fleet average')}</p>
         </GlassPanel>

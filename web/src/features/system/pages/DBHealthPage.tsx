@@ -28,7 +28,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024) return `${fmtNumber(bytes)} B`;
   if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
   return `${fmtNumber((bytes / (1024 * 1024 * 1024)))} GB`;
@@ -185,7 +185,7 @@ export default function DBHealthPage() {
     {
       key: 'pool',
       label: t('dbHealth.poolUsage', 'Pool usage'),
-      value: pool ? `${fmtInt(poolUsage)}%` : '—',
+      value: pool ? `${fmtNumber(poolUsage)}%` : '—',
       icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
       color: poolUsage >= 80 ? 'red' : 'cyan',
     },
@@ -550,7 +550,7 @@ export default function DBHealthPage() {
                   { label: t('dbHealth.pool.waitCount', 'Wait count'), value: fmtInt(pool.waitCount ?? 0) },
                   {
                     label: t('dbHealth.pool.waitDuration', 'Wait duration'),
-                    value: `${fmtInt(pool.waitDurationMs ?? 0)}ms`,
+                    value: `${fmtNumber(pool.waitDurationMs ?? 0)}ms`,
                   },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between">
@@ -564,7 +564,7 @@ export default function DBHealthPage() {
                 <div className="mt-2">
                   <div className="mb-1 flex justify-between">
                     <Text size="2xs" color="muted">{t('dbHealth.poolUsage', 'Pool usage')}</Text>
-                    <Text size="2xs" color="muted">{fmtInt(poolUsage)}%</Text>
+                    <Text size="2xs" color="muted">{fmtNumber(poolUsage)}%</Text>
                   </div>
                   <div
                     className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]"

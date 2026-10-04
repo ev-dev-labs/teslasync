@@ -133,8 +133,8 @@ describe('BackendStatusSection', () => {
     expect(screen.getByText('database')).toBeInTheDocument()
     expect(screen.getByText('redis')).toBeInTheDocument()
     expect(screen.getAllByText('healthy')).toHaveLength(4)
-    expect(screen.getByText('12.5 ms')).toBeInTheDocument()
-    expect(screen.getByText('3.2 ms')).toBeInTheDocument()
+    expect(screen.getByText('12.50 ms')).toBeInTheDocument()
+    expect(screen.getByText('3.20 ms')).toBeInTheDocument()
     // database has a last_check timestamp (year renders), redis falls back to em-dash.
     expect(container.textContent).toContain('2025')
 
@@ -186,8 +186,8 @@ describe('BackendStatusSection', () => {
     const failures = screen.getByText('4')
     expect(failures).toHaveClass('text-red-400')
 
-    expect(screen.getByText('250.0 ms')).toBeInTheDocument()
-    expect(screen.getByText('5.0 ms')).toBeInTheDocument()
+    expect(screen.getByText('250.00 ms')).toBeInTheDocument()
+    expect(screen.getByText('5.00 ms')).toBeInTheDocument()
   })
 
   it('falls back to extHealth.components.system when the version endpoint fails, and shows em-dash for OS/Arch', async () => {

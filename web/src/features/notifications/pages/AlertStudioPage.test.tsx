@@ -430,7 +430,7 @@ describe('AlertStudioPage — canonical signal units', () => {
     window.localStorage.clear();
   });
 
-  it('associates charge thresholds with canonical percent guidance', () => {
+  it('associates charge thresholds with display-unit guidance and canonical storage', () => {
     renderPage();
     fireEvent.change(document.getElementById('alert-signal') as HTMLSelectElement, {
       target: { value: 'BatteryLevel' },
@@ -438,17 +438,17 @@ describe('AlertStudioPage — canonical signal units', () => {
 
     const input = screen.getByLabelText(/^Numeric value/);
     expect(input).toHaveAttribute('aria-describedby');
-    expect(screen.getByText('Canonical input: percent from 0 to 100.')).toBeInTheDocument();
+    expect(screen.getByText('Enter %. Saved thresholds remain canonical SI values.')).toBeInTheDocument();
   });
 
-  it('identifies speed thresholds as canonical meters per second', () => {
+  it('identifies speed thresholds in the preferred display unit with canonical storage', () => {
     renderPage();
     fireEvent.change(document.getElementById('alert-signal') as HTMLSelectElement, {
       target: { value: 'VehicleSpeed' },
     });
 
     expect(
-      screen.getByText('Canonical SI input: meters per second (m/s).'),
+      screen.getByText('Enter km/h. Saved thresholds remain canonical SI values.'),
     ).toBeInTheDocument();
   });
 });
@@ -470,7 +470,7 @@ describe('AlertStudioPage — multi-vehicle picker integration (Phase-49 / Slice
     fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Low battery' } });
     fireEvent.change(document.getElementById('alert-signal') as HTMLSelectElement, { target: { value: 'BatteryLevel' } });
     fireEvent.change(document.getElementById('alert-operator') as HTMLSelectElement, { target: { value: '<' } });
-    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText(/^Numeric value/), { target: { value: '20' } });
     fireEvent.change(document.getElementById('alert-trigger-mode') as HTMLSelectElement, { target: { value: 'once' } });
     fireEvent.change(screen.getByLabelText('Rule delivery channels'), { target: { value: 'none' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
@@ -555,7 +555,7 @@ describe('AlertStudioPage — alert-behavior defaults', () => {
     pickSignal('BatteryLevel')
     pickOperator('>')
     expect(getTriggerSelect().value).toBe('once')
-    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText(/^Numeric value/), { target: { value: '20' } })
     expect(getSaveButton()).not.toBeDisabled()
     fireEvent.click(getSaveButton())
     await waitFor(() => expect(recordedSavePayloads[0]).toMatchObject({
@@ -569,7 +569,7 @@ describe('AlertStudioPage — alert-behavior defaults', () => {
     fillName('Test rule')
     pickSignal('BatteryLevel')
     pickOperator('<')
-    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText(/^Numeric value/), { target: { value: '20' } })
     fireEvent.change(getTriggerSelect(), { target: { value: 'repeat' } })
     await waitFor(() => expect(getSaveButton()).not.toBeDisabled())
     fireEvent.click(getSaveButton())
@@ -629,7 +629,7 @@ describe('AlertStudioPage — two-tier severity escalation (Phase-49 / Slice 000
   }
 
   function fillValueNum(v: string) {
-    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: v } })
+    fireEvent.change(screen.getByLabelText(/^Numeric value/), { target: { value: v } })
   }
 
   // T1 — section is hidden when trigger_mode != 'repeat'. Force-choose

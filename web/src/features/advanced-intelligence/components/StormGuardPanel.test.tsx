@@ -51,7 +51,7 @@ describe('StormGuardPanel', () => {
     expect(screen.getByText('Storm warning')).toBeInTheDocument();
     expect(screen.getByText(/thunderstorm \(WMO 95\)/)).toBeInTheDocument();
     expect(screen.getByText(/Battery 60%/)).toBeInTheDocument();
-    expect(screen.getByText(/Peak gust 28 m\/s/)).toBeInTheDocument();
+    expect(screen.getByText(/Peak gust 28\.00 m\/s/)).toBeInTheDocument();
   });
 
   it('hydrates the form from stored config and saves edits', () => {

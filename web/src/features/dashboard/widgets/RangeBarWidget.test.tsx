@@ -236,9 +236,9 @@ describe('RangeBarWidget — loading & empty states', () => {
   it('retains both range readings and variance on a cached refresh failure', () => {
     setState({ state: makeState(), isError: true, error: new Error('transient') });
     renderWidget();
-    expect(screen.getByText('300')).toBeInTheDocument();
-    expect(screen.getByText('350 mi')).toBeInTheDocument();
-    expect(screen.getByText('+16.7%')).toBeInTheDocument();
+    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(screen.getByText('350.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('+16.67%')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -276,8 +276,8 @@ describe('RangeBarWidget — loading & empty states', () => {
     renderWidget(FULL);
 
     expect(screen.queryByText('No range data')).toBeNull();
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('0 mi')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('0.00 mi')).toBeInTheDocument();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });
 
@@ -300,9 +300,9 @@ describe('RangeBarWidget — full layout unit conversion', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('300')).toBeInTheDocument();
+    expect(screen.getByText('300.00')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
-    expect(screen.getByText('350 mi')).toBeInTheDocument();
+    expect(screen.getByText('350.00 mi')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).toBeNull();
   });
 
@@ -311,9 +311,9 @@ describe('RangeBarWidget — full layout unit conversion', () => {
     setState({ state: makeState({ rated_range: km(400), ideal_range: km(360) }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('400')).toBeInTheDocument();
+    expect(screen.getByText('400.00')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
-    expect(screen.getByText('360 km')).toBeInTheDocument();
+    expect(screen.getByText('360.00 km')).toBeInTheDocument();
   });
 });
 
@@ -326,7 +326,7 @@ describe('RangeBarWidget — EPA variance', () => {
 
     // (350 - 300) / 300 = +16.66…% → "+16.7%"
     expect(screen.getByText('EPA variance')).toBeInTheDocument();
-    expect(screen.getByText('+16.7%')).toBeInTheDocument();
+    expect(screen.getByText('+16.67%')).toBeInTheDocument();
   });
 
   it('shows a negative (unsigned "-") variance when ideal is below rated', () => {
@@ -335,7 +335,7 @@ describe('RangeBarWidget — EPA variance', () => {
     renderWidget(FULL);
 
     // (360 - 400) / 400 = -10% → "-10.0%"
-    expect(screen.getByText('-10.0%')).toBeInTheDocument();
+    expect(screen.getByText('-10.00%')).toBeInTheDocument();
   });
 
   it('hides the variance readout when the ideal range is unknown (no divide-by-zero)', () => {
@@ -362,7 +362,7 @@ describe('RangeBarWidget — compact layout', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('300')).toBeInTheDocument();
+    expect(screen.getByText('300.00')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
     expect(screen.getByText('Rated range')).toBeInTheDocument();
     expect(screen.queryByRole('heading')).toBeNull();
@@ -375,7 +375,7 @@ describe('RangeBarWidget — compact layout', () => {
     setState({ state: makeState({ rated_range: 0, ideal_range: mi(280) }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('280')).toBeInTheDocument();
+    expect(screen.getByText('280.00')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
     expect(screen.getByText('Ideal range')).toBeInTheDocument();
     expect(screen.queryByText('Rated range')).toBeNull();

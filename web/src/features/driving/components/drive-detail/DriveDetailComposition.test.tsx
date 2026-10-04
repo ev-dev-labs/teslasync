@@ -84,7 +84,7 @@ beforeEach(() => {
 });
 
 describe('Continuous drive report with real summary, journey, energy, cost and chart panels', () => {
-  it.each(['recorded', 'missing'] as const)('renders the entire %s story without tabs or section navigation', (record) => {
+  it.each(['recorded', 'missing'] as const)('keeps the entire %s story visible with direct section links, not hidden tabs', (record) => {
     if (record === 'missing') {
       state.drive = null;
       state.chartData = [];
@@ -93,7 +93,9 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
     for (const role of ['tab', 'tablist', 'tabpanel']) {
       expect(screen.queryByRole(role, { hidden: true })).toBeNull();
     }
-    expect(screen.queryByRole('navigation', { name: 'Drive report sections' })).toBeNull();
+    const navigation = screen.getByRole('navigation', { name: 'Drive report sections' });
+    expect(within(navigation).getByRole('link', { name: 'Overview' })).toHaveAttribute('href', '#overview');
+    expect(within(navigation).getByRole('link', { name: 'Energy and cost' })).toHaveAttribute('href', '#energy');
     for (const id of [
       'journey', 'route', 'overview', 'energy-evidence', 'cost-estimate',
       'fsd-evidence', 'silent-counter', 'telemetry', 'battery-trace', 'speed-distribution',
@@ -116,7 +118,7 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
       }
     }
     const route = screen.getByTestId('drive-detail-route');
-    expect(route.compareDocumentPosition(screen.getByTestId('drive-detail-summary')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('drive-detail-summary').compareDocumentPosition(route) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.querySelector('#energy-evidence')!.compareDocumentPosition(screen.getByTestId('drive-detail-evidence')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -131,7 +133,7 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
     }
     expect(screen.queryByText('Net consumption')).toBeNull();
     expect(screen.queryByText('Net Consumption')).toBeNull();
-    expect(screen.getAllByText(/Persisted drive aggregate/)).toHaveLength(2);
+    expect(screen.getAllByText(/Persisted drive aggregate/)).toHaveLength(3);
     expect(screen.getByRole('table', { name: 'Drive timeline' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Energy and range evidence' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Cost and savings' })).toBeInTheDocument();

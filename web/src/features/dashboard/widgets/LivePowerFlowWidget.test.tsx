@@ -332,16 +332,16 @@ describe('LivePowerFlowWidget — node derivation', () => {
     const solar = nodeById('solar');
     expect(solar?.position).toBe('top');
     expect(solar?.value).toBe(4);
-    expect(solar?.formattedValue).toBe('4.0 kW');
+    expect(solar?.formattedValue).toBe('4.00 kW');
     expect(screen.getByTestId('node-solar-label')).toHaveTextContent('Solar');
 
     expect(nodeById('grid')?.position).toBe('left');
-    expect(nodeById('grid')?.formattedValue).toBe('2.0 kW');
+    expect(nodeById('grid')?.formattedValue).toBe('2.00 kW');
     expect(nodeById('home')?.position).toBe('right');
-    expect(nodeById('home')?.formattedValue).toBe('3.5 kW');
+    expect(nodeById('home')?.formattedValue).toBe('3.50 kW');
     expect(nodeById('battery')?.position).toBe('bottom');
     expect(nodeById('battery')?.value).toBe(1.5);
-    expect(nodeById('battery')?.formattedValue).toBe('1.5 kW');
+    expect(nodeById('battery')?.formattedValue).toBe('1.50 kW');
   });
 
   it('uses the magnitude (abs) of negative power readings for node values', () => {
@@ -349,9 +349,9 @@ describe('LivePowerFlowWidget — node derivation', () => {
     renderWidget();
 
     expect(nodeById('grid')?.value).toBe(1);
-    expect(nodeById('grid')?.formattedValue).toBe('-1.0 kW');
+    expect(nodeById('grid')?.formattedValue).toBe('-1.00 kW');
     expect(nodeById('battery')?.value).toBe(2);
-    expect(nodeById('battery')?.formattedValue).toBe('-2.0 kW');
+    expect(nodeById('battery')?.formattedValue).toBe('-2.00 kW');
   });
 
   it('gives every node an icon and a localized label', () => {
@@ -409,7 +409,7 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
   it('preserves a signed negative solar reading as consumption, not production', () => {
     setLive({ data: makeLive({ solar_power: -1000 }) });
     renderWidget();
-    expect(nodeById('solar')?.formattedValue).toBe('-1.0 kW');
+    expect(nodeById('solar')?.formattedValue).toBe('-1.00 kW');
     expect(arrowByEnds('site', 'solar')?.value).toBe(1);
     expect(arrowByEnds('solar', 'site')).toBeUndefined();
   });
@@ -466,7 +466,7 @@ describe('LivePowerFlowWidget — null safety', () => {
   it('retains measured power and directions on a failed cached refresh', () => {
     setLive({ data: makeLive({ solar_power: 4000 }), isError: true });
     renderWidget();
-    expect(nodeById('solar')?.formattedValue).toBe('4.0 kW');
+    expect(nodeById('solar')?.formattedValue).toBe('4.00 kW');
     expect(arrowByEnds('solar', 'site')?.active).toBe(true);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();

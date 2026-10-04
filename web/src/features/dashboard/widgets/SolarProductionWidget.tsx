@@ -1,7 +1,7 @@
 import { useCallback, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sun } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useTeslaEnergyHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber, sumKnown } from '@/api/dataState';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -39,7 +39,7 @@ function todayKey(): string {
 
 export default function SolarProductionWidget({ size }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const gradientId = useId();
@@ -116,6 +116,15 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
   const hasData = chartData.length > 0;
+  const axisLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.solar_kwh)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => fmt(value)),
+    [chartData, fmt],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
 
   const handleRefresh = useCallback(() => {
     refetchSites();
@@ -142,7 +151,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
-        {...(isCompact ? shellProps : {})}
+        {...shellProps}
         loading={false}
         dataState={dataState}
         updatedAt={sitesUpdatedAt}
@@ -210,7 +219,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         },
         {
           label: t('widget.solarProduction.total30dSentence', '30-day total'),
-          value: totalKwh == null ? null : fmtInt(totalKwh),
+          value: totalKwh == null ? null : fmtNumber(totalKwh),
           unit: unitPrefs.energy,
         },
         {
@@ -255,7 +264,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
+              <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                 {chartGrid}
                 <XAxis
                   dataKey="date"
@@ -267,7 +276,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
                   tick={tick}
                   tickLine={false}
                   axisLine={false}
-                  width={40}
+                  width={axisWidth}
                   tickFormatter={(v: number) => fmt(v)}
                 />
                 <Tooltip

@@ -291,7 +291,7 @@ describe('CostBreakdownWidget — shared tooltip', () => {
 
     expect(screen.getByText('March:')).toBeInTheDocument();
     expect(screen.getByText('$42.00')).toBeInTheDocument();
-    expect(money.formatCurrency).toHaveBeenCalledWith(42, 2);
+    expect(money.formatCurrency).toHaveBeenCalledWith(42, undefined);
 
     // The swatch colour is a dynamic per-slice value (jsdom normalises the hex).
     const swatch = container.querySelector('span[style]') as HTMLElement | null;
@@ -430,9 +430,9 @@ describe('CostBreakdownWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Cost / km')).toBeInTheDocument();
-    // cost_per_km_ev 0.05, no conversion for km → formatCurrency(0.05, 3).
-    expect(money.formatCurrency).toHaveBeenCalledWith(0.05, 3);
-    expect(screen.getByText('$0.050')).toBeInTheDocument();
+    // Metric cost/distance stays unchanged before display formatting.
+    expect(money.formatCurrency).toHaveBeenCalledWith(0.05, undefined);
+    expect(screen.getByText('$0.05')).toBeInTheDocument();
   });
 
   it('converts cost/km to cost/mi and labels the stat "Cost / mi" for imperial users', () => {
@@ -440,11 +440,9 @@ describe('CostBreakdownWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Cost / mi')).toBeInTheDocument();
-    // 0.05 $/km × 1.60934 km/mi ≈ 0.0804670 $/mi → "$0.080" at 3 dp.
-    const [amount, decimals] = money.formatCurrency.mock.calls.find((c) => c[1] === 3) ?? [];
-    expect(amount).toBeCloseTo(0.0804670, 6);
-    expect(decimals).toBe(3);
-    expect(screen.getByText('$0.080')).toBeInTheDocument();
+    // 0.05 $/km × 1.609344 km/mi = 0.0804672 $/mi → "$0.08".
+    expect(money.formatCurrency).toHaveBeenCalledWith(0.0804672, undefined);
+    expect(screen.getByText('$0.08')).toBeInTheDocument();
   });
 
   it('preserves measured zero cost/distance and gas savings', () => {
@@ -455,8 +453,7 @@ describe('CostBreakdownWidget — standard layout', () => {
 
     expect(screen.getByText('Cost / km')).toBeInTheDocument();
     expect(screen.getByText('Gas savings')).toBeInTheDocument();
-    expect(screen.getByText('$0.000')).toBeInTheDocument();
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.00')).toHaveLength(2);
     expect(screen.queryByText('—')).toBeNull();
   });
 
@@ -595,7 +592,7 @@ describe('CostBreakdownWidget — null-safety & hardening', () => {
       renderWidget(STANDARD);
       expect(screen.queryByText('No cost data')).not.toBeInTheDocument();
       expect(screen.getByTestId('cost-bars')).toHaveAttribute('data-json', expect.stringContaining('"value":0'));
-      expect(screen.getByText('$0.000')).toBeInTheDocument();
+      expect(screen.getAllByText('$0.00')).toHaveLength(4);
     });
 
     it('reports malformed monthly data without losing known aggregate values', () => {

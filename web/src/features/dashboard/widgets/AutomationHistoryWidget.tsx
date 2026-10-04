@@ -13,6 +13,10 @@ import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import type { AutomationHistoryStatus } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
+import { WidgetBigNumber } from './shared';
 
 // ── Status → visual mapping ──────────────────────────────────────────
 
@@ -43,15 +47,19 @@ function CompactView({
   lastRunTime,
   t,
 }: {
-  successRate: number;
+  successRate: number | null;
   lastRunTime: string | null;
   t: (key: string, fallback: string) => string;
 }) {
   const { fmtNumber } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
-      <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(successRate)}%</span>
-      <span className="text-2xs text-[var(--text-muted)]">{t('widget.successRate', 'Success rate')}</span>
+      <WidgetBigNumber
+        value={successRate == null ? null : fmtNumber(successRate)}
+        unit="%"
+        label={t('widget.successRate', 'Success rate')}
+        align="center"
+      />
       {lastRunTime && (
         <TimeStamp value={lastRunTime} className="text-xs text-[var(--text-secondary)]" />
       )}
@@ -62,9 +70,9 @@ function CompactView({
 // ── Main widget ──────────────────────────────────────────────────────
 
 export default function AutomationHistoryWidget({ size }: WidgetProps) {
-  const { formatDurationMs } = useNumberFormatting();
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatDurationMs, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const query = useAutomationHistory();
   const {
     data,
     isLoading,
@@ -73,20 +81,21 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useAutomationHistory();
+  } = query;
+  const state = useDataState({ ...query, data: data ?? undefined }, { provenance: 'historical' });
 
   const isCompact = size.cols <= 1;
   const items = data?.items ?? [];
   const summary = data?.summary;
-  const successRate = summary?.success_rate ?? 0;
-  const totalRuns = summary?.total_executions ?? 0;
-  const hasRuns = totalRuns > 0 || items.length > 0;
+  const successRate = knownNumber(summary?.success_rate);
+  const totalRuns = knownNumber(summary?.total_executions);
+  const hasRuns = (totalRuns != null && totalRuns > 0) || items.length > 0;
 
   // A red "danger" chip for a 0% success rate must mean "runs are failing",
   // not "nothing has run yet" — otherwise a fresh install with zero executions
   // looks like a broken one. Fall back to a neutral chip until there is at
   // least one run to grade.
-  const rateVariant = !hasRuns
+  const rateVariant = !hasRuns || successRate == null
     ? 'neutral'
     : successRate >= 90
       ? 'success'
@@ -97,7 +106,9 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
   const feedItems = useMemo<EventFeedItem[]>(
     () =>
       items.map((entry) => {
-        const mapped = STATUS_MAP[entry.status] ?? DEFAULT_STATUS;
+        const mapped = Object.prototype.hasOwnProperty.call(STATUS_MAP, entry.status)
+          ? STATUS_MAP[entry.status]
+          : DEFAULT_STATUS;
         const durationStr = formatDurationMs(entry.duration_ms ?? null);
         const statusLabel = entry.status ?? '—';
         return {
@@ -105,7 +116,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
           icon: mapped.icon,
           title: entry.automation_name ?? '—',
           subtitle: `${statusLabel} · ${durationStr}`,
-          timestamp: entry.triggered_at ?? new Date(0).toISOString(),
+          timestamp: entry.triggered_at ?? '',
           color: mapped.color,
           severity: mapped.severity,
         };
@@ -120,15 +131,11 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
       title={t('widget.automationHistory', 'Automation history')}
       icon={<PlayCircle className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      dataState={{ ...state, status: state.status === 'initial' && !isLoading ? 'unavailable' : state.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      error={
-        isError && !data
-          ? t('widget.automationHistoryError', 'Failed to load automation history')
-          : undefined
-      }
       onRefresh={() => refetch()}
     >
       {isCompact ? (
@@ -148,13 +155,13 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
       ) : (
         <div className="flex-1 min-h-0 flex flex-col gap-2">
           {/* Success rate header */}
-          <div className="flex items-center gap-2 pb-1.5 border-b border-white/[0.06]">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 pb-1.5 border-b border-[var(--border-subtle)]">
             <Badge variant={rateVariant}>
-              {fmtNumber(successRate)}% {t('widget.successRate', 'Success rate')}
+              {successRate == null ? '—' : `${fmtNumber(successRate)}%`}{' '}{t('widget.successRate', 'Success rate')}
             </Badge>
             {summary && (
-              <span className="text-2xs text-[var(--text-muted)]">
-                {fmtInt(totalRuns)} {t('widget.totalRuns', 'runs')}
+              <span className={dashboardTokens.metricLabel}>
+                {totalRuns == null ? '—' : fmtInt(totalRuns)} {t('widget.totalRuns', 'runs')}
               </span>
             )}
           </div>

@@ -172,6 +172,11 @@ vi.mock('@/components/data-display', async () => {
 });
 
 import FSMDistributionWidget from './FSMDistributionWidget';
+
+it.each([1, 2, 3])('identifies state distribution at %i columns', (cols) => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'State distribution' })).toBeInTheDocument();
+});
 import type { WidgetSize } from './types';
 import type { FSMStats, FSMTransition, FSMTransitionResponse } from '@/types/fsm';
 
@@ -236,11 +241,13 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <FSMDistributionWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('State distribution');
+  return view;
 }
 
 interface Segment {
@@ -292,9 +299,9 @@ describe('FSMDistributionWidget', () => {
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('charging')).toBeInTheDocument();
     expect(screen.getByText('asleep')).toBeInTheDocument();
-    expect(screen.getByText('60%')).toBeInTheDocument();
-    expect(screen.getByText('30%')).toBeInTheDocument();
-    expect(screen.getByText('10%')).toBeInTheDocument();
+    expect(screen.getByText('60.00%')).toBeInTheDocument();
+    expect(screen.getByText('30.00%')).toBeInTheDocument();
+    expect(screen.getByText('10.00%')).toBeInTheDocument();
   });
 
   it('paints each donut Cell from the per-state colour map', () => {
@@ -318,13 +325,13 @@ describe('FSMDistributionWidget', () => {
       { state: 'charging', value: 3000, pct: 75 },
       { state: 'driving', value: 1000, pct: 25 },
     ]);
-    expect(screen.getByText('75%')).toBeInTheDocument();
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(screen.getByText('25.00%')).toBeInTheDocument();
     // The filtered-out state never reaches the legend.
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
   });
 
-  it('compact layout shows the current state + time-in-state, no title/legend/feed', () => {
+  it('compact layout identifies the current state and time-in-state without a legend or feed', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     // Largest segment (driving, 1h) becomes the current-state headline.
@@ -332,7 +339,7 @@ describe('FSMDistributionWidget', () => {
     expect(screen.getByText('1h 0m')).toBeInTheDocument();
 
     // Compact drops the title, the donut and the transition feed.
-    expect(screen.queryByText('State distribution')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'State distribution' })).toBeInTheDocument();
     expect(screen.queryByTestId('pie')).not.toBeInTheDocument();
     expect(screen.queryByText('Recent transitions')).not.toBeInTheDocument();
   });
@@ -370,11 +377,12 @@ describe('FSMDistributionWidget', () => {
     // Synthetic payload: idle, 1h, 50% → fmtDuration + one-dp fmtNumber.
     expect(within(tip).getByText('idle')).toBeInTheDocument();
     expect(within(tip).getByText(/1h 0m/)).toBeInTheDocument();
-    expect(within(tip).getByText(/50\.0%/)).toBeInTheDocument();
+    expect(within(tip).getByText('1h 0m · 50.00%')).toBeInTheDocument();
   });
 
-  it('renders a skeleton placeholder while a source query is loading', () => {
+  it('renders a skeleton placeholder when neither source has loaded', () => {
     statsMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined, dataUpdatedAt: 0 }));
+    transitionsMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
@@ -400,6 +408,7 @@ describe('FSMDistributionWidget', () => {
     statsMock.mockReturnValue(
       makeQuery({ error: new Error('boom'), isError: true, data: undefined, dataUpdatedAt: 0 }),
     );
+    transitionsMock.mockReturnValue(makeQuery({ data: undefined, dataUpdatedAt: 0 }));
     renderWidget();
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
@@ -410,6 +419,53 @@ describe('FSMDistributionWidget', () => {
     expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
     expect(screen.queryByText('State distribution')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
+  });
+
+  it('keeps transition history visible when distribution loading fails', () => {
+    statsMock.mockReturnValue(makeQuery({ data: undefined, error: new Error('stats unavailable'), isError: true }));
+    const { container } = renderWidget();
+    expect(screen.getByText('Recent transitions')).toBeVisible();
+    expect(within(transitionFeed()).getAllByTestId('timestamp')).toHaveLength(2);
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps distribution and real dual recovery when transition loading fails', () => {
+    const refetchStats = vi.fn();
+    const refetchTransitions = vi.fn();
+    statsMock.mockReturnValue(makeQuery({ data: makeStats(DONUT_STATS), refetch: refetchStats }));
+    transitionsMock.mockReturnValue(makeQuery({
+      data: undefined, error: new Error('history unavailable'), isError: true, refetch: refetchTransitions,
+    }));
+    renderWidget();
+    expect(screen.getByTestId('pie')).toBeVisible();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetchStats).toHaveBeenCalledTimes(1);
+    expect(refetchTransitions).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not hide either retained section during a background refresh failure', () => {
+    statsMock.mockReturnValue(makeQuery({
+      data: makeStats(DONUT_STATS), error: new Error('refresh failed'), isError: true,
+    }));
+    renderWidget();
+    expect(screen.getByTestId('pie')).toBeVisible();
+    expect(screen.getByText('Recent transitions')).toBeVisible();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('filters nonfinite durations without inventing a percentage', () => {
+    statsMock.mockReturnValue(makeQuery({ data: makeStats({ driving: Number.POSITIVE_INFINITY, idle: 600_000 }) }));
+    renderWidget();
+    expect(pieData()).toEqual([{ state: 'idle', value: 600_000, pct: 100 }]);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+  });
+
+  it('carries a rounded sixtieth minute into the next hour', () => {
+    statsMock.mockReturnValue(makeQuery({ data: makeStats({ driving: 3_599_000 }) }));
+    renderWidget({ cols: 1, rows: 1 });
+    expect(screen.getByText('1h 0m')).toBeVisible();
+    expect(screen.queryByText('60m')).toBeNull();
   });
 
   it('shows the empty state (keeping the titled shell) when there is no distribution', () => {
@@ -430,7 +486,7 @@ describe('FSMDistributionWidget', () => {
 
     expect(screen.getByText('No state data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('State distribution')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'State distribution' })).toBeInTheDocument();
   });
 
   it('refetches BOTH sources when the freshness control is activated', () => {
@@ -472,6 +528,29 @@ describe('FSMDistributionWidget', () => {
     expect(statsMock).toHaveBeenCalledWith('');
     // Resolved to no vehicle, not loading → the empty state (not a skeleton).
     expect(screen.getByText('No state data available')).toBeInTheDocument();
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 1.5])('does not enable a query for invalid vehicle %s', vehicleId => {
+    statsMock.mockReturnValue(makeQuery());
+    transitionsMock.mockReturnValue(makeQuery());
+    vehiclesMock.mockReturnValue(makeQuery({ data: [] }));
+    renderWidget({ cols: 2, rows: 2 }, vehicleId);
+    expect(statsMock).toHaveBeenCalledWith('');
+    expect(transitionsMock).toHaveBeenCalledWith('', 'vehicle', 24, 1, 5);
+  });
+
+  it('recovers vehicle discovery without refetching disabled FSM sources', () => {
+    const refetchVehicles = vi.fn();
+    const refetchStats = vi.fn();
+    const refetchTransitions = vi.fn();
+    vehiclesMock.mockReturnValue(makeQuery({ error: new Error('discovery failed'), isError: true, refetch: refetchVehicles }));
+    statsMock.mockReturnValue(makeQuery({ refetch: refetchStats }));
+    transitionsMock.mockReturnValue(makeQuery({ refetch: refetchTransitions }));
+    renderWidget();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchVehicles).toHaveBeenCalledTimes(1);
+    expect(refetchStats).not.toHaveBeenCalled();
+    expect(refetchTransitions).not.toHaveBeenCalled();
   });
 
   it('is null-safe: undefined stats + a non-array transitions payload degrade without crashing', () => {

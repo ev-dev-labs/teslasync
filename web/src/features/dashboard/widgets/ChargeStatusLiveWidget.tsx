@@ -140,17 +140,18 @@ function CompactChargingView({ power, batteryLevel }: { power: number | null; ba
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <BatteryCharging className="h-5 w-5 text-neon-green animate-pulse" />
       <WidgetBigNumber value={power == null ? null : `${fmtNumber(power)} kW`} animated={false} align="center" size="secondary" />
-      <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${batteryLevel}%`}</span>
+      <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`}</span>
     </div>
   );
 }
 
 /* ── Compact: idle ── */
 function CompactIdleView({ batteryLevel, statusLabel }: { batteryLevel: number | null; statusLabel: string }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <Plug className="h-5 w-5 text-[var(--text-muted)]" />
-      <WidgetBigNumber value={batteryLevel == null ? null : `${batteryLevel}%`} label={statusLabel} animated={false} align="center" size="secondary" />
+      <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel)}%`} label={statusLabel} animated={false} align="center" size="secondary" />
     </div>
   );
 }
@@ -186,7 +187,7 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t 
             {t('widget.charging', 'Charging')}
           </Badge>
         </div>
-        <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${batteryLevel}%`}</span>
+        <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`}</span>
       </div>
 
       {/* Primary metric: power */}
@@ -229,7 +230,7 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t 
           <MetricCell
             icon={<BatteryCharging className="h-3 w-3 text-[var(--text-muted)]" />}
             label={t('widget.batteryLevel', 'Battery')}
-            value={batteryLevel == null ? '—' : `${batteryLevel}%`}
+            value={batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`}
           />
         </div>
       )}
@@ -259,7 +260,7 @@ function IdleView({ metrics, latestSession, statusLabel, t }: IdleViewProps) {
           {statusLabel}
         </p>
         <p className={dashboardTokens.secondaryMetric}>
-          {metrics.batteryLevel == null ? '—' : `${metrics.batteryLevel}%`}
+          {metrics.batteryLevel == null ? '—' : `${fmtNumber(metrics.batteryLevel)}%`}
         </p>
       </div>
       <div className="w-full min-w-0 border-t border-[var(--border-subtle)] pt-2 text-center">

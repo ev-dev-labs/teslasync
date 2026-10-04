@@ -19,7 +19,7 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ drives, sessions }: RecentActivityProps) {
-  const { fmtInt, precision: displayPrecision } = useNumberFormatting();
+  const { fmtInt, fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
   return (
@@ -69,7 +69,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     />
                     {d.start_soc_pct != null && d.end_soc_pct != null && (
                       <span className="text-2xs text-[var(--text-muted)]">
-                        {d.start_soc_pct}% → {d.end_soc_pct}%
+                        {fmtNumber(d.start_soc_pct)}% → {fmtNumber(d.end_soc_pct)}%
                       </span>
                     )}
                   </div>

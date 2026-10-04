@@ -71,14 +71,16 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDispl
   // because the surrounding code had already moved to "convert at the
   // boundary" semantics but these two reductions kept the legacy "convert
   // eagerly, render verbatim" assumption from the old in-line code.
+  const averages = (filteredDrives ?? []).flatMap((drive) => drive.avgSpeedMps != null ? [drive.avgSpeedMps] : []);
+  const peaks = (filteredDrives ?? []).flatMap((drive) => drive.maxSpeedMps != null ? [drive.maxSpeedMps] : []);
   const avgDriveSpeedMps =
-    filteredDrives.length > 0
-      ? filteredDrives.reduce((s, d) => s + (d.avgSpeedMps ?? 0), 0) / filteredDrives.length
+    averages.length > 0
+      ? averages.reduce((sum, speed) => sum + speed, 0) / averages.length
       : null;
 
   const topDriveSpeedMps =
-    filteredDrives.length > 0
-      ? Math.max(...filteredDrives.map((d) => d.maxSpeedMps ?? 0))
+    peaks.length > 0
+      ? Math.max(...peaks)
       : null;
 
   return (
@@ -87,6 +89,9 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDispl
         <Gauge className="h-4 w-4 text-emerald-300" aria-hidden="true" />
         {t('dynamics.speedGear', 'Speed & Gear')}
       </PanelTitle>
+      <Text as="p" variant="caption" className="mb-4">
+        {t('dynamics.review.speedGearScope', 'Gear and motor power: latest vehicle signals. Average and top speed: loaded trips in the date range, not just the selected ride.')}
+      </Text>
       <Grid cols={{ default: 2, md: 4 }} gap={6}>
         <div className="flex flex-col items-center justify-center gap-2">
           <Text as="span" weight="bold" className={cn('text-5xl tabular-nums', shiftColor(motorLatest?.shift_state))}>

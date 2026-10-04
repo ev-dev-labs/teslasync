@@ -386,8 +386,8 @@ describe('MaintenancePage', () => {
     expect(screen.getAllByText('30 km').length).toBeGreaterThanOrEqual(1);
 
     // Cost stats (deterministic scalar branches).
-    expect(screen.getByText('$200')).toBeInTheDocument(); // total spent
-    expect(screen.getByText('$100')).toBeInTheDocument(); // avg / service (200 / 2)
+    expect(screen.getByText('$200.00')).toBeInTheDocument(); // total spent
+    expect(screen.getByText('$100.00')).toBeInTheDocument(); // avg / service (200 / 2)
 
     // Service-records table cells.
     expect(screen.getByText('Annual inspection')).toBeInTheDocument();
@@ -552,7 +552,7 @@ describe('MaintenancePage', () => {
     renderPage();
 
     // (39000 - 20000) / 20000 = 95% → derived status "overdue".
-    expect(screen.getByText('95%')).toBeInTheDocument();
+    expect(screen.getByText('95.00%')).toBeInTheDocument();
     const bar = screen.getByRole('progressbar', { name: 'Tire Rotation service progress' });
     expect(bar).toHaveAttribute('aria-valuenow', '95');
     expect(
@@ -572,7 +572,7 @@ describe('MaintenancePage', () => {
     expect(screen.getByText('Total spent')).toBeInTheDocument();
     expect(screen.getByText('Avg / service')).toBeInTheDocument();
     // Single record → the <2-dates branch: every figure collapses to $500.
-    expect(screen.getAllByText('$500').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('$500.00').length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders a 0% bar for a malformed last_service_date instead of a NaN one (regression)', () => {
@@ -590,7 +590,7 @@ describe('MaintenancePage', () => {
     const bar = screen.getByRole('progressbar', { name: 'Air Filter service progress' });
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     expect(bar).not.toHaveAttribute('aria-valuenow', 'NaN');
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
   });
 
   it('sorts by due date stably: null/invalid-due items sort last and tie-break by name (regression)', () => {

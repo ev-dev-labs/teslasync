@@ -269,22 +269,22 @@ export default function EfficiencyPage() {
   }, [filteredDrives, isFahrenheit]);
 
   /* ---- Computed metrics ---- */
-  const costPerKm = stats && stats.totalDistanceKm > 0
+  const costPerKm = stats && stats.totalDistanceKm > 0 && stats.avgEfficiencyWhKm != null
     ? fmtNumber((stats.avgEfficiencyWhKm / 1000) * 0.12)
     : '—';
-  const distancePerKwh = stats && stats.avgEfficiencyWhKm > 0
+  const distancePerKwh = stats && stats.avgEfficiencyWhKm != null && stats.avgEfficiencyWhKm > 0
     ? fmtNumber(toStatsDistanceDisplay(1000 / stats.avgEfficiencyWhKm))
     : '—';
 
   /* ---- Energy insight tiles ---- */
   const insights = stats
     ? [
-        { key: 'regen', label: t('efficiency.totalRegen', 'Total regen'), value: formatEnergy(stats.regenEnergyWh ?? 0), icon: <Zap className="h-4 w-4" />, color: 'green' as const },
-        { key: 'ratio', label: t('efficiency.regenRatioLabel', 'Regen ratio'), value: `${fmtNumber((stats.regenRatio ?? 0) * 100)}%`, icon: <TrendingUp className="h-4 w-4" />, color: 'cyan' as const },
+        { key: 'regen', label: t('efficiency.totalRegen', 'Total regen'), value: stats.regenEnergyWh != null ? formatEnergy(stats.regenEnergyWh) : '—', icon: <Zap className="h-4 w-4" />, color: 'green' as const },
+        { key: 'ratio', label: t('efficiency.regenRatioLabel', 'Regen ratio'), value: stats.regenRatio != null ? `${fmtNumber(stats.regenRatio * 100)}%` : '—', icon: <TrendingUp className="h-4 w-4" />, color: 'cyan' as const },
         { key: 'co2', label: t('efficiency.co2Label', 'CO₂ saved'), value: `${fmtInt(stats.co2SavedKg ?? 0)} ${t('efficiency.kgUnit', 'kg')}`, icon: <Leaf className="h-4 w-4" />, color: 'green' as const },
         { key: 'dist', label: t('efficiency.totalDistLabel', 'Total distance'), value: `${fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`, icon: <Route className="h-4 w-4" />, color: 'cyan' as const },
-        { key: 'top', label: t('efficiency.topSpeed', 'Top speed'), value: `${fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} ${speedUnit}`, icon: <Gauge className="h-4 w-4" />, color: 'purple' as const },
-        { key: 'cost', label: t('efficiency.costPerKmLabel', 'Est. cost/km'), value: `$${costPerKm}`, icon: <Fuel className="h-4 w-4" />, color: 'amber' as const },
+        { key: 'top', label: t('efficiency.topSpeed', 'Top speed'), value: stats.topSpeedKmh != null ? `${fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh))} ${speedUnit}` : '—', icon: <Gauge className="h-4 w-4" />, color: 'purple' as const },
+        { key: 'cost', label: t('efficiency.costPerKmLabel', 'Est. cost/km'), value: costPerKm !== '—' ? `$${costPerKm}` : '—', icon: <Fuel className="h-4 w-4" />, color: 'amber' as const },
       ]
     : [];
 
@@ -340,13 +340,13 @@ export default function EfficiencyPage() {
             </GlassPanel>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
-              <MetricCard label={t('efficiency.avgConsumption', 'Avg consumption')} value={fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} subtitle={efficiencyUnit} icon={<Zap className="h-5 w-5" />} color="amber" />
+              <MetricCard label={t('efficiency.avgConsumption', 'Avg consumption')} value={stats.avgEfficiencyWhKm != null ? fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm)) : '—'} subtitle={efficiencyUnit} icon={<Zap className="h-5 w-5" />} color="amber" />
               <MetricCard label={t('efficiency.efficiencyLabel', 'Efficiency')} value={distancePerKwh} subtitle={`${distanceUnit}/kWh`} icon={<Gauge className="h-5 w-5" />} color="cyan" />
-              <MetricCard label={t('efficiency.avgSpeed', 'Avg speed')} value={fmtNumber(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} subtitle={speedUnit} icon={<TrendingUp className="h-5 w-5" />} color="green" />
-              <MetricCard label={t('efficiency.topSpeed', 'Top speed')} value={fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} subtitle={speedUnit} icon={<Gauge className="h-5 w-5" />} color="purple" />
+              <MetricCard label={t('efficiency.avgSpeed', 'Avg speed')} value={stats.avgSpeedKmh != null ? fmtNumber(toStatsSpeedDisplay(stats.avgSpeedKmh)) : '—'} subtitle={speedUnit} icon={<TrendingUp className="h-5 w-5" />} color="green" />
+              <MetricCard label={t('efficiency.topSpeed', 'Top speed')} value={stats.topSpeedKmh != null ? fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh)) : '—'} subtitle={speedUnit} icon={<Gauge className="h-5 w-5" />} color="purple" />
               <MetricCard label={t('efficiency.co2Label', 'CO₂ saved')} value={fmtInt(stats.co2SavedKg ?? 0)} subtitle={t('efficiency.kgUnit', 'kg')} icon={<Leaf className="h-5 w-5" />} color="green" />
               <MetricCard label={t('efficiency.totalDistLabel', 'Total distance')} value={fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} subtitle={distanceUnit} icon={<Route className="h-5 w-5" />} color="cyan" />
-              <MetricCard label={t('efficiency.costPerKm', 'Est. cost/km')} value={`$${costPerKm}`} icon={<Fuel className="h-5 w-5" />} color="amber" />
+              <MetricCard label={t('efficiency.costPerKm', 'Est. cost/km')} value={costPerKm !== '—' ? `$${costPerKm}` : '—'} icon={<Fuel className="h-5 w-5" />} color="amber" />
               <MetricCard label={t('efficiency.drivesAnalyzed', 'Drives analyzed')} value={fmtInt(stats.totalDrives ?? 0)} icon={<Car className="h-5 w-5" />} color="blue" />
             </div>
           )}
@@ -371,20 +371,26 @@ export default function EfficiencyPage() {
               ) : (
                 <div className="space-y-5">
                   <div className="flex justify-center">
-                    <LinearGauge
-                      value={Math.round(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))}
+                    {stats.avgEfficiencyWhKm != null ? <LinearGauge
+                      value={toEfficiencyDisplay(stats.avgEfficiencyWhKm)}
                       max={Math.round(toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM))}
                       size={148}
                       label={t('efficiency.avg', 'Avg')}
                       unit={` ${efficiencyUnit}`}
                       color={efficiencyColor(stats.avgEfficiencyWhKm ?? 0)}
                     className="max-w-xs"
-                    />
+                    /> : <EmptyState /* no-action: transient — recorded energy measurements are missing */ message={t('efficiency.noSummary', 'No efficiency summary available yet')} />}
                   </div>
                   <div className="space-y-4">
-                    <MetricBar label={t('efficiency.avgConsumption', 'Avg consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0)} max={toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM)} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`} />
-                    <MetricBar label={t('efficiency.avgSpeed', 'Avg speed')} value={toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0)} max={150} color="#10b981" sublabel={`${fmtInt(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`} />
-                    <MetricBar label={t('efficiency.regenRatio', 'Regen ratio')} value={(stats.regenRatio ?? 0) * 100} max={100} color="#a855f7" sublabel={`${fmtNumber((stats.regenRatio ?? 0) * 100)}%`} />
+                    {stats.avgEfficiencyWhKm != null
+                      ? <MetricBar label={t('efficiency.avgConsumption', 'Avg consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm)} max={toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM)} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm))} ${efficiencyUnit}`} />
+                      : <MetricCard label={t('efficiency.avgConsumption', 'Avg consumption')} value="—" />}
+                    {stats.avgSpeedKmh != null
+                      ? <MetricBar label={t('efficiency.avgSpeed', 'Avg speed')} value={toStatsSpeedDisplay(stats.avgSpeedKmh)} max={150} color="#10b981" sublabel={`${fmtInt(toStatsSpeedDisplay(stats.avgSpeedKmh))} ${speedUnit}`} />
+                      : <MetricCard label={t('efficiency.avgSpeed', 'Avg speed')} value="—" />}
+                    {stats.regenRatio != null
+                      ? <MetricBar label={t('efficiency.regenRatio', 'Regen ratio')} value={stats.regenRatio * 100} max={100} color="#a855f7" sublabel={`${fmtNumber(stats.regenRatio * 100)}%`} />
+                      : <MetricCard label={t('efficiency.regenRatio', 'Regen ratio')} value="—" />}
                     <MetricBar label={t('efficiency.totalDriveTime', 'Total drive time')} value={stats.totalDurationS ?? 0} max={Math.max(stats.totalDurationS ?? 0, 36000)} color="#f59e0b" sublabel={formatDuration(stats.totalDurationS ?? 0)} />
                   </div>
                 </div>
@@ -554,13 +560,13 @@ export default function EfficiencyPage() {
                       key: 'totalDist',
                       header: `${t('efficiency.total', 'Total')} ${distanceUnit}`,
                       align: 'right',
-                      render: (b) => <Text color="secondary">{fmtInt(toDistanceDisplay(b.totalDist))}</Text>,
+                      render: (b) => <Text color="secondary">{fmtNumber(toDistanceDisplay(b.totalDist))}</Text>,
                     },
                     {
                       key: 'avgSpeed',
                       header: t('efficiency.avgSpeedCol', 'Avg speed'),
                       align: 'right',
-                      render: (b) => <Text color="secondary">{fmtInt(toSpeedDisplay(b.avgSpeed))} {speedUnit}</Text>,
+                      render: (b) => <Text color="secondary">{fmtNumber(toSpeedDisplay(b.avgSpeed))} {speedUnit}</Text>,
                     },
                   ]}
                   mobileColumns={['range', 'count', 'avgEff']}

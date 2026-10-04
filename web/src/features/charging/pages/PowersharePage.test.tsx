@@ -284,7 +284,7 @@ describe('PowersharePage', () => {
     expect(kpi.getByText('Active')).toBeInTheDocument();
     expect(kpi.getByText('Home')).toBeInTheDocument();
     expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
-    expect(kpi.getByText('5.5 h')).toBeInTheDocument();
+    expect(kpi.getByText('5.50 h')).toBeInTheDocument();
 
     // Every section renders (titles are unique per panel; stop reason is
     // identified by its help copy which only appears on its panel).

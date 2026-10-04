@@ -454,10 +454,10 @@ describe('NavigationRoutePage — ready state', () => {
     renderPage();
 
     // KPI band: 5000 m → 5.0 km, 12 min, 600 s (echoed), 85 %.
-    expect(screen.getAllByText('5.0 km').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('12 min').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('5.00 km').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('12.00 min').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText(/600s/).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
 
     // Navigation-status hero: active badge + destination.
     expect(screen.getByText('Active')).toBeInTheDocument();
@@ -505,7 +505,7 @@ describe('NavigationRoutePage — ready state', () => {
     expect(screen.getByTestId('line-chart')).toHaveAttribute('data-points', '3');
 
     // Avg speed: (10+20+30)/3 = 20 m/s → 72.0 km/h.
-    expect(screen.getByText('72.0 km/h')).toBeInTheDocument();
+    expect(screen.getByText('72.00 km/h')).toBeInTheDocument();
 
     // Recent-destinations table dedupes to the two named stops.
     const recent = screen.getByTestId('maps:navigation-recent-destinations');
@@ -609,7 +609,7 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     expect(screen.getByText('No destination history available.')).toBeInTheDocument();
     expect(screen.getByText('No location snapshots recorded yet.')).toBeInTheDocument();
     // No moving speeds → avg speed collapses to 0.0 km/h (never NaN).
-    expect(screen.getByText('0.0 km/h')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km/h')).toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 

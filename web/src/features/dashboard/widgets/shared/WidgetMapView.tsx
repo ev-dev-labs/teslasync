@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapContainer, MapTileLayer } from '@/components/maps';
+import { MapContainer, MapTileLayer, MapInvalidator } from '@/components/maps';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 
@@ -59,7 +59,7 @@ export function WidgetMapView({
     <div
       role="region"
       aria-label={ariaLabel ?? t('widget.mapView.label', 'Map')}
-      className={cn('h-full w-full rounded-lg overflow-hidden', className)}
+      className={cn('relative flex min-h-0 flex-1 flex-col w-full rounded-lg overflow-hidden', className)}
     >
       <MapContainer
         center={center}
@@ -67,9 +67,10 @@ export function WidgetMapView({
         scrollWheelZoom={interactive}
         zoomControl={interactive}
         dragging={interactive}
-        className="h-full w-full bg-[#1a1a2e]"
+        className="min-h-0 flex-1 w-full bg-[#1a1a2e]"
       >
         <MapTileLayer style="dark" />
+        <MapInvalidator />
         {children}
       </MapContainer>
     </div>

@@ -273,7 +273,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     // 3 jobs total.
     expect(within(metricCard('Total exports')).getByText('3')).toBeInTheDocument();
     // 2048 + 0 + 5_000_000 bytes → "4.8 MB".
-    expect(within(metricCard('Total size')).getByText('4.8 MB')).toBeInTheDocument();
+    expect(within(metricCard('Total size')).getByText('4.77 MB')).toBeInTheDocument();
     // drives x2 beats charging x1 — rendered lower-cased from the type key.
     expect(within(metricCard('Most exported')).getByText('drives')).toBeInTheDocument();
   });

@@ -33,7 +33,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -75,6 +75,11 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 import YearReviewWidget from './YearReviewWidget';
+
+it.each([1, 2, 3, 4])('identifies the year review at %i columns', (cols) => {
+  renderWidget(cols, 1);
+  expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
+});
 import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -190,13 +195,15 @@ function renderWidget(cols: number, vehicleId?: number) {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   const props = { vehicleId, size: { cols, rows: 2 } } as WidgetProps;
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <YearReviewWidget {...props} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName(`Year in review ${YEAR}`);
+  return view;
 }
 
 beforeEach(() => {
@@ -212,6 +219,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
 });
 
 // ── Vehicle resolution + request contract ───────────────────────────────────
@@ -260,12 +269,12 @@ describe('YearReviewWidget vehicle resolution', () => {
 // ── States: loading / error / empty ─────────────────────────────────────────
 
 describe('YearReviewWidget states', () => {
-  it('renders a loading skeleton (no title, no empty copy) while fetching', () => {
+  it('retains its heading above a loading skeleton without empty copy', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget(2, 1);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText(`Year in Review ${YEAR}`)).toBeNull();
+    expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
     expect(screen.queryByText('No year-in-review data')).toBeNull();
   });
 
@@ -282,7 +291,7 @@ describe('YearReviewWidget states', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No year-in-review data')).toBeNull();
-    expect(screen.queryByText(`Year in Review ${YEAR}`)).toBeNull();
+    expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
   });
 
   it('shows the empty state when the endpoint returns no payload', async () => {
@@ -299,6 +308,16 @@ describe('YearReviewWidget states', () => {
 // ── Populated: standard (2-col) ─────────────────────────────────────────────
 
 describe('YearReviewWidget standard layout', () => {
+  it('localizes the busiest month using the active locale without changing its identity', async () => {
+    renderWidget(2, 1);
+    await screen.findByText('Jul');
+    act(() => { setGlobalLocale('de-DE'); });
+    const expectedMonth = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: 'UTC' })
+      .format(new Date(Date.UTC(YEAR, 6, 1)));
+    expect(screen.getByText(expectedMonth)).toBeInTheDocument();
+    expect(screen.getByText('Total distance')).toBeInTheDocument();
+    expect(screen.queryByText('Total miles')).not.toBeInTheDocument();
+  });
   it('renders the titled core stat grid with correctly-scaled km values', async () => {
     renderWidget(2, 1);
 
@@ -306,12 +325,12 @@ describe('YearReviewWidget standard layout', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Total distance: 12000 km → 12,000 km (NOT the old ~7 the bug produced).
-    expect(screen.getByText('12,000')).toBeInTheDocument();
+    expect(screen.getByText('12,000.00')).toBeInTheDocument();
     expect(screen.getByText('320')).toBeInTheDocument(); // total drives
-    expect(screen.getByText('2,400.0')).toBeInTheDocument(); // energy kWh
-    expect(screen.getByText('3,400')).toBeInTheDocument(); // CO₂ kg
+    expect(screen.getByText('2,400.00')).toBeInTheDocument(); // energy kWh
+    expect(screen.getByText('3,400.00')).toBeInTheDocument(); // CO₂ kg
     expect(screen.getByText('Jul')).toBeInTheDocument(); // busiest month
-    expect(screen.getByText('500.0')).toBeInTheDocument(); // longest drive km
+    expect(screen.getByText('500.00')).toBeInTheDocument(); // longest drive km
 
     // Standard layout must NOT include the wide-only stats.
     expect(screen.queryByText('Driving time')).toBeNull();
@@ -327,11 +346,11 @@ describe('YearReviewWidget wide layout', () => {
 
     expect(await screen.findByText('Driving time')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('300')).toBeInTheDocument(); // 18000 min → 300 h
+    expect(screen.getByText('300.00')).toBeInTheDocument(); // 18000 min → 300 h
     expect(screen.getByText('Top speed')).toBeInTheDocument();
-    expect(screen.getByText('180')).toBeInTheDocument(); // 180 km/h
+    expect(screen.getByText('180.00')).toBeInTheDocument(); // 180 km/h
     // Core stats still present.
-    expect(screen.getByText('12,000')).toBeInTheDocument();
+    expect(screen.getByText('12,000.00')).toBeInTheDocument();
   });
 });
 
@@ -343,16 +362,16 @@ describe('YearReviewWidget unit conversion (mi/mph)', () => {
     renderWidget(4, 1);
 
     // 12000 km → 12000*1000 m / 1609.344 = 7,456 mi.
-    expect(await screen.findByText('7,456')).toBeInTheDocument();
+    expect(await screen.findByText('7,456.45')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // 180 km/h → (180/3.6) m/s → 111.85 → 112 mph.
-    expect(screen.getByText('112')).toBeInTheDocument();
+    expect(screen.getByText('111.85')).toBeInTheDocument();
     // 500 km → 310.7 mi.
-    expect(screen.getByText('310.7')).toBeInTheDocument();
+    expect(screen.getByText('310.69')).toBeInTheDocument();
 
     // The mi unit label is shown, and the old broken single-digit km value is gone.
     expect(screen.getAllByText('mi').length).toBeGreaterThan(0);
-    expect(screen.queryByText('12,000')).toBeNull();
+    expect(screen.queryByText('12,000.00')).toBeNull();
   });
 });
 
@@ -363,14 +382,14 @@ describe('YearReviewWidget compact layout', () => {
     renderWidget(1, 1);
 
     // AnimatedNumber lands on the converted distance (reduced motion pinned).
-    expect(await screen.findByText('12,000')).toBeInTheDocument();
+    expect(await screen.findByText('12,000.00')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Unit + "in {year}" caption.
     expect(screen.getByText(/km\s+in\s+2/)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(String(YEAR)))).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
 
     // Compact has no title and no stat-grid labels.
-    expect(screen.queryByText(`Year in Review ${YEAR}`)).toBeNull();
+    expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
     expect(screen.queryByText('Total drives')).toBeNull();
   });
 });
@@ -378,7 +397,7 @@ describe('YearReviewWidget compact layout', () => {
 // ── Null-safety ─────────────────────────────────────────────────────────────
 
 describe('YearReviewWidget null-safety', () => {
-  it('renders 0/— placeholders (never NaN/undefined) for missing fields', async () => {
+  it('preserves unknown measurements instead of inventing zero totals', async () => {
     routeYearReview(
       makeYearReview({
         total_distance_km: undefined as unknown as number,
@@ -397,9 +416,9 @@ describe('YearReviewWidget null-safety', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Busiest month with no monthly stats collapses to the em-dash placeholder.
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(8);
     // Missing longest drive + missing energy → 0.0 (both 1-dp stats).
-    expect(screen.getAllByText('0.0').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('0.00')).toBeNull();
     // Nothing leaked NaN / undefined into the DOM.
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });

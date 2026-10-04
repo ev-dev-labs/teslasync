@@ -38,7 +38,7 @@
  *     Wh/mi (the SI → display boundary).
  *   - chart render: a populated drive paints a `.recharts-surface`; an empty
  *     drive shows the "no telemetry" empty state (no surface).
- *   - compact layout: the stat summary without a chart / legend / title.
+ *   - compact layout: the heading and stat summary without a chart / legend.
  *   - null-safety / hardening: efficiency omitted when energy or distance is
  *     absent; null distance/duration render "0.0" / "0" (the `?? 0` guards);
  *     an all-null telemetry point still builds a chart without throwing.
@@ -245,16 +245,72 @@ function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}) {
   );
 }
 
+const canvasContext = {
+  font: '',
+  measureText: vi.fn((label: string) => ({ width: label.length * 8 })),
+};
+let canvasDescriptor: PropertyDescriptor | undefined;
+
 beforeEach(() => {
+  canvasDescriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext');
+  canvasContext.measureText.mockClear();
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true, value: () => canvasContext,
+  });
   mockVehicles.mockReturnValue(vehicles([1]));
   mockUnits.mockReturnValue(units('km'));
   mockDrives.mockReturnValue(qr({ data: [makeDrive()] }));
   mockTelemetry.mockReturnValue(qr({ data: [makePoint()] }));
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Drive telemetry', level: 3 })).toBeVisible();
+});
+
 afterEach(() => {
   cleanup();
+  if (canvasDescriptor) Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', canvasDescriptor);
+  else Reflect.deleteProperty(HTMLCanvasElement.prototype, 'getContext');
   vi.clearAllMocks();
+});
+
+describe('DriveTelemetryWidget — complete axis labels', () => {
+  it.each([STANDARD, WIDE])('measures both axes and the existing speed-domain bound at $cols columns', size => {
+    mockTelemetry.mockReturnValue(qr({ data: [makePoint({ power: -30_000 })] }));
+    const { container } = renderWidget(size);
+    expect(canvasContext.measureText).toHaveBeenCalledWith('72.00');
+    expect(canvasContext.measureText).toHaveBeenCalledWith('82.00');
+    expect(canvasContext.measureText).toHaveBeenCalledWith('-30.00');
+    expect(canvasContext.font).toMatch(new RegExp(`^${size.cols >= 3 ? 11 : 10}px `));
+    const axes = container.querySelectorAll('.recharts-yAxis');
+    expect(axes).toHaveLength(2);
+    const speedTick = axes[0].querySelector('.recharts-cartesian-axis-tick-value');
+    const powerTick = axes[1].querySelector('.recharts-cartesian-axis-tick-value');
+    expect(speedTick).toHaveAttribute('x', '56');
+    expect(powerTick).toHaveAttribute('x', '256');
+    expect(speedTick).toHaveAttribute('text-anchor', 'end');
+    expect(powerTick).toHaveAttribute('text-anchor', 'start');
+  });
+
+  it('does not measure or render axes in the compact summary', () => {
+    const { container } = renderWidget(COMPACT);
+    expect(canvasContext.measureText).not.toHaveBeenCalled();
+    expect(container.querySelector('.recharts-surface')).toBeNull();
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+  });
+
+  it('does not format missing or nonfinite telemetry as axis observations', () => {
+    mockTelemetry.mockReturnValue(qr({
+      data: [makePoint({ speed: null, power: Number.NaN })],
+    }));
+    renderWidget(STANDARD);
+    expect(canvasContext.measureText).toHaveBeenCalledWith('0.00');
+    expect(canvasContext.measureText).toHaveBeenCalledWith('10.00');
+    expect(canvasContext.measureText.mock.calls.flat()).not.toEqual(
+      expect.arrayContaining(['NaN', 'undefined', 'null']),
+    );
+  });
 });
 
 describe('DriveTelemetryWidget — vehicle resolution & hook wiring', () => {
@@ -381,15 +437,15 @@ describe('DriveTelemetryWidget — standard layout (metric)', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(screen.getByText('100.0')).toBeInTheDocument(); // 100000 m → 100.0 km
+    expect(screen.getByText('100.00')).toBeInTheDocument(); // 100000 m → 100 km
     expect(screen.getByText('km')).toBeInTheDocument();
 
     expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.getByText('30')).toBeInTheDocument(); // 1800 s → 30 min
+    expect(screen.getByText('30.00')).toBeInTheDocument(); // 1800 s → 30 min
     expect(screen.getByText('min')).toBeInTheDocument();
 
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('150')).toBeInTheDocument(); // 15000 Wh / 100 km
+    expect(screen.getByText('150.00')).toBeInTheDocument(); // 15000 Wh / 100 km
     expect(screen.getByText('Wh/km')).toBeInTheDocument();
   });
 
@@ -452,24 +508,23 @@ describe('DriveTelemetryWidget — imperial units', () => {
     mockTelemetry.mockReturnValue(qr({ data: [] }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('62.1')).toBeInTheDocument(); // 100000 m ÷ 1609.344
+    expect(screen.getByText('62.14')).toBeInTheDocument(); // 100000 m ÷ 1609.344
     expect(screen.getByText('mi')).toBeInTheDocument();
-    expect(screen.getByText('241')).toBeInTheDocument(); // 15000 Wh ÷ 62.137 mi
+    expect(screen.getByText('241.40')).toBeInTheDocument(); // 15000 Wh ÷ 62.137 mi
     expect(screen.getByText('Wh/mi')).toBeInTheDocument();
     expect(screen.queryByText('Wh/km')).toBeNull();
   });
 });
 
 describe('DriveTelemetryWidget — compact layout', () => {
-  it('renders the stat summary without a chart, legend, or title', () => {
+  it('renders the heading and stat summary without a chart or legend', () => {
     renderWidget(COMPACT);
 
     expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(screen.getByText('100.0')).toBeInTheDocument();
+    expect(screen.getByText('100.00')).toBeInTheDocument();
     expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.getByText('30')).toBeInTheDocument();
-    // Compact tiles suppress the shell title, the chart, and the legend.
-    expect(screen.queryByText('Drive telemetry')).toBeNull();
+    expect(screen.getByText('30.00')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drive telemetry', level: 3 })).toBeVisible();
     expect(screen.queryByTestId('chart-legend')).toBeNull();
   });
 
@@ -507,7 +562,7 @@ describe('DriveTelemetryWidget — null-safety & hardening', () => {
     renderWidget(STANDARD);
 
     expect(screen.queryByText('Efficiency')).toBeNull();
-    expect(screen.getByText('0.0')).toBeInTheDocument(); // distance renders 0.0, not NaN
+    expect(screen.getByText('0.00')).toBeInTheDocument(); // distance renders zero, not NaN
   });
 
   it('keeps missing distance and duration unknown rather than inventing zeros', () => {
@@ -526,7 +581,7 @@ describe('DriveTelemetryWidget — null-safety & hardening', () => {
     renderWidget(STANDARD);
 
     expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 

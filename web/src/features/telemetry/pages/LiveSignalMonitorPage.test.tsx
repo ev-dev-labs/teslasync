@@ -197,8 +197,8 @@ describe('LiveSignalMonitorPage', () => {
     renderPage();
 
     // Value-type breakdown: numeric 3/5 = 60%, boolean & string 1/5 = 20% each.
-    expect(screen.getByText('3 · 60%')).toBeInTheDocument();
-    expect(screen.getAllByText('1 · 20%')).toHaveLength(2);
+    expect(screen.getByText('3 · 60.00%')).toBeInTheDocument();
+    expect(screen.getAllByText('1 · 20.00%')).toHaveLength(2);
 
     // Ranking: speed is the busiest signal (count 3), the two singletons tie.
     expect(screen.getByText('3×')).toBeInTheDocument();

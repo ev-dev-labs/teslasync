@@ -7,6 +7,7 @@ import {
   chartGrid, axisTickSm, useThemeChartPalette,
   AREA_DEFAULTS, areaGradient,
   EmbeddedChart,
+  useMeasuredAxisWidth,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
@@ -24,7 +25,7 @@ import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function BatteryDegradationTrendWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -49,6 +50,13 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   }, [data]);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
+  const healthAxisLabels = useMemo(() => {
+    const values = chartData.map(point => point.health).filter((value): value is number => value != null && Number.isFinite(value));
+    return [...values, ...(values.length ? [Math.min(...values) - 2] : []), 80, 100].map(value => `${value}%`);
+  }, [chartData]);
+  const healthAxisWidth = useMeasuredAxisWidth({
+    labels: healthAxisLabels, fontSize: axisTickSm.fontSize, minWidth: 60, padding: 24, enabled: !isCompact,
+  });
   const currentHealth = knownNumber(data?.current_health_pct) ?? knownNumber(data?.current_health);
   const degradationRate = knownNumber(data?.degradation_rate_pct_per_month);
   const totalCycles = knownNumber(data?.current_cycles);
@@ -68,10 +76,10 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       });
     items.push({
       label: t('widget.cycles', 'Cycles'),
-      value: totalCycles != null ? fmtNumber(totalCycles) : '—',
+      value: totalCycles != null ? fmtInt(totalCycles) : '—',
     });
     return items;
-  }, [currentHealth, degradationRate, totalCycles, t, fmtNumber]);
+  }, [currentHealth, degradationRate, totalCycles, t, fmtNumber, fmtInt]);
 
   const handleRefresh = useCallback(() => {
     void refetch();
@@ -93,7 +101,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       ]}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+        <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
           {areaGradient(gradientId, palette.series[1])}
           {chartGrid}
           <XAxis dataKey="month" {...axisTickSm} />
@@ -101,6 +109,8 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
             domain={['dataMin - 2', 100]}
             tickFormatter={(v: number) => `${v}%`}
             {...axisTickSm}
+            tick={axisTickSm}
+            width={healthAxisWidth}
           />
           <Tooltip content={<ChartTooltip />} />
           <ReferenceLine y={80} stroke={gaugeTone.danger} strokeDasharray="4 4" strokeOpacity={0.4} />

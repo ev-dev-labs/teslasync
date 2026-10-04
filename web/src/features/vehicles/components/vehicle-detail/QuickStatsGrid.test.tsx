@@ -144,8 +144,8 @@ describe('batteryColor', () => {
 
 describe('formatBatteryLevel', () => {
   it('appends a percent sign to a finite level, including the falsy 0', () => {
-    expect(formatBatteryLevel(72)).toBe('72%')
-    expect(formatBatteryLevel(0)).toBe('0%')
+    expect(formatBatteryLevel(72)).toBe('72.00%')
+    expect(formatBatteryLevel(0)).toBe('0.00%')
   })
 
   it('renders an em-dash for missing / non-finite levels (never "null%")', () => {
@@ -173,7 +173,7 @@ describe('QuickStatsGrid', () => {
     }
 
     // Battery routed through formatBatteryLevel.
-    expect(screen.getByText('72%')).toBeInTheDocument()
+    expect(screen.getByText('72.00%')).toBeInTheDocument()
     // Power formatted with the kW suffix at global precision (2).
     expect(screen.getByText('45.50 kW')).toBeInTheDocument()
     // Status echoed into the State tile.
@@ -184,9 +184,9 @@ describe('QuickStatsGrid', () => {
     renderGrid()
 
     // rated_range and odometer both go through the distance formatter.
-    expect(formatDistance).toHaveBeenCalledWith(320000, { precision: 0 })
-    expect(formatDistance).toHaveBeenCalledWith(15000000, { precision: 0 })
-    expect(formatSpeed).toHaveBeenCalledWith(25, { precision: 0 })
+    expect(formatDistance).toHaveBeenCalledWith(320000)
+    expect(formatDistance).toHaveBeenCalledWith(15000000)
+    expect(formatSpeed).toHaveBeenCalledWith(25)
     expect(formatTemperature).toHaveBeenCalledWith(21)
     expect(formatTemperature).toHaveBeenCalledWith(8)
 
@@ -222,7 +222,7 @@ describe('QuickStatsGrid', () => {
   it('applies the red accent ring only when the battery is critical (<=20%)', () => {
     renderGrid({ battery_level: 12 })
     expect(metricColor('Battery')).toBe('red')
-    expect(screen.getByText('12%')).toBeInTheDocument()
+    expect(screen.getByText('12.00%')).toBeInTheDocument()
 
     cleanup()
 
@@ -246,7 +246,7 @@ describe('QuickStatsGrid', () => {
 
   it('renders a 0% battery verbatim with the red critical accent (not an em-dash)', () => {
     renderGrid({ battery_level: 0 })
-    expect(screen.getByText('0%')).toBeInTheDocument()
+    expect(screen.getByText('0.00%')).toBeInTheDocument()
     expect(metricColor('Battery')).toBe('red')
   })
 

@@ -31,9 +31,9 @@
  * Strategy: `useQuery` is the network boundary and is fully controllable via a
  * hoisted mock (only the widget consumes it directly). `useVehicles`,
  * `useFormatting` and `useUnits` are mocked so formatting is deterministic and
- * the SI-meter contract is observable via spies. `react-i18next` echoes each
- * `t(key, fallback)` fallback (with `{{var}}` interpolation) so assertions read
- * against English copy. `DataFreshness`'s display hooks are stubbed. A
+ * the SI-meter contract is observable via spies. `react-i18next` uses the real
+ * English catalog for session pluralization and echoes other fallbacks with
+ * interpolation. `DataFreshness`'s display hooks are stubbed. A
  * `<MemoryRouter>` wraps every render because the error panel navigates.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -48,7 +48,7 @@ import type { WidgetSize } from './types';
 const { useQueryMock, requestMock, vehiclesMock, formattingMock, unitsMock } =
   vi.hoisted(() => ({
     useQueryMock: vi.fn(),
-    requestMock: vi.fn(() => Promise.resolve([])),
+    requestMock: vi.fn<(...args: unknown[]) => Promise<never[]>>(() => Promise.resolve([])),
     vehiclesMock: vi.fn(),
     formattingMock: vi.fn(),
     unitsMock: vi.fn(),
@@ -78,16 +78,20 @@ vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => unitsMock(),
 }));
 
-// i18n → echo the developer fallback, interpolating `{{var}}` placeholders.
+// Session grammar needs real catalog resolution, not fallback interpolation.
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  const { createEnglishI18n } = await import('@/test/createEnglishI18n');
+  const i18n = await createEnglishI18n();
   const interp = (tpl: string, opts?: Record<string, unknown>) =>
     opts ? tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (opts[k] != null ? String(opts[k]) : '')) : tpl;
   return {
     ...actual,
     useTranslation: () => ({
       t: (_key: string, fallback?: string | Record<string, unknown>, opts?: Record<string, unknown>) =>
-        typeof fallback === 'string' ? interp(fallback, opts) : _key,
+        _key === 'widget.chargeCost.sessions'
+          ? i18n.t(_key, { ...opts, defaultValue: typeof fallback === 'string' ? fallback : _key })
+          : typeof fallback === 'string' ? interp(fallback, opts) : _key,
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -103,6 +107,11 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 }));
 
 import ChargeCostTrackerWidget, { computeMetrics, type CostMetrics } from './ChargeCostTrackerWidget';
+
+it.each([1, 2, 3])('identifies charge costs at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Charge cost tracker' })).toBeInTheDocument();
+});
 
 // ── Fixtures ────────────────────────────────────────────────────────────────────
 
@@ -144,8 +153,8 @@ function makeSession(over: Partial<ChargingSession> = {}): ChargingSession {
 
 // Deterministic display-boundary spies with realistic SI-metre semantics.
 let formatCurrency: ReturnType<typeof vi.fn>;
-let costPerDistanceUnit: ReturnType<typeof vi.fn>;
-let estimateGasCost: ReturnType<typeof vi.fn>;
+let costPerDistanceUnit: ReturnType<typeof vi.fn<(kwh: number, distanceM: number) => number | null>>;
+let estimateGasCost: ReturnType<typeof vi.fn<(distanceM: number) => number | null>>;
 
 interface QueryOverrides {
   data?: ChargingSession[];
@@ -176,17 +185,30 @@ const FULL: WidgetSize = { cols: 2, rows: 2 };
 const NONTALL: WidgetSize = { cols: 2, rows: 1 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 
+it.each([
+  { count: 1, label: '1 session', size: FULL },
+  { count: 2, label: '2 sessions', size: FULL },
+  { count: 1, label: '1 session', size: NONTALL },
+  { count: 2, label: '2 sessions', size: NONTALL },
+])('renders catalog session grammar for $count sessions at $size.rows rows', ({ count, label, size }) => {
+  setQuery({ data: Array.from({ length: count }, (_, index) => makeSession({ id: index + 1 })) });
+  renderWidget(size);
+  expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
+});
+
 function renderWidget(size: WidgetSize = FULL, vehicleId?: number) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <ChargeCostTrackerWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charge cost tracker');
+  return view;
 }
 
 /** Pull the queryFn passed to the (mocked) useQuery on the most recent render. */
 function lastQueryFn(): () => unknown {
-  const opts = useQueryMock.mock.calls.at(-1)?.[0] as { queryFn: () => unknown };
+  const opts = useQueryMock.mock.calls[useQueryMock.mock.calls.length - 1]?.[0] as { queryFn: () => unknown };
   return opts.queryFn;
 }
 
@@ -228,6 +250,32 @@ beforeEach(() => {
 // ── computeMetrics (pure aggregation) ─────────────────────────────────────────
 
 describe('computeMetrics', () => {
+  it('preserves recorded billing when configured pricing is unavailable', () => {
+    const recorded = computeMetrics(
+      [makeSession({ cost_decimal: 2.5 })],
+      null,
+      () => null,
+      () => null,
+    );
+    expect(recorded.totalCost).toBe(2.5);
+
+    const unpriced = computeMetrics(
+      [makeSession({ cost_decimal: null, cost: null })],
+      null,
+      () => null,
+      () => null,
+    );
+    expect(unpriced.totalCost).toBeNull();
+
+    const mixed = computeMetrics(
+      [makeSession({ cost_decimal: 2.5 }), makeSession({ cost_decimal: null, cost: null })],
+      null,
+      () => null,
+      () => null,
+    );
+    expect(mixed.totalCost).toBeNull();
+  });
+
   it('sums SI energy and prefers a recorded session cost over the kWh estimate', () => {
     const costFn = vi.fn(() => 0.05);
     const gasFn = vi.fn(() => 20);
@@ -249,8 +297,8 @@ describe('computeMetrics', () => {
   });
 
   it('derives the estimated range in SI METERS (not miles) before calling the cost/gas helpers', () => {
-    const costFn = vi.fn(() => null);
-    const gasFn = vi.fn(() => null);
+    const costFn = vi.fn<(kwh: number, distanceM: number) => number | null>(() => null);
+    const gasFn = vi.fn<(distanceM: number) => number | null>(() => null);
     computeMetrics([makeSession({ total_energy_added_wh: 10_000, cost: null })], 0.1, costFn, gasFn);
 
     const expectedMeters = 10 * AVG_M_PER_KWH; // 56 327.04 m for 10 kWh
@@ -317,7 +365,7 @@ describe('ChargeCostTrackerWidget — compact layout', () => {
     setQuery({ data: [makeSession({ cost: 12 }), makeSession({ cost: 8 })] });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('$20')).toBeInTheDocument(); // formatCurrency(20, 0)
+    expect(screen.getByText('$20.00')).toBeInTheDocument();
     expect(screen.getByText('30-day cost')).toBeInTheDocument();
   });
 
@@ -339,7 +387,7 @@ describe('ChargeCostTrackerWidget — full layout', () => {
 
     expect(screen.getByText('Total energy')).toBeInTheDocument();
     expect(screen.getByText('Total cost')).toBeInTheDocument();
-    expect(screen.getByText('10.0 kWh')).toBeInTheDocument(); // 10 kWh from 10 000 Wh
+    expect(screen.getByText('10.00 kWh')).toBeInTheDocument(); // 10 kWh from 10 000 Wh
     expect(screen.queryByText('vs gas savings')).toBeNull();
   });
 
@@ -359,9 +407,9 @@ describe('ChargeCostTrackerWidget — full layout', () => {
     // 10 kWh → ~35 mi of range → gas ≈ $4.08 → savings ≈ $3.08 vs the $1 charge cost.
     expect(screen.getByText('$3.08')).toBeInTheDocument();
 
-    const distArg = costPerDistanceUnit.mock.calls.at(-1)?.[1] as number;
+    const distArg = costPerDistanceUnit.mock.calls[costPerDistanceUnit.mock.calls.length - 1]?.[1] as number;
     expect(distArg).toBeCloseTo(10 * AVG_M_PER_KWH, 1); // ~56 327 m, not 35
-    expect(estimateGasCost.mock.calls.at(-1)?.[0]).toBeCloseTo(10 * AVG_M_PER_KWH, 1);
+    expect(estimateGasCost.mock.calls[estimateGasCost.mock.calls.length - 1]?.[0]).toBeCloseTo(10 * AVG_M_PER_KWH, 1);
   });
 
   it('falls back to "—" for gas savings when no gas price is configured (helper returns null)', () => {
@@ -383,7 +431,7 @@ describe('ChargeCostTrackerWidget — request contract', () => {
     renderWidget(FULL, 7);
 
     lastQueryFn()();
-    const url = requestMock.mock.calls.at(-1)?.[0] as string;
+    const url = requestMock.mock.calls[requestMock.mock.calls.length - 1]?.[0] as string;
 
     expect(url).toContain('/charging?vehicle_id=7&limit=100&start=');
     expect(url).not.toContain('/api/v1');
@@ -396,7 +444,7 @@ describe('ChargeCostTrackerWidget — request contract', () => {
     renderWidget(FULL, undefined);
 
     lastQueryFn()();
-    const url = requestMock.mock.calls.at(-1)?.[0] as string;
+    const url = requestMock.mock.calls[requestMock.mock.calls.length - 1]?.[0] as string;
     expect(url).toContain('vehicle_id=42');
   });
 });

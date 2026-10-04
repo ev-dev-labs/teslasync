@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, CheckCircle2, Clock, MonitorSmartphone } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -6,10 +6,16 @@ import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useVehicles, useVehicleState, useVehicleConfigLatest } from '@/api/hooks/useVehicles';
+import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { combineDataStates } from '@/api/dataState';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 
 type UpdateStatus =
+  | 'unknown'
   | 'up-to-date'
   | 'available'
   | 'downloading'
@@ -19,29 +25,69 @@ type UpdateStatus =
 
 export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
-  const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
-  const { data: configData, isLoading: configLoading } = useVehicleConfigLatest(id, 60_000);
+  const vehiclesQuery = useVehicles();
+  const rawId = vehicleId ?? vehiclesQuery.data?.[0]?.id;
+  const id = rawId != null && Number.isSafeInteger(rawId) && rawId > 0 ? rawId : 0;
+  const stateQuery = useVehicleState(id);
+  const configQuery = useVehicleConfigLatest(id, 60_000);
+  const { data: stateData, isLoading: stateLoading } = stateQuery;
+  const { data: configData, isLoading: configLoading } = configQuery;
+  const stateState = useDataState(stateQuery);
+  const configState = useDataState(configQuery, {
+    partial: [configData?.software_update_download_pct, configData?.software_update_install_pct]
+      .some(value => value != null && (!isFiniteNumber(value) || value < 0 || value > 100)),
+  });
+  const vehiclesState = useDataState(vehiclesQuery);
+  const handleRefresh = useCallback(() => {
+    if (!id) {
+      void vehiclesQuery.refetch();
+      return;
+    }
+    void stateQuery.refetch();
+    void configQuery.refetch();
+  }, [id, vehiclesQuery.refetch, stateQuery.refetch, configQuery.refetch]);
+  const combined = combineDataStates([stateState, configState]);
+  const hasPayload = stateState.hasData || configState.hasData;
+  const sourceError = stateState.fatalError ?? configState.fatalError;
+  const dataState = id ? {
+    ...combined,
+    data: stateData ?? configData,
+    hasData: hasPayload,
+    fatalError: hasPayload ? null : sourceError,
+    refreshError: hasPayload ? combined.refreshError ?? sourceError : null,
+    status: !hasPayload && sourceError ? 'initialFailure' as const : combined.status,
+    retry: handleRefresh,
+  } : vehiclesState;
+  const sourceTimes = [stateState.updatedAt, configState.updatedAt]
+    .filter((value): value is number => value != null);
+  const dataUpdatedAt = id
+    ? sourceTimes.length > 0 ? Math.min(...sourceTimes) : 0
+    : vehiclesQuery.dataUpdatedAt;
+  const isFetching = id ? stateQuery.isFetching || configQuery.isFetching : vehiclesQuery.isFetching;
+  const isStale = id ? stateQuery.isStale || configQuery.isStale : vehiclesQuery.isStale;
+  const isError = id ? stateQuery.isError || configQuery.isError : vehiclesQuery.isError;
 
   const isLoading = stateLoading || configLoading;
   const state = stateData?.state;
   const currentVersion = state?.software_version ?? '—';
 
   const updateVersion = configData?.software_update_version ?? null;
-  const downloadPct = configData?.software_update_download_pct ?? null;
-  const installPct = configData?.software_update_install_pct ?? null;
+  const rawDownloadPct = configData?.software_update_download_pct;
+  const rawInstallPct = configData?.software_update_install_pct;
+  const downloadPct = isFiniteNumber(rawDownloadPct) && rawDownloadPct >= 0 && rawDownloadPct <= 100 ? rawDownloadPct : null;
+  const installPct = isFiniteNumber(rawInstallPct) && rawInstallPct >= 0 && rawInstallPct <= 100 ? rawInstallPct : null;
   const expectedDuration = configData?.software_update_expected_duration ?? null;
   const scheduledStart = configData?.software_update_scheduled_start ?? null;
 
   const updateStatus = useMemo<UpdateStatus>(() => {
+    if (configData == null) return 'unknown';
     if (!updateVersion) return 'up-to-date';
     if (installPct != null && installPct > 0 && installPct < 100) return 'installing';
     if (downloadPct != null && downloadPct > 0 && downloadPct < 100) return 'downloading';
     if (installPct === 100) return 'installed';
     if (downloadPct === 100) return 'ready';
     return 'available';
-  }, [updateVersion, downloadPct, installPct]);
+  }, [configData, updateVersion, downloadPct, installPct]);
 
   // Show the body when we have EITHER live vehicle state OR a pending update
   // from the config snapshot. The two queries poll independently, so gating
@@ -57,11 +103,12 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
       title={isCompact ? undefined : t('widget.softwareUpdate', 'Software update')}
       icon={isCompact ? undefined : <MonitorSmartphone className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       {hasData ? (
         <FadeIn>
@@ -109,9 +156,7 @@ function CompactView({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1.5">
       <MonitorSmartphone className="h-5 w-5 text-neon-cyan" />
-      <span className="text-xs font-bold text-[var(--text-primary)] truncate max-w-full px-1">
-        {version || '—'}
-      </span>
+      <WidgetBigNumber value={version || '—'} align="center" size="secondary" />
       <StatusBadgeSmall status={updateStatus} t={t} />
     </div>
   );
@@ -139,13 +184,17 @@ function FullView({
   isTall: boolean;
   t: (k: string, f: string) => string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col justify-center gap-2.5">
       {/* Current version row */}
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="min-w-0">
-          <p className="text-2xs text-[var(--text-muted)]">{t('widget.currentVersion', 'Current version')}</p>
-          <p className="text-sm font-bold text-[var(--text-primary)] truncate">{version || '—'}</p>
+          <WidgetBigNumber
+            label={t('widget.currentVersion', 'Current version')}
+            value={version || '—'}
+            size="secondary"
+          />
         </div>
         <StatusBadgeSmall status={updateStatus} t={t} />
       </div>
@@ -171,7 +220,7 @@ function FullView({
               max={100}
               color="#22d3ee"
               label={t('widget.downloading', 'Downloading')}
-              sublabel={`${downloadPct}%`}
+              sublabel={`${fmtNumber(downloadPct)}%`}
             />
           )}
 
@@ -181,7 +230,7 @@ function FullView({
               max={100}
               color="#a78bfa"
               label={t('widget.installing', 'Installing')}
-              sublabel={`${installPct}%`}
+              sublabel={`${fmtNumber(installPct)}%`}
             />
           )}
 
@@ -193,11 +242,11 @@ function FullView({
           )}
 
           {/* Expected duration — shown in tall layout when relevant */}
-          {isTall && expectedDuration != null && expectedDuration > 0 && (
+          {isTall && isFiniteNumber(expectedDuration) && expectedDuration > 0 && (
             <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] pt-0.5 border-t border-white/[0.06]">
               <Clock className="h-3 w-3 shrink-0" />
               <span>
-                {t('widget.estimatedTime', 'Est. time')}: ~{expectedDuration}{' '}
+                {t('widget.estimatedTime', 'Est. time')}: ~{fmtNumber(expectedDuration)}{' '}
                 {t('widget.minutes', 'min')}
               </span>
             </div>
@@ -234,7 +283,8 @@ function StatusBadgeSmall({
   status: UpdateStatus;
   t: (k: string, f: string) => string;
 }) {
-  const config: Record<UpdateStatus, { variant: 'success' | 'info' | 'warning'; label: string }> = {
+  const config: Record<UpdateStatus, { variant: 'success' | 'info' | 'warning' | 'neutral'; label: string }> = {
+    unknown: { variant: 'neutral', label: t('common:unknown', 'Unknown') },
     'up-to-date': { variant: 'success', label: t('widget.statusUpToDate', 'Up to date') },
     available: { variant: 'info', label: t('widget.statusAvailable', 'Available') },
     downloading: { variant: 'warning', label: t('widget.statusDownloading', 'Downloading') },

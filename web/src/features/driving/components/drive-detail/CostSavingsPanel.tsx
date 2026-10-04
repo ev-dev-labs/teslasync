@@ -13,14 +13,14 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: DriveStats }) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const { settings } = useSettings();
+  const { settings, settingsUnavailable } = useSettings();
   const { unitPrefs } = useUnits();
   const { costPerKwh, currencySymbol, formatEnergyCost, formatCurrency, costPerDistanceUnit, estimateGasCost } = useFormatting();
   const { energyWh } = driveEnergyEvidence(drive, stats);
   const kwh = energyWh != null && Number.isFinite(energyWh) ? energyWh / 1000 : null;
   const distanceM = drive.distanceM ?? 0;
   const gasCost = estimateGasCost(distanceM);
-  const evCost = kwh != null ? kwh * costPerKwh : null;
+  const evCost = kwh != null && costPerKwh != null ? kwh * costPerKwh : null;
   const savings = gasCost != null && evCost != null ? gasCost - evCost : null;
   const savingsPct = gasCost != null && gasCost > 0 && savings != null ? savings / gasCost * 100 : null;
   const costPerUnit = kwh != null ? costPerDistanceUnit(kwh, distanceM) : null;
@@ -38,15 +38,15 @@ export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: 
         <Text as="p" variant="caption">
           {t('driveDetail.report.costMethod', 'Estimate using configured rates, not a charging invoice. Energy source is listed in energy evidence.')}
         </Text>
-        <Table aria-label={t('driveDetail.costSavings', 'Cost and savings')}>
+        <Table variant="embedded" aria-label={t('driveDetail.costSavings', 'Cost and savings')}>
           <thead><tr><th scope="col">{t('driveDetail.report.metric', 'Metric')}</th><th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th></tr></thead>
           <tbody>{rows.map((row) => (
             <tr key={row.id}><th scope="row">{row.label}</th><td className="whitespace-nowrap tabular-nums">{row.value}</td></tr>
           ))}</tbody>
         </Table>
         <Text as="p" variant="caption">
-          {t('driveDetail.atRate', 'at {{currencySymbol}}{{costPerKwh}}/kWh', { currencySymbol, costPerKwh })}
-          {' · '}{t('driveDetail.atMpg', 'at {{mpg}} MPG', { mpg: settings.gas_efficiency_mpg ?? '—' })}
+          {t('driveDetail.atRate', 'at {{currencySymbol}}{{costPerKwh}}/kWh', { currencySymbol, costPerKwh: costPerKwh ?? '—' })}
+          {' · '}{t('driveDetail.atMpg', 'at {{mpg}} MPG', { mpg: settingsUnavailable ? '—' : settings.gas_efficiency_mpg ?? '—' })}
         </Text>
       </GlassPanel>
     </FadeIn>

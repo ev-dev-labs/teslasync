@@ -2,13 +2,14 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { AlertTriangle, AlertOctagon, Info } from 'lucide-react';
-import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useAnomalies } from '@/api/hooks/useAnomalies';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDataState } from '@/hooks/useDataState';
+import { safeArray } from '@/lib/safeArray';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetTipCards, type TipItem } from './shared';
+import { WidgetBigNumber, WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -20,8 +21,8 @@ const SEVERITY_IMPACT: Record<string, 'high' | 'medium' | 'low'> = {
   info: 'low',
 };
 
-const SEVERITY_BADGE: Record<string, 'danger' | 'warning' | 'neutral'> = {
-  critical: 'danger',
+const SEVERITY_BADGE: Record<string, 'error' | 'warning' | 'neutral'> = {
+  critical: 'error',
   warning: 'warning',
   info: 'neutral',
 };
@@ -80,18 +81,25 @@ export function maxSeverity(anomalies: { severity: string }[]): string {
 }
 
 export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : null;
 
+  const query = useAnomalies(vehicleIdStr);
   const {
     data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useAnomalies(vehicleIdStr);
+  } = query;
+  const hasAnomalyEvidence = Array.isArray(data?.anomalies);
+  const unavailable = vehicleIdStr == null && !vehiclesLoading && !isLoading && data === undefined && !error;
+  const state = useDataState(
+    { ...query, data: unavailable ? null : data },
+    { partial: data != null && !hasAnomalyEvidence, unavailable },
+  );
 
   const isCompact = size.cols <= 1;
-  const anomalies = data?.anomalies ?? [];
+  const anomalies = safeArray(data?.anomalies).filter(entry => entry != null);
 
   const tips: TipItem[] = useMemo(
     () =>
@@ -100,7 +108,7 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
         .map((entry, index) => ({
           id: `${entry.signal ?? 'signal'}-${entry.detected_at ?? index}`,
           icon: severityIcon(entry.severity),
-          title: `${entry.signal ?? '—'} · z=${fmtNumber(entry.z_score ?? 0)} · ${formatRelativeTime(entry.detected_at ?? '', t)}`,
+          title: `${entry.signal ?? '—'} · z=${entry.z_score != null && Number.isFinite(entry.z_score) ? fmtNumber(entry.z_score) : '—'} · ${formatRelativeTime(entry.detected_at ?? '', t)}`,
           description: entry.message ?? '—',
           impact: SEVERITY_IMPACT[entry.severity] ?? ('low' as const),
           impactLabel: t(
@@ -116,8 +124,10 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
   }, [refetch]);
 
   const shellProps = {
-    loading: isLoading,
-    error: error ? String(error) : null,
+    title: t('widget.anomalyDetector.title', 'Anomaly detector'),
+    loading: isLoading || (vehicleId == null && vehiclesLoading),
+    dataState: state,
+    error: state.fatalError ? String(state.fatalError) : null,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -133,13 +143,17 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
     return (
       <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
-          {count > 0 ? (
-            <>
-              <span className="text-2xl font-bold text-[var(--text-primary)]">{count}</span>
-              <Badge variant={badgeVariant} size="sm">
-                {t('widget.anomalyDetector.activeCount', '{{count}} active', { count })}
-              </Badge>
-            </>
+          {count > 0 || !hasAnomalyEvidence ? (
+            <WidgetBigNumber
+              value={hasAnomalyEvidence ? fmtInt(count) : null}
+              align="center"
+              badge={hasAnomalyEvidence ? {
+                text: t('widget.anomalyDetector.activeCount', '{{count}} active', {
+                  count, replace: { count: fmtInt(count) },
+                }),
+                variant: badgeVariant,
+              } : undefined}
+            />
           ) : (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
@@ -154,18 +168,21 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
 
   return (
     <WidgetShell
-      title={t('widget.anomalyDetector.title', 'Anomaly detector')}
       icon={<AlertTriangle className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
       {...shellProps}
     >
       <div className="flex flex-col h-full">
         <div className="flex-1 min-h-0">
-          <WidgetTipCards
+          {hasAnomalyEvidence ? <WidgetTipCards
             tips={tips}
             compact={false}
             emptyMessage={t('widget.anomalyDetector.noAnomalies', 'No anomalies')}
             emptyIcon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-          />
+          /> : (
+            <EmptyState /* no-action: source evidence is absent; shell recovery remains available */
+              message={t('common.noData', 'No data available')}
+            />
+          )}
         </div>
       </div>
     </WidgetShell>

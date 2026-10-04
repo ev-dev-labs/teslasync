@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Calendar, DollarSign, Lightbulb, Shield } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { Caption, GlassPanel } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
@@ -18,6 +18,8 @@ interface OptimizerSectionProps {
 export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const locationPct = optimizer.current_schedule.home_charging_pct;
+  const hasLocationEvidence = Number.isFinite(locationPct) && locationPct > 0 && locationPct <= 100;
   // Neutralise NaN/undefined so the gauge never emits a NaN stroke-dashoffset
   // (which renders a broken arc) and the threshold branches stay deterministic.
   const score = safeNumber(optimizer.battery_health_score);
@@ -41,7 +43,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Current Habits */}
         <FadeIn delay={0.24}>
-          <GlassPanel className="p-6">
+          <GlassPanel className="h-full p-6">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <Calendar className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('charging.optimizer.habits', 'Charging Habits')}
@@ -49,7 +51,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
             <div className="space-y-3">
               {[
                 { label: t('charging.optimizer.sessionsWeek', 'Sessions/week'), value: fmtNumber(optimizer.current_schedule.avg_sessions_per_week) },
-                { label: t('charging.optimizer.homePct', 'Home charging'), value: `${fmtNumber(optimizer.current_schedule.home_charging_pct)}%` },
+                { label: t('charging.optimizer.locationPct', 'Most-used recorded location'), value: hasLocationEvidence ? `${fmtNumber(locationPct)}%` : '—' },
                 { label: t('charging.optimizer.avgTarget', 'Avg charge target'), value: `${fmtNumber(optimizer.current_schedule.avg_charge_to_pct)}%` },
                 { label: t('charging.optimizer.commonHour', 'Common start hour'), value: optimizer.current_schedule.most_common_start_hour != null ? `${optimizer.current_schedule.most_common_start_hour}:00` : '—' },
                 { label: t('charging.optimizer.commonDay', 'Most common'), value: optimizer.current_schedule.most_common_day ?? '—' },
@@ -60,12 +62,15 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                 </div>
               ))}
             </div>
+            <Caption className="mt-3">
+              {t('charging.optimizer.locationEvidence', 'Location clusters do not confirm home charging. Missing location evidence is shown as unknown.')}
+            </Caption>
           </GlassPanel>
         </FadeIn>
 
         {/* Battery Health Score */}
         <FadeIn delay={0.25}>
-          <GlassPanel className="flex flex-col items-center justify-center p-6">
+          <GlassPanel className="flex h-full flex-col items-center justify-center p-6">
             <LinearGauge
               value={score}
               max={100}
@@ -88,7 +93,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
 
         {/* Cost Analysis */}
         <FadeIn delay={0.26}>
-          <GlassPanel className="p-6">
+          <GlassPanel className="h-full p-6">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <DollarSign className="h-4 w-4 text-emerald-300" aria-hidden="true" />
               {t('charging.optimizer.costAnalysis', 'Cost Analysis')}
@@ -121,6 +126,9 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                 </div>
               </div>
             </div>
+            <Caption className="mt-3">
+              {t('charging.optimizer.observedCostEvidence', 'Hourly costs combine recorded charging locations, not a confirmed tariff. Savings are illustrative, not guaranteed.')}
+            </Caption>
           </GlassPanel>
         </FadeIn>
       </div>

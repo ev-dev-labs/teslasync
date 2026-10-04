@@ -174,7 +174,7 @@ describe('JobProgressDrawer', () => {
     // Active section shows its empty placeholder instead of a blank panel.
     expect(within(region).getByText(/no active exports/i)).toBeInTheDocument()
     // Recent job renders its formatted size.
-    expect(within(region).getByText('2.4 MB · just now')).toBeInTheDocument()
+    expect(within(region).getByText('2.38 MB · just now')).toBeInTheDocument()
     // The download link carries a descriptive accessible name (not just
     // "Download") so multiple links are distinguishable, and points at the
     // prefixed download URL.

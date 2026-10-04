@@ -7,7 +7,7 @@
  * vehicle, else none/0), the `useMotorLatest` query result, and the widget
  * `size`:
  *
- *   - size.cols <= 1 → compact tile: gear + torque only, no title.
+ *   - size.cols <= 1 → compact tile: heading + gear + torque.
  *   - otherwise      → full tile: titled header + a signed torque BipolarBar +
  *                      a 2×2 StatCard grid (stator temp / gear / lateral +
  *                      longitudinal G).
@@ -183,6 +183,11 @@ beforeEach(() => {
   mockUseMotorLatest.mockClear();
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Motor performance', level: 3 })).toBeVisible();
+});
+
 afterEach(() => {
   cleanup();
 });
@@ -231,12 +236,12 @@ describe('MotorPerformanceWidget — full view', () => {
       'aria-valuenow',
       '150',
     );
-    expect(screen.getByText('150')).toBeInTheDocument();
+    expect(screen.getByText('150.00')).toBeInTheDocument();
     expect(screen.getByText('Nm')).toBeInTheDocument();
 
     // Stator temp: 30 °C stays 30 under a °C preference, tagged with the unit.
     const stator = within(statCardOf('Stator temp'));
-    expect(stator.getByText('30')).toBeInTheDocument();
+    expect(stator.getByText('30.00')).toBeInTheDocument();
     expect(stator.getByText('°C')).toBeInTheDocument();
 
     // Gear state echoes the reported gear.
@@ -256,7 +261,7 @@ describe('MotorPerformanceWidget — full view', () => {
 
     // 30 °C → 86 °F, tagged with the Fahrenheit unit, never the Celsius one.
     const stator = within(statCardOf('Stator temp'));
-    expect(stator.getByText('86')).toBeInTheDocument();
+    expect(stator.getByText('86.00')).toBeInTheDocument();
     expect(stator.getByText('°F')).toBeInTheDocument();
     expect(screen.queryByText('°C')).toBeNull();
   });
@@ -273,7 +278,7 @@ describe('MotorPerformanceWidget — full view', () => {
       }),
     });
 
-    expect(within(statCardOf('Stator temp')).getByText('45')).toBeInTheDocument();
+    expect(within(statCardOf('Stator temp')).getByText('45.00')).toBeInTheDocument();
     expect(within(statCardOf('Gear state')).getByText('R')).toBeInTheDocument();
   });
 
@@ -295,10 +300,10 @@ describe('MotorPerformanceWidget — full view', () => {
 
     const meter = screen.getByRole('meter', { name: 'Torque' });
     expect(meter).toHaveAttribute('aria-valuenow', '-150');
-    expect(screen.getByText('-150')).toBeInTheDocument();
+    expect(screen.getByText('-150.00')).toBeInTheDocument();
     // The unsigned magnitude must NOT also be on screen — that was the
     // confusing double readout.
-    expect(screen.queryByText('150')).toBeNull();
+    expect(screen.queryByText('150.00')).toBeNull();
   });
 
   it('scales regen and drive independently and labels both directions', () => {
@@ -340,9 +345,8 @@ describe('MotorPerformanceWidget — compact view', () => {
     expect(screen.getByText('Gear')).toBeInTheDocument();
     expect(screen.getByText('D')).toBeInTheDocument();
     expect(screen.getByText('Torque')).toBeInTheDocument();
-    expect(screen.getByText('150 Nm')).toBeInTheDocument();
-    // A 1×1 tile suppresses the header title entirely.
-    expect(screen.queryByText('Motor performance')).toBeNull();
+    expect(screen.getByText('150.00 Nm')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Motor performance', level: 3 })).toBeVisible();
   });
 
   it('shows an accessible empty state when there is no motor data', () => {
@@ -361,7 +365,7 @@ describe('MotorPerformanceWidget — lifecycle states', () => {
     });
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute('aria-valuenow', '0');
-    expect(within(statCardOf('Stator temp')).getByText('0')).toBeInTheDocument();
+    expect(within(statCardOf('Stator temp')).getByText('0.00')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
 

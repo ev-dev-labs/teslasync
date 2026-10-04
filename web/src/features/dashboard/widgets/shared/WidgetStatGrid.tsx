@@ -10,6 +10,7 @@ export interface StatGridItem {
   value: string | number | null | undefined;
   unit?: string;
   icon?: ReactNode;
+  sublabel?: string;
   trend?: 'up' | 'down' | 'flat';
   trendValue?: string;
   /** Direction is not desirability: a declining cost can be a positive result. */
@@ -52,6 +53,7 @@ export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
           value={stat.value}
           unit={stat.unit}
           icon={stat.icon}
+          sublabel={stat.sublabel}
           trend={
             stat.trend && stat.trendValue
               ? {

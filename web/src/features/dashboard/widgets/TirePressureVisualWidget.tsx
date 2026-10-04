@@ -92,15 +92,13 @@ function formatTimestamp(iso: string | undefined, t: (k: string, fb: string) => 
   }
 }
 
-export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProps) {
+export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: tireData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useLatestTirePressure(id, 10_000);
   const { pressureUnit, toPressureValue } = usePressureFormat();
-
-  const isCompact = size.cols <= 1;
 
   const tires: [TireInfo, TireInfo, TireInfo, TireInfo] = [
     { label: 'FL', value: tireData?.front_left ?? null, variant: tirePressureVariant(tireData?.front_left) },
@@ -144,7 +142,7 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.tirePressure', 'Tire pressure')}
+      title={t('widget.tirePressure', 'Tire pressure')}
       icon={<CircleDot className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={loading}
       dataState={dataState}

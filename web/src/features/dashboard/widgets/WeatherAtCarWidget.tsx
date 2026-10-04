@@ -9,6 +9,10 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { safeArray } from '@/lib/safeArray';
+import { WidgetBigNumber } from './shared';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 /** Coarse weather condition derived from the outside temperature (°C, SI). */
 export type WeatherCondition = 'freezing' | 'warm' | 'mild';
@@ -35,18 +39,19 @@ function WeatherIcon({ tempC, className }: { tempC: number; className?: string }
 export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
-  const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const vehiclesQuery = useVehicles();
+  const candidate = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
+  const id = Number.isSafeInteger(candidate) && Number(candidate) > 0 ? Number(candidate) : 0;
+  const query = useVehicleState(id, { refetchInterval: 30_000 });
   const {
     data: stateData,
     isLoading,
     isFetching,
     isStale,
     isError,
-    error,
     dataUpdatedAt,
     refetch,
-  } = useVehicleState(id, { refetchInterval: 30_000 });
+  } = query;
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, tempUnit);
@@ -57,6 +62,13 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
   const rawOutsideTemp = state?.outside_temp;
   const outsideTemp = isFiniteNumber(rawOutsideTemp) ? rawOutsideTemp : null;
   const hasTemp = outsideTemp !== null;
+  const discoveryState = useDataState(vehiclesQuery);
+  const sourceState = useDataState({
+    ...query,
+    data: stateData ?? (!id || (!isLoading && !query.isPending && !isError) ? null : undefined),
+  }, { provenance: 'live', unavailable: !hasTemp });
+  const dataState = !id && vehicleId == null && discoveryState.status !== 'ok'
+    ? discoveryState : sourceState;
 
   const lat = state?.latitude;
   const lon = state?.longitude;
@@ -64,19 +76,15 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols === 1 && size.rows === 1;
 
   const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    if (vehicleId == null) void vehiclesQuery.refetch?.();
+    if (id) void refetch();
+  }, [refetch, vehicleId, id, vehiclesQuery]);
 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.weatherAtCar', 'Weather at car')}
-      icon={!isCompact ? <CloudSun className="h-3.5 w-3.5 text-cyan-300" /> : undefined}
-      loading={isLoading}
-      // Surface a genuine initial-load failure (no usable reading yet) as a real
-      // error panel instead of the misleading "No weather data" empty state.
-      // When a reading is already on screen, a background-refetch error stays a
-      // subtle freshness signal so valid data is never blanked out.
-      error={isError && !hasTemp ? String(error ?? t('widget.weatherError', 'Unable to load weather data')) : null}
+      icon={!isCompact ? <CloudSun className="h-3.5 w-3.5 text-[var(--text-secondary)]" /> : undefined}
+      dataState={{ ...dataState, retry: handleRefresh }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -86,23 +94,16 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
       {outsideTemp !== null ? (
         isCompact ? (
           <div className="h-full flex flex-col items-center justify-center gap-1">
-            <WeatherIcon tempC={outsideTemp} className="h-6 w-6 text-neon-cyan" />
-            <span className="text-2xl font-bold text-[var(--text-primary)]">
-              {fmtInt(toTemperatureDisplay(outsideTemp))}{tempUnit}
-            </span>
+            <WeatherIcon tempC={outsideTemp} className="h-6 w-6 text-[var(--text-secondary)]" />
+            <WidgetBigNumber value={`${fmtInt(toTemperatureDisplay(outsideTemp))}${tempUnit}`} align="center" />
           </div>
         ) : (
-          <div className="h-full flex items-center gap-4 py-2">
-            <WeatherIcon tempC={outsideTemp} className="h-10 w-10 text-neon-cyan flex-shrink-0" />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-3xl font-bold text-[var(--text-primary)]">
-                {fmtInt(toTemperatureDisplay(outsideTemp))}{tempUnit}
-              </span>
-              <span className="text-xs text-[var(--text-muted)]">
-                {t('widget.outsideTemp', 'Outside temperature')}
-              </span>
+          <div className="h-full flex flex-wrap items-center gap-4 py-2">
+            <WeatherIcon tempC={outsideTemp} className="h-10 w-10 text-[var(--text-secondary)] flex-shrink-0" />
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <WidgetBigNumber value={`${fmtInt(toTemperatureDisplay(outsideTemp))}${tempUnit}`} label={t('widget.outsideTemp', 'Outside temperature')} />
               {isFiniteNumber(lat) && isFiniteNumber(lon) && (
-                <span className="text-2xs text-[var(--text-muted)] tabular-nums">
+                <span className={dashboardTokens.metricLabel}>
                   {fmtNumber(lat)}°, {fmtNumber(lon)}°
                 </span>
               )}

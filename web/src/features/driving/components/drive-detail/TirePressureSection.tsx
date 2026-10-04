@@ -86,7 +86,7 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
 
   return (
     <FadeIn className="space-y-3">
-      <Table aria-label={t('driveDetail.tirePressure', 'Tire pressure during drive')}>
+      <Table variant="embedded" aria-label={t('driveDetail.tirePressure', 'Tire pressure during drive')}>
         <tbody>{wheels.map((wheel) => (
           <tr key={wheel.key}>
             <th scope="row">{wheel.label}</th>

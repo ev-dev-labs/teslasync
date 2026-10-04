@@ -104,9 +104,9 @@ describe('GrokDynamicsBriefing', () => {
   it('keeps the shell and empty state when nothing is measured', () => {
     renderBriefing();
     expect(screen.getByTestId('grok-dynamics-briefing')).toBeInTheDocument();
-    expect(screen.getByText("Grok's powertrain read")).toBeInTheDocument();
+    expect(screen.getByText('Live powertrain interpretation')).toBeInTheDocument();
     expect(
-      screen.getByText('Drive the car so Grok can read axle torque, regen, and chassis g.'),
+      screen.getByText('No current axle torque, regen, or acceleration signals reported.'),
     ).toBeInTheDocument();
   });
 
@@ -114,7 +114,7 @@ describe('GrokDynamicsBriefing', () => {
     motorState.isLoading = true;
     dynamicsState.isLoading = true;
     renderBriefing();
-    expect(screen.getByRole('status', { name: 'Loading Grok powertrain read…' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading current powertrain signals…' })).toBeInTheDocument();
   });
 
   it('surfaces a transport error instead of pretending there is no telemetry', () => {
@@ -139,9 +139,9 @@ describe('GrokDynamicsBriefing', () => {
 
     renderBriefing();
 
-    expect(screen.getByText('Motors are charging the pack — that is free range.')).toBeInTheDocument();
+    expect(screen.getByText(/Regeneration is reported in current motor signals/)).toBeInTheDocument();
     expect(screen.getByText('12.0 kW')).toBeInTheDocument();
-    expect(screen.getByText(/one-pedal Tesla/)).toBeInTheDocument();
+    expect(screen.getByText(/brake switch reports inactive/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Tesla physics cockpit' })).toHaveAttribute(
       'href',
       '/physics-cockpit',

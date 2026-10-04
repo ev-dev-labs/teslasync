@@ -10,7 +10,7 @@ import type { ChargeAdvisorComponentProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComponentProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const current = analysis.current;
   const sourceLabel = current.source === 'live'
@@ -26,7 +26,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
   const age = current.ageMs == null
     ? '—'
     : t('chargeAdvisor.current.ageDays', '{{days}} days', {
-      days: fmtInt(current.ageMs / 86_400_000),
+      days: fmtNumber(current.ageMs / 86_400_000),
     });
   const retrievalLabel = current.retrievalState === 'connected'
     ? t('chargeAdvisor.current.retrievalConnected', 'Connected')
@@ -84,7 +84,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
             {current.chargeLimitPct == null
               ? t('chargeAdvisor.current.noLimit', 'Charge limit —')
               : t('chargeAdvisor.current.limit', 'Charge limit {{pct}}%', {
-                pct: Math.round(current.chargeLimitPct),
+                pct: fmtNumber(current.chargeLimitPct),
               })}
           </Text>
         </div>

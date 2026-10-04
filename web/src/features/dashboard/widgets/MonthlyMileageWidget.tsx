@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart } from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth } from '@/components/charts';
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
@@ -102,6 +102,15 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
   const hasData = chartData.length > 0;
+  const axisLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.distance)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => fmt(value)),
+    [chartData, fmt],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
 
   // Summary stats are identical in the compact and standard layouts, so they
   // are derived once and reused (single source of truth + stable reference).
@@ -130,6 +139,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.monthlyMileage.title', 'Monthly mileage')}
         loading={isLoading}
         dataState={dataState}
         updatedAt={dataUpdatedAt}
@@ -187,7 +197,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
               {chartGrid}
               <XAxis
                 dataKey="month"
@@ -199,7 +209,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={axisWidth}
                 tickFormatter={(v: number) => fmt(v)}
               />
               <Tooltip

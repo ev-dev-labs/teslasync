@@ -8,7 +8,7 @@
  * test:
  *
  *   1. Two responsive layouts driven by `size.cols`:
- *        - compact (cols <= 1): a title-less shell showing the peak-g big
+ *        - compact (cols <= 1): a titled shell showing the peak-g big
  *          number + a "Smooth"/"Aggressive" Badge, or an EmptyState.
  *        - standard/wide (cols >= 2): a titled "Driving Dynamics" shell with
  *          three LinearGauges (Accel/Brake/Lateral), a severity Badge, and —
@@ -54,6 +54,9 @@ import type {
 } from '@/types/driving';
 import DrivingDynamicsWidget from './DrivingDynamicsWidget';
 import { hasGaugeColor } from '@/test/gaugeTestUtils';
+import { useMeasuredAxisWidth } from '@/components/charts';
+import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // jsdom lacks matchMedia; DataFreshness → useMotionPreference reads it during
 // render. Install a benign stub before any component mounts.
@@ -99,10 +102,32 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+const axisCapture = vi.hoisted(() => ({
+  chart: {} as Record<string, unknown>,
+  axis: {} as Record<string, unknown>,
+  realFrame: false,
+}));
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual, ...chartTestDoubles,
+    EmbeddedChart: (props: Omit<Parameters<typeof actual.EmbeddedChart>[0], 'children'> & { children: ReactNode }) =>
+      axisCapture.realFrame
+        ? <actual.EmbeddedChart {...props} />
+        : <chartTestDoubles.EmbeddedChart {...props} />,
+    useMeasuredAxisWidth: vi.fn(actual.useMeasuredAxisWidth),
+    ResponsiveContainer: ({ children, width, height }: { children?: ReactNode; width?: string; height?: string }) =>
+      <div data-testid="responsive-plot" data-width={width} data-height={height}>{children}</div>,
+    BarChart: (props: Record<string, unknown>) => {
+      axisCapture.chart = props;
+      return <svg>{props.children as ReactNode}</svg>;
+    },
+    YAxis: (props: Record<string, unknown>) => { axisCapture.axis = props; return null; },
+    XAxis: () => null,
+    Bar: () => null,
+    Tooltip: () => null,
+  };
 });
 
 // `useThemeChartPalette()` (called unconditionally at the top of the widget)
@@ -208,11 +233,87 @@ function gaugeArc(container: HTMLElement, color: string): boolean {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  axisCapture.chart = {};
+  axisCapture.axis = {};
+  axisCapture.realFrame = false;
   // Sensible defaults so a test that forgets to seed a hook still renders
   // rather than crashing on a destructure of `undefined`.
   useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
   useDrivingDynamicsMock.mockReturnValue(makeQuery());
   useAccelerationDistributionMock.mockReturnValue(makeDistQuery());
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe('DrivingDynamicsWidget histogram viewport', () => {
+  it.each([2, 4])('keeps the caption outside the single fixed plot at three columns and %i rows', rows => {
+    axisCapture.realFrame = true;
+    useDrivingDynamicsMock.mockReturnValue(makeQuery({ data: makeDynamics() }));
+    useAccelerationDistributionMock.mockReturnValue(makeDistQuery({ data: { values: [1, 3, 2] } }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <DrivingDynamicsWidget size={{ cols: 3, rows }} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const caption = screen.getByText('G-force distribution', { selector: 'span, p' });
+    const viewport = screen.getByRole('img', { name: 'Distribution of observed acceleration magnitudes' });
+    const plot = screen.getByTestId('responsive-plot');
+    expect(caption).toHaveClass('block', 'mb-1', 'text-2xs');
+    expect(caption).not.toHaveClass('text-xs');
+    expect(viewport).toHaveAttribute('data-chart-viewport', 'bounded');
+    expect(viewport).not.toContainElement(caption);
+    expect(caption.closest('[data-chart-viewport]')).toBeNull();
+    expect(caption.nextElementSibling).toBe(viewport.closest('figure'));
+    expect(viewport).toContainElement(plot);
+    expect(container.querySelectorAll('[data-chart-viewport]')).toHaveLength(1);
+    expect(viewport.querySelectorAll('[data-testid="responsive-plot"]')).toHaveLength(1);
+    expect(viewport.firstElementChild).toBe(plot);
+    expect(viewport).toHaveStyle({
+      '--chart-height-desktop': '160px',
+      '--chart-height-mobile': '144px',
+    });
+    expect(plot).toHaveAttribute('data-width', '100%');
+    expect(plot).toHaveAttribute('data-height', '100%');
+    expect(viewport.closest('figure')).not.toHaveAttribute('data-chart-fluid');
+    client.clear();
+  });
+});
+
+describe('DrivingDynamicsWidget axis gutter', () => {
+  it('measures complete integer counts with zero baseline and excludes non-finite buckets', () => {
+    useDrivingDynamicsMock.mockReturnValue(makeQuery({ data: makeDynamics() }));
+    useAccelerationDistributionMock.mockReturnValue(makeDistQuery({
+      data: { values: [123456789, 25, Number.NaN, Number.POSITIVE_INFINITY] },
+    }));
+    renderWidget({ cols: 3, rows: 2 });
+    const options = vi.mocked(useMeasuredAxisWidth).mock.lastCall![0];
+    expect(options.labels).toEqual(['0', '123456789', '25']);
+    expect(options.fontSize).toBe(11);
+    expect(options.minWidth).toBe(60);
+    expect(options.padding).toBe(24);
+    expect(axisCapture.axis.width).toBeGreaterThanOrEqual(Math.ceil(9 * 11 * 0.75) + 24);
+    expect(axisCapture.axis.allowDecimals).toBe(false);
+    expect(axisCapture.axis.tickFormatter).toBeUndefined();
+    expect(axisCapture.axis.domain).toBeUndefined();
+    expect((axisCapture.chart.margin as { left: number }).left).toBe(4);
+    expect((axisCapture.chart.data as { count: number | null }[]).map(point => point.count)).toEqual([123456789, 25, null, null]);
+  });
+
+  it.each([1, 2])('keeps %i-column layouts axis-free without measurement', cols => {
+    useDrivingDynamicsMock.mockReturnValue(makeQuery({ data: makeDynamics() }));
+    useAccelerationDistributionMock.mockReturnValue(makeDistQuery({ data: { values: [123456789] } }));
+    renderWidget({ cols, rows: 2 });
+    expect(axisCapture.chart).toEqual({});
+    expect(vi.mocked(useMeasuredAxisWidth).mock.lastCall![0].enabled).toBe(false);
+  });
+});
+
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Driving dynamics', level: 3 })).toBeVisible();
 });
 
 afterEach(() => {
@@ -376,8 +477,7 @@ describe('DrivingDynamicsWidget — compact layout', () => {
     expect(screen.getByText('0.30')).toBeInTheDocument();
     expect(screen.getByText('Max g')).toBeInTheDocument();
     expect(screen.getByText('Smooth')).toBeInTheDocument();
-    // Compact mode drops the header title and the gauges.
-    expect(screen.queryByText('Driving dynamics')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Driving dynamics', level: 3 })).toBeVisible();
     expect(screen.queryByText('Accel')).not.toBeInTheDocument();
   });
 
@@ -399,12 +499,12 @@ describe('DrivingDynamicsWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No dynamics data')).toBeInTheDocument();
-    expect(screen.queryByText('Driving dynamics')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Driving dynamics', level: 3 })).toBeVisible();
   });
 });
 
 describe('DrivingDynamicsWidget — query states', () => {
-  it('renders a skeleton while loading with no title, gauges, or empty message', () => {
+  it('keeps the heading while loading without gauges or an empty message', () => {
     useDrivingDynamicsMock.mockReturnValue(
       makeQuery({ isLoading: true, data: undefined }),
     );

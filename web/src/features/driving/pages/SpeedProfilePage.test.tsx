@@ -343,9 +343,9 @@ describe('SpeedProfilePage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();
-    expect(screen.getByText('90')).toBeInTheDocument(); // avg 25 m/s → 90 km/h
-    expect(screen.getByText('144')).toBeInTheDocument(); // peak 40 m/s → 144 km/h
-    expect(screen.getByText('54')).toBeInTheDocument(); // optimal 15 m/s → 54 km/h
+    expect(screen.getByText('90.00')).toBeInTheDocument(); // avg 25 m/s → 90 km/h
+    expect(screen.getByText('144.00')).toBeInTheDocument(); // peak 40 m/s → 144 km/h
+    expect(screen.getByText('54.00')).toBeInTheDocument(); // optimal 15 m/s → 54 km/h
     expect(screen.getByText('500')).toBeInTheDocument(); // total readings
     expect(screen.getByText('5 drives analysed')).toBeInTheDocument();
 
@@ -380,23 +380,23 @@ describe('SpeedProfilePage', () => {
     for (const range of ['0-15', '30-45', '60-75', '90+']) {
       expect(screen.getByText(range)).toBeInTheDocument();
     }
-    expect(screen.getByText('20.0%')).toBeInTheDocument(); // 100 / 500
-    expect(screen.getByText('42.0%')).toBeInTheDocument(); // 210 / 500
-    expect(screen.getByText('11 km/h')).toBeInTheDocument(); // 0-15 avg drive speed
-    expect(screen.getByText('120')).toBeInTheDocument(); // 0-15 efficiency
-    expect(screen.getByText('200')).toBeInTheDocument(); // 60-75 efficiency
+    expect(screen.getByText('20.00%')).toBeInTheDocument(); // 100 / 500
+    expect(screen.getByText('42.00%')).toBeInTheDocument(); // 210 / 500
+    expect(screen.getByText('10.80 km/h')).toBeInTheDocument(); // 0-15 avg drive speed
+    expect(screen.getByText('120.00')).toBeInTheDocument(); // 0-15 efficiency
+    expect(screen.getByText('200.00')).toBeInTheDocument(); // 60-75 efficiency
   });
 
   it('renders the efficiency insight at the optimal speed', () => {
     renderPage();
-    expect(screen.getByText(/Drives around 54 km\/h show the best energy efficiency/)).toBeInTheDocument();
+    expect(screen.getByText(/Drives around 54\.00 km\/h show the best energy efficiency/)).toBeInTheDocument();
   });
 
   it('re-converts every figure when unit prefs switch to mph / mi', () => {
     unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_MI });
     renderPage();
 
-    expect(screen.getByText('56')).toBeInTheDocument(); // 25 m/s → 56 mph
+    expect(screen.getByText('55.92')).toBeInTheDocument(); // 25 m/s → 56 mph
     expect(screen.getByTestId('gauge-Avg Speed')).toHaveTextContent('56mph');
     // Efficiency unit label flips to Wh/mi (drive→bucket matching is unit-aware,
     // so the exact matched-card count is display-unit dependent — assert ≥1).

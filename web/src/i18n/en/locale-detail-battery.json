@@ -110,7 +110,9 @@
     "health": {
       "excellent": "Excellent",
       "good": "Good",
-      "degraded": "Degraded"
+      "degraded": "Degraded",
+      "unavailable": "Not measured",
+      "missingMeasurement": "Capacity measurements are not available yet; battery health cannot be assessed."
     },
     "insight": {
       "excellentTitle": "Excellent health",
@@ -135,7 +137,8 @@
       "avoid100": "Avoid charging to 100% regularly — keep the limit at 80–90%.",
       "avoidDeep": "Try to avoid deep discharges below 20%.",
       "aboveAvg": "Your degradation rate is above average — review charging habits.",
-      "great": "Your battery health looks great — keep up the good habits!"
+      "great": "Your battery health looks great — keep up the good habits!",
+      "needMeasurements": "Keep monitoring as capacity measurements arrive; battery health cannot be assessed yet."
     },
     "title": "Battery health",
     "subtitle": "Degradation tracking, prediction, charging habits & longevity insights",

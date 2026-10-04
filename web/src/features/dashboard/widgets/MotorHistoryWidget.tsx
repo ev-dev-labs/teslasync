@@ -1,7 +1,7 @@
-import { useCallback, useMemo } from 'react';
+import { cloneElement, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog } from 'lucide-react';
-import { ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useMotorHistory } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -119,6 +119,25 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     return Math.ceil(max);
   }, [chartData, dangerThreshold]);
 
+  const torqueLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.torque)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => `${fmt(value)}`),
+    [chartData, fmt],
+  );
+  const temperatureLabels = useMemo(
+    () => [0, tempMax, ...chartData.map((entry) => entry.statorTemp)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => `${fmt(value)}°`),
+    [chartData, tempMax, fmt],
+  );
+  const torqueAxisWidth = useMeasuredAxisWidth({
+    labels: torqueLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
+  const temperatureAxisWidth = useMeasuredAxisWidth({
+    labels: temperatureLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
+
   const stats: ChartSummaryStat[] = [
         {
           label: t('widget.motorHistory.torque', 'Torque'),
@@ -147,7 +166,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell title={t('widget.motorHistory.title', 'Motor history')} {...shellProps}>
         <WidgetChartSummary
           compact
           emptyMessage={t('widget.motorHistory.noData', 'No motor history')}
@@ -192,8 +211,8 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
           >
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
-              {chartGrid}
+                <ComposedChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+              {cloneElement(chartGrid, { yAxisId: 'torque' })}
               <XAxis
                 dataKey="time"
                 tick={tick}
@@ -207,7 +226,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={torqueAxisWidth}
                 tickFormatter={(v: number) => `${fmt(v)}`}
                 label={isWide ? { value: 'Nm', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 } : undefined}
               />
@@ -218,7 +237,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={temperatureAxisWidth}
                 domain={[0, tempMax]}
                 tickFormatter={(v: number) => `${fmt(v)}°`}
                 label={isWide ? { value: tempUnit, angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 10 } : undefined}
@@ -254,7 +273,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               />
               {/* Torque line — cyan */}
               <Line
-                yAxisId="acceleration"
+                yAxisId="torque"
                 type="monotone"
                 dataKey="torque"
                 stroke="#06b6d4"

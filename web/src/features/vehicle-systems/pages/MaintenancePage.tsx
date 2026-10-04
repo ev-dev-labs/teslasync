@@ -276,7 +276,7 @@ function MaintenanceItemCard({
   item: MaintenanceItem;
   formatDistance: DistanceFormatter;
 }) {
-  const { fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const pct = computeProgress(item);
   const derivedStatus = item.status === 'completed' ? 'completed' : statusFromPct(pct);
@@ -299,7 +299,7 @@ function MaintenanceItemCard({
       {derivedStatus !== 'completed' && (
         <div className="space-y-1">
           <div className={cn('flex items-center justify-between', typography.size['2xs'], typography.color.muted)}>
-            <span className="tabular-nums">{fmtInt(pct)}%</span>
+            <span className="tabular-nums">{fmtNumber(pct)}%</span>
             <span>
               {item.due_date
                 ? `${t('maintenance.due', 'Due')}: ${formatDate(item.due_date)}`

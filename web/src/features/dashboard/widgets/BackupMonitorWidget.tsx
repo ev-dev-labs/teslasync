@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HardDrive } from 'lucide-react';
-import { StatCard } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useBackupRuns } from '@/api/hooks/useAdmin';
@@ -11,6 +10,12 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+import { WidgetStatGrid } from './shared';
+import { dashboardTokens } from '../lib/dashboardTokens';
+import { severityTokens } from '@/lib/tokens';
 
 type BackupStatus = 'completed' | 'failed' | 'running' | 'queued';
 
@@ -25,28 +30,29 @@ type TranslateFn = (
   options?: Record<string, unknown>,
 ) => string;
 
-export function statusVariant(status: string): 'success' | 'warning' | 'danger' {
+export function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'completed') return 'success';
   if (status === 'running' || status === 'queued') return 'warning';
-  return 'danger';
+  return status === 'failed' ? 'danger' : 'neutral';
 }
 
 export function statusLabel(status: string, t: TranslateFn): string {
   if (status === 'completed') return t('widget.backupMonitor.statusSuccess', 'Success');
   if (status === 'running') return t('widget.backupMonitor.statusRunning', 'Running');
   if (status === 'queued') return t('widget.backupMonitor.statusQueued', 'Queued');
-  return t('widget.backupMonitor.statusFailed', 'Failed');
+  return status === 'failed' ? t('widget.backupMonitor.statusFailed', 'Failed') : '—';
 }
 
 export function statusDotColor(status: string): string {
-  if (status === 'completed') return 'bg-green-500 shadow-green-500/40';
-  if (status === 'running' || status === 'queued') return 'bg-amber-400 shadow-amber-400/40';
-  return 'bg-red-500 shadow-red-500/40';
+  if (status === 'completed') return severityTokens.success.dot;
+  if (status === 'running' || status === 'queued') return severityTokens.warn.dot;
+  return status === 'failed' ? severityTokens.critical.dot : 'bg-[var(--text-muted)]';
 }
 
 /** Format bytes into human-readable size (e.g. "1.2 GB", "450 MB"). */
-export function fmtBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+export function fmtBytes(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return '—';
+  if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   // Clamp the unit index into range: sub-1 byte counts yield a negative
   // exponent and out-of-range values overflow past TB — either would index
@@ -82,13 +88,14 @@ export function fmtRelativeTime(iso: string | null, t: TranslateFn): string {
 }
 
 export default function BackupMonitorWidget({ size }: WidgetProps) {
-  useNumberFormatting();
+  const { formatDurationMs } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime: fmtShortTime } = useDateFormat();
-  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } =
-    useBackupRuns();
+  const query = useBackupRuns();
+  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const dataState = useDataState(query, { provenance: 'historical' });
 
-  const runs = useMemo(() => data ?? [], [data]);
+  const runs = useMemo(() => safeArray(data), [data]);
 
   const sortedRuns = useMemo(
     () =>
@@ -100,14 +107,14 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
   );
 
   const latestRun = sortedRuns[0] ?? null;
-  const latestStatus: BackupStatus = latestRun?.status ?? 'failed';
+  const latestStatus: BackupStatus | '' = latestRun?.status ?? '';
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 4;
 
   const shellProps = {
-    loading: isLoading,
-    error: null as string | null,
+    title: t('widget.backupMonitor.title', 'Backup monitor'),
+    dataState,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -129,14 +136,14 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
           <div className="flex items-center gap-3 min-h-[44px]">
             <span
               role="img"
-              aria-label={statusLabel(latestRun?.status ?? 'failed', t)}
+              aria-label={statusLabel(latestStatus, t)}
               className={cn(
                 'inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_6px] shrink-0',
-                statusDotColor(latestRun?.status ?? 'failed'),
+                statusDotColor(latestStatus),
               )}
             />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+              <p className={dashboardTokens.secondaryMetric}>
                 {fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t)}
               </p>
               <p className="text-2xs text-[var(--text-muted)] truncate">
@@ -152,8 +159,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
   // ── Standard (2×2) and Wide (2×4) layouts ──
   return (
     <WidgetShell
-      title={t('widget.backupMonitor.title', 'Backup monitor')}
-      icon={<HardDrive className="h-3.5 w-3.5 text-emerald-400" />}
+      icon={<HardDrive className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
       {...shellProps}
     >
       {runs.length === 0 && !isLoading ? (
@@ -165,32 +171,18 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
       ) : (
         <div className="flex flex-col gap-3 h-full">
           {/* Stat card grid */}
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            <StatCard
-              label={t('widget.backupMonitor.lastBackup', 'Last backup')}
-              value={fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t)}
-            />
-            <StatCard
-              label={t('widget.backupMonitor.size', 'Backup size')}
-              value={fmtBytes(latestRun?.fileSize ?? 0)}
-            />
-            <StatCard
-              label={t('widget.backupMonitor.type', 'Type')}
-              value={latestRun?.backupType ?? '—'}
-            />
-            <div
-              className={cn(
-                'rounded-lg p-3',
-                latestStatus === 'failed' && 'bg-red-500/10',
-              )}
-            >
-              <p className="text-2xs tracking-wider text-[var(--text-muted)] mb-1">
+          <WidgetStatGrid cols={2} stats={[
+            { label: t('widget.backupMonitor.lastBackup', 'Last backup'), value: fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t) },
+            { label: t('widget.backupMonitor.size', 'Backup size'), value: fmtBytes(latestRun?.fileSize) },
+            { label: t('widget.backupMonitor.type', 'Type'), value: latestRun?.backupType ?? '—' },
+          ]} />
+            <div className="min-w-0">
+              <p className={dashboardTokens.metricLabel}>
                 {t('widget.backupMonitor.status', 'Status')}
               </p>
-              <Badge variant={statusVariant(latestRun?.status ?? 'failed')}>
-                {statusLabel(latestRun?.status ?? 'failed', t)}
+              <Badge variant={statusVariant(latestStatus)}>
+                {statusLabel(latestStatus, t)}
               </Badge>
-            </div>
           </div>
 
           {/* Wide layout: last 5 backup runs */}
@@ -202,7 +194,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
               {sortedRuns.slice(0, 5).map((run) => (
                 <div
                   key={run.id}
-                  className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-3 py-2 min-h-[44px]"
+                  className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] py-2 min-h-[44px]"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span
@@ -217,8 +209,8 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
                         {fmtShortTime(run.completedAt ?? run.createdAt)}
                       </p>
                       <p className="text-2xs text-[var(--text-muted)] truncate">
-                        {fmtBytes(run.fileSize ?? 0)}
-                        {run.durationMs != null ? ` · ${run.durationMs}ms` : ''}
+                        {fmtBytes(run.fileSize)}
+                        {knownNumber(run.durationMs) != null ? ` · ${formatDurationMs(run.durationMs)}` : ''}
                       </p>
                     </div>
                   </div>

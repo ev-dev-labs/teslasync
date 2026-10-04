@@ -99,7 +99,7 @@ const DAY_LABELS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const DAY_LABELS_FULL = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -143,7 +143,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   // Compact: show peak speed metric
   if (isCompact) {
     return (
-      <WidgetShell dataState={trust.hasData ? trust : undefined} loading={isLoading} error={trust.fatalError?.message ?? null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
+      <WidgetShell title={t('widget.speedHeatmap.title', 'Speed heatmap')} dataState={trust.hasData ? trust : undefined} loading={isLoading} error={trust.fatalError?.message ?? null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
         <WidgetBigNumber
           value={totalDrives > 0 ? fmtNumber(maxSpeed) : null}
           unit={unitPrefs.speed}
@@ -174,7 +174,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
       {totalDrives > 0 ? (
         <WidgetChartSummary
           stats={[
-            { label: t('widget.speedHeatmap.drives', '{{count}} drives', { count: totalDrives }), value: totalDrives },
+            { label: t('widget.speedHeatmap.drives', '{{count}} drives', { count: totalDrives }), value: fmtInt(totalDrives) },
             { label: t('widget.speedHeatmap.peakSpeed', 'Peak avg {{speed}} {{unit}}', { speed: fmtNumber(maxSpeed), unit: unitPrefs.speed }), value: fmtNumber(maxSpeed), unit: unitPrefs.speed },
           ]}
           chart={

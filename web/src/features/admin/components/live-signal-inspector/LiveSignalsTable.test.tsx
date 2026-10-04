@@ -297,8 +297,7 @@ describe('LiveSignalsTable — timestamp cell', () => {
     const row = getRow('no-ts');
     expect(within(row).queryByTestId('timestamp')).toBeNull();
     const cells = within(row).getAllByRole('cell');
-    // formatAge(1500) → "1.5s".
-    expect(cells[4]).toHaveTextContent('1.5s');
+    expect(cells[4]).toHaveTextContent('1.50s');
   });
 });
 

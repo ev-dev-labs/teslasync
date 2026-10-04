@@ -36,7 +36,8 @@
 
 import { type ReactNode } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -81,6 +82,11 @@ vi.mock('@/hooks/useDateFormat', async () => {
 });
 
 import NotificationStatsWidget from './NotificationStatsWidget';
+
+it.each([1, 2, 3])('identifies notification statistics at %i columns', (cols) => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Notification stats' })).toBeInTheDocument();
+});
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { NotificationLog, NotificationStats } from '@/api/types';
@@ -106,7 +112,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
-function qr(over: Record<string, unknown> = {}): any {
+function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,
     isLoading: false,
@@ -117,7 +123,7 @@ function qr(over: Record<string, unknown> = {}): any {
     dataUpdatedAt: 1_700_000_000_000,
     refetch: vi.fn(),
     ...over,
-  };
+  } as never;
 }
 
 /** Deterministic `useDateFormat` stub: only the two consumed formatters. */
@@ -159,13 +165,15 @@ const minsAgo = (mins: number) => new Date(Date.now() - mins * 60_000).toISOStri
 
 function renderWidget(size: WidgetSize) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <NotificationStatsWidget size={size} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Notification stats');
+  return view;
 }
 
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
@@ -209,7 +217,8 @@ describe('NotificationStatsWidget — compact layout', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     renderWidget(COMPACT);
     // 118 / 120 → 98.333… → one decimal.
-    expect(screen.getByText('98.3%')).toBeInTheDocument();
+    expect(screen.getByText('98.33')).toBeInTheDocument();
+    expect(screen.getByText('%')).toBeInTheDocument();
     expect(screen.getByText('Delivery rate')).toBeInTheDocument();
     expect(screen.getByText('2 failed')).toBeInTheDocument();
   });
@@ -219,7 +228,7 @@ describe('NotificationStatsWidget — compact layout', () => {
       qr({ data: { ...STATS, total_sent: 100, sent: 100, failed: 0 } }),
     );
     renderWidget(COMPACT);
-    expect(screen.getByText('100.0%')).toBeInTheDocument();
+    expect(screen.getByText('100.00')).toBeInTheDocument();
     expect(screen.queryByText(/failed/i)).toBeNull();
   });
 
@@ -253,7 +262,7 @@ describe('NotificationStatsWidget — standard layout', () => {
     // Values: total sent (also echoed as its "up" trend), delivery rate,
     // failed, active channels.
     expect(screen.getAllByText('120')).toHaveLength(2);
-    expect(screen.getByText('98.3')).toBeInTheDocument();
+    expect(screen.getByText('98.33')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
 
@@ -262,14 +271,76 @@ describe('NotificationStatsWidget — standard layout', () => {
     expect(screen.getByText('Needs attention')).toBeInTheDocument();
   });
 
-  it('treats a logs-query load as loading too (renders the skeleton)', () => {
-    // Stats are ready but the secondary logs query is still loading — the
-    // standard layout gates its skeleton on `statsLoading || logsLoading`.
+  it('keeps ready statistics visible when the unused logs query is loading', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     mockUseLogs.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Total sent (7d)')).toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('Total sent (7d)')).toBeInTheDocument();
+  });
+
+  describe('NotificationStatsWidget — prerequisite trust and preferences', () => {
+    it('shows missing counts and an unobserved delivery rate as unknown, not zero', () => {
+      mockUseStats.mockReturnValue(qr({ data: {} }));
+      renderWidget(STANDARD);
+      expect(screen.getAllByText('—')).toHaveLength(4);
+      expect(screen.queryByText('0')).toBeNull();
+      expect(screen.queryByText('%')).toBeNull();
+    });
+
+    it('keeps explicit zero counts but does not invent a delivery rate for zero attempts', () => {
+      mockUseStats.mockReturnValue(qr({ data: { ...STATS, total_sent: 0, sent: 0, failed: 0, enabled_channels: 0 } }));
+      renderWidget(STANDARD);
+      expect(screen.getAllByText('0')).toHaveLength(3);
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.queryByText('%')).toBeNull();
+    });
+
+    it('keeps cached KPIs and logs and retries both sources after refresh failure', () => {
+      const statsRefetch = vi.fn();
+      const logsRefetch = vi.fn();
+      mockUseStats.mockReturnValue(qr({ data: STATS, isError: true, error: new Error('stats refresh failed'), refetch: statsRefetch }));
+      mockUseLogs.mockReturnValue(qr({ data: [makeLog({ title: 'Retained log' })], refetch: logsRefetch }));
+      renderWidget(WIDE);
+      expect(screen.getByText('Retained log')).toBeInTheDocument();
+      expect(screen.getByText('Active channels')).toBeInTheDocument();
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      expect(statsRefetch).toHaveBeenCalledTimes(1);
+      expect(logsRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps KPIs while a failed secondary source has its own real retry', () => {
+      const logsRefetch = vi.fn();
+      mockUseStats.mockReturnValue(qr({ data: STATS }));
+      mockUseLogs.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('logs failed'), refetch: logsRefetch }));
+      renderWidget(WIDE);
+      expect(screen.getByText('Active channels')).toBeInTheDocument();
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+      expect(logsRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows history even if the statistics source failed its initial load', () => {
+      mockUseStats.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('stats failed') }));
+      mockUseLogs.mockReturnValue(qr({ data: [makeLog({ title: 'Independent history' })] }));
+      renderWidget(WIDE);
+      expect(screen.getByText('Independent history')).toBeInTheDocument();
+      expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    });
+
+    it('reacts to locale and precision changes without a query refresh', () => {
+      const locale = getGlobalLocale();
+      const precision = getGlobalPrecision();
+      const refetch = vi.fn();
+      try {
+        mockUseStats.mockReturnValue(qr({ data: STATS, refetch }));
+        renderWidget(COMPACT);
+        act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+        expect(screen.getByText('98,3')).toBeInTheDocument();
+        expect(refetch).not.toHaveBeenCalled();
+      } finally {
+        act(() => { setGlobalLocale(locale); setGlobalPrecision(precision); });
+      }
+    });
   });
 
   it('shows the title + empty state (not the grid) when stats are absent', () => {

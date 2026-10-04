@@ -1431,7 +1431,7 @@ export default function Layout() {
       )}
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
         {/* Spacer for fixed mobile header */}
         <div className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />
         {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-[4.5rem] shrink-0 xl:block" />}>
@@ -1442,6 +1442,8 @@ export default function Layout() {
             breadcrumbCollections={visibleCollections}
           />
         </Suspense>}
+
+        {presentation.mode === 'standard' && <RateLimitBanner />}
 
         {/* Browser-compat warning — topmost banner
             in the main content column so users on outdated browsers see
@@ -1566,14 +1568,6 @@ export default function Layout() {
           highest-priority operational message and should not be hidden
           under transient client-side notices. */}
       {presentation.mode === 'standard' && <MaintenanceBanner />}
-
-      {/* Rate-limit / circuit-breaker banner —
-          most-transient surface, sits on top so the user sees the
-          countdown before any of the slower-cycling banners. Stack
-          order from top to bottom: rate-limit → tesla-reauth →
-          new-version. Each banner is ≤ 48 px tall so the stack stays
-          under 144 px even when all three fire simultaneously. */}
-      {presentation.mode === 'standard' && <RateLimitBanner />}
 
       {/* New-version banner — proactive reload nudge
           when the backend redeploys mid-session, before the next chunk-load

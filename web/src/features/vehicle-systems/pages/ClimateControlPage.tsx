@@ -591,8 +591,8 @@ export default function ClimateControlPage() {
 
   const tempDelta = useMemo(() => {
     if (latest?.insideTemp == null || latest?.driverTempSetting == null) return null;
-    return +fmtNumber(latest.insideTemp - latest.driverTempSetting);
-  }, [latest?.insideTemp, latest?.driverTempSetting, fmtNumber]);
+    return latest.insideTemp - latest.driverTempSetting;
+  }, [latest?.insideTemp, latest?.driverTempSetting]);
 
   /* ─── Climate efficiency stats ─── */
   // HvacPower is an enum signal (not kW), so numeric power stats are
@@ -803,7 +803,7 @@ export default function ClimateControlPage() {
                     weight="bold"
                     className={cn('tabular-nums', TONE_TEXT[scoreTone(comfortScore)])}
                   >
-                    {comfortScore != null ? fmtInt(comfortScore) : '—'}
+                    {comfortScore != null ? fmtNumber(comfortScore) : '—'}
                   </Text>
                 </ComfortStat>
 
@@ -828,7 +828,7 @@ export default function ClimateControlPage() {
                     weight="bold"
                     className={cn('tabular-nums', TONE_TEXT[deltaTone(tempDelta)])}
                   >
-                    {tempDelta != null ? `${tempDelta > 0 ? '+' : ''}${tempDelta}` : '—'}
+                    {tempDelta != null ? `${tempDelta > 0 ? '+' : ''}${fmtNumber(tempDelta)}` : '—'}
                   </Text>
                 </ComfortStat>
 
@@ -1313,14 +1313,14 @@ export default function ClimateControlPage() {
                 />
                 <MetricCard
                   label={t('climate.page.acOnTime', 'AC on time')}
-                  value={efficiencyStats ? `${fmtInt(efficiencyStats.acOnPct)}%` : '—'}
+                  value={efficiencyStats ? `${fmtNumber(efficiencyStats.acOnPct)}%` : '—'}
                   subtitle={t('climate.page.ofSamples', 'of samples')}
                   icon={<Zap className="h-4 w-4" />}
                   color="amber"
                 />
                 <MetricCard
                   label={t('climate.page.comfortScore', 'Comfort score')}
-                  value={comfortScore != null ? `${fmtInt(comfortScore)}%` : '—'}
+                  value={comfortScore != null ? `${fmtNumber(comfortScore)}%` : '—'}
                   icon={<Thermometer className="h-4 w-4" />}
                   color={comfortScore != null && comfortScore >= 80 ? 'green' : 'amber'}
                 />

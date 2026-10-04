@@ -43,7 +43,7 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -209,7 +209,7 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('MediaHistoryWidget', () => {
-  it('renders the titled feed with every track and its capitalised source label', () => {
+  it('renders the titled feed with every track and its unchanged source identity', () => {
     const { container } = renderWidget();
 
     // Titled shell — no gutted panel.
@@ -220,16 +220,45 @@ describe('MediaHistoryWidget', () => {
     expect(screen.getByText(`${MUSIC} Yesterday ${EM} The Beatles`)).toBeInTheDocument();
     expect(screen.getByText(`${MUSIC} Clocks ${EM} Coldplay`)).toBeInTheDocument();
 
-    // sourceLabel: `usb` → the acronym, others Capitalised.
-    expect(screen.getByText('USB')).toBeInTheDocument();
-    expect(screen.getByText('Bluetooth')).toBeInTheDocument();
-    expect(screen.getByText('Spotify')).toBeInTheDocument();
+    expect(screen.getByText('usb')).toBeInTheDocument();
+    expect(screen.getByText('bluetooth')).toBeInTheDocument();
+    expect(screen.getByText('spotify')).toBeInTheDocument();
 
     // The compact single-line summary is NOT used at 2 cols.
     expect(screen.queryByText(`Bohemian Rhapsody ${EM} Queen`)).not.toBeInTheDocument();
 
     // All three rows reached the feed.
     expect(container.querySelectorAll('[style]').length).toBeGreaterThanOrEqual(3);
+  });
+
+  describe('MediaHistoryWidget — retained history and recovery', () => {
+    it('retains tracks and canonical source identities after a failed refresh', () => {
+      const q = makeQuery({ data: ITEMS, isError: true, error: new Error('refresh failed') });
+      mediaMock.mockReturnValue(q);
+      renderWidget();
+      expect(screen.getByText(`${MUSIC} Bohemian Rhapsody ${EM} Queen`)).toBeInTheDocument();
+      expect(screen.getByText('usb')).toBeInTheDocument();
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      expect(q.refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries failed vehicle discovery rather than the disabled media query', () => {
+      const refetch = vi.fn();
+      vehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('discovery failed'), refetch });
+      const q = makeQuery();
+      mediaMock.mockReturnValue(q);
+      renderWidget();
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(q.refetch).not.toHaveBeenCalled();
+    });
+
+    it('does not invent an epoch date for an entry with no timestamp', () => {
+      mediaMock.mockReturnValue(makeQuery({ data: [{ id: 1, now_playing_title: 'Undated track', now_playing_artist: 'Artist' }] }));
+      renderWidget();
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.queryByText(/1970/)).toBeNull();
+    });
   });
 
   it('colours the playing row green and non-playing rows neutral grey', () => {

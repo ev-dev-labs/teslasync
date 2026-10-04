@@ -32,7 +32,7 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     expect(within(table).getByText('User TITLE unchanged')).toBeInTheDocument();
     expect(within(table).getByText('Measured')).toBeInTheDocument();
     expect(within(table).getByText(/warn · sent/)).toBeInTheDocument();
-    expect(within(table).getByRole('cell', { name: /1,250 ms/ })).toHaveClass('text-right');
+    expect(within(table).getByRole('cell', { name: /1,250\.00 ms/ })).toHaveClass('text-right');
     expect(within(table).queryByRole('button', { name: /Filter/ })).not.toBeInTheDocument();
   });
 });

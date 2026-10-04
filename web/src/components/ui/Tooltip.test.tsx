@@ -24,7 +24,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { Tooltip, type TooltipProps } from './Tooltip';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -158,6 +158,37 @@ describe('Tooltip — placement (side)', () => {
 });
 
 describe('Tooltip — multiline', () => {
+  it('repositions an unopened tooltip when its initially hidden layout becomes measurable', () => {
+    let measuredWidth = 0;
+    let notifyResize: () => void = () => undefined;
+    const disconnect = vi.fn();
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { notifyResize = callback; }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = disconnect;
+    });
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(() => measuredWidth);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(340, 40, 36, 36));
+    const { unmount } = render(<Tooltip content="Help" multiline><button>Info</button></Tooltip>);
+    try {
+      const tip = screen.getByRole('tooltip');
+      expect(tip.style.translate).toBe('');
+      measuredWidth = 320;
+      act(() => notifyResize());
+      expect(tip.style.translate).toBe('-140px 0');
+      unmount();
+      expect(disconnect).toHaveBeenCalled();
+    } finally {
+      unmount();
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('forces a single line (whitespace-nowrap) by default', () => {
     render(
       <Tooltip content="Short tip">
@@ -180,6 +211,8 @@ describe('Tooltip — multiline', () => {
     expect(cls).toContain('w-80');
     expect(cls).toContain('max-w-[calc(100vw-1.5rem)]');
     expect(cls).toContain('leading-relaxed');
+    expect(cls).toContain('transition-[opacity,transform]');
+    expect(cls).not.toContain('transition-all');
   });
 
   it.each(['hover', 'focus'])('keeps a wide tooltip inside the viewport on %s', (interaction) => {
@@ -200,6 +233,38 @@ describe('Tooltip — multiline', () => {
       if (interaction === 'hover') fireEvent.mouseEnter(wrapper);
       else fireEvent.focus(trigger);
       expect(tip.style.translate).toBe('-140px 0');
+    } finally {
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+    }
+  });
+
+  it('positions an unopened tooltip on mount and updates its bounds after resizing', () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(320);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(340, 40, 36, 36),
+    );
+    try {
+      const { unmount } = render(
+        <Tooltip content="Long help text" side="bottom" multiline>
+          <button>Info</button>
+        </Tooltip>,
+      );
+      const tip = screen.getByRole('tooltip');
+      expect(tip.style.translate).toBe('-140px 0');
+
+      width.mockReturnValue(296);
+      viewport.mockReturnValue(320);
+      bounds.mockReturnValue(new DOMRect(270, 40, 36, 36));
+      fireEvent(window, new Event('resize'));
+      expect(tip.style.translate).toBe('-128px 0');
+
+      unmount();
+      const callsAfterUnmount = bounds.mock.calls.length;
+      fireEvent(window, new Event('resize'));
+      expect(bounds.mock.calls).toHaveLength(callsAfterUnmount);
     } finally {
       width.mockRestore();
       viewport.mockRestore();

@@ -119,7 +119,7 @@ describe('LiveSignalKpiBand — values', () => {
   it('formats a sub-minute freshest age in seconds', () => {
     render(<LiveSignalKpiBand stats={makeStats({ freshestAgeMs: 1500 })} />);
 
-    expect(screen.getByText('1.5s')).toBeInTheDocument();
+    expect(screen.getByText('1.50s')).toBeInTheDocument();
   });
 
   it('formats a sub-second freshest age in milliseconds', () => {

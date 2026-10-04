@@ -32,11 +32,21 @@ the editor so decimal commas remain unambiguous. Currency preferences change
 presentation, not exchange rates. Focusing and leaving an unchanged rounded
 field does not replace its precise stored value.
 
+Quantity and currency inputs share the same decimal parser. Native digits and
+minus signs round-trip correctly, and grouping must match the selected locale
+(including Indian grouping and French space separators). Malformed separators
+such as `1,2` in an English locale are rejected rather than silently saved as
+`12`. Strict parsing accepts only ungrouped ASCII decimal/scientific notation.
+
 **Fonts & readability** at `/settings#typography` offers a searchable UI and
 monospace font library, live font samples, and a text field for trying your own
 copy. Font selection, reading presets, scale, line height, letter spacing, and
 heading weight apply across the app immediately. Selected fonts are persisted
 with the rest of the settings and restored before the first page paint.
+The adaptive typography token layer updates root CSS custom properties rather
+than injecting an inline stylesheet, so it remains compatible with the deployed
+Content Security Policy. Reset restores prior token values without clearing
+unrelated font or theme preferences.
 
 Reset controls live in **Reset & recovery**, separate from everyday preferences.
 The overview retains the current-preference summary, export link, guided-tour

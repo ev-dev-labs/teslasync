@@ -25,7 +25,7 @@
  *     → blue);
  *   - null-safety: a route with null locations / null efficiency / null trip
  *     count renders "—" and "0" placeholders instead of NaN / "undefined";
- *   - the compact (title-less) and wide (annotated) layout variants;
+ *   - the compact (titled) and wide (annotated) layout variants;
  *   - the freshness refresh interaction re-issuing the read.
  *
  * The network boundary (`request` from `@/api/client`) is mocked; TanStack Query
@@ -178,6 +178,11 @@ beforeEach(() => {
   routeRequest(routeData([]));
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols });
+  expect(screen.getByRole('heading', { name: 'Route efficiency', level: 3 })).toBeVisible();
+});
+
 // ── Vehicle resolution ──────────────────────────────────────────────────────
 
 describe('RouteEfficiencyWidget vehicle resolution', () => {
@@ -218,7 +223,7 @@ describe('RouteEfficiencyWidget vehicle resolution', () => {
 // ── States: loading / empty / error ─────────────────────────────────────────
 
 describe('RouteEfficiencyWidget states', () => {
-  it('renders a loading skeleton (no title, no empty copy) while fetching', () => {
+  it('keeps the heading with a loading skeleton and no empty copy while fetching', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget({ vehicleId: 1 });
 
@@ -268,7 +273,7 @@ describe('RouteEfficiencyWidget populated list', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('Home → Work')).toBeInTheDocument();
     // km unit → value passes through untouched; trips rendered with the ×.
-    expect(screen.getByText(/220 Wh\/km · 12×/)).toBeInTheDocument();
+    expect(screen.getByText('220.00 Wh/km · 12×')).toBeInTheDocument();
   });
 
   it('assigns the four efficiency badge buckets by raw Wh threshold', async () => {
@@ -336,7 +341,7 @@ describe('RouteEfficiencyWidget unit conversion', () => {
     renderWidget({ vehicleId: 1 });
 
     // 200 Wh/km × 1.609344 = 321.87 → rounds to 322 Wh/mi.
-    expect(await screen.findByText(/322 Wh\/mi · 3×/)).toBeInTheDocument();
+    expect(await screen.findByText('321.87 Wh/mi · 3×')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.queryByText(/Wh\/km/)).toBeNull();
   });
@@ -345,7 +350,7 @@ describe('RouteEfficiencyWidget unit conversion', () => {
 // ── Layout variants ─────────────────────────────────────────────────────────
 
 describe('RouteEfficiencyWidget layout variants', () => {
-  it('renders the compact (title-less) layout for a 1-column widget', async () => {
+  it('renders the compact (titled) layout for a 1-column widget', async () => {
     routeRequest(
       routeData([makeRoute({ startLocation: 'Home', endLocation: 'Gym', avgEfficiency: 210 })]),
     );
@@ -353,8 +358,7 @@ describe('RouteEfficiencyWidget layout variants', () => {
 
     expect(await screen.findByText('Home → Gym')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    // Compact widgets drop the header title.
-    expect(screen.queryByText('Route efficiency')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Route efficiency', level: 3 })).toBeVisible();
   });
 
   it('annotates each route with best/worst efficiency in the wide layout', async () => {
@@ -373,7 +377,7 @@ describe('RouteEfficiencyWidget layout variants', () => {
 
     expect(await screen.findByText(/Home → Lake/)).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText(/best 180 \/ worst 260 Wh\/km/)).toBeInTheDocument();
+    expect(screen.getByText('Home → Lake · best 180.00 / worst 260.00 Wh/km')).toBeInTheDocument();
   });
 });
 

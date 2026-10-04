@@ -64,6 +64,12 @@ describe('Energy and range evidence', () => {
     expect(value('Odometer (from → to)')).toBe('10,000.00 → — km');
   });
 
+  it('labels an ongoing drive odometer as start to latest rather than a completed endpoint', () => {
+    render(<MoreDetailsPanel drive={driveFixture({ endTs: null })} stats={statsFixture()} />);
+    expect(value('Odometer (start → latest)')).toBe('10,000.00 → 10,040.00 km');
+    expect(screen.queryByRole('rowheader', { name: 'Odometer (from → to)' })).toBeNull();
+  });
+
   it('retains range endpoints, delta and method without re-converting display-unit stats', () => {
     prefs.distance = 'mi';
     render(<MoreDetailsPanel drive={driveFixture()} stats={statsFixture({ startRange: 100, endRange: 80 })} />);

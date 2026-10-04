@@ -163,7 +163,7 @@ describe('MQTTStatusWidget — standard layout (2×2)', () => {
 
     // 8.5 + 4 = 12.5 signals/sec; 1000 + 500 = 1,500 total.
     expect(screen.getByText('Messages/sec')).toBeInTheDocument();
-    expect(screen.getByText('12.5')).toBeInTheDocument();
+    expect(screen.getByText('12.50')).toBeInTheDocument();
     expect(screen.getByText('Total messages')).toBeInTheDocument();
     expect(screen.getByText('1,500')).toBeInTheDocument();
 
@@ -186,7 +186,7 @@ describe('MQTTStatusWidget — standard layout (2×2)', () => {
     mockMqtt.mockReturnValue(makeQuery({ data: makeStatus({ broker: '', vehicles: [] }) }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('0.0')).toBeInTheDocument(); // messages/sec
+    expect(screen.getByText('0.00')).toBeInTheDocument(); // messages/sec
     expect(screen.getByText('0')).toBeInTheDocument(); // total messages
     // Last-message (no vehicles) AND the blank broker both collapse to the
     // em-dash — the `|| '—'` broker guard is what turns '' into a placeholder.
@@ -200,7 +200,7 @@ describe('MQTTStatusWidget — compact layout (1×N)', () => {
     renderWidget(COMPACT);
 
     expect(screen.getByText('Online')).toBeInTheDocument();
-    expect(screen.getByText('12.5')).toBeInTheDocument();
+    expect(screen.getByText('12.50')).toBeInTheDocument();
     expect(screen.getByText('msg/s')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'MQTT status' })).toBeInTheDocument();
     expect(screen.queryByText('Total messages')).not.toBeInTheDocument();
@@ -244,7 +244,7 @@ describe('MQTTStatusWidget — states & interaction', () => {
       renderWidget(STANDARD);
       expect(screen.getByText('Offline')).toBeInTheDocument();
       expect(screen.getByText('0')).toBeInTheDocument();
-      expect(screen.getByText('0.0')).toBeInTheDocument();
+      expect(screen.getByText('0.00')).toBeInTheDocument();
     });
   });
 

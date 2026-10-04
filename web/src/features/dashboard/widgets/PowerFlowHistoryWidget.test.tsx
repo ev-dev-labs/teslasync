@@ -78,8 +78,10 @@ vi.mock('react-i18next', () => ({
 // for inspection. Only the chart library is stubbed — the widget's own series
 // wiring, axis config, and formatters still run.
 vi.mock('@/components/charts', async () => {
+  const { useMeasuredAxisWidth } = await import('@/components/charts/useMeasuredAxisWidth');
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
+  useMeasuredAxisWidth,
   ...chartTestDoubles,
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
@@ -161,6 +163,18 @@ vi.mock('@/hooks/useSettings', () => ({
 
 import PowerFlowHistoryWidget, { shortTime } from './PowerFlowHistoryWidget';
 
+it.each([1, 2, 3])('identifies power flow history at %i columns', (cols) => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Power flow history' })).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('identifies power flow history without a linked site at %i columns', (cols) => {
+  useSitesMock.mockReturnValue(makeQ<TeslaEnergySite[]>([]));
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Power flow history' })).toBeInTheDocument();
+  expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
+});
+
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 interface QResult<T> {
@@ -208,6 +222,8 @@ function makeSite(over: Partial<TeslaEnergySite> = {}): TeslaEnergySite {
     storm_mode_capable: true,
     fetched_at: '2026-07-04T00:00:00Z',
     created_at: '2026-07-04T00:00:00Z',
+    updated_at: '2026-07-04T00:00:00Z',
+    site_info_fetched_at: null,
     ...over,
   };
 }
@@ -258,11 +274,13 @@ function populatedWindow(): TeslaEnergyLiveStatus[] {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <PowerFlowHistoryWidget size={size} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Power flow history');
+  return view;
 }
 
 beforeEach(() => {
@@ -365,7 +383,7 @@ describe('PowerFlowHistoryWidget — states', () => {
     expect(screen.queryByText('No power flow data')).toBeNull();
     expect(screen.getByTestId('area-chart')).toBeInTheDocument();
     expect(screen.getByText('Avg solar')).toBeInTheDocument();
-    expect(screen.getAllByText('0.0')).toHaveLength(3);
+    expect(screen.getAllByText('0.00')).toHaveLength(3);
   });
 });
 
@@ -414,9 +432,9 @@ describe('PowerFlowHistoryWidget — populated (standard)', () => {
     expect(screen.getByText('Peak home')).toBeInTheDocument();
     expect(screen.getByText('Avg net grid')).toBeInTheDocument();
     // mean(4,6)=5.0 · max(3,7)=7.0 · sum(1,2)=3.0
-    expect(screen.getByText('5.0')).toBeInTheDocument();
-    expect(screen.getByText('7.0')).toBeInTheDocument();
-    expect(screen.getByText('1.5')).toBeInTheDocument();
+    expect(screen.getByText('5.00')).toBeInTheDocument();
+    expect(screen.getByText('7.00')).toBeInTheDocument();
+    expect(screen.getByText('1.50')).toBeInTheDocument();
     // Every stat carries the kW unit suffix.
     expect(screen.getAllByText('kW')).toHaveLength(3);
   });
@@ -458,7 +476,7 @@ describe('PowerFlowHistoryWidget — populated (standard)', () => {
     renderWidget({ cols: 2, rows: 2 });
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-key', 'time');
     // fmt(1234.5, 1) → "1234.5"
-    expect(screen.getByTestId('y-axis')).toHaveAttribute('data-sample', '1234.5');
+    expect(screen.getByTestId('y-axis')).toHaveAttribute('data-sample', '1,234.50');
   });
 
   it('formats tooltip values as "<n> kW" via fmtNumber', () => {
@@ -484,8 +502,8 @@ describe('PowerFlowHistoryWidget — compact', () => {
     expect(heading.parentElement?.querySelector('svg.lucide-trending-up[aria-hidden="true"]')).toBeInTheDocument();
     expect(screen.getByText('Avg solar')).toBeInTheDocument();
     expect(screen.getByText('Peak home')).toBeInTheDocument();
-    expect(screen.getByText('5.0')).toBeInTheDocument();
-    expect(screen.getByText('7.0')).toBeInTheDocument();
+    expect(screen.getByText('5.00')).toBeInTheDocument();
+    expect(screen.getByText('7.00')).toBeInTheDocument();
     // Net Grid stat and the chart body only exist on the standard+ layout.
     expect(screen.queryByText('Avg net grid')).toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();
@@ -539,9 +557,9 @@ describe('PowerFlowHistoryWidget — null safety', () => {
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
     // avg solar = (0+4)/2 = 2.0 · peak home = max(0,6) = 6.0
-    expect(screen.getByText('6.0')).toBeInTheDocument();
-    expect(screen.getByText('4.0')).toBeInTheDocument();
-    expect(screen.getByText('2.0')).toBeInTheDocument();
+    expect(screen.getByText('6.00')).toBeInTheDocument();
+    expect(screen.getByText('4.00')).toBeInTheDocument();
+    expect(screen.getByText('2.00')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
     expect(screen.getByTestId('area-chart')).toHaveAttribute('data-count', '2');
   });
@@ -556,7 +574,7 @@ describe('PowerFlowHistoryWidget — refresh', () => {
       isError: true, error: new Error('refresh failed'), refetch,
     }));
     renderWidget(size);
-    expect(screen.getByText('5.0')).toBeInTheDocument();
+    expect(screen.getByText('5.00')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
@@ -569,9 +587,9 @@ describe('PowerFlowHistoryWidget — refresh', () => {
       makeStatus({ solar_power: null, load_power: null, grid_power: 1000 }),
     ]));
     renderWidget();
-    expect(screen.getByText('-0.5')).toBeInTheDocument();
+    expect(screen.getByText('-0.50')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
   });
   it('refetches both sites and history when the freshness control is activated', () => {
     const refetchSites = vi.fn();

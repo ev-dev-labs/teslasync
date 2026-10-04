@@ -149,9 +149,9 @@ describe('SignalTypeBreakdown', () => {
     for (const label of ROW_LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(sublabelText('Numeric')).toBe('10 · 50%');
-    expect(sublabelText('Boolean')).toBe('6 · 30%');
-    expect(sublabelText('String')).toBe('4 · 20%');
+    expect(sublabelText('Numeric')).toBe('10 · 50.00%');
+    expect(sublabelText('Boolean')).toBe('6 · 30.00%');
+    expect(sublabelText('String')).toBe('4 · 20.00%');
     // Header total caption, locale-grouped.
     expect(screen.getByText('20')).toBeInTheDocument();
     // Data branch → no empty state.
@@ -162,9 +162,9 @@ describe('SignalTypeBreakdown', () => {
     renderBreakdown({ numericCount: 5, booleanCount: 0, stringCount: 0 }); // total 5
 
     // A zero-count type is still shown as a 0% row, never hidden.
-    expect(sublabelText('Numeric')).toBe('5 · 100%');
-    expect(sublabelText('Boolean')).toBe('0 · 0%');
-    expect(sublabelText('String')).toBe('0 · 0%');
+    expect(sublabelText('Numeric')).toBe('5 · 100.00%');
+    expect(sublabelText('Boolean')).toBe('0 · 0.00%');
+    expect(sublabelText('String')).toBe('0 · 0.00%');
     expect(screen.getAllByText(/^(Numeric|Boolean|String)$/)).toHaveLength(3);
   });
 
@@ -222,9 +222,9 @@ describe('SignalTypeBreakdown', () => {
   it('clamps a negative count to zero rather than yielding a negative percentage', () => {
     renderBreakdown({ numericCount: -5, booleanCount: 10, stringCount: 0 }); // numeric → 0, total 10
 
-    expect(sublabelText('Numeric')).toBe('0 · 0%');
-    expect(sublabelText('Boolean')).toBe('10 · 100%');
-    expect(sublabelText('String')).toBe('0 · 0%');
+    expect(sublabelText('Numeric')).toBe('0 · 0.00%');
+    expect(sublabelText('Boolean')).toBe('10 · 100.00%');
+    expect(sublabelText('String')).toBe('0 · 0.00%');
     // The clamped-away -5 must not resurface in the total (10, not 5).
     expect(screen.getByText('10')).toBeInTheDocument();
   });

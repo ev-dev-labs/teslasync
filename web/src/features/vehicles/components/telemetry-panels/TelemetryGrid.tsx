@@ -14,7 +14,7 @@ interface TelemetryGridProps {
 }
 
 export function TelemetryGrid({ state }: TelemetryGridProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatTemperature } = useUnits()
 
@@ -24,7 +24,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Battery}
           label={t('common.battery', 'Battery')}
-          value={`${fmtInt(state.battery_level)}%`}
+          value={`${fmtNumber(state.battery_level)}%`}
           color={
             state.battery_level > 50
               ? 'text-emerald-300'
@@ -64,7 +64,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           label={t('common.charger', 'Charger')}
           value={
             state.is_charging
-              ? `${fmtInt(state.charger_power)} kW`
+              ? `${fmtNumber(state.charger_power)} kW`
               : t('common.notCharging', 'Not charging')
           }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}

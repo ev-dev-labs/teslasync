@@ -13,7 +13,7 @@ import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -31,6 +31,7 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
 
   return (
     <WidgetShell
+      title={t('widget.chargeStatusLive', 'Charge status')}
       loading={isLoading && !stateData}
       error={!stateData && isError ? String(error ?? 'Request failed') : null}
       dataState={stateData ? deriveDataState(query, { provenance: stateData.live ? 'live' : 'cached' }) : undefined}
@@ -46,8 +47,8 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
             <Badge variant="success" size="sm">{t('widget.charging', 'Charging')}</Badge>
             <WidgetStatGrid cols={2} stats={[
               { label: t('widget.power', 'Power'), value: reading(state.charger_power, value => `${fmtNumber(value)} kW`) },
-              { label: t('widget.rate', 'Rate'), value: reading(state.charge_rate, value => `${fmtInt(convertDistanceFromSI(value, distanceUnit))} ${distanceUnit}/h`) },
-              { label: t('widget.battery', 'Battery'), value: reading(state.battery_level, value => `${value}%`) },
+              { label: t('widget.rate', 'Rate'), value: reading(state.charge_rate, value => `${fmtNumber(convertDistanceFromSI(value, distanceUnit))} ${distanceUnit}/h`) },
+              { label: t('widget.battery', 'Battery'), value: reading(state.battery_level, value => `${fmtNumber(value)}%`) },
               { label: t('widget.timeToFull', 'Time to full'), value: reading(state.time_to_full_charge, value => value >= 0 ? `${fmtNumber(value)}h` : '—') },
             ]} />
           </div>
@@ -57,7 +58,7 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
               {state.is_charging === false ? t('widget.notCharging', 'Not charging') : t('widget.chargingSchedule.modeUnknown', 'Unknown')}
             </Badge>
             <WidgetStatGrid cols={2} stats={[
-              { label: t('widget.battery', 'Battery'), value: reading(state.battery_level, value => `${value}%`) },
+              { label: t('widget.battery', 'Battery'), value: reading(state.battery_level, value => `${fmtNumber(value)}%`) },
               { label: t('widget.range', 'Range'), value: reading(state.rated_range, value => `${fmtNumber(convertDistanceFromSI(value, distanceUnit))} ${distanceUnit}`) },
             ]} />
           </div>

@@ -45,7 +45,7 @@ const AVG_METERS_PER_KWH = convertDistanceToSI(3.5, 'mi');
  */
 export function computeMetrics(
   sessions: ChargingSession[],
-  costPerKwh: number,
+  costPerKwh: number | null,
   costPerDistFn: (kwh: number, distanceM: number) => number | null,
   estimateGasCostFn: (distanceM: number) => number | null,
 ): CostMetrics {
@@ -56,10 +56,10 @@ export function computeMetrics(
   const costs = sessions.map((s, index) => {
     const recorded = knownNumber(s.cost_decimal) ?? knownNumber(s.cost);
     const energy = energies[index];
-    return recorded ?? (energy == null ? null : energy * costPerKwh);
+    return recorded ?? (energy == null || costPerKwh == null ? null : energy * costPerKwh);
   });
   const totalKwh = sumKnown(energies);
-  const totalCost = sumKnown(costs);
+  const totalCost = costs.some(cost => cost == null) ? null : sumKnown(costs);
 
   const totalDistanceM = totalKwh == null || energies.some(energy => energy == null)
     ? null : totalKwh * AVG_METERS_PER_KWH;
@@ -125,7 +125,9 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   const energyWh = sumKnown((sessions ?? []).map(session => session.total_energy_added_wh));
   const dataState = sessions ? deriveDataState(query, {
     provenance: 'inferred',
-    partial: sessions.length >= 100 || sessions.some(session => knownNumber(session.total_energy_added_wh) == null),
+    partial: sessions.length >= 100 || sessions.some(session =>
+      knownNumber(session.total_energy_added_wh) == null
+      || (costPerKwh == null && knownNumber(session.cost_decimal) == null && knownNumber(session.cost) == null)),
   }) : undefined;
   const currency = (value: number | null, decimals?: number) => value == null ? null : formatCurrency(value, decimals);
 
@@ -146,6 +148,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.chargeCost.title', 'Charge cost tracker')}
         loading={isLoading && !sessions}
         dataState={dataState}
         error={errorMessage}
@@ -156,7 +159,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
         onRefresh={handleRefresh}
       >
         {hasData ? (
-          <WidgetBigNumber value={currency(metrics.totalCost, 0)} label={t('widget.chargeCost.monthly', '30-day cost')} animated={false} align="center" />
+          <WidgetBigNumber value={currency(metrics.totalCost)} label={t('widget.chargeCost.monthly', '30-day cost')} animated={false} align="center" />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-5 w-5" />}
@@ -189,13 +192,13 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
           ]} />
           <div className={`flex min-w-0 flex-wrap justify-between gap-2 ${dashboardTokens.metricLabel}`}>
             <span>{t('widget.chargeCost.sessions', '{{count}} sessions', { count: metrics.sessionCount })}</span>
-            <span>{formatCurrency(costPerKwh)}/{t('widget.chargeCost.kwh', 'kWh')}</span>
+            <span>{costPerKwh != null ? formatCurrency(costPerKwh) : '—'}/{t('widget.chargeCost.kwh', 'kWh')}</span>
           </div>
 
           {isTall && (
             <div className="space-y-2">
               <WidgetStatGrid cols={2} stats={[
-                { label: t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', { unit: distanceUnit }), value: currency(metrics.costPerDistance, 3), icon: <Fuel className="h-3.5 w-3.5" /> },
+                { label: t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', { unit: distanceUnit }), value: currency(metrics.costPerDistance), icon: <Fuel className="h-3.5 w-3.5" /> },
                 { label: t('widget.chargeCost.gasSavings', 'vs gas savings'), value: currency(metrics.gasSavings), icon: <TrendingDown className="h-3.5 w-3.5" /> },
               ]} />
               <p className={dashboardTokens.metricLabel}>

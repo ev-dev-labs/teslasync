@@ -110,7 +110,7 @@ describe('BatteryRangePanel — battery gauge', () => {
   it('renders the battery level, percent unit, and label', () => {
     render(<BatteryRangePanel state={makeState({ battery_level: 72 })} />)
 
-    expect(screen.getByText('72')).toBeInTheDocument()
+    expect(screen.getByText('72.00')).toBeInTheDocument()
     expect(screen.getByText('%')).toBeInTheDocument()
     expect(screen.getByText('Battery')).toBeInTheDocument()
   })
@@ -136,7 +136,7 @@ describe('BatteryRangePanel — battery gauge', () => {
     )
 
     // Value falls back to 0 (not NaN → "0" via the gauge formatter)...
-    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.getByText('0.00')).toBeInTheDocument()
     // ...an unknown battery is treated as the critical-low colour...
     expect(gaugeHex(container)).toBe('#ef4444')
     // ...and crucially the fill geometry stays a finite number (the fix:
@@ -150,8 +150,8 @@ describe('BatteryRangePanel — range metrics', () => {
   it('delegates rated + ideal range to formatDistance at precision 0 and renders them', () => {
     render(<BatteryRangePanel state={makeState({ rated_range: 500, ideal_range: 480 })} />)
 
-    expect(mockFormatDistance).toHaveBeenCalledWith(500, { precision: 0 })
-    expect(mockFormatDistance).toHaveBeenCalledWith(480, { precision: 0 })
+    expect(mockFormatDistance).toHaveBeenCalledWith(500)
+    expect(mockFormatDistance).toHaveBeenCalledWith(480)
     expect(screen.getByText('Rated range')).toBeInTheDocument()
     expect(screen.getByText('Ideal range')).toBeInTheDocument()
     expect(screen.getByText('500 km')).toBeInTheDocument()
@@ -161,7 +161,7 @@ describe('BatteryRangePanel — range metrics', () => {
   it('renders an em dash when a range value is missing', () => {
     render(<BatteryRangePanel state={makeState({ rated_range: undefined })} />)
 
-    expect(mockFormatDistance).toHaveBeenCalledWith(undefined, { precision: 0 })
+    expect(mockFormatDistance).toHaveBeenCalledWith(undefined)
     // The Rated Range card body falls back to the formatter's em dash.
     expect(screen.getByText('Rated range').closest('div')).toHaveTextContent('—')
   })
@@ -179,7 +179,7 @@ describe('BatteryRangePanel — charging state', () => {
     render(<BatteryRangePanel state={makeState({ is_charging: false, charge_rate: 48 })} />)
 
     expect(screen.getByText('Not charging')).toBeInTheDocument()
-    expect(screen.queryByText('48 km/h')).toBeNull()
+    expect(screen.queryByText('48.00 km/h')).toBeNull()
     expect(mockFormatDistance).not.toHaveBeenCalledWith(48)
   })
 
@@ -190,7 +190,7 @@ describe('BatteryRangePanel — charging state', () => {
       />,
     )
 
-    expect(screen.getByText('Full in 1.5h')).toBeInTheDocument()
+    expect(screen.getByText('Full in 1.50h')).toBeInTheDocument()
   })
 
   it('omits the subtitle when charging but the ETA is zero', () => {

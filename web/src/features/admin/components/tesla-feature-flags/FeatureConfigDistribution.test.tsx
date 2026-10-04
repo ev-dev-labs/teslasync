@@ -122,9 +122,9 @@ describe('FeatureConfigDistribution', () => {
     renderPanel({ summary: makeSummary({ total: 4, enabled: 3, disabled: 1, enabledRate: 75 }) });
 
     expect(heading()).toBeInTheDocument();
-    // Gauge — labelled, whole-percent value, and its unit.
+    // Gauge uses display precision; the count chips remain integers.
     expect(screen.getByText('Enabled rate')).toBeInTheDocument();
-    expect(screen.getByText('75')).toBeInTheDocument();
+    expect(screen.getByText('75.00')).toBeInTheDocument();
     expect(screen.getByText('%')).toBeInTheDocument();
     // Count chips.
     expect(screen.getByText('Enabled: 3')).toBeInTheDocument();
@@ -145,15 +145,14 @@ describe('FeatureConfigDistribution', () => {
 
     expect(screen.getByText('Enabled: 1,234')).toBeInTheDocument();
     expect(screen.getByText('Disabled: 1,234')).toBeInTheDocument();
-    expect(screen.getByText('50')).toBeInTheDocument();
+    expect(screen.getByText('50.00')).toBeInTheDocument();
   });
 
-  it('rounds a fractional enabled rate to a whole percent in the gauge (decimals=0)', () => {
-    // total = 3, enabled = 2 → 66.66…% → rounds to "67".
+  it('rounds a fractional enabled rate at the selected display precision', () => {
     renderPanel({ summary: makeSummary({ total: 3, enabled: 2, disabled: 1 }) });
 
-    expect(screen.getByText('67')).toBeInTheDocument();
-    expect(screen.queryByText('66.67')).toBeNull();
+    expect(screen.getByText('66.67')).toBeInTheDocument();
+    expect(screen.queryByText('67')).toBeNull();
   });
 
   it('renders a role="status" empty state (and no gauge) when there are no features', () => {

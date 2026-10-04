@@ -8,7 +8,7 @@ import {
   Thermometer, ThermometerSun, ThermometerSnowflake, Flame,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { Grid, PageContainer, Stack } from '@/components/layout';
 
 import {
   GlassPanel, Badge, Button,
@@ -46,8 +46,10 @@ import {
   buildRecommendations,
   healthLabel,
   healthVariant,
+  hasHealthMeasurement,
   isProjectionTrustworthy,
 } from '../components/battery-health/helpers';
+import { BATTERY_PANEL_CLASS, BATTERY_PANEL_HEADER_CLASS } from '../components/battery-health/layout';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export {
@@ -124,7 +126,7 @@ function StatCell({
   note?: ReactNode;
 }) {
   return (
-    <GlassPanel className="h-full p-4 text-center">
+    <GlassPanel className="min-w-0 h-full p-4 text-center">
       <MetricLabel className="mb-1">{label}</MetricLabel>
       <Text
         as="p"
@@ -152,7 +154,7 @@ function StatCell({
  */
 function BatteryHealthSkeleton() {
   return (
-    <div className="space-y-6" data-testid="battery-health-skeleton">
+    <Stack gap={6} className="min-w-0 w-full" data-testid="battery-health-skeleton">
       <StatGridSkeleton cards={7} className="md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7" />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Skeleton className="h-64 rounded-xl xl:col-span-2" />
@@ -166,7 +168,7 @@ function BatteryHealthSkeleton() {
         <Skeleton className="h-40 rounded-xl" />
         <Skeleton className="h-40 rounded-xl" />
       </div>
-    </div>
+    </Stack>
   );
 }
 
@@ -204,6 +206,9 @@ export default function BatteryHealthPage() {
     () => (health ? buildRecommendations(health, t) : []),
     [health, t],
   );
+  const healthMeasured = health != null && hasHealthMeasurement(health);
+  const healthValue = healthMeasured ? fmtPercent(health!.current_soh) : '—';
+  const healthUnavailable = t('battery.health.missingMeasurement', 'Capacity measurements are not available yet; battery health cannot be assessed.');
 
   /* ── Derived: degradation projection sanity ────────────────────────
    * Backend regression on a short history window can produce absurd
@@ -230,6 +235,7 @@ export default function BatteryHealthPage() {
         subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
         error={healthLoading ? null : healthError as Error | null}
       >
+        <Stack gap={6} className="min-w-0 w-full">
         <LiveStaleDataBanner />
         <FadeIn>
           <AIBatteryHealthForecastNarrative vehicleId={vehicleId} />
@@ -242,11 +248,14 @@ export default function BatteryHealthPage() {
             message={t('battery.empty', 'No battery health data available yet.')}
           />
         )}
+        </Stack>
       </PageContainer>
     );
   }
 
-  const capacityNowPct = health.original_capacity_wh > 0
+  const capacityMeasured = Number.isFinite(health.estimated_capacity_wh) && health.estimated_capacity_wh > 0;
+  const originalCapacityMeasured = Number.isFinite(health.original_capacity_wh) && health.original_capacity_wh > 0;
+  const capacityNowPct = capacityMeasured && originalCapacityMeasured
     ? Math.max(0, Math.min(100, (health.estimated_capacity_wh / health.original_capacity_wh) * 100))
     : 0;
 
@@ -309,7 +318,9 @@ export default function BatteryHealthPage() {
           ? 'warning'
           : 'danger';
   const healthOperationalTone: OperationalTone =
-    health.current_soh >= 90
+    !healthMeasured
+      ? 'neutral'
+      : health.current_soh >= 90
       ? 'success'
       : health.current_soh >= 70
         ? 'warning'
@@ -351,7 +362,7 @@ export default function BatteryHealthPage() {
       },
     }));
   const narrative: OperationalNarrative = {
-    whatChanged: t(
+    whatChanged: !healthMeasured ? healthUnavailable : t(
       'operations.battery.narrative.whatChanged',
       'Modeled pack health is {{health}}, with {{rate}} annualized degradation across the available history.',
       {
@@ -360,7 +371,7 @@ export default function BatteryHealthPage() {
       },
     ),
     whyItMatters:
-      healthAttention[0]?.description
+      !healthMeasured ? healthUnavailable : healthAttention[0]?.description
       ?? t(
         'operations.battery.narrative.healthyImpact',
         'Stable capacity preserves usable range and reduces near-term service uncertainty.',
@@ -392,7 +403,9 @@ export default function BatteryHealthPage() {
     },
     likelyCause: null,
     recommendedResponse:
-      health.current_soh < 70
+      !healthMeasured
+        ? t('battery.tip.needMeasurements', 'Keep monitoring as capacity measurements arrive; battery health cannot be assessed yet.')
+        : health.current_soh < 70
         ? t(
             'operations.battery.narrative.serviceResponse',
             'Arrange an independent battery-health review and preserve the supporting snapshots.',
@@ -457,6 +470,7 @@ export default function BatteryHealthPage() {
       title={t('battery.title', 'Battery Health')}
       subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
     >
+      <Stack gap={6} className="min-w-0 w-full" data-testid="battery-health-sections">
       <LiveStaleDataBanner />
 
       <OperationalBrief
@@ -468,7 +482,9 @@ export default function BatteryHealthPage() {
           'Health, degradation, range confidence, charging stress, thermal impact, and cycle exposure are summarized before the deeper evidence.',
         )}
         statusLabel={
-          health.current_soh >= 90
+          !healthMeasured
+            ? t('battery.health.unavailable', 'Not measured')
+            : health.current_soh >= 90
             ? t('operations.battery.statusHealthy', 'Healthy')
             : health.current_soh >= 70
               ? t('operations.battery.statusMonitor', 'Monitor')
@@ -499,7 +515,7 @@ export default function BatteryHealthPage() {
           {
             key: 'health',
             label: t('operations.battery.packScore', 'Pack score'),
-            value: fmtPercent(health.current_soh),
+            value: healthValue,
             detail: t(
               'operations.battery.healthDetail',
               'Current modeled health relative to the original usable pack.',
@@ -509,12 +525,12 @@ export default function BatteryHealthPage() {
           {
             key: 'degradation',
             label: t('operations.battery.degradationPace', 'Degradation pace'),
-            value: `${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}`,
+            value: healthMeasured ? `${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}` : '—',
             detail: t(
               'operations.battery.degradationDetail',
               'Annualized capacity change inferred from available history.',
             ),
-            tone: health.degradation_rate_pct_per_year <= 5 ? 'success' : 'warning',
+            tone: !healthMeasured ? 'neutral' : health.degradation_rate_pct_per_year <= 5 ? 'success' : 'warning',
           },
           {
             key: 'range-confidence',
@@ -593,8 +609,8 @@ export default function BatteryHealthPage() {
               only in the Help glossary — is the whole point of the inline
               affordance. Each `<GlossaryTerm>` self-gates on the user's
               contextual-help preference and degrades to plain text. */}
-          <p
-            className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]"
+          <Text as="p" variant="caption"
+            className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1"
             data-testid="battery-glossary-strip"
           >
             <span>{t('battery.glossary.lead', 'Terms on this page:')}</span>
@@ -602,31 +618,31 @@ export default function BatteryHealthPage() {
             <GlossaryTerm term="degradation" />
             <GlossaryTerm term="soc" />
             <GlossaryTerm term="rated_range" />
-          </p>
+          </Text>
           <section
             aria-label={t('battery.section.kpis', 'Battery health summary metrics')}
-            className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7"
+            className="grid min-w-0 grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7"
           >            <MetricCard
               label={t('battery.metric.soh', 'State of Health')}
-              value={fmtPercent(health.current_soh)}
+              value={healthValue}
               icon={<Heart className="h-5 w-5" aria-hidden="true" />}
               color="cyan"
             />
             <MetricCard
               label={t('battery.metric.currentCap', 'Current Capacity')}
-              value={formatEnergy(health.estimated_capacity_wh)}
+              value={capacityMeasured ? formatEnergy(health.estimated_capacity_wh) : '—'}
               icon={<Battery className="h-5 w-5" aria-hidden="true" />}
               color="green"
             />
             <MetricCard
               label={t('battery.metric.originalCap', 'Original Capacity')}
-              value={formatEnergy(health.original_capacity_wh)}
+              value={originalCapacityMeasured ? formatEnergy(health.original_capacity_wh) : '—'}
               icon={<BatteryFull className="h-5 w-5" aria-hidden="true" />}
               color="blue"
             />
             <MetricCard
               label={t('battery.metric.degradation', 'Degradation Rate')}
-              value={`${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}`}
+              value={healthMeasured ? `${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}` : '—'}
               icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
               color="amber"
             />
@@ -663,20 +679,20 @@ export default function BatteryHealthPage() {
       </SectionErrorBoundary>
 
       {/* ── 2. Hero: health gauges + capacity/wear bars ───────────── */}
-      <FadeIn delay={0.05}>
+      <FadeIn delay={0.05} className="min-w-0 w-full">
         <section
           aria-label={t('battery.section.overview', 'Health score and capacity')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+          className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3"
         >
           <SectionErrorBoundary name="battery:health-hero" fallbackTitle={t('battery.section.heroFailed', 'Health score panel failed to load')}>
-            <GlassPanel className="h-full p-4 sm:p-6 xl:col-span-2">
-              <PanelTitle className="mb-4 flex items-center gap-2">
+            <GlassPanel className={cn(BATTERY_PANEL_CLASS, 'xl:col-span-2')}>
+              <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
                 <Heart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('battery.hero.title', 'Health Overview')}
               </PanelTitle>
-              <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-3 sm:gap-6 xl:grid-cols-3 2xl:grid-cols-5">
+              <div className="grid min-w-0 grid-cols-2 items-center gap-4 sm:grid-cols-3 2xl:grid-cols-5">
                 <div className="col-span-2 flex flex-col items-center sm:col-span-1">
-                  <LinearGauge
+                  {healthMeasured ? <LinearGauge
                     value={health.current_soh}
                     max={100}
                     label={t('battery.gauge.health', 'Health Score')}
@@ -684,25 +700,25 @@ export default function BatteryHealthPage() {
                     hideScale
                     size={130}
                     tone={healthTone(health.current_soh)}
-                  />
-                  <Badge variant={healthVariant(health.current_soh)} className="mt-2">
-                    {healthLabel(health.current_soh, t)}
+                  /> : <Text variant="bodySm" className="text-center">{healthUnavailable}</Text>}
+                  <Badge variant={healthMeasured ? healthVariant(health.current_soh) : 'neutral'} className="mt-2">
+                    {healthMeasured ? healthLabel(health.current_soh, t) : t('battery.health.unavailable', 'Not measured')}
                   </Badge>
                 </div>
-                <LinearGauge
+                {capacityMeasured && originalCapacityMeasured ? <LinearGauge
                   value={capacityNowPct}
                   max={100}
                   label={t('battery.gauge.capacity', 'Capacity')}
                   unit="%"
                   tone="info"
-                />
-                <LinearGauge
+                /> : <Text variant="bodySm">{t('battery.gauge.capacity', 'Capacity')}: —</Text>}
+                {healthMeasured ? <LinearGauge
                   value={health.degradation_rate_pct_per_year}
                   max={10}
                   label={t('battery.gauge.degradation', 'Degradation')}
                   unit="%/yr"
                   tone={degradationTone(health.degradation_rate_pct_per_year)}
-                />
+                /> : <Text variant="bodySm">{t('battery.gauge.degradation', 'Degradation')}: —</Text>}
                 <LinearGauge
                   value={health.total_cycles}
                   max={1500}
@@ -720,32 +736,32 @@ export default function BatteryHealthPage() {
           </SectionErrorBoundary>
 
           <SectionErrorBoundary name="battery:metric-bars" fallbackTitle={t('battery.section.metricBarsFailed', 'Metric bars failed to load')}>
-            <GlassPanel className="h-full p-4 sm:p-6">
-              <PanelTitle className="mb-4 flex items-center gap-2">
+            <GlassPanel className={BATTERY_PANEL_CLASS}>
+              <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
                 <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('battery.bars.title', 'Capacity & Wear')}
               </PanelTitle>
-              <div className="space-y-5">
+              <Stack gap={4}>
                 <div>
-                  <MetricBar
+                  {capacityMeasured && originalCapacityMeasured ? <MetricBar
                     label={t('battery.bar.capacity', 'Current Capacity')}
                     value={Math.round(capacityNowPct)}
                     max={100}
                     color={gaugeTone.info}
-                  />
+                  /> : <Text variant="bodySm">{t('battery.bar.capacity', 'Current Capacity')}: —</Text>}
                   <Text as="p" size="2xs" color="muted" className="mt-1">
-                    {formatEnergy(health.estimated_capacity_wh)} / {formatEnergy(health.original_capacity_wh)}
+                    {capacityMeasured ? formatEnergy(health.estimated_capacity_wh) : '—'} / {originalCapacityMeasured ? formatEnergy(health.original_capacity_wh) : '—'}
                   </Text>
                 </div>
                 <div>
-                  <MetricBar
+                  {healthMeasured ? <MetricBar
                     label={t('battery.bar.degradation', 'Degradation')}
                     value={health.degradation_rate_pct_per_year}
                     max={10}
                     color={gaugeTone[degradationTone(health.degradation_rate_pct_per_year)]}
-                  />
+                  /> : <Text variant="bodySm">{t('battery.bar.degradation', 'Degradation')}: —</Text>}
                   <Text as="p" size="2xs" color="muted" className="mt-1">
-                    {fmtNumber(health.degradation_rate_pct_per_year)}% {t('battery.perYear', 'per year')}
+                    {healthMeasured ? `${fmtNumber(health.degradation_rate_pct_per_year)}% ${t('battery.perYear', 'per year')}` : '—'}
                   </Text>
                 </div>
                 <div>
@@ -759,7 +775,7 @@ export default function BatteryHealthPage() {
                     {t('battery.warrantyLimit', 'Tesla warranty: 1,500 cycles / 70%')}
                   </Text>
                 </div>
-              </div>
+              </Stack>
             </GlassPanel>
           </SectionErrorBoundary>
         </section>
@@ -779,20 +795,21 @@ export default function BatteryHealthPage() {
       </DeferredBatterySection>
 
       {/* ── 4. Thermal monitoring + New vs Now bento ──────────────── */}
-      <FadeIn delay={0.15}>
+      <FadeIn delay={0.15} className="min-w-0 w-full">
         <section
           aria-label={t('battery.section.thermalCompare', 'Thermal monitoring and capacity comparison')}
-          className="grid grid-cols-1 gap-4 2xl:grid-cols-2"
+          className="grid min-w-0 grid-cols-1 gap-4 2xl:grid-cols-2"
         >
           <SectionErrorBoundary name="battery:thermal" fallbackTitle={t('battery.section.thermalFailed', 'Thermal monitoring failed to load')}>
-            <GlassPanel className="h-full p-4 sm:p-5">
-              <PanelTitle className="mb-4 flex items-center gap-2">
+            <GlassPanel className={BATTERY_PANEL_CLASS}>
+              <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
                 <Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />
                 {t('battery.thermal.title', 'Thermal Monitoring')}
               </PanelTitle>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              <Grid minItemWidth="wide" gap={4} className="min-w-0">
                 <MetricCard
                   label={t('battery.thermal.moduleTempMax', 'Module Temp (Max)')}
+                  wrapLabel
                   value={
                     chargingLive?.module_temp_max != null
                       ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_max))} ${tempUnit}`
@@ -810,6 +827,7 @@ export default function BatteryHealthPage() {
                 />
                 <MetricCard
                   label={t('battery.thermal.moduleTempMin', 'Module Temp (Min)')}
+                  wrapLabel
                   value={
                     chargingLive?.module_temp_min != null
                       ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_min))} ${tempUnit}`
@@ -827,6 +845,7 @@ export default function BatteryHealthPage() {
                 />
                 <MetricCard
                   label={t('battery.thermal.heater', 'Battery Heater')}
+                  wrapLabel
                   value={
                     chargingLive?.battery_heater_on == null
                       ? '—'
@@ -839,6 +858,7 @@ export default function BatteryHealthPage() {
                 />
                 <MetricCard
                   label={t('battery.thermal.tempSpread', 'Temperature Spread')}
+                  wrapLabel
                   value={
                     chargingLive?.module_temp_max != null && chargingLive?.module_temp_min != null
                       ? `${fmtNumber(
@@ -850,31 +870,31 @@ export default function BatteryHealthPage() {
                   icon={<Activity className="h-5 w-5" aria-hidden="true" />}
                   color="purple"
                 />
-              </div>
+              </Grid>
             </GlassPanel>
           </SectionErrorBoundary>
 
           <SectionErrorBoundary name="battery:capacity-range" fallbackTitle={t('battery.section.capacityRangeFailed', 'Capacity & range comparison failed to load')}>
-            <GlassPanel className="h-full p-4 sm:p-5">
-              <PanelTitle className="mb-4 flex items-center gap-2">
+            <GlassPanel className={BATTERY_PANEL_CLASS}>
+              <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
                 <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}
               </PanelTitle>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              <Grid minItemWidth="compact" gap={4} className="min-w-0">
                 <StatCell
                   label={t('battery.newVsNow.capNew', 'Capacity When New')}
-                  value={formatEnergy(health.original_capacity_wh)}
+                  value={originalCapacityMeasured ? formatEnergy(health.original_capacity_wh) : '—'}
                 />
                 <StatCell
                   label={t('battery.newVsNow.capNow', 'Capacity Now')}
-                  value={formatEnergy(health.estimated_capacity_wh)}
+                  value={capacityMeasured ? formatEnergy(health.estimated_capacity_wh) : '—'}
                   accent="text-cyan-300"
                   note={
-                    <Text as="p" size="2xs" className="mt-1 text-rose-300">
+                    capacityMeasured && originalCapacityMeasured ? <Text as="p" size="2xs" className="mt-1 text-rose-300">
                       -{formatEnergy(
                         Math.max(0, health.original_capacity_wh - health.estimated_capacity_wh),
                       )}
-                    </Text>
+                    </Text> : undefined
                   }
                 />
                 <StatCell
@@ -901,7 +921,7 @@ export default function BatteryHealthPage() {
                     ) : undefined
                   }
                 />
-              </div>
+              </Grid>
             </GlassPanel>
           </SectionErrorBoundary>
         </section>
@@ -909,33 +929,33 @@ export default function BatteryHealthPage() {
 
       {/* ── 5. Smart insights — full-width reflow ─────────────────── */}
       <SectionErrorBoundary name="battery:insights" fallbackTitle={t('battery.section.insightsFailed', 'Smart insights failed to load')}>
-        <FadeIn delay={0.2}>
-          <section aria-label={t('battery.insights.title', 'Smart Insights')} className="space-y-3">
-            <SectionTitle className="flex items-center gap-2">
+        <FadeIn delay={0.2} className="min-w-0 w-full">
+          <section aria-label={t('battery.insights.title', 'Smart Insights')} className="min-w-0 w-full space-y-4">
+            <SectionTitle className="flex min-w-0 items-center gap-2">
               <Heart className="h-4 w-4 text-rose-300" aria-hidden="true" />
               {t('battery.insights.title', 'Smart Insights')}
             </SectionTitle>
             {insights.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
+              <Grid minItemWidth="wide" gap={4} className="min-w-0 w-full">
                 {insights.map((ins, i) => {
                   const sev = severityTokens[insightSeverity[ins.status]];
                   return (
                     <GlassPanel
                       key={i}
                       data-severity={insightSeverity[ins.status]}
-                      className={cn('border p-4 transition-all duration-normal', sev.border, sev.bg)}
+                      className={cn(BATTERY_PANEL_CLASS, 'border transition-all duration-normal', sev.border, sev.bg)}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={cn('mt-0.5', sev.fg)}>{ins.icon}</div>
+                        <div className={cn('mt-0.5 shrink-0', sev.fg)}>{ins.icon}</div>
                         <div className="min-w-0">
                           <Text as="p" size="sm" weight="medium" color="primary">{ins.title}</Text>
-                          <Text as="p" variant="bodySm" className="mt-0.5">{ins.description}</Text>
+                          <Text as="p" variant="bodySm" className="mt-2">{ins.description}</Text>
                         </div>
                       </div>
                     </GlassPanel>
                   );
                 })}
-              </div>
+              </Grid>
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Info className="h-8 w-8" aria-hidden="true" />}
@@ -964,18 +984,18 @@ export default function BatteryHealthPage() {
       </DeferredBatterySection>
 
       {/* ── 8. Quick links + recommendations bento ────────────────── */}
-      <FadeIn delay={0.35}>
+      <FadeIn delay={0.35} className="min-w-0 w-full">
         <section
           aria-label={t('battery.section.linksTips', 'Related pages and recommendations')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+          className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2"
         >
           <SectionErrorBoundary name="battery:quick-links" fallbackTitle={t('battery.section.quickLinksFailed', 'Quick links failed to load')}>
-            <GlassPanel className="h-full p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
+            <GlassPanel className={BATTERY_PANEL_CLASS}>
+              <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
                 <ArrowRight className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('battery.links.title', 'Explore More')}
               </PanelTitle>
-              <nav aria-label={t('battery.links.title', 'Explore More')} className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              <nav aria-label={t('battery.links.title', 'Explore More')} className="grid min-w-0 grid-cols-2 gap-4 md:grid-cols-3">
                 {QUICK_LINKS.map((link) => (
                   <Link key={link.to} to={link.to}>
                     <Button
@@ -992,12 +1012,14 @@ export default function BatteryHealthPage() {
           </SectionErrorBoundary>
 
           <SectionErrorBoundary name="battery:recommendations" fallbackTitle={t('battery.section.recommendationsFailed', 'Recommendations failed to load')}>
-            <GlassPanel glow="green" className="h-full p-4 sm:p-5">
-              <Badge variant="success" className="mb-3">
+            <GlassPanel glow="green" className={BATTERY_PANEL_CLASS}>
+              <div className={BATTERY_PANEL_HEADER_CLASS}>
+              <Badge variant="success">
                 <Lightbulb className="mr-1 inline h-4 w-4" aria-hidden="true" />
                 {t('battery.recommendations.title', 'Recommendations')}
               </Badge>
-              <ul className="space-y-2">
+              </div>
+              <ul className="space-y-4">
                 {recommendations.map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-2">
                     <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
@@ -1009,6 +1031,7 @@ export default function BatteryHealthPage() {
           </SectionErrorBoundary>
         </section>
       </FadeIn>
+      </Stack>
     </PageContainer>
   );
 }

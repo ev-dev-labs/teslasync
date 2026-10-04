@@ -8,7 +8,7 @@
  * `useUnits().unitPrefs.distance`. Its behaviour surface — the thing under test:
  *
  *   1. Three responsive layouts driven by `size.cols`:
- *        - compact (cols <= 1): a title-less shell with the projected-range big
+ *        - compact (cols <= 1): a titled shell with the projected-range big
  *          number + "Projected" caption + a health badge, or an EmptyState.
  *        - standard (cols === 2): a titled "Projected Range" shell with the
  *          range number, a health badge, and the projected-vs-EPA comparison bar.
@@ -170,6 +170,11 @@ beforeEach(() => {
   useProjectedRangeMock.mockReturnValue(makeQuery());
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Projected range', level: 3 })).toBeVisible();
+});
+
 afterEach(() => {
   cleanup();
 });
@@ -190,13 +195,13 @@ describe('ProjectedRangeWidget — standard layout (km)', () => {
 
     // Titled shell + the current range converted straight through in km.
     expect(screen.getByText('Projected range')).toBeInTheDocument();
-    expect(screen.getByText('350')).toBeInTheDocument();
+    expect(screen.getByText('350.00')).toBeInTheDocument();
     expect(screen.getAllByText('km').length).toBeGreaterThan(0);
 
     // Health 95 → "Excellent" chip carrying the score.
     const badge = screen.getByText(/Excellent/);
     expect(badge).toHaveTextContent('Excellent');
-    expect(badge).toHaveTextContent('95%');
+    expect(badge).toHaveTextContent('95.00%');
 
     // Comparison bar: 350 / 500 = 70% → amber, indeterminate off.
     const bar = screen.getByRole('progressbar', {
@@ -204,9 +209,9 @@ describe('ProjectedRangeWidget — standard layout (km)', () => {
     });
     expect(bar).toHaveAttribute('aria-valuenow', '70');
     expect(barFill(container).style.width).toBe('70%');
-    expect(screen.getByText('70% of EPA rated')).toBeInTheDocument();
+    expect(screen.getByText('70.00% of EPA rated')).toBeInTheDocument();
     // EPA readout on the right of the bar.
-    expect(screen.getByText('EPA: 500 km')).toBeInTheDocument();
+    expect(screen.getByText('EPA: 500.00 km')).toBeInTheDocument();
   });
 });
 
@@ -231,7 +236,7 @@ describe('ProjectedRangeWidget — health badge thresholds', () => {
 
       const badge = screen.getByText(new RegExp(text));
       expect(badge).toHaveTextContent(text);
-      expect(badge).toHaveTextContent(`${score}%`);
+      expect(badge).toHaveTextContent(`${score}.00%`);
       expect(badge.className).toContain(klass);
     },
   );
@@ -314,13 +319,13 @@ describe('ProjectedRangeWidget — wide layout (range factors)', () => {
     expect(screen.getByText('Battery cycles')).toBeInTheDocument();
 
     // … and their formatted values (avg daily = 40 km converted straight through).
-    expect(screen.getByText('8.5%')).toBeInTheDocument();
-    expect(screen.getByText('40 km')).toBeInTheDocument();
-    expect(screen.getByText('91.2%')).toBeInTheDocument();
+    expect(screen.getByText('8.50%')).toBeInTheDocument();
+    expect(screen.getByText('40.00 km')).toBeInTheDocument();
+    expect(screen.getByText('91.20%')).toBeInTheDocument();
     expect(screen.getByText('512')).toBeInTheDocument();
 
     // The primary range + comparison bar still render in wide mode.
-    expect(screen.getByText('350')).toBeInTheDocument();
+    expect(screen.getByText('350.00')).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
   });
 });
@@ -336,13 +341,12 @@ describe('ProjectedRangeWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     // Reduced motion → AnimatedNumber lands on 350 (0 dp) immediately.
-    expect(screen.getByText('350')).toBeInTheDocument();
+    expect(screen.getByText('350.00')).toBeInTheDocument();
     expect(screen.getByText('Projected')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
     expect(screen.getByText('Excellent')).toBeInTheDocument();
 
-    // Compact drops the header title, the comparison bar and the factors list.
-    expect(screen.queryByText('Projected range')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Projected range', level: 3 })).toBeVisible();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByText('Range factors')).not.toBeInTheDocument();
   });
@@ -353,7 +357,7 @@ describe('ProjectedRangeWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('No projected range data')).toBeInTheDocument();
-    expect(screen.queryByText('Projected range')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Projected range', level: 3 })).toBeVisible();
   });
 });
 
@@ -369,12 +373,12 @@ describe('ProjectedRangeWidget — unit conversion', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // 350 km = 350 000 m / 1609.344 ≈ 217 mi (rounded by AnimatedNumber, 0 dp).
-    expect(screen.getByText('217')).toBeInTheDocument();
+    expect(screen.getByText('217.48')).toBeInTheDocument();
     expect(screen.getAllByText('mi').length).toBeGreaterThan(0);
     // EPA 500 km ≈ 311 mi — proves the EPA readout converted too.
-    expect(screen.getByText('EPA: 311 mi')).toBeInTheDocument();
+    expect(screen.getByText('EPA: 310.69 mi')).toBeInTheDocument();
     // The km value must NOT leak through — proves the conversion ran.
-    expect(screen.queryByText('350')).not.toBeInTheDocument();
+    expect(screen.queryByText('350.00')).not.toBeInTheDocument();
     // The ratio is unit-independent, so the bar percentage is unchanged.
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
   });
@@ -398,7 +402,7 @@ describe('ProjectedRangeWidget — query states', () => {
     expect(screen.queryByText('km')).toBeNull();
     expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
   });
-  it('renders a skeleton while loading with no title, range or empty message', () => {
+  it('keeps the heading while loading without a range or empty message', () => {
     useProjectedRangeMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
@@ -434,7 +438,7 @@ describe('ProjectedRangeWidget — query states', () => {
 
     // Data is still on screen …
     expect(screen.getByText('Projected range')).toBeInTheDocument();
-    expect(screen.getByText('350')).toBeInTheDocument();
+    expect(screen.getByText('350.00')).toBeInTheDocument();
     expect(screen.getByText(/Excellent/)).toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
     expect(container.querySelector('.bg-red-400')).toBeTruthy();

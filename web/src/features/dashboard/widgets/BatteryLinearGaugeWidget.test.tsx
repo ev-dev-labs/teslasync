@@ -302,7 +302,7 @@ describe('BatteryLinearGaugeWidget — layout variants', () => {
     renderWidget({ size: { cols: 2, rows: 1 } });
     expect(screen.getByRole('heading', { name: 'Battery' })).toBeInTheDocument();
     expect(screen.getByText('Level')).toBeInTheDocument();
-    expect(screen.getAllByText('80')).toHaveLength(1);
+    expect(screen.getAllByText('80.00')).toHaveLength(1);
   });
 });
 

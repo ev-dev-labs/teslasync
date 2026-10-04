@@ -329,8 +329,8 @@ describe('Drive + ChargingSession + FleetAnalytics (via <RecentActivity>)', () =
 
     const timeline = screen.getByTestId('activity-timeline');
     // 12 000 m → 12 km ; 25 000 Wh → 25 kWh — the SI→display contract for these DTOs.
-    expect(timeline.textContent).toMatch(/12(\.\d)?\s*km/);
-    expect(timeline.textContent).toMatch(/25(\.\d)?\s*kWh/);
+    expect(timeline.textContent).toContain('12.00 km');
+    expect(timeline.textContent).toContain('25.00 kWh');
     // FleetAnalytics scalars land in the performance panel.
     expect(screen.getByText('Total drives (30d)').parentElement).toHaveTextContent('42');
     expect(screen.getByText('Charge sessions').parentElement).toHaveTextContent('7');
@@ -425,8 +425,8 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     const { container, toTemperatureDisplay, toDistanceDisplay, toPressureDisplay } = renderLive(true);
 
     // Motor
-    expect(screen.getByText('320 Nm')).toBeInTheDocument();
-    expect(screen.getByText('45°C')).toBeInTheDocument();
+    expect(screen.getByText('320.00 Nm')).toBeInTheDocument();
+    expect(screen.getByText('45.00°C')).toBeInTheDocument();
     expect(screen.getByText('D').className).toContain('green'); // gear → success badge
     // Media
     expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
@@ -434,7 +434,7 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     // Security + Location + Tire
     expect(container.textContent).toContain('Locked');
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('2.3')).toBeInTheDocument(); // front_left
+    expect(screen.getByText('2.30')).toBeInTheDocument(); // front_left
 
     // Converters receive raw SI: inside_temp °C, front_left bar, miles_to_arrival.
     expect(toTemperatureDisplay).toHaveBeenCalledWith(21);
@@ -450,7 +450,7 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     expect(screen.getByRole('heading', { name: 'Navigation' })).toBeInTheDocument();
     // Loading state: skeletons present, no concrete value or progressbar leaks.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('320 Nm')).toBeNull();
+    expect(screen.queryByText('320.00 Nm')).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 });

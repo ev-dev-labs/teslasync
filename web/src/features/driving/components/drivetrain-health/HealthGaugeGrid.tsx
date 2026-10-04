@@ -126,15 +126,15 @@ export function HealthGaugeGrid({
                 { label: t('drivetrain.totalDrives', 'Total Drives'), value: fmtInt(stats.totalDrives ?? 0) },
                 {
                   label: t('drivetrain.totalDistance', 'Total Distance'),
-                  value: `${fmtInt(toDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`,
+                  value: `${fmtNumber(toDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`,
                 },
                 {
                   label: t('drivetrain.avgSpeed', 'Avg Speed'),
-                  value: `${fmtNumber(toSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`,
+                  value: stats.avgSpeedKmh != null ? `${fmtNumber(toSpeedDisplay(stats.avgSpeedKmh))} ${speedUnit}` : '—',
                 },
                 {
                   label: t('drivetrain.topSpeed', 'Top Speed'),
-                  value: `${fmtNumber(toSpeedDisplay(stats.topSpeedKmh ?? 0))} ${speedUnit}`,
+                  value: stats.topSpeedKmh != null ? `${fmtNumber(toSpeedDisplay(stats.topSpeedKmh))} ${speedUnit}` : '—',
                 },
               ]}
             />

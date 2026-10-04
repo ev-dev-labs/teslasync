@@ -47,7 +47,7 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
         <PanelTitle className="flex items-center gap-2 mb-4">
           <Navigation className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" /> {t('driveDetail.journeyDetails', 'Journey details')}
         </PanelTitle>
-        <Table className="table-fixed [&_td]:break-words [&_td]:[overflow-wrap:anywhere]" aria-label={t('driveDetail.timeline.label', 'Drive timeline')}>
+        <Table variant="embedded" className="table-fixed [&_td]:break-words [&_td]:[overflow-wrap:anywhere]" aria-label={t('driveDetail.timeline.label', 'Drive timeline')}>
           <thead><tr>
             <th scope="col"><span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" aria-hidden="true" />{t('driveDetail.start', 'Start')}</span></th>
             <th scope="col"><span className="inline-flex items-center gap-2"><Flag className="h-4 w-4" aria-hidden="true" />{t('driveDetail.destination', 'Destination')}</span></th>

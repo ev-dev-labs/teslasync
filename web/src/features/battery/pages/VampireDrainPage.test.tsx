@@ -288,7 +288,7 @@ describe('VampireDrainPage', () => {
 
     // KPI band — SI %/day read straight from the stats contract.
     expect(await screen.findByText('2.34%')).toBeInTheDocument() // avg KPI card
-    expect(screen.getByText('72.5')).toBeInTheDocument() // observed hours
+    expect(screen.getByText('72.50')).toBeInTheDocument() // observed hours
     // median + p95 appear twice: once in the KPI band and once in the gauge side rail.
     expect(screen.getAllByText('1.81%').length).toBeGreaterThanOrEqual(2)
     expect(screen.getAllByText('4.56%').length).toBeGreaterThanOrEqual(2)
@@ -311,16 +311,16 @@ describe('VampireDrainPage', () => {
     renderPage()
 
     // One row per event: duration, start/end SOC, rate, and the loss badge.
-    expect(await screen.findByText('6.0h')).toBeInTheDocument()
-    expect(screen.getByText('10.0h')).toBeInTheDocument()
-    expect(screen.getByText('8.0h')).toBeInTheDocument()
-    expect(screen.getByText('90%')).toBeInTheDocument()
-    expect(screen.getByText('84%')).toBeInTheDocument()
+    expect(await screen.findByText('6.00h')).toBeInTheDocument()
+    expect(screen.getByText('10.00h')).toBeInTheDocument()
+    expect(screen.getByText('8.00h')).toBeInTheDocument()
+    expect(screen.getByText('90.00%')).toBeInTheDocument()
+    expect(screen.getByText('84.00%')).toBeInTheDocument()
     expect(screen.getByText('8.00')).toBeInTheDocument() // rate %/day, 2dp
     // Loss badges render all three severity branches (>5 danger, >2 warning, else success).
-    expect(screen.getByText('6.0%')).toBeInTheDocument()
-    expect(screen.getByText('3.0%')).toBeInTheDocument()
-    expect(screen.getByText('1.0%')).toBeInTheDocument()
+    expect(screen.getByText('6.00%')).toBeInTheDocument()
+    expect(screen.getByText('3.00%')).toBeInTheDocument()
+    expect(screen.getByText('1.00%')).toBeInTheDocument()
 
     // Ambient is SI °C → display °C at 2dp; the nullable event renders "—".
     expect(screen.getByText('25.00°C')).toBeInTheDocument()
@@ -383,7 +383,7 @@ describe('VampireDrainPage', () => {
     )
     // The KPI cards / gauge value are withheld — no half-populated dashboard.
     expect(screen.queryByText('Avg drain / day')).toBeNull()
-    expect(screen.queryByText('72.5')).toBeNull()
+    expect(screen.queryByText('72.50')).toBeNull()
     // Panel chrome still renders so the layout doesn't collapse.
     expect(screen.getByText('Drain rate trend')).toBeInTheDocument()
   })
@@ -398,7 +398,7 @@ describe('VampireDrainPage', () => {
 
     // The independent events query is unaffected — the table + charts degrade gracefully.
     expect(await screen.findByText('8.00')).toBeInTheDocument()
-    expect(screen.getByText('90%')).toBeInTheDocument()
+    expect(screen.getByText('90.00%')).toBeInTheDocument()
 
     // Retry re-fires the failed stats request.
     const before = statsCallCount()
@@ -428,14 +428,14 @@ describe('VampireDrainPage', () => {
     await screen.findByRole('table')
     const firstRow = () =>
       within(screen.getByRole('table')).getAllByRole('row')[1] // [0] is the header row
-    expect(within(firstRow()).getByText('90%')).toBeInTheDocument()
+    expect(within(firstRow()).getByText('90.00%')).toBeInTheDocument()
 
     // Toggle to duration desc → longest first (event B, 10.0h, start SOC 70%).
     fireEvent.click(screen.getByRole('button', { name: 'Duration' }))
     await waitFor(() =>
-      expect(within(firstRow()).queryByText('70%')).toBeInTheDocument(),
+      expect(within(firstRow()).queryByText('70.00%')).toBeInTheDocument(),
     )
-    expect(within(firstRow()).queryByText('90%')).toBeNull()
+    expect(within(firstRow()).queryByText('90.00%')).toBeNull()
   })
 
   it('exposes landmark regions, an accessible refresh control, and table headers', async () => {

@@ -46,7 +46,7 @@ export default function ColdStartPage() {
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
   const summary = useMemo(() => summarizeColdStarts(drives), [drives]);
   const penaltyCost =
-    summary.totalPenaltyWh != null && costPerKwh > 0
+    summary.totalPenaltyWh != null && costPerKwh != null && costPerKwh > 0
       ? (summary.totalPenaltyWh / 1_000) * costPerKwh
       : null;
   const penaltyCostLabel =

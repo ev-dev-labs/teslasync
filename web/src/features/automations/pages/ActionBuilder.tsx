@@ -10,6 +10,8 @@ import {
 } from '@/components/ui';
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { UnitInput } from '@/components/forms';
+import { useSettings } from '@/hooks/useSettings';
+import { parseForUnit } from '@/lib/unitInput';
 import type { NotificationChannel } from '@/types/notifications';
 import type {
   AutomationActionKind,
@@ -215,7 +217,7 @@ function createDefaultAction(kind: AutomationActionKind, channelId = 0): Automat
 }
 
 function settingValueKind(action: AutomationActionSetSettingStepInput): SettingValueKind {
-  if (action.value_num != null) return 'number';
+  if ('value_num' in action) return 'number';
   if (action.value_bool != null) return 'boolean';
   return 'text';
 }
@@ -223,13 +225,13 @@ function settingValueKind(action: AutomationActionSetSettingStepInput): SettingV
 function actionWithSettingValue(
   action: AutomationActionSetSettingStepInput,
   kind: SettingValueKind,
-  value: string,
+  value: string | number | null,
 ): AutomationActionStepInput {
   if (kind === 'number') {
     return {
       kind: 'action_set_setting',
       setting_key: action.setting_key,
-      value_num: Number.parseFloat(value) || 0,
+      value_num: typeof value === 'number' && Number.isFinite(value) ? value : null,
     };
   }
   if (kind === 'boolean') {
@@ -242,7 +244,7 @@ function actionWithSettingValue(
   return {
     kind: 'action_set_setting',
     setting_key: action.setting_key,
-    value_text: value,
+    value_text: value == null ? '' : String(value),
   };
 }
 
@@ -378,6 +380,7 @@ export function ActionBuilder({ actions = [], channels = [], onChange }: ActionB
 
 function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
   const { t } = useTranslation();
+  const { settings } = useSettings();
   const guidedFields = action.kind === 'action_command'
     ? GUIDED_COMMAND_FIELDS[action.command_name] ?? [] : [];
   // Initialise the params editor once from the action's stored params. The
@@ -537,7 +540,7 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
     case 'action_set_setting': {
       const valueKind = settingValueKind(action);
       const value = valueKind === 'number'
-        ? String(action.value_num ?? 0)
+        ? action.value_num == null ? '' : String(action.value_num)
         : valueKind === 'boolean'
           ? String(action.value_bool ?? false)
           : (action.value_text ?? '');
@@ -559,11 +562,11 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
               { value: 'boolean', label: t('automations.builder.valueBoolean', 'Boolean') },
             ]}
             value={valueKind}
-            onChange={(event) => onChange(actionWithSettingValue(
-              action,
-              event.target.value as SettingValueKind,
-              value,
-            ))}
+            onChange={(event) => {
+              const nextKind = event.target.value as SettingValueKind;
+              onChange(actionWithSettingValue(action, nextKind,
+                nextKind === 'number' ? parseForUnit(value, 'number', settings) : value));
+            }}
             className="w-36"
           />
           {valueKind === 'boolean' ? (
@@ -577,15 +580,22 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
               onChange={(event) => onChange(actionWithSettingValue(action, valueKind, event.target.value))}
               className="w-28"
             />
+          ) : valueKind === 'number' ? (
+            <UnitInput
+              label={t('automations.builder.value', 'Value')}
+              unit="number"
+              value={action.value_num ?? null}
+              commitOnChange
+              onChange={(next) => onChange(actionWithSettingValue(action, valueKind, next))}
+              placeholder={t('automations.builder.valueNumberPlaceholder', '80')}
+              className="w-44"
+            />
           ) : (
             <UiInput
               label={t('automations.builder.value', 'Value')}
-              type={valueKind === 'number' ? 'number' : 'text'}
               value={value}
               onChange={(event) => onChange(actionWithSettingValue(action, valueKind, event.target.value))}
-              placeholder={valueKind === 'number'
-                ? t('automations.builder.valueNumberPlaceholder', '80')
-                : t('automations.builder.valueTextPlaceholder', 'enabled')}
+              placeholder={t('automations.builder.valueTextPlaceholder', 'enabled')}
               className="w-44"
             />
           )}

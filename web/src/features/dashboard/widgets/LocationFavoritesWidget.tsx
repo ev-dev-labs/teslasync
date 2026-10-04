@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError } from '@/components/feedback';
 import { useLocations } from '@/api/hooks/useLocations';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
 
@@ -11,6 +11,8 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 export function locationBadge(
   snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
@@ -29,30 +31,38 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
 
+  const locationsQuery = useLocations(vehicleIdStr);
   const {
     data: locations,
     isLoading: locLoading,
-    error: locError,
     isFetching: locFetching,
     isStale: locStale,
     isError: locIsError,
     dataUpdatedAt: locUpdatedAt,
     refetch: locRefetch,
-  } = useLocations(vehicleIdStr);
+  } = locationsQuery;
 
+  const snapshotQuery = useLocationSnapshotLatest(vid ?? 0);
   const {
     data: snapshot,
     isLoading: snapLoading,
-    error: snapError,
     isFetching: snapFetching,
     isStale: snapStale,
     isError: snapIsError,
     dataUpdatedAt: snapUpdatedAt,
     refetch: snapRefetch,
-  } = useLocationSnapshotLatest(vid ?? 0);
+  } = snapshotQuery;
+  const locationsState = useDataState({
+    ...locationsQuery,
+    data: locIsError && (!Array.isArray(locations) || locations.length === 0) ? undefined : locations,
+  });
+  const snapshotState = useDataState({
+    ...snapshotQuery,
+    data: snapIsError && !snapshot ? undefined : snapshot,
+  });
+  const combinedState = useCombinedDataState([locationsState, snapshotState]);
 
   const isLoading = locLoading || snapLoading;
-  const error = locError ?? snapError;
   const isFetching = locFetching || snapFetching;
   const isStale = locStale || snapStale;
   const isError = locIsError || snapIsError;
@@ -60,17 +70,19 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
 
   const isCompact = size.cols <= 1;
 
-  const locBadge = locationBadge(snapshot, t);
+  const locBadge = snapshot ? locationBadge(snapshot, t) : {
+    emoji: '📍', label: '—', variant: 'neutral' as const,
+  };
   const badgeVariant: 'success' | 'warning' | 'neutral' =
     locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral';
 
   const items: RankedItem[] = useMemo(() => {
-    const locs = locations ?? [];
-    return locs.map((loc) => ({
+    const locs = Array.isArray(locations) ? locations : [];
+    return locs.filter((loc) => loc != null).map((loc) => ({
       id: loc.id,
       label: loc.addressName ?? '—',
-      value: loc.visitCount ?? 0,
-      formattedValue: `${fmtInt(loc.visitCount ?? 0)}× · ${loc.lastVisited ? formatRelative(loc.lastVisited) : '—'}`,
+      value: loc.visitCount != null && Number.isFinite(loc.visitCount) ? loc.visitCount : 0,
+      formattedValue: `${loc.visitCount != null && Number.isFinite(loc.visitCount) ? fmtInt(loc.visitCount) + '×' : '—'} · ${loc.lastVisited ? formatRelative(loc.lastVisited) : '—'}`,
       barColor: 'bg-blue-400',
     }));
   }, [locations, fmtInt]);
@@ -85,8 +97,15 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
   }, [locRefetch, snapRefetch]);
 
   const shellProps = {
+    title: t('widget.locationFavorites.title', 'Favorite locations'),
     loading: isLoading,
-    error: error ? String(error) : null,
+    dataState: isCompact ? { ...snapshotState, retry: handleRefresh } : {
+      ...combinedState,
+      retry: handleRefresh,
+      data: locations ?? snapshot,
+      hasData: items.length > 0 || snapshot != null,
+      status: isLoading && items.length === 0 && !snapshot ? 'initial' as const : combinedState.status,
+    },
     updatedAt,
     isFetching,
     isStale,
@@ -111,11 +130,11 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
 
   return (
     <WidgetShell
-      title={t('widget.locationFavorites.title', 'Favorite locations')}
       icon={<MapPin className="h-3.5 w-3.5 text-blue-400" />}
       {...shellProps}
     >
       <div className="mb-3 flex items-center gap-2">
+        {snapshotState.fatalError && <QueryError error={snapshotState.fatalError} onRetry={() => { void snapRefetch(); }} />}
         <span className="text-lg" role="img" aria-label={locBadge.label}>
           {locBadge.emoji}
         </span>
@@ -123,13 +142,15 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
           {locBadge.label}
         </Badge>
         {snapshot?.destination_name && (
-          <span className="truncate text-xs text-[var(--text-secondary)]">
+          <span className={`${dashboardTokens.metricLabel} min-w-0 break-words`}>
             → {snapshot.destination_name}
           </span>
         )}
       </div>
 
-      {(locations ?? []).length > 0 ? (
+      {locationsState.fatalError ? (
+        <QueryError error={locationsState.fatalError} onRetry={() => { void locRefetch(); }} />
+      ) : items.length > 0 ? (
         <WidgetRankedList
           items={items}
           emptyMessage={t('widget.locationFavorites.noData', 'No favorite locations')}

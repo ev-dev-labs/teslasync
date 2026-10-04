@@ -55,14 +55,24 @@ export function degradationColor(pct: number): string {
   return '#ef4444';
 }
 
+export function hasHealthMeasurement(health: BatteryHealthAnalytics): boolean {
+  if (health.current_soh == null || !Number.isFinite(health.current_soh)) return false;
+  // The API emits zero health and capacity when neither history nor live BMS
+  // capacity is available. A measured zero must still retain its warning.
+  return health.current_soh !== 0
+    || health.estimated_capacity_wh > 0
+    || (health.history ?? []).some((point) => point.capacity_wh > 0);
+}
+
 export function buildInsights(
   health: BatteryHealthAnalytics,
   charging: BatteryChargingAnalysis | null,
   t: TFunction,
 ): InsightItem[] {
   const items: InsightItem[] = [];
+  const hasMeasurement = hasHealthMeasurement(health);
 
-  if (health.current_soh >= 90) {
+  if (hasMeasurement && health.current_soh >= 90) {
     items.push({
       icon: <CheckCircle className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.excellentTitle', 'Excellent Health'),
@@ -72,7 +82,7 @@ export function buildInsights(
       }),
       status: 'good',
     });
-  } else if (health.current_soh >= 70) {
+  } else if (hasMeasurement && health.current_soh >= 70) {
     items.push({
       icon: <Info className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.goodTitle', 'Good Health'),
@@ -82,7 +92,7 @@ export function buildInsights(
       }),
       status: 'warning',
     });
-  } else {
+  } else if (hasMeasurement) {
     items.push({
       icon: <AlertTriangle className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.concernTitle', 'Health Concern'),
@@ -104,7 +114,7 @@ export function buildInsights(
       }),
       status: 'warning',
     });
-  } else {
+  } else if (health.charging_habits?.total_count > 0) {
     items.push({
       icon: <CheckCircle className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.goodHabitsTitle', 'Good Charging Habits'),
@@ -144,7 +154,7 @@ export function buildInsights(
     });
   }
 
-  if (health.degradation_rate_pct_per_year < 3) {
+  if (hasMeasurement && health.degradation_rate_pct_per_year < 3) {
     items.push({
       icon: <Target className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.lowDegTitle', 'Low Degradation Rate'),
@@ -173,11 +183,13 @@ export function buildRecommendations(
   if (health.avg_depth_of_discharge_pct > 70) {
     tips.push(t('battery.tip.avoidDeep', 'Try to avoid deep discharges below 20%.'));
   }
-  if (health.degradation_rate_pct_per_year > 3) {
+  if (hasHealthMeasurement(health) && health.degradation_rate_pct_per_year > 3) {
     tips.push(t('battery.tip.aboveAvg', 'Your degradation rate is above average — review charging habits.'));
   }
   if (tips.length === 0) {
-    tips.push(t('battery.tip.great', 'Your battery health looks great — keep up the good habits!'));
+    tips.push(hasHealthMeasurement(health)
+      ? t('battery.tip.great', 'Your battery health looks great — keep up the good habits!')
+      : t('battery.tip.needMeasurements', 'Keep monitoring as capacity measurements arrive; battery health cannot be assessed yet.'));
   }
   return tips;
 }
@@ -190,8 +202,8 @@ export function computeEnergyBreakdown(
   const dcEnergy = convertEnergyFromSI(charging.dc_energy_wh, 'kWh');
   return {
     pieData: [
-      { name: 'AC', value: roundTo1(acEnergy), fill: '#10b981' },
-      { name: 'DC', value: roundTo1(dcEnergy), fill: '#f59e0b' },
+      { name: 'AC', value: acEnergy, fill: '#10b981' },
+      { name: 'DC', value: dcEnergy, fill: '#f59e0b' },
     ],
     acCount: charging.ac_session_count,
     dcCount: charging.dc_session_count,
@@ -206,8 +218,4 @@ export function isProjectionTrustworthy(prediction: DegradationPrediction | null
   if (!Number.isFinite(slope) || slope > 50) return false;
   const yearsTo80 = prediction.years_to_80_pct;
   return yearsTo80 != null && Number.isFinite(yearsTo80) && yearsTo80 > 0;
-}
-
-function roundTo1(value: number): number {
-  return Math.round(value * 10) / 10;
 }

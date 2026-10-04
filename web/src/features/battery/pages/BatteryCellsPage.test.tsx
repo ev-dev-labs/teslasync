@@ -125,7 +125,7 @@ vi.mock('@/hooks/useUnits', () => ({
     // network-free so temperature branches are assertable in both units.
     formatTemperature: (v: number | null | undefined, opts?: { precision?: number }) => {
       const c = typeof v === 'number' ? v : 0;
-      const p = opts?.precision ?? 0;
+      const p = opts?.precision ?? 2;
       const val = h.temp === '°F' ? c * 1.8 + 32 : c;
       return `${val.toFixed(p)}${h.temp}`;
     },
@@ -280,14 +280,14 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByText('Cell voltage heatmap').closest('section')).toHaveClass('items-start');
     expect(screen.getByText('#3 3.8500 V')).toBeInTheDocument(); // min cell → cell 3
     expect(screen.getByText('#4 3.9500 V')).toBeInTheDocument(); // max cell → cell 4
-    expect(screen.getByText('12.5 mV')).toBeInTheDocument(); // imbalance
-    expect(screen.getByText('398.5 V')).toBeInTheDocument(); // pack voltage
+    expect(screen.getByText('12.50 mV')).toBeInTheDocument(); // imbalance
+    expect(screen.getByText('398.50 V')).toBeInTheDocument(); // pack voltage
 
     // Temperature summary — SI °C identity via the stubbed formatter.
-    expect(screen.getByText('25.0°C')).toBeInTheDocument();
-    expect(screen.getByText('22.0°C')).toBeInTheDocument();
-    expect(screen.getByText('30.0°C')).toBeInTheDocument();
-    expect(screen.getAllByText('8.0°C').length).toBeGreaterThanOrEqual(1); // temp spread
+    expect(screen.getByText('25.00°C')).toBeInTheDocument();
+    expect(screen.getByText('22.00°C')).toBeInTheDocument();
+    expect(screen.getByText('30.00°C')).toBeInTheDocument();
+    expect(screen.getAllByText('8.00°C').length).toBeGreaterThanOrEqual(1); // temp spread
 
     // Health-recommendation insights (imbalance 12.5 → warning, temp
     // spread 8 → critical, 2 significant-deviation cells → critical).
@@ -298,8 +298,8 @@ describe('BatteryCellsPage', () => {
 
     // Cell-details table — 4-decimal voltage + signed delta + status label.
     expect(screen.getByText('3.8500')).toBeInTheDocument();
-    expect(screen.getByText('+5.0')).toBeInTheDocument();
-    expect(screen.getByText('-45.0')).toBeInTheDocument();
+    expect(screen.getByText('+5.00')).toBeInTheDocument();
+    expect(screen.getByText('-45.00')).toBeInTheDocument();
     expect(screen.getByText('Normal')).toBeInTheDocument();
     expect(screen.getByText('4 cells')).toBeInTheDocument(); // count badge
 
@@ -326,12 +326,12 @@ describe('BatteryCellsPage', () => {
     renderPage();
 
     // 25°C → 77°F, 22°C → 71.6°F, 30°C → 86°F; spread 8°C·1.8 → 14.4°F.
-    expect(screen.getByText('77.0°F')).toBeInTheDocument();
-    expect(screen.getByText('86.0°F')).toBeInTheDocument();
-    expect(screen.getAllByText('14.4°F').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('77.00°F')).toBeInTheDocument();
+    expect(screen.getByText('86.00°F')).toBeInTheDocument();
+    expect(screen.getAllByText('14.40°F').length).toBeGreaterThanOrEqual(1);
     // The °C identity strings must NOT survive once the preference is °F.
-    expect(screen.queryByText('25.0°C')).not.toBeInTheDocument();
-    expect(screen.queryByText('8.0°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('25.00°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('8.00°C')).not.toBeInTheDocument();
   });
 
   it('shows a skeleton in every panel while loading and leaks no ready values', () => {
@@ -341,7 +341,7 @@ describe('BatteryCellsPage', () => {
 
     expect(screen.getByRole('heading', { name: /Battery Cells/i, level: 1 })).toBeInTheDocument();
     expect(screen.queryByText('3.9025 V')).not.toBeInTheDocument();
-    expect(screen.queryByText('25.0°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('25.00°C')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 

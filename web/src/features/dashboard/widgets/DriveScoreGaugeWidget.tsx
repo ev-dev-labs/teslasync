@@ -7,6 +7,7 @@ import { useDriveScore } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetGaugeHero, WidgetStatGrid, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
@@ -26,6 +27,7 @@ export function scoreColor(score: number): string {
 }
 
 export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -59,11 +61,11 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   const stats = useMemo<GaugeHeroStat[]>(() => {
     if (!score) return [];
     return [
-      { label: t('widget.driveScoreGauge.efficiency', 'Efficiency'), value: knownNumber(score.efficiency) ?? '—' },
-      { label: t('widget.driveScoreGauge.smoothness', 'Smoothness'), value: knownNumber(score.smoothness) ?? '—' },
-      { label: t('widget.driveScoreGauge.speed', 'Speed discipline'), value: knownNumber(score.speedDiscipline) ?? '—' },
+      { label: t('widget.driveScoreGauge.efficiency', 'Efficiency'), value: knownNumber(score.efficiency) == null ? '—' : fmtNumber(score.efficiency) },
+      { label: t('widget.driveScoreGauge.smoothness', 'Smoothness'), value: knownNumber(score.smoothness) == null ? '—' : fmtNumber(score.smoothness) },
+      { label: t('widget.driveScoreGauge.speed', 'Speed discipline'), value: knownNumber(score.speedDiscipline) == null ? '—' : fmtNumber(score.speedDiscipline) },
     ];
-  }, [score, t]);
+  }, [score, t, fmtNumber]);
 
   const subScores = useMemo(() => {
     if (!score) return [];
@@ -101,7 +103,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
                   max={100}
                   color={scoreColor(s.value)}
                   label={s.label}
-                  sublabel={`${s.value}`}
+                  sublabel={fmtNumber(s.value)}
                 />
               ) : (
                 <WidgetBigNumber key={s.key} value={null} label={s.label} size="secondary" />

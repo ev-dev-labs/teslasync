@@ -271,11 +271,11 @@ describe('SeasonalEfficiencyPage', () => {
 
   it('freezes the injected analysis clock across query changes', () => {
     const view = renderPage();
-    expect(screen.getByText('Latest included: 16.5 days ago')).toBeInTheDocument();
+    expect(screen.getByText('Latest included: 16.50 days ago')).toBeInTheDocument();
     vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 10 * 86_400_000);
     h.history = query({ data: readyHistory() });
     view.rerenderPage();
-    expect(screen.getByText('Latest included: 16.5 days ago')).toBeInTheDocument();
+    expect(screen.getByText('Latest included: 16.50 days ago')).toBeInTheDocument();
   });
 
   it('keeps every shell visible during loading without a retry action', () => {

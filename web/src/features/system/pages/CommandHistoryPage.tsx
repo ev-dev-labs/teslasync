@@ -29,6 +29,7 @@ import {
   ResponsiveContainer, ChartTooltip, CHART_COLORS, axisTickSm, EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
@@ -129,13 +130,13 @@ const SUCCESS_COLOR = '#22c55e';
 const FAILED_COLOR = '#ef4444';
 const OTHER_COLOR = '#64748b';
 
-const pctLabel = (n: number, total: number): string =>
-  `${total > 0 ? Math.round((n / total) * 100) : 0}%`;
-
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CommandHistoryPage() {
   const { t } = useTranslation();
+  const { fmtPercent } = useNumberFormatting();
+  const pctLabel = (n: number, total: number): string =>
+    fmtPercent(total > 0 ? (n / total) * 100 : 0);
   usePageTitle(t('commandHistory.title', 'Command history'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -227,7 +228,7 @@ export default function CommandHistoryPage() {
     ).length;
     const successCount = allCommands.filter((c) => c.status === 'success').length;
     const failedCount = total - successCount;
-    const successRate = total > 0 ? Math.round((successCount / total) * 100) : 0;
+    const successRate = total > 0 ? (successCount / total) * 100 : 0;
 
     const cmdCounts: Record<string, number> = {};
     for (const c of allCommands) {
@@ -373,7 +374,7 @@ export default function CommandHistoryPage() {
           />
           <MetricCard
             label={t('commandHistory.successRate', 'Success rate')}
-            value={`${stats.successRate}%`}
+            value={fmtPercent(stats.successRate)}
             icon={<TrendingUp className="h-4 w-4" />}
             color="green"
           />

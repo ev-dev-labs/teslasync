@@ -10,9 +10,8 @@ import {
   GlassPanel, Button, Badge,
   PanelTitle, Caption, Text,
 } from '@/components/ui';
-import { StatCard, DateTime } from '@/components/data-display';
+import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { FrontendErrorsCard } from '@/components/status';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -28,6 +27,8 @@ import {
   ApiLogsEvidenceTable, type ApiLogsServerFilterKey, type ApiLogsServerFilters,
 } from '../components/ApiLogsEvidenceTable';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { ApiLogsBackendErrors } from '../components/ApiLogsBackendErrors';
+import { ApiLogsFrontendErrors } from '../components/ApiLogsFrontendErrors';
 
 /* ------------------------------------------------------------------ */
 /*  Local helpers                                                      */
@@ -459,50 +460,13 @@ export default function ApiLogsPage() {
           aria-label={t('apiLogs.errorDiagnostics', 'Error diagnostics')}
           className="grid gap-3 lg:grid-cols-2"
         >
-          <GlassPanel className="p-3 sm:p-4">
-            <PanelTitle>{t('apiLogs.backendErrors', 'Backend runtime errors')}</PanelTitle>
-            <Caption className="mt-1 block">
-              {t('apiLogs.backendScope', 'Since the current API process started; independent of API call filters.')}
-            </Caption>
-            <StaleRefreshWarning state={runtimeState} label={t('apiLogs.backendErrors', 'Backend runtime errors')} hideRetry />
-            {runtimeLoading && !runtimeErrors ? (
-              <Skeleton className="mt-4 h-16" />
-            ) : runtimeState.fatalError ? (
-              <QueryError error={runtimeState.fatalError} onRetry={() => refetchRuntime()} />
-            ) : runtimeErrors ? (
-              <>
-                <Text as="p" className="mt-3">
-                  {runtimeErrors.total_errors != null ? t('apiLogs.runtimeTotal', '{{count}} errors · uptime {{uptime}}', {
-                    count: runtimeErrors.total_errors,
-                    uptime: runtimeErrors.uptime || '—',
-                  }) : t('apiLogs.runtimeTotalUnknown', '— errors · uptime {{uptime}}', { uptime: runtimeErrors.uptime || '—' })}
-                </Text>
-                {Object.keys(runtimeErrors.by_code ?? {}).length ? (
-                  <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto">
-                    {Object.entries(runtimeErrors.by_code ?? {})
-                      .sort((a, b) => b[1].count - a[1].count)
-                      .map(([code, entry]) => (
-                        <li key={code} className="flex items-start justify-between gap-3 border-t border-[var(--glass-border)] pt-2">
-                          <div className="min-w-0">
-                            <Text as="p" variant="bodySm" weight="medium">{code}</Text>
-                            <Caption className="block break-words">{entry.last_message || '—'}</Caption>
-                            {entry.last_seen && <Caption className="block"><DateTime value={entry.last_seen} in="utc" /></Caption>}
-                          </div>
-                          <Badge variant="warning" size="sm">{fmtInt(entry.count)}</Badge>
-                        </li>
-                      ))}
-                  </ul>
-                ) : (
-                  <Caption className="mt-3 block">{t('apiLogs.noRuntimeErrors', 'No backend runtime errors in this process.')}</Caption>
-                )}
-              </>
-            ) : (
-              <Caption className="mt-3 block">{t('apiLogs.runtimeUnavailable', 'Backend runtime error summary unavailable.')}</Caption>
-            )}
-          </GlassPanel>
-          <GlassPanel className="p-3 sm:p-4">
-            <FrontendErrorsCard />
-          </GlassPanel>
+          <ApiLogsBackendErrors
+            data={runtimeErrors}
+            state={runtimeState}
+            loading={runtimeLoading}
+            onRetry={() => refetchRuntime()}
+          />
+          <ApiLogsFrontendErrors />
         </section>
       </FadeIn>
     </PageContainer>

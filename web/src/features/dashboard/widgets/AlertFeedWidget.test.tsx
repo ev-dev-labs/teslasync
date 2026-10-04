@@ -32,7 +32,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -303,6 +303,17 @@ describe('AlertFeedWidget — null-safety & sizing', () => {
 });
 
 describe('AlertFeedWidget — refresh wiring', () => {
+  it('keeps cached drill-through rows visible and provides real refresh recovery', () => {
+    const refetch = vi.fn();
+    mockAlerts.mockReturnValue(qr({ data: ALERTS, error: new Error('refresh failed'), isError: true, refetch }));
+    renderWidget(WIDE);
+    expect(screen.getByRole('link', { name: /Battery critically low/ })).toHaveAttribute('href', expect.stringContaining('signal=BatteryLevel'));
+    const warning = screen.getByTestId('stale-refresh-warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
   it('invokes the query refetch when the freshness control is activated', () => {
     const refetch = vi.fn();
     mockAlerts.mockReturnValue(qr({ data: ALERTS, refetch }));

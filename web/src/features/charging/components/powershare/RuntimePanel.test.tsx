@@ -165,7 +165,7 @@ describe('RuntimePanel — populated view', () => {
 
     // Hours remaining bar — 1dp h sublabel.
     expect(screen.getByText('Hours Remaining')).toBeInTheDocument();
-    expect(screen.getByText('4.2 h')).toBeInTheDocument();
+    expect(screen.getByText('4.20 h')).toBeInTheDocument();
   });
 
   it('falls back to "Unknown" status when only numeric data is present', () => {
@@ -181,7 +181,7 @@ describe('RuntimePanel — populated view', () => {
     renderPanel({ hoursLeft: 2.5, powerKw: null, shareType: null });
 
     expect(screen.getByText('Hours Remaining')).toBeInTheDocument();
-    expect(screen.getByText('2.5 h')).toBeInTheDocument();
+    expect(screen.getByText('2.50 h')).toBeInTheDocument();
     // No power reading → no output-power bar.
     expect(screen.queryByText('Output Power')).toBeNull();
     expect(screen.queryByText('Destination')).toBeNull();
@@ -197,7 +197,7 @@ describe('RuntimePanel — non-finite hardening', () => {
     expect(screen.queryByText(/kW/)).toBeNull();
     // Hours still renders normally.
     expect(screen.getByText('Hours Remaining')).toBeInTheDocument();
-    expect(screen.getByText('3.0 h')).toBeInTheDocument();
+    expect(screen.getByText('3.00 h')).toBeInTheDocument();
     // No NaN leaks into the DOM (e.g. as `width: NaN%`).
     expect(container.innerHTML).not.toContain('NaN');
   });

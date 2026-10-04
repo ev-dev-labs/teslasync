@@ -42,7 +42,7 @@ export function batteryUsedPct(
 }
 
 export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -141,13 +141,13 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                       <div className="flex items-center justify-end gap-1">
                         <Battery className="h-2.5 w-2.5 text-[var(--text-muted)]" aria-hidden="true" />
                         <span className="text-2xs text-[var(--text-secondary)] tabular-nums">
-                          {knownNumber(d.start_soc_pct) ?? '?'}% → {knownNumber(d.end_soc_pct) ?? '?'}%
+                          {knownNumber(d.start_soc_pct) == null ? '?' : fmtNumber(d.start_soc_pct)}% → {knownNumber(d.end_soc_pct) == null ? '?' : fmtNumber(d.end_soc_pct)}%
                         </span>
                       </div>
                       <div className="flex items-center justify-end gap-1 mt-0.5">
                         {batteryUsed != null && dist != null && dist > 0 && (
                           <span className="text-2xs text-cyan-300 tabular-nums">
-                            {fmtInt(batteryUsed)}%
+                            {fmtNumber(batteryUsed)}%
                           </span>
                         )}
                         <span className="text-2xs text-[var(--text-muted)] tabular-nums">

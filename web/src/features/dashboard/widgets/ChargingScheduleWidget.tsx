@@ -169,6 +169,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.chargingSchedule.title', 'Charging schedule')}
         loading={isLoading}
         error={blockingError}
         dataState={dataState}

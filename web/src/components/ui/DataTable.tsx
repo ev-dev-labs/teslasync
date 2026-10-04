@@ -1,4 +1,4 @@
-import { type ReactNode, type MouseEvent as ReactMouseEvent, isValidElement, useState, useCallback, useEffect, useMemo, useRef, useId, useDeferredValue } from 'react'
+import { type ReactNode, type MouseEvent as ReactMouseEvent, isValidElement, useState, useCallback, useEffect, useMemo, useRef, useDeferredValue } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
@@ -177,6 +177,8 @@ export interface PaginationConfig {
 }
 
 interface DataTableProps<T> {
+  /** Remove the outer frame when the enclosing panel already owns the surface. */
+  variant?: 'standalone' | 'embedded'
   columns: Column<T>[]
   data: T[]
   /** Local loaded-row filters only. Never enable automatically for server pagination. */
@@ -436,6 +438,7 @@ function alignClass(align?: 'left' | 'center' | 'right'): string {
  *  All advanced props are optional — passing only `columns` + `data` gives the
  *  same lightweight behavior as the base table. */
 export function DataTable<T>({
+  variant = 'standalone',
   columns,
   data,
   enableValueFilters = false,
@@ -485,7 +488,6 @@ export function DataTable<T>({
   showSelectionSummary = true,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
-  const keyboardHintId = useId()
   const [localSearch, setLocalSearch] = useState('')
   const deferredLocalSearch = useDeferredValue(localSearch)
   const localSearchEnabled = searchable && !paginationControls && !controls?.search
@@ -1252,8 +1254,11 @@ export function DataTable<T>({
 
   return (
     <>
-    <div className={cn(tableTokens.frame, 'space-y-0 overflow-visible p-0')}
-      data-grid-frame="">
+    <div className={cn(
+      variant === 'embedded' ? 'min-w-0 max-w-full' : tableTokens.frame,
+      'space-y-0 overflow-visible p-0',
+    )}
+      data-grid-frame="" data-grid-variant={variant}>
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
         <TableToolbar
@@ -1301,7 +1306,6 @@ export function DataTable<T>({
         {/* Preserve native table semantics, not an ARIA grid with a different cell-navigation contract. */}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
         <table tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper, footerControls && 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]')} aria-label={accessibleTableName}
-          aria-describedby={footerControls ? keyboardHintId : undefined}
           onKeyDown={event => {
             if (!footerControls || event.defaultPrevented || event.target !== event.currentTarget
               || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
@@ -1524,11 +1528,6 @@ export function DataTable<T>({
         </div>
       )}
     </div>
-    {footerControls && (
-      <Text as="p" id={keyboardHintId} size="xs" color="muted" className="mt-2 px-1">
-        {t('table.pagination.keyboardHint', 'With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page.')}
-      </Text>
-    )}
     </>
   )
 }

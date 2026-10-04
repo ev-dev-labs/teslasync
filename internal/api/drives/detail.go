@@ -11,6 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // driveDetailHandler wraps the legacy *DriveHandler with a signal.StateReader
@@ -250,17 +251,21 @@ func stateToSignalMap(s signal.State) map[string]interface{} {
 }
 
 func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.drives.detail")
+	defer span.End()
+
 	id, err := urlParamInt64(r, "driveID")
 	if err != nil {
+		span.RecordError(err)
 		writeError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
-	ctx := r.Context()
-
 	drive, err := h.drives.GetByID(ctx, id)
 	if err != nil {
-		log.Error().Err(err).Int64("id", id).Msg("failed to get drive")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("id", id).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get drive")
 		writeError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
@@ -277,7 +282,9 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		// In-progress drive — compute live values from signal snapshots.
 		live = true
 		if err := h.enrichLiveDrive(ctx, drive, endTs); err != nil {
-			log.Error().Err(err).Int64("driveID", id).Msg("failed to enrich live drive")
+			span.RecordError(err)
+			log.Error().Err(err).Int64("driveID", id).
+				Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to enrich live drive")
 			writeError(w, http.StatusInternalServerError, "failed to load live drive state")
 			return
 		}
@@ -289,7 +296,9 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	telemetryRows, err := h.state.Timeline(ctx,
 		drive.VehicleID, driveTelemetryFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
-		log.Error().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry from signal_log")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("driveID", id).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get drive telemetry from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to load drive telemetry")
 		return
 	}
@@ -298,7 +307,9 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	positionRows, err := h.state.Timeline(ctx,
 		drive.VehicleID, drivePositionFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
-		log.Error().Err(err).Int64("driveID", id).Msg("failed to get drive positions from signal_log")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("driveID", id).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get drive positions from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to load drive positions")
 		return
 	}
@@ -315,6 +326,8 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"end_ts":             drive.EndTs,
 		"duration_s":         drive.DurationS,
 		"distance_m":         drive.DistanceM,
+		"start_odometer_m":   drive.StartOdometerM,
+		"end_odometer_m":     drive.EndOdometerM,
 		"start_address":      drive.StartAddress,
 		"end_address":        drive.EndAddress,
 		"start_lat":          drive.StartLat,

@@ -319,8 +319,8 @@ describe('CabinThermalPage', () => {
     h.history = query({ data: soak() });
     renderPage();
 
-    expect(screen.getByText(/113°F cabin/)).toBeInTheDocument();
-    expect(screen.getByText(/5\.4°F/)).toBeInTheDocument();
+    expect(screen.getByText(/113\.0°F cabin/)).toBeInTheDocument();
+    expect(screen.getByText(/5\.40°F/)).toBeInTheDocument();
     expect(screen.getAllByText(/°F/).length).toBeGreaterThan(1);
   });
 });

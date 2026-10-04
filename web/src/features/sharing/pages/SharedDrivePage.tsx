@@ -284,14 +284,14 @@ export default function SharedDrivePage() {
             {drive.efficiency_wh_per_m != null && (
               <StatCard
                 label={t('share.efficiency', 'Efficiency')}
-                value={`${Math.round(toEfficiencyDisplay(drive.efficiency_wh_per_m * METERS_PER_KM, distancePref))} ${effPref}`}
+                value={`${fmtNumber(toEfficiencyDisplay(drive.efficiency_wh_per_m * METERS_PER_KM, distancePref))} ${effPref}`}
                 icon={<Zap className="h-4 w-4" />}
               />
             )}
             {drive.start_battery != null && drive.end_battery != null && (
               <StatCard
                 label={t('share.battery', 'Battery')}
-                value={`${drive.start_battery}% → ${drive.end_battery}%`}
+                value={`${fmtNumber(drive.start_battery)}% → ${fmtNumber(drive.end_battery)}%`}
                 icon={<Battery className="h-4 w-4" />}
               />
             )}
@@ -312,7 +312,7 @@ export default function SharedDrivePage() {
             {drive.elevation_gain != null && (
               <StatCard
                 label={t('share.elevGain', 'Elevation gain')}
-                value={`${Math.round(convertElevation(drive.elevation_gain, distancePref))} ${elevPref}`}
+                value={`${fmtNumber(convertElevation(drive.elevation_gain, distancePref))} ${elevPref}`}
                 icon={<Mountain className="h-4 w-4" />}
               />
             )}
@@ -354,13 +354,13 @@ export default function SharedDrivePage() {
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
-                    tickFormatter={(v: number) => `${Math.round(v)} ${distancePref}`}
+                    tickFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                   />
                   <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)} ${elevPref}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
                     labelFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
-                    formatter={(v: number) => [`${Math.round(v)} ${elevPref}`, t('share.elevTooltipLabel', 'Elevation')]}
+                    formatter={(v: number) => [`${fmtNumber(v)} ${elevPref}`, t('share.elevTooltipLabel', 'Elevation')]}
                   />
                   <Area
                     {...AREA_DEFAULTS}
@@ -389,13 +389,13 @@ export default function SharedDrivePage() {
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
-                    tickFormatter={(v: number) => `${Math.round(v)} ${distancePref}`}
+                    tickFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                   />
                   <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
                     labelFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
-                    formatter={(v: number) => [`${Math.round(v)} ${speedPref}`, t('share.speedTooltipLabel', 'Speed')]}
+                    formatter={(v: number) => [`${fmtNumber(v)} ${speedPref}`, t('share.speedTooltipLabel', 'Speed')]}
                   />
                   <Line
                     {...AREA_DEFAULTS}

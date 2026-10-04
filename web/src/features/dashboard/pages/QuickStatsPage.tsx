@@ -151,7 +151,7 @@ export default function QuickStatsPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
               <MetricCard
                 label={t('quickStats.distanceDriven', 'Distance driven')}
-                value={`${fmtInt(fromKm(analytics.totalDistanceKm ?? 0))} ${distanceUnit}`}
+                value={`${fmtNumber(fromKm(analytics.totalDistanceKm ?? 0))} ${distanceUnit}`}
                 icon={<MapPin className="h-4 w-4" />}
                 color="cyan"
               />

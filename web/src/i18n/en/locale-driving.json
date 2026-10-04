@@ -905,6 +905,19 @@
   "driveDetail": {
     "report": {
       "overview": "Overview",
+      "sections": "Drive report sections",
+      "driveCost": "Drive cost",
+      "costSummaryNote": "Configured-rate estimate, not a charging invoice",
+      "batteryChange": "Battery change",
+      "startOdometer": "Start odometer",
+      "endOdometer": "End odometer",
+      "latestOdometer": "Latest odometer",
+      "ongoingOdometer": "Odometer (start → latest)",
+      "summarySource": "Recorded drive details · comparisons use this vehicle’s history",
+      "driveEnergy": "Drive energy",
+      "estimatedEnergy": "Estimated from recorded power",
+      "performance": "Performance and comparisons",
+      "odometerMixed": "Recorded endpoints with telemetry fallback",
       "telemetry": "Telemetry",
       "energy": "Energy and cost",
       "diagnostics": "Diagnostics",
@@ -1038,7 +1051,7 @@
     "battery": "Battery",
     "destination": "Destination",
     "moreDetails": "More details",
-    "odometer": "Odometer (from → To)",
+    "odometer": "Odometer (from → to)",
     "rangeStartEnd": "Range (start → End)",
     "elevSummary": "Elevation summary",
     "consumptionRate": "Consumption",
@@ -1637,6 +1650,97 @@
     }
   },
   "dynamics": {
+    "review": {
+      "subtitle": "Understand one ride: energy outcome, powertrain evidence, and the signals behind it.",
+      "evidence": "Inside this ride",
+      "evidenceDescription": "Power delivery, recovered power, axle load, and temperature — sampled only within the selected trip window.",
+      "live": "Vehicle now",
+      "liveBadge": "Current signals · not trip history",
+      "liveDescription": "Latest reported motor, pedal, G-force, gear, and cruise state for this vehicle. These readings may be parked or older than now and do not describe the selected ride.",
+      "context": "Beyond this ride",
+      "contextDescription": "Vehicle coaching covers the last 30 days. Speed and power analytics cover loaded trips in the selected date range, plus any current drive. Neither is a score for this ride.",
+      "rangeAnalytics": "Date-range trip context",
+      "speedGearScope": "Gear and motor power: latest vehicle signals. Average and top speed: loaded trips in the date range, not just the selected ride."
+    },
+    "trip": {
+      "title": "Trip review",
+      "reviewDescription": "Choose a ride to review its recorded outcome and motor samples. Current vehicle signals and multi-trip context are separated below.",
+      "drive": "Drive",
+      "noDrives": "No drives in this range",
+      "unknownStart": "Unknown start",
+      "inProgress": "In progress",
+      "liveDrive": "Current drive"
+    },
+    "ride": {
+      "title": "Selected ride",
+      "unselected": "No trip selected",
+      "open": "In progress · totals may change",
+      "recorded": "Recorded trip",
+      "unknownOrigin": "Origin not recorded",
+      "unknownDestination": "Destination not recorded",
+      "onTheRoad": "On the road",
+      "details": "Open trip details",
+      "distance": "Distance",
+      "duration": "Duration",
+      "energy": "Energy used",
+      "recovered": "Energy recovered",
+      "speed": "Average / peak speed: {{average}} / {{peak}}",
+      "battery": "Battery: {{start}} → {{end}}",
+      "energyMeaning": "Energy recovered is recorded regeneration, not peak regen power. Missing measurements remain unknown; these totals do not rate driving style.",
+      "empty": "Choose a trip with recorded data to review its outcome."
+    },
+    "powertrain": {
+      "title": "Powertrain summary",
+      "scope": "Selected-drive evidence",
+      "coverage": "Up to {{limit}} motor samples inside the selected drive. Averages describe reported samples, not a time-weighted or complete-trip assessment.",
+      "loading": "Loading selected-drive evidence",
+      "empty": "No motor samples in this drive window. Trip totals remain available above; current readings are kept separate below.",
+      "output": "Power & regeneration",
+      "outputEvidence": "Peak sampled power {{power}}; peak sampled regen {{regen}}. These are instantaneous readings, not trip energy totals.",
+      "load": "Motor load & temperature",
+      "loadEvidence": "Peak reported axle torque {{torque}}; hottest recorded motor {{temperature}}. A missing axle or temperature signal limits the evidence.",
+      "inputs": "Driver inputs",
+      "inputsEvidence": "Motor power does not establish pedal position or braking technique. Pedal, G-force, gear, and cruise panels below show current vehicle signals, not this trip’s historical inputs."
+    },
+    "evidence": {
+      "torqueSamples": "Torque samples above 200 Nm",
+      "torqueMeaning": "Sum of reported axle torque. Sample share is not time spent under load or a driver rating.",
+      "powerDemand": "Power demand",
+      "powerMeaning": "Measured motor output, not pedal position. Power alone cannot classify driving style.",
+      "thermalMeaning": "Average of the hotter reported motor in each sample. Temperature alone does not establish thermal limiting or powertrain health."
+    },
+    "guidance": {
+      "title": "How to read this ride",
+      "empty": "No measured motor evidence available for trip-specific guidance.",
+      "power": "Compare power peaks with the trip’s speed and road conditions. Average motor power alone cannot tell whether acceleration was smooth or efficient.",
+      "regen": "Review energy recovered alongside energy used. A peak regen reading is not a measure of braking quality, and friction-brake use cannot be reconstructed from motor power.",
+      "torque": "Use the front and rear torque traces to see which axle reported load. Gaps are missing telemetry, not evidence that an axle was inactive.",
+      "thermal": "Temperature adds context to sustained motor load. Without the vehicle’s limiting signals, these samples do not prove overheating or reduced power."
+    },
+    "liveInterpretation": {
+      "title": "Live powertrain interpretation",
+      "loading": "Loading current powertrain signals…",
+      "empty": "No current axle torque, regen, or acceleration signals reported.",
+      "scope": "Latest vehicle signals",
+      "limits": "Observed values only — not a launch, grip, thermal-health, or selected-trip assessment.",
+      "thermal": "Hottest reported stator/inverter {{temp}}. Thermal limiting has not been established.",
+      "parked": "The latest reported shift state is Park; this is current vehicle context.",
+      "load": "Axle torque is a reported motor measurement, not a driver rating or a claim about vehicle motion.",
+      "regen": "Regeneration is reported in current motor signals. Peak power does not establish recovered trip energy.",
+      "brakeOff": "The brake switch reports inactive alongside regeneration signals.",
+      "brakeOn": "The brake switch reports active alongside regeneration signals. Friction-brake force is not measured here.",
+      "pedal": "Pedal and axle torque signals are present. They do not establish launch performance.",
+      "axleShare": "Rear axle accounts for {{share}}% of reported absolute axle torque. This does not establish traction or grip."
+    },
+    "contextCharts": {
+      "load": "Trip load comparison",
+      "loadDescription": "Recorded average motor power versus trip distance — not peak power or acceleration",
+      "loadAria": "Per-drive scatter chart of average motor power versus trip distance",
+      "profileDescription": "Average power (left, kW) and recovered energy (right, kWh) for the latest 20 loaded trips",
+      "profileAria": "Recent-drives average motor power and recorded recovered energy on separate axes",
+      "averageKw": "Average power (kW)",
+      "recoveredKwh": "Recovered energy (kWh)"
+    },
     "autopilot": "Autopilot & cruise",
     "currentSpeed": "Current speed",
     "cruiseSetSpeed": "Cruise set speed",
@@ -1655,13 +1759,28 @@
     "maxPower": "Max power (kW)",
     "regenPower": "Regen power (kW)",
     "coach": {
-      "hardAccel": "Hard acceleration",
-      "hardBrake": "Hard braking",
+      "vehicleTitle": "Vehicle coaching · last 30 days",
+      "styleCount": "{{style}}: {{count}} drives",
+      "styles": {
+        "efficient": "Efficient",
+        "moderate": "Moderate",
+        "aggressive": "Aggressive"
+      },
+      "impact": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "scopeDescription": "Completed drives with positive recorded energy and available speed, power, and temperature over the last 30 days. Scores compare consumption with this vehicle’s best measured trip; power and speed profiles are heuristics, not observed braking technique or safety ratings.",
+      "noScore": "No vehicle-wide score available.",
+      "noPatterns": "No driving-pattern evidence available.",
+      "hardAccel": "High power demand",
+      "hardBrake": "Strong regeneration",
       "highway": "Highway driving",
       "shortTrips": "Short trips (<5 km)",
-      "coldStarts": "Cold starts",
+      "coldStarts": "Cold-weather drives",
       "title": "Driving coach",
-      "overallScore": "Driving score",
+      "overallScore": "Efficiency comparison",
       "drivesAnalyzed": "{{count}} drives analyzed",
       "styleBreakdown": "Style breakdown",
       "noData": "Drive more to see your style breakdown.",
@@ -2111,6 +2230,22 @@
     }
   },
   "fsd": {
+    "observatory": {
+      "columns": {
+        "date": "Date / time",
+        "route": "Route",
+        "reportedFsd": "Reported FSD",
+        "confidence": "Evidence",
+        "firmware": "Firmware",
+        "notes": "Notes",
+        "routeDrives": "Route drives",
+        "chapterDrives": "Chapter drives",
+        "share": "FSD share",
+        "unknown": "Unknown drives",
+        "ambiguous": "Ambiguous drives"
+      },
+      "chaptersHint": "One row per route and firmware chapter. Route drives is the route total; chapter drives is the count for that firmware chapter."
+    },
     "title": "FSD insights",
     "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
     "noVehicle": "Select a vehicle to see supervised self-driving telemetry.",

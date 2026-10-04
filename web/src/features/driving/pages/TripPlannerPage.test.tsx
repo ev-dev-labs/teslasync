@@ -569,11 +569,11 @@ describe('TripPlannerPage — KPI derivation after a successful plan', () => {
     renderPage();
     planWith(makePlan());
 
-    expect(screen.getByText('100 km')).toBeInTheDocument(); // 100_000 m → km
+    expect(screen.getByText('100.00 km')).toBeInTheDocument(); // 100_000 m → km
     expect(screen.getByText('2h 0m')).toBeInTheDocument(); // total 7200s
     expect(screen.getByText('1h 30m')).toBeInTheDocument(); // driving 5400s
     expect(screen.getByText('30m')).toBeInTheDocument(); // charging 1800s
-    expect(screen.getByText('50.0 kWh')).toBeInTheDocument(); // 50_000 Wh
+    expect(screen.getByText('50.00 kWh')).toBeInTheDocument(); // 50_000 Wh
     expect(screen.getByText('$12.50')).toBeInTheDocument(); // estimated_cost
     // Placeholders are gone now a plan exists.
     expect(screen.queryByText('—')).not.toBeInTheDocument();

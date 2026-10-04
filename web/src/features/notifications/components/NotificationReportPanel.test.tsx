@@ -71,7 +71,7 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByText('Outbound HTTP calls').closest('[data-role="metric-card"]')).toHaveTextContent('11');
     expect(screen.getByText(/Outbound HTTP calls include retries and failures/)).toBeInTheDocument();
     expect(screen.getByText(/Compare with Notifications under API Logs’ By Service/)).toBeInTheDocument();
-    expect(screen.getByText('1.7')).toBeInTheDocument();
+    expect(screen.getByText('1.67')).toBeInTheDocument();
     expect(screen.getByText('Deliveries without a linked trigger')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Alert')).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('NotificationReportPanel', () => {
       isError: false,
     } as ReturnType<typeof useNotificationReport>);
     renderPanel();
-    expect(screen.getByText('1.0')).toBeInTheDocument();
+    expect(screen.getByText('1.00')).toBeInTheDocument();
     expect(screen.getByText('Deliveries without a linked trigger').closest('[data-role="metric-card"]')).toHaveTextContent('2');
     expect(screen.getByText(/Older deliveries without an event identifier appear only in delivery counts/)).toBeInTheDocument();
   });

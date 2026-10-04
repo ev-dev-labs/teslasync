@@ -7,6 +7,7 @@ import { knownNumber } from '@/api/dataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
 import type { WidgetProps } from './types';
@@ -20,6 +21,7 @@ const AMBER = 'text-amber-400';
 /* ── Main widget ────────────────────────────────────────────── */
 
 export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatPower } = useUnits();
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
@@ -64,7 +66,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
       id: 'battery',
       label: t('widget.energyFlowAnimated.battery', 'Battery'),
       value: batteryLevel ?? 0,
-      formattedValue: batteryLevel == null ? '—' : `${batteryLevel}%`,
+      formattedValue: batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`,
       icon: <Battery className="h-2.5 w-2.5" />,
       position: 'left',
     },
@@ -84,7 +86,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
       icon: <Plug className="h-2.5 w-2.5" />,
       position: 'top',
     },
-  ], [batteryLevel, absPower, chargerPower, driveLabel, driveValue, chargerValue, isCharging, t]);
+  ], [batteryLevel, absPower, chargerPower, driveLabel, driveValue, chargerValue, isCharging, t, fmtNumber]);
 
   const arrows = useMemo<FlowArrow[]>(() => [
     {
@@ -127,7 +129,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
       {state ? (
         isCompact ? (
           <div className="flex h-full min-w-0 flex-col gap-2">
-            <WidgetBigNumber value={batteryLevel == null ? null : `${batteryLevel}%`} align="center" />
+            <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel)}%`} align="center" />
             <WidgetStatGrid compact stats={[
               ...(isCharging ? [{ label: t('widget.energyFlowAnimated.charger', 'Charger'), value: chargerValue, icon: <Plug className="size-3.5" /> }] : []),
               ...(!isCharging || isConsuming || isRegen ? [{ label: driveLabel, value: driveValue, icon: <Zap className="size-3.5" /> }] : []),

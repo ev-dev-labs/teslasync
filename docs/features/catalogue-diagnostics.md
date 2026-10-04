@@ -54,6 +54,17 @@ destinations without removing them from the catalog.
 
 Expand an API Logs row for method, URL, status, duration, vehicle ID, rate-limit flag, error, request/response headers and bodies. Header values are redacted except for a small allowlist of safe diagnostic fields. Body capture is disabled by default (`API_LOG_CAPTURE_BODIES=false`); when enabled, captured payloads are limited to 10 KB. Older records cannot retroactively gain headers or bodies.
 
+The runtime diagnostics use two independent, responsive cards rather than a
+nested browser tile. Backend totals and uptime describe the current API
+process; category rows preserve counts, the latest message, and last-seen
+timestamps, with a link to System Status. Browser totals describe reports
+received within the server's reporting window and show the summary timestamp
+and reported sources. Neither card uses the API-call filters. Zero browser
+reports does not establish an error-free frontend or complete reporting
+coverage, including when reporting or RUM is disabled. Loading, unavailable
+summaries, and failed requests remain distinct from explicitly reported zero;
+a failed refresh retains existing evidence with a stale-data notice.
+
 Method, status, endpoint, service, app installation, and app-key filters live in
 their column headers. Reveal the optional App key column through **Columns**.
 These are server predicates, not checklists inferred from the current 25-row

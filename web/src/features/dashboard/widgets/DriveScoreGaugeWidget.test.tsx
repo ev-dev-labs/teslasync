@@ -238,7 +238,7 @@ describe('DriveScoreGaugeWidget empty (no scored drives)', () => {
     renderWidget(STANDARD);
 
     expect(screen.queryByText('No score yet')).toBeNull();
-    expect(screen.getByText('87')).toBeInTheDocument(); // gauge value
+    expect(screen.getByText('87.00')).toBeInTheDocument(); // gauge value
     expect(screen.getByText('B')).toBeInTheDocument(); // gauge grade label
   });
 });
@@ -251,16 +251,16 @@ describe('DriveScoreGaugeWidget standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Drive score')).toBeInTheDocument(); // header title
-    expect(screen.getByText('87')).toBeInTheDocument(); // gauge overall
+    expect(screen.getByText('87.00')).toBeInTheDocument(); // gauge overall
     expect(screen.getByText('B')).toBeInTheDocument(); // gauge grade label
 
     // Stat labels + values are present.
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
     expect(screen.getByText('Smoothness')).toBeInTheDocument();
     expect(screen.getByText('Speed discipline')).toBeInTheDocument();
-    expect(screen.getByText('90')).toBeInTheDocument();
-    expect(screen.getByText('82')).toBeInTheDocument();
-    expect(screen.getByText('75')).toBeInTheDocument();
+    expect(screen.getByText('90.00')).toBeInTheDocument();
+    expect(screen.getByText('82.00')).toBeInTheDocument();
+    expect(screen.getByText('75.00')).toBeInTheDocument();
 
     // Non-tall → no MetricBar, so each label appears exactly once (stats only).
     expect(screen.getAllByText('Efficiency')).toHaveLength(1);
@@ -280,8 +280,8 @@ describe('DriveScoreGaugeWidget tall layout', () => {
     expect(screen.getAllByText('Speed discipline')).toHaveLength(2);
 
     // The bar sublabel echoes the value alongside the stat value → two "90"s.
-    expect(screen.getAllByText('90')).toHaveLength(2);
-    expect(screen.getByText('87')).toBeInTheDocument(); // gauge overall stays singular
+    expect(screen.getAllByText('90.00')).toHaveLength(2);
+    expect(screen.getByText('87.00')).toBeInTheDocument(); // gauge overall stays singular
   });
 });
 
@@ -293,12 +293,12 @@ describe('DriveScoreGaugeWidget compact layout', () => {
     renderWidget(COMPACT);
 
     // The compact 1×1 gauge keeps the score + grade but nothing else.
-    expect(screen.getByText('87')).toBeInTheDocument();
+    expect(screen.getByText('87.00')).toBeInTheDocument();
     expect(screen.getByText('B')).toBeInTheDocument();
 
     expect(screen.queryByText('Drive score')).toBeNull(); // title hidden
     expect(screen.queryByText('Efficiency')).toBeNull(); // stats hidden
-    expect(screen.queryByText('90')).toBeNull(); // stat value hidden
+    expect(screen.queryByText('90.00')).toBeNull(); // stat value hidden
   });
 });
 
@@ -309,7 +309,7 @@ describe('DriveScoreGaugeWidget refresh', () => {
     const refetch = vi.fn();
     mockUseDriveScore.mockReturnValue(qr({ data: makeScore(), error: new Error('offline'), isError: true, refetch }));
     renderWidget(TALL);
-    expect(screen.getByText('87')).toBeInTheDocument();
+    expect(screen.getByText('87.00')).toBeInTheDocument();
     expect(screen.getAllByText('Efficiency')).toHaveLength(2);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -319,7 +319,7 @@ describe('DriveScoreGaugeWidget refresh', () => {
   it('preserves a legitimate zero overall score and keeps missing subscores unknown', () => {
     mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ overall: 0, efficiency: undefined, smoothness: 0 }) }));
     renderWidget(STANDARD);
-    expect(screen.getAllByText('0')).toHaveLength(2);
+    expect(screen.getAllByText('0.00')).toHaveLength(2);
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('No score yet')).not.toBeInTheDocument();
   });
@@ -329,7 +329,7 @@ describe('DriveScoreGaugeWidget refresh', () => {
     renderWidget(TALL);
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.getByText('Weekly score')).toBeInTheDocument();
-    expect(screen.getAllByText('90')).toHaveLength(2);
+    expect(screen.getAllByText('90.00')).toHaveLength(2);
   });
 
   it('invokes refetch when the freshness refresh control is activated', () => {

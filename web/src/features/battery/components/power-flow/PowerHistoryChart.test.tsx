@@ -348,7 +348,7 @@ describe('PowerHistoryChart — ready state', () => {
     const yAxis = screen.getByTestId('y-axis');
     expect(yAxis.getAttribute('data-sample-kw')).toContain('kW');
     expect(yAxis.getAttribute('data-sample-kw')).toMatch(/1[.,]5/);
-    expect(yAxis).toHaveAttribute('data-sample-w', '500 W');
+    expect(yAxis).toHaveAttribute('data-sample-w', '500.00 W');
   });
 
   it('mounts the tooltip and legend', () => {

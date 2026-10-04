@@ -61,8 +61,8 @@ describe('Shared utilization tables', () => {
     expect(mobile).toHaveClass('sm:hidden');
     expect(within(mobile).getAllByRole('listitem')).toHaveLength(2);
     expect(within(mobile).getByText('50 km')).toBeInTheDocument();
-    expect(display.formatDistance).toHaveBeenCalledWith(50_000, { precision: 1 });
-    expect(display.formatEnergy).toHaveBeenCalledWith(10_000, { precision: 1 });
+    expect(display.formatDistance).toHaveBeenCalledWith(50_000);
+    expect(display.formatEnergy).toHaveBeenCalledWith(10_000);
     expect(within(table).queryByRole('button', { name: /filter/i })).not.toBeInTheDocument();
   });
 

@@ -371,20 +371,35 @@ export function DashboardGrid({
       const baselineRows = Math.max(item.minH ?? def.minSize.rows, def.defaultSize.rows);
       const baselineHeight = baselineRows * ROW_HEIGHT + (baselineRows - 1) * marginY;
       const priorHeight = panel.style.height;
-      panel.style.height = `${baselineHeight}px`;
-      const nestedOverflow = Array.from(panel.querySelectorAll<HTMLElement>('*')).reduce((largest, element) => {
-        const overflow = element.scrollHeight - element.clientHeight;
-        if (overflow <= 4) return largest;
-        const overflowY = getComputedStyle(element).overflowY;
-        return overflowY === 'auto' || overflowY === 'scroll'
-          ? Math.max(largest, overflow)
-          : largest;
-      }, 0);
-      const contentHeight = panel.clientHeight + Math.max(
-        panel.scrollHeight - panel.clientHeight,
-        nestedOverflow,
-      );
-      panel.style.height = priorHeight;
+      const priorTransition = panel.style.getPropertyValue('transition-property');
+      const priorTransitionPriority = panel.style.getPropertyPriority('transition-property');
+      let contentHeight: number;
+      try {
+        // Even the reduced-motion 0.01ms transition delays this synchronous read.
+        panel.style.setProperty('transition-property', 'none', 'important');
+        panel.style.height = `${baselineHeight}px`;
+        const nestedOverflow = Array.from(panel.querySelectorAll<HTMLElement>('*')).reduce((largest, element) => {
+          const overflow = element.scrollHeight - element.clientHeight;
+          if (overflow <= 4) return largest;
+          const overflowY = getComputedStyle(element).overflowY;
+          return overflowY === 'auto' || overflowY === 'scroll'
+            ? Math.max(largest, overflow)
+            : largest;
+        }, 0);
+        contentHeight = panel.clientHeight + Math.max(
+          panel.scrollHeight - panel.clientHeight,
+          nestedOverflow,
+        );
+      } finally {
+        panel.style.height = priorHeight;
+        // Commit the restored box before transitions can animate from the reference size.
+        void panel.offsetHeight;
+        if (priorTransition) {
+          panel.style.setProperty('transition-property', priorTransition, priorTransitionPriority);
+        } else {
+          panel.style.removeProperty('transition-property');
+        }
+      }
       if (contentHeight <= 0) continue;
       const maxH = item.maxH ?? def.maxSize.rows;
       const hNew = Math.max(baselineRows, Math.min(rowsForHeight(contentHeight, ROW_HEIGHT, marginY), maxH));
@@ -646,7 +661,7 @@ export function DashboardGrid({
             // (RGL v2 merges `react-grid-item` onto the container root, so
             // transform animations must live here, not on the item.)
             'widget-panel w-full overflow-y-auto rounded-xl',
-            mobile ? 'flex-1 min-h-0' : 'h-full',
+            mobile ? 'flex flex-1 min-h-0 flex-col' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
             panelStyle && 'kiosk-panel',
           )}

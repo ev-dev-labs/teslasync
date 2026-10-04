@@ -51,6 +51,7 @@ import {
   useAlertMessagePlaceholders,
   useAlertMessagePresets,
   useAlertMessagePreview,
+  useAlertMessageFormattingKey,
 } from '@/api/hooks/useAlertMessageHelpers'
 import type {
   AlertMessagePlaceholder,
@@ -75,6 +76,7 @@ export interface AlertMessageEditorDraft {
   op?: AlertRuleOp
   severity?: AlertRuleSeverity
   vehicle_name?: string
+  vehicle_timezone?: string
   value_num?: number | null
   value_text?: string | null
   value_bool?: boolean | null
@@ -149,6 +151,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
     ref,
   ) {
     const { t } = useTranslation()
+    const formattingKey = useAlertMessageFormattingKey()
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
     const presetButtonRef = useRef<HTMLButtonElement | null>(null)
 
@@ -172,6 +175,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
       signal_name: draft.signal_name,
       op: draft.op,
       metric_id: draft.metric_id ?? null,
+      vehicle_timezone: draft.vehicle_timezone,
       enabled: !disabled,
     })
 
@@ -282,7 +286,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
 
     // ──────────────── Preset gallery ────────────────
     const [presetModalOpen, setPresetModalOpen] = useState(false)
-    const presetsQuery = useAlertMessagePresets(draft.kind)
+    const presetsQuery = useAlertMessagePresets(draft.kind, draft)
     const [presetFilter, setPresetFilter] = useState<string | null>(null)
 
     // Set of placeholder keys that are valid for the current rule's op.
@@ -372,6 +376,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           op: draft.op,
           severity: draft.severity,
           vehicle_name: draft.vehicle_name,
+          vehicle_timezone: draft.vehicle_timezone,
           value_num: draft.value_num,
           value_text: draft.value_text,
           value_bool: draft.value_bool,
@@ -381,11 +386,13 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           metric_window: draft.metric_window,
           metric_op: draft.metric_op,
           metric_threshold: draft.metric_threshold,
+          formattingKey,
         }),
-      [draft, includeTitle, msgTemplate],
+      [draft, includeTitle, msgTemplate, formattingKey],
     )
 
     useEffect(() => {
+      let active = true
       const handle = window.setTimeout(() => {
         const body: AlertMessagePreviewRequest = {
           name: draft.name,
@@ -397,6 +404,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           op: draft.op,
           severity: draft.severity,
           vehicle_name: draft.vehicle_name,
+          vehicle_timezone: draft.vehicle_timezone,
           value_num: draft.value_num,
           value_text: draft.value_text,
           value_bool: draft.value_bool,
@@ -411,15 +419,20 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
         }
         previewMut.mutate(body, {
           onSuccess: data => {
+            if (!active) return
             setPreview(data)
             setPreviewError(null)
           },
           onError: err => {
+            if (!active) return
             setPreviewError(err instanceof Error ? err.message : 'Preview failed')
           },
         })
       }, PREVIEW_DEBOUNCE_MS)
-      return () => window.clearTimeout(handle)
+      return () => {
+        active = false
+        window.clearTimeout(handle)
+      }
     }, [previewKey])
 
     // ──────────────── Render ────────────────
@@ -767,6 +780,9 @@ function PresetGalleryModal({
                   <code className="mt-1 block w-full overflow-x-auto whitespace-nowrap rounded bg-[var(--surface-2)] px-2 py-1 font-mono text-xs text-cyan-300">
                     {preset.template}
                   </code>
+                  {preset.example && (
+                    <div className={typography.role.caption}>{preset.example}</div>
+                  )}
                   {preset.tags && preset.tags.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {preset.tags.map(tag => (

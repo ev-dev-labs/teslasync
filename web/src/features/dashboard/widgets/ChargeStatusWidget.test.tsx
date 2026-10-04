@@ -80,6 +80,11 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import ChargeStatusWidget from './ChargeStatusWidget';
+
+it.each([1, 2, 3])('identifies charge status at %i columns', (cols) => {
+  renderWidget({ size: { cols, rows: 2 } });
+  expect(screen.getByRole('heading', { name: 'Charge status' })).toBeInTheDocument();
+});
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import type { VehicleState } from '@/api/types';
 import type { WidgetProps, WidgetSize } from './types';
@@ -156,13 +161,15 @@ const CHARGING: Partial<VehicleState> = {
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <ChargeStatusWidget size={SIZE} {...props} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charge status');
+  return view;
 }
 
 beforeEach(() => {
@@ -246,9 +253,9 @@ describe('ChargeStatusWidget — charging', () => {
 
     // Metric values (each is a single <p> once text nodes are joined).
     expect(screen.getByText('11.00 kW')).toBeInTheDocument();
-    expect(screen.getByText('32 km/h')).toBeInTheDocument(); // 32000 m/h → 32 km/h
-    expect(screen.getByText('72%')).toBeInTheDocument();
-    expect(screen.getByText('2.5h')).toBeInTheDocument();
+    expect(screen.getByText('32.00 km/h')).toBeInTheDocument(); // 32000 m/h → 32 km/h
+    expect(screen.getByText('72.00%')).toBeInTheDocument();
+    expect(screen.getByText('2.50h')).toBeInTheDocument();
 
     // Not-charging copy must be absent on the charging branch.
     expect(screen.queryByText('Not charging')).toBeNull();
@@ -269,9 +276,9 @@ describe('ChargeStatusWidget — charging', () => {
     );
     renderWidget();
 
-    expect(screen.getByText('0.0h')).toBeInTheDocument();
+    expect(screen.getByText('0.00h')).toBeInTheDocument();
     // The other charging metrics still render.
-    expect(screen.getByText('72%')).toBeInTheDocument();
+    expect(screen.getByText('72.00%')).toBeInTheDocument();
   });
 });
 
@@ -284,8 +291,8 @@ describe('ChargeStatusWidget — not charging', () => {
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
     // "80% · 400 km" — assert the pieces to stay robust to the middot spacing.
-    expect(container.textContent).toContain('80%');
-    expect(container.textContent).toContain('400 km'); // 400000 m → 400 km
+    expect(container.textContent).toContain('80.00%');
+    expect(container.textContent).toContain('400.00 km'); // 400000 m → 400 km
     // Charging-only copy must be absent.
     expect(screen.queryByText('Charging')).toBeNull();
   });
@@ -299,8 +306,8 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
     const { container } = renderWidget();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
     expect(container.querySelector('.\\@xs\\:grid-cols-2')).toBeInTheDocument();
   });
   it('keeps a missing charging battery level unknown', () => {
@@ -317,7 +324,7 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
     );
     renderWidget();
 
-    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
@@ -335,8 +342,8 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
     // Without the `?? 0` hardening this line would read "% · 0 km".
-    expect(container.textContent).not.toContain('0%');
-    expect(container.textContent).not.toContain('0 km');
+    expect(container.textContent).not.toContain('0.00%');
+    expect(container.textContent).not.toContain('0.00 km');
     expect(screen.getAllByText('—')).toHaveLength(2);
   });
 });
@@ -350,8 +357,8 @@ describe('ChargeStatusWidget — refresh wiring', () => {
     }));
     renderWidget();
     expect(screen.getByText('0.00 kW')).toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(screen.getByText('-1 km/h')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('-1.00 km/h')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
   it('invokes the query refetch when the freshness control is activated', () => {

@@ -129,7 +129,7 @@ export function WidgetShell({
     <div
       className={cn(
         dashboardTokens.shell,
-        'transition-shadow duration-slow',
+        'min-h-0 flex-1 transition-shadow duration-slow',
         justUpdated && 'shadow-[0_0_12px_rgba(34,197,94,0.15)] motion-reduce:shadow-none',
         className,
       )}
@@ -187,7 +187,7 @@ export function WidgetShell({
           )}
         </>
       )}
-      <div className={cn(dashboardTokens.body, !noPadding ? 'px-4 pb-3 overflow-auto' : 'overflow-hidden')}>
+      <div className={cn(dashboardTokens.body, !noPadding ? 'px-4 pb-3 overflow-auto' : 'flex flex-col overflow-hidden')}>
         {initialLoading ? (
           loadingContent ?? <Skeleton className="h-full min-h-24 rounded-xl" />
         ) : fatalError ? (

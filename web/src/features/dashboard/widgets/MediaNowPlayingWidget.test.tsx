@@ -33,7 +33,8 @@
  * components it composes may reach for router context.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { MediaSnapshot } from '@/api/types';
@@ -90,6 +91,7 @@ function makeMedia(over: Partial<MediaSnapshot> = {}): MediaSnapshot {
 }
 
 interface MediaResult {
+  error?: Error;
   data: MediaSnapshot | null | undefined;
   isLoading: boolean;
   isFetching: boolean;
@@ -210,13 +212,75 @@ describe('MediaNowPlayingWidget — states', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
-  it('surfaces a red freshness dot on error but still paints an empty panel', () => {
+  it('surfaces a fatal error instead of claiming nothing is playing on initial failure', () => {
     useMediaLatestMock.mockReturnValue(
       makeResult({ isError: true, dataUpdatedAt: 0, data: null }),
     );
     const { container } = renderWidget();
     expect(container.querySelector('.bg-red-400')).not.toBeNull();
-    expect(screen.getByText('Nothing playing')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('Nothing playing')).toBeNull();
+  });
+
+  describe('MediaNowPlayingWidget — prerequisite trust and preferences', () => {
+    it('retains the title, album and transport indicators with real refresh recovery', () => {
+      const refetch = vi.fn();
+      useMediaLatestMock.mockReturnValue(makeResult({ isError: true, error: new Error('refresh failed'), refetch }));
+      renderWidget();
+      expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+      expect(screen.getByText('A Night at the Opera')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar', { name: 'Playback progress' })).toBeInTheDocument();
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries failed vehicle resolution before the disabled media query', () => {
+      const refetch = vi.fn();
+      const mediaRefetch = vi.fn();
+      useVehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('discovery failed'), refetch });
+      useMediaLatestMock.mockReturnValue(makeResult({ data: undefined, refetch: mediaRefetch }));
+      renderWidget();
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(mediaRefetch).not.toHaveBeenCalled();
+    });
+
+    it('does not invent zero elapsed time when only the duration is known', () => {
+      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ now_playing_elapsed: undefined }) }));
+      renderWidget();
+      expect(screen.queryByRole('progressbar', { name: 'Playback progress' })).toBeNull();
+      expect(screen.queryByText('0:00')).toBeNull();
+      expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+    });
+
+    it('keeps a real zero volume reading without inventing an unknown scale maximum', () => {
+      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 0, audio_volume_max: undefined }) }));
+      renderWidget();
+      expect(screen.queryByRole('progressbar', { name: 'Volume' })).toBeNull();
+      expect(screen.getByText('0.00')).toBeInTheDocument();
+    });
+
+    it('bounds the accessible volume reading to the known scale', () => {
+      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 15, audio_volume_max: 10 }) }));
+      renderWidget();
+      expect(screen.getByRole('progressbar', { name: 'Volume' })).toHaveAttribute('aria-valuenow', '10');
+    });
+
+    it('reacts to locale and precision without changing media identities or refetching', () => {
+      const locale = getGlobalLocale();
+      const precision = getGlobalPrecision();
+      const refetch = vi.fn();
+      try {
+        useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 5.125 }), refetch }));
+        renderWidget();
+        act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(3); });
+        expect(screen.getByText('5,125')).toBeInTheDocument();
+        expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+        expect(refetch).not.toHaveBeenCalled();
+      } finally {
+        act(() => { setGlobalLocale(locale); setGlobalPrecision(precision); });
+      }
+    });
   });
 });
 

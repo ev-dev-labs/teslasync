@@ -643,7 +643,7 @@ export default function DrivesListPage() {
       formatValue: (v) => `${fmtInt(v)} ${efficiencyUnit}`,
       formatTick: (v) => fmtInt(v) },
     { key: 'cost',       label: t('drives.metric.cost', 'Cost'),             chart: 'bar',  color: '#ef4444', accent: 'red',
-      getValue: (p) => (p.value / 1_000) * costPerKwh,
+      getValue: (p) => costPerKwh != null ? (p.value / 1_000) * costPerKwh : null,
       formatValue: (v) => formatCurrency(v),
       // Compact axis label so the Y-axis doesn't show "$0.0833" on each tick.
       formatTick: (v) => formatCurrency(v) },
@@ -763,8 +763,8 @@ export default function DrivesListPage() {
   const priorEffDisp = priorStats?.avgEfficiencyWhKm != null
     ? toEfficiencyDisplay(priorStats.avgEfficiencyWhKm)
     : null;
-  const totalCost = (currentStats.totalEnergyWh / 1_000) * costPerKwh;
-  const priorTotalCost = priorStats && priorStats.energyMeasuredCount > 0
+  const totalCost = costPerKwh != null ? (currentStats.totalEnergyWh / 1_000) * costPerKwh : null;
+  const priorTotalCost = costPerKwh != null && priorStats && priorStats.energyMeasuredCount > 0
     ? (priorStats.totalEnergyWh / 1_000) * costPerKwh
     : null;
   const routeContextCount = dateFilteredDrives.filter((drive) => {

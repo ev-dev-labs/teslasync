@@ -48,6 +48,11 @@ import ChargingScheduleWidget, {
   modeLabel,
   modeBadgeVariant,
 } from './ChargingScheduleWidget';
+
+it.each([1, 2, 3])('identifies charging schedules at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Charging schedule' })).toBeInTheDocument();
+});
 import type { WidgetSize } from './types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -163,11 +168,13 @@ function makeStateResult(over: Partial<StateResult> = {}): StateResult {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <ChargingScheduleWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charging schedule');
+  return view;
 }
 
 /** Options object the widget passed to the mocked `useQuery` on last render. */
@@ -178,7 +185,7 @@ interface CapturedQuery {
   staleTime: number;
 }
 function lastQueryOptions(): CapturedQuery {
-  return useQueryMock.mock.calls.at(-1)?.[0] as CapturedQuery;
+  return useQueryMock.mock.calls[useQueryMock.mock.calls.length - 1]?.[0] as CapturedQuery;
 }
 
 beforeEach(() => {
@@ -544,7 +551,7 @@ describe('ChargingScheduleWidget — compact', () => {
     expect(screen.getByText('85%')).toBeInTheDocument();
     expect(screen.getByText('Charge limit')).toBeInTheDocument();
     // Compact drops the header title + timeline.
-    expect(screen.queryByText('Charging schedule')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Charging schedule' })).toBeInTheDocument();
     expect(screen.queryByText('Target limit')).toBeNull();
   });
 

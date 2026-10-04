@@ -13,6 +13,7 @@ import type { ChargingSession } from '../types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
@@ -20,6 +21,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
+  const { formatDateTime } = useDateFormat();
 
   const query = useQuery({
     queryKey: ['charging', id, 'recent-10'],
@@ -30,15 +32,12 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   const chartData = useMemo(
     () =>
-      // Reverse first (the API returns newest-first) so the chart reads
-      // oldest → newest left-to-right, THEN index — giving ascending x-axis
-      // labels. `slice()` guards the react-query cache array from an
-      // in-place `reverse()` mutation.
+      // The API returns newest-first; copy before reversing the cached rows.
       (charges ?? [])
         .slice()
         .reverse()
-        .map((s, i) => ({
-          i: String(i),
+        .map((s) => ({
+          started_at: s.started_at,
           energy: knownNumber(s.total_energy_added_wh) == null ? null : convertEnergyFromSI(s.total_energy_added_wh, unitPrefs.energy),
         })),
     [charges, unitPrefs.energy],
@@ -60,6 +59,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.chargeHistory.title', 'Charge history')}
         loading={isLoading && !charges}
         error={!charges && error ? String(error) : null}
         dataState={charges ? deriveDataState(query, { provenance: 'historical', partial: chartData.some(d => d.energy == null) }) : undefined}
@@ -102,7 +102,8 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
         chart={
           <AreaChartWrapper
             data={chartData}
-            xKey="i"
+            xKey="started_at"
+            xFormatter={(value) => formatDateTime(value)}
             series={[{ key: 'energy', label: unitPrefs.energy, color: '#10b981' }]}
             height={200}
             yFormatter={(v) => `${v} ${unitPrefs.energy}`}

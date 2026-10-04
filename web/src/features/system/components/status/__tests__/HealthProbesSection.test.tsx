@@ -98,7 +98,7 @@ describe('HealthProbesSection', () => {
     expect(screen.getAllByText('connected')).toHaveLength(2)
     expect(screen.getByText('148')).toBeInTheDocument() // goroutines
     expect(screen.getByText('1d 2h 3m')).toBeInTheDocument() // uptime of 93784s
-    expect(screen.getByText('4.2 ms')).toBeInTheDocument() // db latency
+    expect(screen.getByText('4.20 ms')).toBeInTheDocument() // db latency
     expect(screen.getByText('12')).toBeInTheDocument() // pool connections
     // header summary chips
     expect(screen.getByText('Live')).toBeInTheDocument()
@@ -133,7 +133,7 @@ describe('HealthProbesSection', () => {
     )
     renderSection()
 
-    expect(await screen.findByText('0.0 ms')).toBeInTheDocument()
+    expect(await screen.findByText('0.00 ms')).toBeInTheDocument()
     // The em-dash placeholder must NOT be used for a genuine 0 ms latency.
     expect(screen.queryByText(EM_DASH)).toBeNull()
   })

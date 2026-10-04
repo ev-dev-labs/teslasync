@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -13,6 +12,11 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates, knownNumber } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 /**
  * Maps a charge-plan status to a semantic <Badge> variant. Exported for direct
@@ -64,41 +68,67 @@ export function joinDateTime(datePart: string, timePart: string): string {
 }
 
 export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
-  const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const vehiclesQuery = useVehicles();
+  const candidate = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
+  const id = Number.isSafeInteger(candidate) && Number(candidate) > 0 ? Number(candidate) : 0;
   const { formatCurrency } = useFormatting();
   const { formatTime, formatDateShort: formatDate } = useDateFormat();
 
+  const plansQuery = useChargePlans(id > 0 ? id : undefined);
   const {
     data: plans,
     isLoading: plansLoading,
     isFetching: plansFetching,
     isStale: plansStale,
     isError: plansError,
-    dataUpdatedAt: plansUpdatedAt,
     refetch: refetchPlans,
-  } = useChargePlans(id > 0 ? id : undefined);
+  } = plansQuery;
 
+  const ratesQuery = useRatePlans();
   const {
     data: ratePlans,
     isLoading: ratesLoading,
     isFetching: ratesFetching,
     isStale: ratesStale,
     isError: ratesError,
-    dataUpdatedAt: ratesUpdatedAt,
     refetch: refetchRates,
-  } = useRatePlans();
+  } = ratesQuery;
 
-  const isLoading = plansLoading || ratesLoading;
   const isFetching = plansFetching || ratesFetching;
   const isStale = plansStale || ratesStale;
   const isError = plansError || ratesError;
-  const updatedAt = Math.max(plansUpdatedAt ?? 0, ratesUpdatedAt ?? 0);
 
-  const safePlans = plans ?? [];
-  const safeRates = ratePlans ?? [];
+  const safePlans = safeArray(plans);
+  const safeRates = safeArray(ratePlans);
+  const discoveryState = useDataState(vehiclesQuery);
+  const plansState = useDataState({
+    ...plansQuery,
+    data: plans ?? (!id || (!plansLoading && !plansQuery.isPending && !plansError) ? null : undefined),
+  }, { provenance: 'inferred', unavailable: safePlans.length === 0 });
+  const ratesState = useDataState({
+    ...ratesQuery,
+    data: ratePlans ?? (!ratesLoading && !ratesQuery.isPending && !ratesError ? null : undefined),
+  }, { provenance: 'historical', unavailable: safeRates.length === 0 });
+  const sources = [
+    !id && vehicleId == null && discoveryState.status !== 'ok' ? discoveryState : plansState,
+    ratesState,
+  ];
+  const combined = combineDataStates(sources);
+  const failure = sources.find((state) => state.fatalError)?.fatalError ?? null;
+  const retained = safePlans.length > 0 || safeRates.length > 0;
+  const dataState = {
+    ...combined,
+    data: { plans, ratePlans },
+    hasData: retained,
+    status: !retained && failure ? 'initialFailure' as const
+      : !retained && sources.some((state) => state.status === 'initial') ? 'initial' as const
+        : retained && sources.some((state) => state.status === 'unavailable') ? 'partial' as const : combined.status,
+    fatalError: !retained ? failure : null,
+    refreshError: retained ? combined.refreshError ?? failure : null,
+    retry: () => handleRefresh(),
+  };
 
   const activePlan = useMemo(
     () => safePlans.find((p) => p.status === 'active' || p.status === 'scheduled') ?? safePlans[0] ?? null,
@@ -111,10 +141,11 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     if (!activePlan) return [];
 
     const items: DetailEntry[] = [];
+    const estimatedCost = knownNumber(activePlan.estimated_cost);
 
     items.push({
       label: t('widget.chargePlans.targetSoc', 'Target SOC'),
-      value: `${fmtInt(activePlan.target_soc ?? 0)}%`,
+      value: knownNumber(activePlan.target_soc) == null ? '—' : `${fmtNumber(activePlan.target_soc)}%`,
       badge: { text: activePlan.status ?? '—', variant: detailBadgeVariant(activePlan.status) },
     });
 
@@ -135,12 +166,12 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
 
     items.push({
       label: t('widget.chargePlans.estEnergy', 'Est. energy'),
-      value: activePlan.estimated_kwh != null ? `${fmtNumber(activePlan.estimated_kwh)} kWh` : '—',
+      value: knownNumber(activePlan.estimated_kwh) != null ? `${fmtNumber(activePlan.estimated_kwh)} kWh` : '—',
     });
 
     items.push({
       label: t('widget.chargePlans.estCost', 'Est. cost'),
-      value: activePlan.estimated_cost != null ? formatCurrency(activePlan.estimated_cost) : '—',
+      value: estimatedCost != null ? formatCurrency(estimatedCost) : '—',
     });
 
     if (activePlan.savings != null && activePlan.savings > 0) {
@@ -157,7 +188,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     });
 
     return items;
-  }, [activePlan, t, formatCurrency, formatTime, formatDate, fmtInt, fmtNumber]);
+  }, [activePlan, t, formatCurrency, formatTime, formatDate, fmtNumber]);
 
   const rateEntries: DetailEntry[] = useMemo(() => {
     return safeRates.map((rp) => ({
@@ -171,35 +202,29 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
   const hasData = safePlans.length > 0 || safeRates.length > 0;
 
   const handleRefresh = () => {
-    refetchPlans();
-    refetchRates();
+    if (vehicleId == null) void vehiclesQuery.refetch?.();
+    if (id) void refetchPlans();
+    void refetchRates();
   };
 
   if (isCompact) {
     return (
       <WidgetShell
-        loading={isLoading}
-        updatedAt={updatedAt}
+        title={t('widget.chargePlans.title', 'Charge plans')}
+        dataState={dataState}
+        updatedAt={dataState.updatedAt ?? 0}
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
         onRefresh={handleRefresh}
       >
         {activePlan ? (
-          <div className="h-full flex flex-col items-center justify-center gap-1 px-2">
-            <Clock className="h-4 w-4 text-cyan-400" />
-            <span className="text-2xl font-bold text-[var(--text-primary)]">
-              {fmtInt(activePlan.target_soc ?? 0)}%
-            </span>
-            <span className="text-2xs text-[var(--text-muted)] tracking-wider truncate max-w-full text-center">
-              {t('widget.chargePlans.targetSoc', 'Target SOC')}
-            </span>
-            {activePlan.depart_by && (
-              <span className="text-xs text-[var(--text-secondary)] truncate max-w-full">
-                {formatTime(activePlan.depart_by)}
-              </span>
-            )}
-          </div>
+          <WidgetBigNumber
+            align="center"
+            value={knownNumber(activePlan.target_soc) == null ? null : `${fmtNumber(activePlan.target_soc)}%`}
+            label={t('widget.chargePlans.targetSoc', 'Target SOC')}
+            subtitle={activePlan.depart_by ? formatTime(activePlan.depart_by) : undefined}
+          />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Clock className="h-5 w-5" />}
@@ -214,9 +239,9 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.chargePlans.title', 'Charge plans')}
-      icon={<Clock className="h-3.5 w-3.5 text-cyan-400" />}
-      loading={isLoading}
-      updatedAt={updatedAt}
+      icon={<Clock className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
+      dataState={dataState}
+      updatedAt={dataState.updatedAt ?? 0}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
@@ -231,22 +256,16 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
                 <Badge variant={badgeVariant(activePlan.status)} size="sm" dot>
                   {activePlan.status ?? '—'}
                 </Badge>
-                <span className="text-xs text-[var(--text-secondary)] truncate">
+                <span className={dashboardTokens.metricLabel}>
                   {activePlan.rate_plan ?? ''}
                 </span>
               </div>
 
               {/* Summary stats */}
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <StatCard
-                  label={t('widget.chargePlans.targetSoc', 'Target SOC')}
-                  value={`${fmtInt(activePlan.target_soc ?? 0)}%`}
-                />
-                <StatCard
-                  label={t('widget.chargePlans.departure', 'Departure')}
-                  value={activePlan.depart_by ? formatTime(activePlan.depart_by) : '—'}
-                />
-              </div>
+              <WidgetStatGrid stats={[
+                { label: t('widget.chargePlans.targetSoc', 'Target SOC'), value: knownNumber(activePlan.target_soc) == null ? '—' : `${fmtNumber(activePlan.target_soc)}%` },
+                { label: t('widget.chargePlans.departure', 'Departure'), value: activePlan.depart_by ? formatTime(activePlan.depart_by) : '—' },
+              ]} />
 
               <WidgetDetailCard
                 entries={planEntries.slice(2)}
@@ -264,9 +283,8 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
           )}
 
           {/* Rate plans section */}
-          {safeRates.length > 0 && (
-            <div className="border-t border-white/[0.06] pt-2">
-              <h4 className="text-2xs font-medium text-[var(--text-muted)] tracking-wider mb-1">
+            <div className="border-t border-[var(--border-subtle)] pt-2">
+              <h4 className={dashboardTokens.title}>
                 {t('widget.chargePlans.ratePlans', 'Rate plans')}
               </h4>
               <WidgetDetailCard
@@ -276,7 +294,6 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
                 emptyIcon={<Clock className="h-5 w-5" />}
               />
             </div>
-          )}
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

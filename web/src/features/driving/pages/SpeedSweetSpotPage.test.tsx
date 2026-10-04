@@ -332,8 +332,8 @@ describe('SpeedSweetSpotPage', () => {
     useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)] }));
     render(<SpeedSweetSpotPage />);
 
-    expect(screen.getByText('62–68 mph')).toBeInTheDocument();
-    expect(screen.getAllByText('241 Wh/mi')).toHaveLength(2);
+    expect(screen.getByText('62.14–68.35 mph')).toBeInTheDocument();
+    expect(screen.getAllByText('241.40 Wh/mi')).toHaveLength(2);
     expect(screen.getByTestId('speed-sweet-spot-evidence')).toHaveAttribute(
       'data-model-from',
       '100',
@@ -348,7 +348,7 @@ describe('SpeedSweetSpotPage', () => {
     useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)] }));
     render(<SpeedSweetSpotPage />);
 
-    expect(screen.getByText('100–110 km/h')).toBeInTheDocument();
-    expect(screen.getAllByText('150 Wh/km')).toHaveLength(2);
+    expect(screen.getByText('100.00–110.00 km/h')).toBeInTheDocument();
+    expect(screen.getAllByText('150.00 Wh/km')).toHaveLength(2);
   });
 });

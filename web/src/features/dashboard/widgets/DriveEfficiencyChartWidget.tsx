@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, ChartLegend, EmbeddedChart } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, ChartLegend, EmbeddedChart, useMeasuredAxisWidth } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
@@ -18,11 +18,6 @@ import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-/**
- * Colour for the rolling-average series (amber). Shared by the reference
- * line, the rolling-average area stroke, and the legend swatch so the three
- * stay in lockstep if the accent ever changes.
- */
 const ROLLING_AVG_COLOR = '#f59e0b';
 
 export interface DailyEfficiency {
@@ -74,8 +69,8 @@ export function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtSho
     return {
       date: entry.date,
       label: fmtShortDate(entry.date + 'T00:00:00'),
-      efficiency: Math.round(entry.avg * 10) / 10,
-      rollingAvg: rollingAvg != null ? Math.round(rollingAvg * 10) / 10 : null,
+      efficiency: entry.avg,
+      rollingAvg,
     };
   });
 }
@@ -115,10 +110,10 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     () =>
       chartData.map((d) => ({
         ...d,
-        efficiency: Math.round(convertEfficiencyFromSI(d.efficiency, unitPrefs.distance) * 10) / 10,
+        efficiency: convertEfficiencyFromSI(d.efficiency, unitPrefs.distance),
         rollingAvg:
           d.rollingAvg != null
-            ? Math.round(convertEfficiencyFromSI(d.rollingAvg, unitPrefs.distance) * 10) / 10
+            ? convertEfficiencyFromSI(d.rollingAvg, unitPrefs.distance)
             : null,
       })),
     [chartData, unitPrefs.distance],
@@ -127,8 +122,9 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const overallAvg = useMemo(() => {
     if (displayData.length === 0) return null;
     const sum = displayData.reduce((s, d) => s + d.efficiency, 0);
-    return Math.round((sum / displayData.length) * 10) / 10;
+    return sum / displayData.length;
   }, [displayData]);
+  const hasRollingAverage = displayData.some(point => point.rollingAvg != null);
 
   const bestDay = useMemo(() => {
     if (displayData.length === 0) return null;
@@ -145,12 +141,21 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     const second = displayData.slice(mid);
     const avgFirst = first.reduce((s, d) => s + d.efficiency, 0) / first.length;
     const avgSecond = second.reduce((s, d) => s + d.efficiency, 0) / second.length;
-    return Math.round(((avgSecond - avgFirst) / avgFirst) * 1000) / 10;
+    return ((avgSecond - avgFirst) / avgFirst) * 100;
   }, [displayData]);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;
   const tick = isWide ? axisTick : axisTickSm;
+  const efficiencyAxisLabels = useMemo(() => {
+    const values = displayData.flatMap(point => [point.efficiency, point.rollingAvg])
+      .filter((value): value is number => value != null && Number.isFinite(value));
+    return [...values, ...(values.length ? [Math.min(...values) - 20, Math.max(...values) + 20] : [])]
+      .map(value => `${fmt(value)}`);
+  }, [displayData, fmt]);
+  const efficiencyAxisWidth = useMeasuredAxisWidth({
+    labels: efficiencyAxisLabels, fontSize: tick.fontSize, minWidth: 36, padding: 20, enabled: !isCompact,
+  });
 
   // Series colour follows the active theme.
   const palette = useThemeChartPalette();
@@ -169,7 +174,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
       },
       {
         label: t('widget.driveEfficiencyChart.trend', 'Trend'),
-        value: trend != null ? `${trend > 0 ? '+' : ''}${trend}%` : '—',
+        value: trend != null ? `${trend > 0 ? '+' : ''}${fmtNumber(trend)}%` : '—',
       },
     ];
     return items;
@@ -201,7 +206,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={displayData}
-            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+            margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
             {...chartAnimation}
           >
             {areaGradient('efficiency-grad', palette.series[0])}
@@ -211,7 +216,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               tick={tick}
               tickLine={false}
               axisLine={false}
-              width={36}
+              width={efficiencyAxisWidth}
               domain={['dataMin - 20', 'dataMax + 20']}
               tickFormatter={(v: number) => `${fmt(v)}`}
             />
@@ -220,9 +225,15 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             {overallAvg != null && (
               <ReferenceLine
                 y={overallAvg}
-                stroke={ROLLING_AVG_COLOR}
+                stroke={palette.neutral}
                 strokeDasharray="4 4"
                 strokeOpacity={0.5}
+                label={{
+                  value: `${t('widget.driveEfficiencyChart.avg', 'Avg')}: ${fmtNumber(overallAvg)} ${efficiencyUnit}`,
+                  position: 'insideTopRight',
+                  fill: palette.neutral,
+                  fontSize: tick.fontSize,
+                }}
               />
             )}
             <Area
@@ -233,7 +244,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               name={t('widget.driveEfficiencyChart.daily', 'Daily') + ` (${efficiencyUnit})`}
               hide={hiddenSeries?.isHidden('efficiency')}
             />
-            <Area
+            {hasRollingAverage && <Area
               {...AREA_DEFAULTS}
               dataKey="rollingAvg"
               stroke={ROLLING_AVG_COLOR}
@@ -242,7 +253,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               strokeDasharray="4 2"
               name={t('widget.driveEfficiencyChart.rolling', '7-day avg') + ` (${efficiencyUnit})`}
               hide={hiddenSeries?.isHidden('rollingAvg')}
-            />
+            />}
           </AreaChart>
         </ResponsiveContainer>
       )}

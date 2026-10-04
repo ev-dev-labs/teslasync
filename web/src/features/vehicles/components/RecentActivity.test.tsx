@@ -179,7 +179,7 @@ describe('RecentActivity — Recent Drives panel', () => {
       sessions: [],
     });
     // 5000 m ÷ 1000 = 5.0 km, with the user's distance-unit suffix.
-    expect(screen.getByText('5.0 km')).toBeInTheDocument();
+    expect(screen.getByText('5.00 km')).toBeInTheDocument();
     expect(container.querySelector('a[href="/drives/42"]')).not.toBeNull();
   });
 
@@ -196,7 +196,7 @@ describe('RecentActivity — Recent Drives panel', () => {
       ],
       sessions: [],
     });
-    expect(screen.getByText('80% → 60%')).toBeInTheDocument();
+    expect(screen.getByText('80.00% → 60.00%')).toBeInTheDocument();
     // The second drive has a null end SOC — no transition rendered for it.
     expect(screen.queryByText(/55%\s*→/)).not.toBeInTheDocument();
   });
@@ -214,8 +214,8 @@ describe('RecentActivity — Recent Drives panel', () => {
       makeDrive({ id: i + 1, distance_m: (i + 1) * 1000 }),
     );
     renderActivity({ drives, sessions: [] });
-    expect(screen.getByText('5.0 km')).toBeInTheDocument(); // 5th row present
-    expect(screen.queryByText('6.0 km')).not.toBeInTheDocument(); // 6th sliced off
+    expect(screen.getByText('5.00 km')).toBeInTheDocument(); // 5th row present
+    expect(screen.queryByText('6.00 km')).not.toBeInTheDocument(); // 6th sliced off
   });
 });
 
@@ -235,7 +235,7 @@ describe('RecentActivity — Recent Charges panel', () => {
       sessions: [makeSession({ id: 9, total_energy_added_wh: 53500 })],
     });
     // 53500 Wh ÷ 1000 = 53.5 kWh.
-    expect(screen.getByText('53.5 kWh')).toBeInTheDocument();
+    expect(screen.getByText('53.50 kWh')).toBeInTheDocument();
     expect(container.querySelector('a[href="/charging/9"]')).not.toBeNull();
   });
 
@@ -264,8 +264,8 @@ describe('RecentActivity — Recent Charges panel', () => {
       makeSession({ id: i + 1, total_energy_added_wh: (i + 1) * 1000 }),
     );
     renderActivity({ drives: [], sessions });
-    expect(screen.getByText('5.0 kWh')).toBeInTheDocument(); // 5th present
-    expect(screen.queryByText('6.0 kWh')).not.toBeInTheDocument(); // 6th sliced off
+    expect(screen.getByText('5.00 kWh')).toBeInTheDocument(); // 5th present
+    expect(screen.queryByText('6.00 kWh')).not.toBeInTheDocument(); // 6th sliced off
   });
 });
 
@@ -314,8 +314,8 @@ describe('RecentActivity — null-safety', () => {
       drives: [makeDrive({ distance_m: undefined as unknown as number })],
       sessions: [makeSession({ total_energy_added_wh: undefined as unknown as number })],
     });
-    expect(screen.getByText('0.0 km')).toBeInTheDocument();
-    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
   });
 });
 

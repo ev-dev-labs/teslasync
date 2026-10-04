@@ -4,8 +4,8 @@ import { Navigation, Gauge } from 'lucide-react';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
-import { useVehicleState } from '@/api/hooks/useVehicles';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { isVehicleStateFieldCurrent, useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -14,6 +14,7 @@ import { INTERVALS } from '@/lib/constants';
 import { latestNumeric, latestText } from '@/lib/signalObservation';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface AutopilotSectionProps {
   vehicleId: number | null | undefined;
@@ -63,24 +64,33 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
 
   const speedUnit = unitPrefs.speed;
 
-  const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: INTERVALS.REALTIME });
+  const stateQuery = useVehicleState(vehicleId ?? 0, { refetchInterval: INTERVALS.REALTIME });
+  const { data: stateData } = stateQuery;
   // Cruise set-speed and follow distance are cold signals — the vehicle only
   // re-emits them when the driver changes them, so they are read from the
   // latest signal_log row. They still need a cadence: without one these two
   // queries fetched exactly once per mount and the panel showed a set-speed
   // from whenever the page happened to load.
-  const { data: cruiseSetObs } = useSignalObservations(
+  const cruiseQuery = useSignalObservations(
     vehicleId ?? undefined,
     { signal_name: 'CruiseSetSpeed', limit: 1, refetchInterval: INTERVALS.FAST },
   );
-  const { data: followObs } = useSignalObservations(vehicleId ?? undefined, {
+  const followQuery = useSignalObservations(vehicleId ?? undefined, {
     signal_name: 'CruiseFollowDistance',
     limit: 1,
     refetchInterval: INTERVALS.FAST,
   });
+  const { data: cruiseSetObs } = cruiseQuery;
+  const { data: followObs } = followQuery;
+  const loading = stateQuery.isLoading || cruiseQuery.isLoading || followQuery.isLoading;
+  const error = stateQuery.error ?? cruiseQuery.error ?? followQuery.error;
 
   const vehicleState = stateData?.state;
-  const speedMps = vehicleState?.speed ?? null;
+  // The state payload can contain durable/default numeric fallbacks even
+  // without a real VehicleSpeed observation. "Current speed" requires the
+  // existing per-field trust contract; a verified, finite zero remains zero.
+  const speedMps = isVehicleStateFieldCurrent(stateData, 'speed')
+    && isFiniteNumber(vehicleState?.speed) ? vehicleState.speed : null;
   const cruiseSetMps = latestNumeric(cruiseSetObs);
   // ValueKindEnum lands in value_text; numeric fallback covers a future
   // backend that re-encodes the bar-count as ValueKindInt32.
@@ -128,6 +138,14 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
             value={followDistance ?? '—'}
           />
         </Grid>
+      ) : loading ? (
+        <Skeleton className="h-32" />
+      ) : error ? (
+        <QueryError error={error} onRetry={() => {
+          void stateQuery.refetch();
+          void cruiseQuery.refetch();
+          void followQuery.refetch();
+        }} />
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           message={t(

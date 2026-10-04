@@ -29,7 +29,7 @@ export function DetailCards({
   stats,
   loading = false,
 }: DetailCardsProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit, formatEnergy } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
@@ -63,7 +63,7 @@ export function DetailCards({
             items={[
               {
                 label: t('drivetrain.peakPowerLabel', 'Peak Power'),
-                value: isFiniteNumber(peakPower) && peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—',
+                value: isFiniteNumber(peakPower) && peakPower > 0 ? `${fmtNumber(peakPower)} kW` : '—',
               },
               {
                 label: t('drivetrain.avgPowerLabel', 'Avg Peak Power'),

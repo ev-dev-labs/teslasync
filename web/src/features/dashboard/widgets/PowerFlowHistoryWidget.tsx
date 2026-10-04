@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useTeslaEnergyLiveStatusHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber } from '@/api/dataState';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -110,6 +110,15 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
   const hasData = chartData.length > 0;
+  const axisLabels = useMemo(
+    () => [0, ...chartData.flatMap((entry) => [entry.solar, entry.battery, entry.grid, entry.home])]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => fmt(value)),
+    [chartData, fmt],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
 
   const handleRefresh = () => {
     refetchSites();
@@ -136,7 +145,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
-        {...(isCompact ? shellProps : {})}
+        {...shellProps}
         loading={false}
         dataState={dataState}
         updatedAt={sitesUpdatedAt}
@@ -254,7 +263,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
           >
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
+                <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
               {chartGrid}
               <XAxis
                 dataKey="time"
@@ -266,7 +275,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={axisWidth}
                 tickFormatter={(v: number) => fmt(v)}
               />
               <Tooltip

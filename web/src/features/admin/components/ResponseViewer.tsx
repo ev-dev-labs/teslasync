@@ -262,7 +262,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
             variant="ghost"
             onClick={() => onReplay(h)}
             className="!h-auto flex-shrink-0 gap-1.5 !rounded-md border border-white/[0.04] !bg-white/[0.03] !px-2 !py-1 font-mono text-2xs hover:!bg-white/[0.06]"
-            title={`${h.method} ${h.path} → ${h.status} (${h.duration}ms)`}
+            title={`${h.method} ${h.path} → ${h.status} (${fmtNumber(h.duration)}ms)`}
           >
             <span
               className={cn(
@@ -279,7 +279,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
             <span className={cn('font-bold', statusColor(h.status))}>
               {h.status}
             </span>
-            <span className="text-[var(--text-muted)]">{h.duration}ms</span>
+            <span className="text-[var(--text-muted)]">{fmtNumber(h.duration)}ms</span>
           </UiButton>
         ))}
       </div>
@@ -324,7 +324,7 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
                 {response.status} {response.statusText}
               </Text>
               <Text variant="caption">
-                {response.duration}ms · {formatBytes(response.size)}
+                {fmtNumber(response.duration)}ms · {formatBytes(response.size)}
               </Text>
             </div>
 

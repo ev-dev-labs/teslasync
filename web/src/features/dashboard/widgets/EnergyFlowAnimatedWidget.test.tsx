@@ -275,7 +275,7 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     renderWidget(compact);
 
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(diagram()).not.toBeInTheDocument();
   });
 
@@ -285,7 +285,7 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     );
     renderWidget(compact);
 
-    expect(screen.getByText('11.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
     expect(screen.queryByText('Idle')).not.toBeInTheDocument();
   });
 
@@ -295,7 +295,7 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     );
     renderWidget(compact);
 
-    expect(screen.getByText('25.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('25.00 kW')).toBeInTheDocument();
   });
 
   it('shows the absolute regen power while regenerating', () => {
@@ -305,7 +305,7 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     renderWidget(compact);
 
     // Canonical negative watts display as a positive regen magnitude.
-    expect(screen.getByText('15.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('15.00 kW')).toBeInTheDocument();
   });
 
   it('shows an "Idle" label and preserves measured zero when parked and not charging', () => {
@@ -315,7 +315,7 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     renderWidget(compact);
 
     expect(screen.getByText('Idle')).toBeInTheDocument();
-    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kW')).toBeInTheDocument();
   });
 });
 
@@ -326,7 +326,7 @@ describe('EnergyFlowAnimatedWidget — unknown and cached values', () => {
     }));
     renderWidget({ size: { cols: 1, rows: 2 } });
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('Idle')).not.toBeInTheDocument();
   });
   it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }])('does not manufacture zero or idle in renderer %j', (size) => {
@@ -337,8 +337,8 @@ describe('EnergyFlowAnimatedWidget — unknown and cached values', () => {
     renderWidget({ size });
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('Idle')).not.toBeInTheDocument();
-    expect(screen.queryByText('0%')).not.toBeInTheDocument();
-    expect(screen.queryByText('0.0 kW')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
   });
 
@@ -347,8 +347,8 @@ describe('EnergyFlowAnimatedWidget — unknown and cached values', () => {
       isError: true, error: new Error('refresh failed'),
     }));
     renderWidget({ size: { cols: 1, rows: 2 } });
-    expect(screen.getByText('15.0 kW')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('15.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

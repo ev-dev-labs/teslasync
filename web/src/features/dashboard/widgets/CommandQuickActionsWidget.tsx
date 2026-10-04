@@ -9,6 +9,8 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps, WidgetSize } from './types';
 
@@ -53,7 +55,10 @@ export function visibleCommandsForSize(size: WidgetSize): QuickCommand[] {
 
 export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicles();
+  const vehicleQuery = useVehicles();
+  const { data: vehicles, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = vehicleQuery;
+  // An explicit selection is already sufficient evidence for these actions.
+  const state = useDataState({ ...vehicleQuery, data: vehicleId ? vehicleId : vehicles });
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { mutate: sendCommand } = useVehicleCommand();
   const operationalMode = useOperationalMode();
@@ -92,6 +97,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
       title={isCompact ? undefined : t('widget.quickActions.title', 'Quick actions')}
       icon={isCompact ? undefined : <Zap className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={showLoading}
+      dataState={{ ...state, status: state.status === 'initial' && !showLoading ? 'unavailable' : state.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -126,7 +132,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                 aria-busy={isRunning || undefined}
                 onClick={() => handleCommand(cmd.command)}
                 aria-label={t(cmd.labelKey, cmd.labelFallback)}
-                className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] transition-colors h-auto"
+                className="flex min-h-11 min-w-0 flex-col items-center gap-1 py-2 px-1 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--border-subtle)] transition-colors h-auto"
               >
                 {isRunning ? (
                   <Loader2 className="h-4 w-4 animate-spin text-neon-cyan" />
@@ -134,7 +140,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                   <Icon className={`h-4 w-4 ${cmd.color}`} />
                 )}
                 {!isCompact && (
-                  <span className="text-2xs text-[var(--text-secondary)] truncate w-full text-center">
+                  <span className={`${dashboardTokens.metricLabel} w-full text-center`}>
                     {t(cmd.labelKey, cmd.labelFallback)}
                   </span>
                 )}

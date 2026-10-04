@@ -215,7 +215,7 @@ describe('EnergyStatsWidget — compact (1×N)', () => {
     renderWidget({ size: COMPACT });
 
     // 45,000 Wh → 45 kWh.
-    expect(screen.getByText('45')).toBeInTheDocument();
+    expect(screen.getByText('45.00')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
     // Compact is title-less and stat-less.
     expect(screen.getByRole('heading', { name: 'Energy stats' })).toBeInTheDocument();
@@ -241,18 +241,18 @@ describe('EnergyStatsWidget — standard (2×N)', () => {
 
     // Total Used: 12,000 Wh → "12.0 kWh"; Total Charged: 15,000 Wh → "15.0 kWh".
     expect(screen.getByText('Total used')).toBeInTheDocument();
-    expect(screen.getByText('12.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('12.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('Total charged')).toBeInTheDocument();
-    expect(screen.getByText('15.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('15.00 kWh')).toBeInTheDocument();
 
     // Avg Efficiency: 0.15 Wh/m × 1000 = 150 Wh/km.
     expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
-    expect(screen.getByText('150.0')).toBeInTheDocument();
+    expect(screen.getByText('150.00')).toBeInTheDocument();
     expect(screen.getByText('Wh/km')).toBeInTheDocument();
 
     // CO₂ Saved: 3.2 kg.
     expect(screen.getByText('CO₂ saved')).toBeInTheDocument();
-    expect(screen.getByText('3.2')).toBeInTheDocument();
+    expect(screen.getByText('3.20')).toBeInTheDocument();
     expect(screen.getByText('kg')).toBeInTheDocument();
   });
 
@@ -279,7 +279,7 @@ describe('EnergyStatsWidget — standard (2×N)', () => {
 
     // Used + Charged both collapse to "0.0 kWh"; efficiency + co2 to "0.0".
     expect(screen.getAllByText('—')).toHaveLength(4);
-    expect(screen.queryByText('0.0 kWh')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
     // Still rendered, not crashed.
     expect(screen.getByText('Energy stats')).toBeInTheDocument();
   });
@@ -297,7 +297,7 @@ describe('EnergyStatsWidget — wide (≥3 cols)', () => {
 
     // Net Energy: (15,000 − 12,000) Wh = 3,000 Wh → "3.0 kWh".
     expect(screen.getByText('Net energy')).toBeInTheDocument();
-    expect(screen.getByText('3.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('3.00 kWh')).toBeInTheDocument();
   });
 });
 
@@ -307,10 +307,10 @@ describe('EnergyStatsWidget — unit conversion', () => {
     renderWidget({ size: STANDARD });
 
     // 0.15 Wh/m × 1609.344 = 241.4016 → "241.4"; label follows the preference.
-    expect(screen.getByText('241.4')).toBeInTheDocument();
+    expect(screen.getByText('241.40')).toBeInTheDocument();
     expect(screen.getByText('Wh/mi')).toBeInTheDocument();
     expect(screen.queryByText('Wh/km')).not.toBeInTheDocument();
-    expect(screen.queryByText('150.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('150.00')).not.toBeInTheDocument();
   });
 });
 
@@ -321,7 +321,7 @@ describe('EnergyStatsWidget — states & interaction', () => {
     renderWidget({ size });
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByText(size.cols === 1 ? '45' : '12.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText(size.cols === 1 ? '45.00' : '12.00 kWh')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -338,13 +338,13 @@ describe('EnergyStatsWidget — states & interaction', () => {
     renderWidget({ size: WIDE });
     expect(screen.getByText('Net energy')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('15.0 kWh')?.textContent).toBe('15.0 kWh');
+    expect(screen.queryByText('15.00 kWh')?.textContent).toBe('15.00 kWh');
   });
 
   it('honors a Wh preference in the compact hero and chart-data conversion', () => {
     setup({ energy: 'Wh' });
     renderWidget({ size: COMPACT });
-    expect(screen.getByText('45,000')).toBeInTheDocument();
+    expect(screen.getByText('45,000.00')).toBeInTheDocument();
     expect(screen.getByText('Wh')).toBeInTheDocument();
     expect(buildEnergyChartData([makeDay()], 'Wh')[0].energy).toBe(5000);
   });

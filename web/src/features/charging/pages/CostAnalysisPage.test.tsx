@@ -297,10 +297,10 @@ describe('CostAnalysisPage', () => {
 
     // KPI band derived at the SI→display boundary: $6 total / 60 kWh → $0.100,
     // 100 km moved → $0.060/km, 60 kWh total energy.
-    expect(await screen.findByText('$0.100')).toBeInTheDocument()
+    expect(await screen.findByText('$0.10')).toBeInTheDocument()
     expect(screen.getAllByText('$6.00').length).toBeGreaterThan(0)
     expect(screen.getAllByText('3 sessions').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('60.0 kWh').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('60.00 kWh').length).toBeGreaterThan(0)
 
     // All nine section headings are present — nothing stubbed out.
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
@@ -325,7 +325,7 @@ describe('CostAnalysisPage', () => {
     renderPage()
 
     // 100 km moved for $6 total → $0.060/km at the display boundary.
-    expect(await screen.findByText('$0.060')).toBeInTheDocument()
+    expect(await screen.findByText('$0.06')).toBeInTheDocument()
 
     // Regression guard: the pre-SI code fed miles into a meters converter,
     // dividing by ~1609 twice and printing ~$96.56/km.
@@ -346,8 +346,8 @@ describe('CostAnalysisPage', () => {
     expect(spinners.length).toBeGreaterThan(0)
 
     // The KPI values are not fabricated while data is loading.
-    expect(screen.queryByText('$0.100')).toBeNull()
-    expect(screen.queryByText('60.0 kWh')).toBeNull()
+    expect(screen.queryByText('$0.10')).toBeNull()
+    expect(screen.queryByText('60.00 kWh')).toBeNull()
   })
 
   it('surfaces retryable error banners and still renders the independent forecast', async () => {
@@ -390,7 +390,7 @@ describe('CostAnalysisPage', () => {
     expect(screen.queryByText(/NaN|Infinity/)).toBeNull()
 
     // No populated values leak through the empty branch.
-    expect(screen.queryByText('$0.100')).toBeNull()
+    expect(screen.queryByText('$0.10')).toBeNull()
   })
 
   it('recomputes the gas-equivalent cost when the gas price changes and Reset restores it', async () => {
@@ -417,7 +417,7 @@ describe('CostAnalysisPage', () => {
     renderPage()
 
     // Wait for data so the KPI region has rendered its cards.
-    await screen.findByText('$0.100')
+    await screen.findByText('$0.10')
 
     // Landmark regions expose their accessible names for screen-reader nav.
     expect(screen.getByRole('region', { name: 'Cost summary metrics' })).toBeInTheDocument()

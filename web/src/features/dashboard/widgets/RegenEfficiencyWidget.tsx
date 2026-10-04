@@ -20,7 +20,7 @@ function regenColor(pct: number): string {
 }
 
 export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtInt } = useNumberFormatting();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatEnergy } = useUnits();
   const { data: vehicles } = useVehicles();
@@ -59,9 +59,9 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   ], [data, t, formatEnergy, fmtInt]);
 
   const gaugeConfig = useMemo(() => ({
-    value: Math.round(regenPct ?? 0),
+    value: regenPct ?? 0,
     max: 100,
-    label: regenPct == null ? '—' : `${Math.round(regenPct)}%`,
+    label: regenPct == null ? '—' : `${fmtNumber(regenPct)}%`,
     unit: t('widget.regenEfficiency.recovery', 'recovery'),
     color,
   }), [regenPct, color, t]);
@@ -78,7 +78,7 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell title={t('widget.regenEfficiency.title', 'Regen braking')} {...shellProps}>
         <div className="flex min-w-0 flex-col gap-2">
           {data ? (
             regenPct != null ? <WidgetGaugeHero gauge={gaugeConfig} compact /> : (

@@ -374,6 +374,36 @@ describe('WeatherAtCarWidget — loading / empty / error', () => {
 });
 
 describe('WeatherAtCarWidget — refresh + vehicle resolution', () => {
+  it('retries failed discovery, not the disabled vehicle-state endpoint', () => {
+    const discoveryRetry = vi.fn();
+    const stateRetry = vi.fn();
+    mockUseVehicles.mockReturnValue(makeQuery({ isError: true, error: new Error('vehicles'), refetch: discoveryRetry }));
+    mockUseVehicleState.mockReturnValue(makeQuery({ isPending: true, refetch: stateRetry }));
+    renderWidget();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry/ }));
+    expect(discoveryRetry).toHaveBeenCalledOnce();
+    expect(stateRetry).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1, 2.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('disables invalid identity %s', (vehicleId) => {
+    renderWidget({ vehicleId });
+    expect(mockUseVehicleState).toHaveBeenCalledWith(0, { refetchInterval: 30_000 });
+  });
+
+  it('reacts to temperature preference changes with unchanged raw data', () => {
+    const state = makeState({ outside_temp: 20 });
+    mockUseVehicleState.mockReturnValue(stateQuery(state));
+    const client = new QueryClient();
+    const tree = () => <MemoryRouter><QueryClientProvider client={client}><WeatherAtCarWidget size={{ cols: 2, rows: 2 }} /></QueryClientProvider></MemoryRouter>;
+    const view = render(tree());
+    expect(screen.getByText('20°C')).toBeInTheDocument();
+    unitsState.temperature = '°F';
+    view.rerender(tree());
+    expect(screen.getByText('68°F')).toBeInTheDocument();
+    expect(state.outside_temp).toBe(20);
+  });
+
   it('refetches vehicle state when the refresh control is activated', () => {
     const refetch = vi.fn();
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ outside_temp: 20 }), { refetch }));

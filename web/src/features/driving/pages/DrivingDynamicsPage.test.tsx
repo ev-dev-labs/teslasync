@@ -165,6 +165,14 @@ vi.mock('@/components/forms', async (importActual) => {
 // exact page-computed props the assertions care about; DriveAnalyticsSection
 // also exposes the wired date-range callbacks as buttons for interaction tests.
 vi.mock('../components/driving-dynamics', () => ({
+  RideOverview: (p: { drive: { id: number } | null }) => (
+    <div data-testid="ride-overview">{p.drive?.id ?? 'none'}</div>
+  ),
+  PowertrainSummary: (p: { historyQuery: { start?: string; end?: string; enabled?: boolean; refetchInterval?: number | false } }) => (
+    <div data-testid="powertrain-summary">
+      <span data-testid="history-window">{JSON.stringify(p.historyQuery)}</span>
+    </div>
+  ),
   SummaryStats: (p: any) => (
     <div data-testid="summary">
       <span data-testid="summary-vid">{String(p.vehicleId)}</span>
@@ -204,7 +212,10 @@ vi.mock('../components/driving-dynamics', () => ({
     </div>
   ),
   DrivingCoachSection: (p: any) => (
-    <div data-testid="coach">{String(p.vehicleId)}</div>
+    <div data-testid="coach">
+      {String(p.vehicleId)}
+      <span data-testid="coach-table-visible">{String(p.showPerDriveScores)}</span>
+    </div>
   ),
   DriveAnalyticsSection: (p: any) => (
     <div data-testid="drive-analytics">
@@ -229,6 +240,7 @@ vi.mock('../components/driving-dynamics', () => ({
       <span data-testid="tt-drive">{p.selectedDriveId}</span>
       <span data-testid="tt-start">{p.startDate}</span>
       <span data-testid="tt-end">{p.endDate}</span>
+      <Button onClick={() => p.onSelectDrive('2')}>Select second ride</Button>
     </div>
   ),
 }));
@@ -336,7 +348,10 @@ function installHappyPath() {
     qr({ data: motorSnap({ shift_state: 'D', power_kw: 42, motor_temp_c_front: 30, motor_temp_c_rear: 35 }) }),
   );
   mockMotorHistory.mockReturnValue(qr({ data: AGGRESSIVE_HISTORY }));
-  mockDrives.mockReturnValue(qr({ data: DRIVES }));
+  mockDrives.mockImplementation((_vehicleId, options) => qr({
+    data: DRIVES.filter((item) => item.startTs && (!options?.start ||
+      (item.startTs >= options.start && item.startTs < (options.end ?? '9999')))),
+  }));
   mockCoach.mockReturnValue(qr({ data: { score: 88, style: 'efficient', trend: [] } }));
 }
 
@@ -387,19 +402,21 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
       screen.getByRole('heading', { level: 1, name: 'Driving Dynamics' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Live motor telemetry, G-forces, and Grok’s powertrain read'),
+      screen.getByText('Understand one ride: energy outcome, powertrain evidence, and the signals behind it.'),
     ).toBeInTheDocument();
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
     // Every <section aria-label> becomes an accessible region.
     const regions = screen.getAllByRole('region');
-    expect(regions).toHaveLength(10);
+    expect(regions).toHaveLength(4);
     expect(screen.getByRole('region', { name: 'Trip review' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Live cockpit' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: "Grok's powertrain read" })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Motor efficiency' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Drive Analytics' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Vehicle now' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Inside this ride' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Beyond this ride' })).toBeInTheDocument();
+    expect(screen.getByTestId('coach-table-visible')).toHaveTextContent('false');
+    expect(screen.getByTestId('ride-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('powertrain-summary')).toBeInTheDocument();
     expect(screen.getByTestId('grok-briefing')).toHaveTextContent('1');
   });
 
@@ -414,7 +431,7 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
     // needs it for the header freshness chip) and the drives list (the
     // shared date filter narrows it for two different panels). Everything
     // else is owned by the panel that renders it, at its own cadence.
-    expect(mockMotorLatest).toHaveBeenCalledWith(1, 5000);
+    expect(mockMotorLatest).not.toHaveBeenCalled();
     expect(mockDrives).toHaveBeenCalledWith(
       '1',
       expect.objectContaining({ limit: 1000, refetchInterval: 30000 }),
@@ -478,6 +495,49 @@ describe('DrivingDynamicsPage — live push bridge', () => {
 });
 
 describe('DrivingDynamicsPage — drive date filtering', () => {
+  it('uses the explicitly selected ride timestamps and stops completed-trip polling', () => {
+    mockDrives.mockReturnValue(qr({ data: [
+      drive({ id: 1, startTs: '2025-06-12T10:00:00Z', endTs: '2025-06-12T11:00:00Z' }),
+      drive({ id: 2, startTs: '2025-06-13T12:00:00Z', endTs: '2025-06-13T12:30:00Z' }),
+    ] }));
+    renderPage('/driving/dynamics?drive=1');
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!)).toEqual({
+      start: '2025-06-12T10:00:00Z', end: '2025-06-12T11:00:01.000Z',
+      refetchInterval: false, enabled: true,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Select second ride' }));
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('2');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!).start).toBe('2025-06-13T12:00:00Z');
+  });
+
+  it('prefers the in-progress drive only when no explicit trip is requested', () => {
+    mockDrives.mockReturnValue(qr({ data: [
+      drive({ id: 1 }),
+      drive({ id: 2, startTs: '2025-06-15T11:00:00Z', endTs: null }),
+    ] }));
+    renderPage();
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('2');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!).refetchInterval).toBe(30000);
+  });
+
+  it('disables historical motor queries rather than falling back to vehicle-wide history', () => {
+    mockDrives.mockReturnValue(qr({ data: [] }));
+    renderPage();
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('none');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!)).toEqual({ enabled: false });
+    expect(screen.getByRole('region', { name: 'Vehicle now' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Beyond this ride' })).toBeInTheDocument();
+  });
+
+  it('does not drop server-scoped trips by comparing UTC dates to local calendar bounds', () => {
+    mockDrives.mockReturnValue(qr({ data: [drive({
+      id: 1, startTs: '2025-06-16T03:00:00Z', endTs: '2025-06-16T04:00:00Z',
+    })] }));
+    renderPage('/driving/dynamics?from=2025-06-15&to=2025-06-15');
+    expect(screen.getByTestId('tt-drive')).toHaveTextContent('1');
+    expect(num('da-count')).toBe(1);
+  });
   it('filters drives to the shared URL window', () => {
     renderPage('/driving/dynamics?from=2025-06-09&to=2025-06-15');
     expect(screen.queryByTestId('range-start')).not.toBeInTheDocument();
@@ -564,7 +624,7 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
 
     // vehicleId ?? 0 → the live hook receives 0 (its `enabled` gate);
     // the drives list receives undefined.
-    expect(mockMotorLatest).toHaveBeenCalledWith(0, 5000);
+    expect(mockMotorLatest).not.toHaveBeenCalled();
     expect(mockDrives).toHaveBeenCalledWith(
       undefined,
       expect.objectContaining({ refetchInterval: 30000 }),
@@ -579,7 +639,7 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
   it('still renders every section and hides the picker for an empty fleet', () => {
     renderPage();
     // No blank page: all labelled regions remain, filtered list is empty.
-    expect(screen.getAllByRole('region')).toHaveLength(10);
+    expect(screen.getAllByRole('region')).toHaveLength(4);
     expect(num('da-count')).toBe(0);
     expect(screen.getByTestId('coach')).toHaveTextContent('undefined');
     // The page does not render a local vehicle selector when the fleet is empty.

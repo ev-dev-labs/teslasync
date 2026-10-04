@@ -27,7 +27,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 vi.mock('react-i18next', async () => {
   const actual =
@@ -67,6 +68,27 @@ function renderBand(overrides: Partial<LiveMonitorKpiBandProps> = {}) {
   };
   return render(<LiveMonitorKpiBand {...props} />);
 }
+
+it('reacts to live precision and locale changes without decimalizing counts', () => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+  const view = renderBand({ bufferCount: 1234, bufferMax: 2000, uniqueSignals: 1001 });
+  expect(screen.getByText('/ 2,000 · 61.70%')).toBeInTheDocument();
+  expect(screen.getByText('1,234')).toBeInTheDocument();
+  try {
+    act(() => {
+      setGlobalPrecision(3);
+      setGlobalLocale('de-DE');
+    });
+    expect(screen.getByText('/ 2.000 · 61,700%')).toBeInTheDocument();
+    expect(screen.getByText('1.234')).toBeInTheDocument();
+    expect(screen.getByText('1.001')).toBeInTheDocument();
+  } finally {
+    view.unmount();
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+  }
+});
 
 /** Assert every card label is on screen regardless of the underlying values. */
 function expectAllSixLabels() {
@@ -147,7 +169,7 @@ describe('LiveMonitorKpiBand — value surfacing', () => {
 
     // 50 / 200 = 25%.
     expect(
-      screen.getByText(bufferSubtitle('200', '25%')),
+      screen.getByText(bufferSubtitle('200', '25.00%')),
     ).toBeInTheDocument();
   });
 });
@@ -160,7 +182,7 @@ describe('LiveMonitorKpiBand — buffer fill clamping', () => {
 
     expect(screen.getByText('500')).toBeInTheDocument(); // raw count preserved
     expect(
-      screen.getByText(bufferSubtitle('200', '100%')),
+      screen.getByText(bufferSubtitle('200', '100.00%')),
     ).toBeInTheDocument();
   });
 
@@ -169,9 +191,9 @@ describe('LiveMonitorKpiBand — buffer fill clamping', () => {
 
     // The raw (nonsensical) count is still shown, but the fill is clamped to 0%.
     expect(screen.getByText('-10')).toBeInTheDocument();
-    expect(screen.getByText(bufferSubtitle('200', '0%'))).toBeInTheDocument();
+    expect(screen.getByText(bufferSubtitle('200', '0.00%'))).toBeInTheDocument();
     // The pre-hardening "-5%" must never surface.
-    expect(screen.queryByText(bufferSubtitle('200', '-5%'))).toBeNull();
+    expect(screen.queryByText(bufferSubtitle('200', '-5.00%'))).toBeNull();
   });
 
   it('falls back to /1 capacity when bufferMax is zero (no Infinity/NaN)', () => {
@@ -179,7 +201,7 @@ describe('LiveMonitorKpiBand — buffer fill clamping', () => {
 
     expect(screen.getByText('3')).toBeInTheDocument();
     // 3 / 1 → clamped to 100%, and the capacity reads "1", never "0".
-    expect(screen.getByText(bufferSubtitle('1', '100%'))).toBeInTheDocument();
+    expect(screen.getByText(bufferSubtitle('1', '100.00%'))).toBeInTheDocument();
   });
 });
 
@@ -209,7 +231,7 @@ describe('LiveMonitorKpiBand — null-safety', () => {
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
     // The fill is a finite 0%, proving the NaN guard on the division.
-    expect(screen.getByText(bufferSubtitle('100', '0%'))).toBeInTheDocument();
+    expect(screen.getByText(bufferSubtitle('100', '0.00%'))).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
   });
 });

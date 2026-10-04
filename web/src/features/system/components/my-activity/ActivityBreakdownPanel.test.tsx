@@ -158,8 +158,8 @@ describe('ActivityBreakdownPanel', () => {
     // i18n-key branch resolves to the fallback when no provider is mounted.
     expect(screen.getByText('Drive start')).toBeInTheDocument();
     // Sublabels: fmtInt(count) + ' · ' + fmtPercent(percent, 0).
-    expect(screen.getByText(`8 ${MIDDOT} 40%`)).toBeInTheDocument();
-    expect(screen.getByText(`12 ${MIDDOT} 60%`)).toBeInTheDocument();
+    expect(screen.getByText(`8 ${MIDDOT} 40.00%`)).toBeInTheDocument();
+    expect(screen.getByText(`12 ${MIDDOT} 60.00%`)).toBeInTheDocument();
   });
 
   it('prefers the i18n fallback chain: fallback → label → key', () => {
@@ -192,7 +192,7 @@ describe('ActivityBreakdownPanel', () => {
     renderPanel({ slices: [malformed] });
 
     expect(screen.getByText(EM_DASH)).toBeInTheDocument();
-    expect(screen.getByText(`0 ${MIDDOT} 0%`)).toBeInTheDocument();
+    expect(screen.getByText(`0 ${MIDDOT} 0.00%`)).toBeInTheDocument();
   });
 
   it('tolerates a nullish slices prop without throwing', () => {

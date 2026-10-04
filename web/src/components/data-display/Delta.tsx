@@ -161,7 +161,12 @@ export function Delta({
     );
   }
 
-  const signedDelta = current - previous;
+  const difference = current - previous;
+  // Independently aggregated readings can differ only by floating-point roundoff.
+  const roundoffTolerance = semantic.unit === 'count'
+    ? 0
+    : Number.EPSILON * Math.max(Math.abs(current), Math.abs(previous)) * 4;
+  const signedDelta = Math.abs(difference) <= roundoffTolerance ? 0 : difference;
   // Percent only when previous is non-zero and finite.
   const canPercent = previous !== 0;
   const signedPct = canPercent ? (signedDelta / Math.abs(previous)) * 100 : null;

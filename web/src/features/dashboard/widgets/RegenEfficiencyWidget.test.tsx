@@ -5,7 +5,7 @@
  * (`vehicleId` prop → first vehicle from `useVehicles` → undefined) and reads
  * that vehicle's regenerative-braking rollup (`useRegenEfficiency`). It renders
  * one of two layouts inside `WidgetShell`:
- *   - compact (cols ≤ 1)  → a titleless `WidgetGaugeHero` (recovery gauge
+ *   - compact (cols ≤ 1)  → a titled `WidgetGaugeHero` (recovery gauge
  *                            only, no stat tiles).
  *   - standard (cols > 1) → a titled shell (with a help affordance) wrapping the
  *                           gauge plus a 3-up stat strip: Total Recovered,
@@ -30,7 +30,7 @@
  *   - standard layout: title, help trigger, gauge percentage label, all three
  *     stat tiles, and the exact `formatEnergy`/`formatPower(value, {precision:1})`
  *     call arguments.
- *   - compact layout: gauge with no title and no stat tiles; empty state.
+ *   - compact layout: heading and gauge without stat tiles; empty state.
  *   - colour thresholds: green / amber / red across the > 30 and > 15 boundaries
  *     (including the exact-boundary 30% → amber and 15% → red cases).
  *   - shell states: loading skeleton, error QueryError, and empty state — never a
@@ -174,6 +174,11 @@ beforeEach(() => {
   mockRegen.mockReturnValue(qr({ data: makeData() }));
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Regen braking', level: 3 })).toBeVisible();
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -211,7 +216,7 @@ describe('RegenEfficiencyWidget — standard layout', () => {
 
     expect(screen.getByText('Regen braking')).toBeInTheDocument();
     // Gauge recovery label (rounded percentage) — 24.7 → 25%.
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('24.70%')).toBeInTheDocument();
     expect(hasGauge(container)).toBe(true);
 
     // Three stat tiles with their formatted values.
@@ -224,9 +229,8 @@ describe('RegenEfficiencyWidget — standard layout', () => {
     const freeTile = screen.getByText('Free charges').parentElement?.parentElement as HTMLElement;
     expect(within(freeTile).getByText('7')).toBeInTheDocument();
 
-    // Energy formatters receive both SI values + the 1-dp precision override.
-    expect(units.formatEnergy).toHaveBeenCalledWith(1234, { precision: 1 });
-    expect(units.formatEnergy).toHaveBeenCalledWith(5000, { precision: 1 });
+    expect(units.formatEnergy).toHaveBeenCalledWith(1234);
+    expect(units.formatEnergy).toHaveBeenCalledWith(5000);
   });
 
   it('exposes an accessible help affordance describing regen recovery', () => {
@@ -239,11 +243,11 @@ describe('RegenEfficiencyWidget — standard layout', () => {
 });
 
 describe('RegenEfficiencyWidget — compact layout', () => {
-  it('renders the gauge without a title or the stat tiles', () => {
+  it('renders the heading and gauge without the stat tiles', () => {
     const { container } = renderWidget(COMPACT);
 
-    expect(screen.queryByText('Regen braking')).toBeNull();
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Regen braking', level: 3 })).toBeVisible();
+    expect(screen.getByText('24.70%')).toBeInTheDocument();
     expect(hasGauge(container)).toBe(true);
     // Stats are suppressed in the compact gauge hero.
     expect(screen.queryByText('Total recovered')).toBeNull();
@@ -261,12 +265,12 @@ describe('RegenEfficiencyWidget — compact layout', () => {
 
 describe('RegenEfficiencyWidget — recovery colour thresholds', () => {
   it.each([
-    { ratio: 50, label: '50%', color: GREEN, band: 'green' },
-    { ratio: 31, label: '31%', color: GREEN, band: 'green' },
-    { ratio: 30, label: '30%', color: AMBER, band: 'amber (boundary: 30 is not > 30)' },
-    { ratio: 16, label: '16%', color: AMBER, band: 'amber' },
-    { ratio: 15, label: '15%', color: RED, band: 'red (boundary: 15 is not > 15)' },
-    { ratio: 5, label: '5%', color: RED, band: 'red' },
+    { ratio: 50, label: '50.00%', color: GREEN, band: 'green' },
+    { ratio: 31, label: '31.00%', color: GREEN, band: 'green' },
+    { ratio: 30, label: '30.00%', color: AMBER, band: 'amber (boundary: 30 is not > 30)' },
+    { ratio: 16, label: '16.00%', color: AMBER, band: 'amber' },
+    { ratio: 15, label: '15.00%', color: RED, band: 'red (boundary: 15 is not > 15)' },
+    { ratio: 5, label: '5.00%', color: RED, band: 'red' },
   ])('paints the gauge $band at $label recovery', ({ ratio, label, color }) => {
     mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: ratio }) }));
     const { container } = renderWidget(STANDARD);
@@ -285,7 +289,7 @@ describe('RegenEfficiencyWidget — API scale contract', () => {
     mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 25 }) }));
     const { container } = renderWidget(STANDARD);
 
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('25.00%')).toBeInTheDocument();
     expect(screen.queryByText('2500%')).toBeNull();
     // 25 is not > 30, so the band must be amber — proof the colour thresholds
     // still discriminate rather than saturating green.
@@ -336,7 +340,7 @@ describe('RegenEfficiencyWidget — null-safety', () => {
   it('preserves signed recovered energy and a genuine zero recovery ratio', () => {
     mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 0, totalRegenWh: -1234, freeCharges: 0 }) }));
     renderWidget(STANDARD);
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
     expect(screen.getByText('-1234 Wh')).toBeInTheDocument();
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
   });
@@ -345,7 +349,7 @@ describe('RegenEfficiencyWidget — null-safety', () => {
     const refetch = vi.fn();
     mockRegen.mockReturnValue(qr({ data: makeData(), error: new Error('offline'), isError: true, refetch }));
     renderWidget(STANDARD);
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('24.70%')).toBeInTheDocument();
     expect(screen.getByText('1234 Wh')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -365,12 +369,12 @@ describe('RegenEfficiencyWidget — null-safety', () => {
     );
     const { container } = renderWidget(STANDARD);
 
-    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(hasGauge(container)).toBe(false);
 
     // Both energy formatters are still called; missing drive energy returns
     // the placeholder (never a blank tile).
-    expect(units.formatEnergy).toHaveBeenCalledWith(undefined, { precision: 1 });
+    expect(units.formatEnergy).toHaveBeenCalledWith(undefined);
     expect(screen.getAllByText('—')).toHaveLength(4);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });

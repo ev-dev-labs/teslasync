@@ -74,12 +74,17 @@ vi.mock('@/api/hooks/useAnalytics', () => ({
 }));
 
 import WeeklySummaryCardWidget, { trendOf } from './WeeklySummaryCardWidget';
+
+it.each([1, 2, 3])('identifies the weekly summary at %i columns', (cols) => {
+  renderWidget({ size: { cols, rows: 2 } });
+  expect(screen.getByRole('heading', { name: 'Weekly summary' })).toBeInTheDocument();
+});
 import type { WidgetSize } from './types';
 import type { WeeklyDigestData } from '@/types/analytics';
 
 /** Only the fields the widget reads off the `useWeeklyDigest` result. */
 interface DigestQuery {
-  data: WeeklyDigestData | undefined;
+  data: { [K in keyof WeeklyDigestData]?: WeeklyDigestData[K] | null } | undefined;
   isLoading: boolean;
   error: unknown;
   isFetching: boolean;
@@ -141,16 +146,18 @@ interface RenderOpts {
 
 function renderWidget(opts: RenderOpts = {}) {
   MOCK_QUERY = opts.query ?? makeQuery();
-  MOCK_VEHICLES = opts.vehicles;
+  MOCK_VEHICLES = opts.vehicles ?? [];
   MOCK_DISTANCE_UNIT = opts.distanceUnit ?? 'km';
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <WeeklySummaryCardWidget vehicleId={opts.vehicleId} size={opts.size ?? TALL} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Weekly summary');
+  return view;
 }
 
 /** The StatCard whose label is `label`, resolved via its shared `.flex` card. */
@@ -180,20 +187,26 @@ describe('trendOf', () => {
     expect(trendOf(42, 0)).not.toHaveProperty('positive');
   });
 
-  it('collapses sub-1% moves to "~0%" so noise never renders a coloured arrow', () => {
-    expect(trendOf(100.5, 100)).toEqual({ direction: 'flat', value: '~0%' });
-    expect(trendOf(100, 100)).toEqual({ direction: 'flat', value: '~0%' });
+  it.each([
+    [null, 100], [100, undefined], [Number.NaN, 100], [100, Number.POSITIVE_INFINITY],
+  ])('does not infer a comparison from missing/nonfinite values %s and %s', (current, previous) => {
+    expect(trendOf(current, previous)).toEqual({ direction: 'flat', value: '—' });
   });
 
-  it('reports up/down direction with a whole-percent magnitude', () => {
-    expect(trendOf(200, 100)).toEqual({ direction: 'up', value: '100%', positive: true });
-    expect(trendOf(100, 200)).toEqual({ direction: 'down', value: '50%', positive: false });
+  it('keeps sub-1% moves flat without discarding their formatted magnitude', () => {
+    expect(trendOf(100.5, 100)).toEqual({ direction: 'flat', value: '~0.50%' });
+    expect(trendOf(100, 100)).toEqual({ direction: 'flat', value: '~0.00%' });
+  });
+
+  it('reports up/down direction with the preferred percent precision', () => {
+    expect(trendOf(200, 100)).toEqual({ direction: 'up', value: '100.00%', positive: true });
+    expect(trendOf(100, 200)).toEqual({ direction: 'down', value: '50.00%', positive: false });
   });
 
   it('flips polarity when lower is better (cost / efficiency)', () => {
     // A drop is good → positive; a rise is bad → not positive.
-    expect(trendOf(100, 200, true)).toEqual({ direction: 'down', value: '50%', positive: true });
-    expect(trendOf(200, 100, true)).toEqual({ direction: 'up', value: '100%', positive: false });
+    expect(trendOf(100, 200, true)).toEqual({ direction: 'down', value: '50.00%', positive: true });
+    expect(trendOf(200, 100, true)).toEqual({ direction: 'up', value: '100.00%', positive: false });
   });
 });
 
@@ -204,25 +217,25 @@ describe('WeeklySummaryCardWidget — unit conversion', () => {
     renderWidget({ size: TALL, distanceUnit: 'km', query: makeQuery({ data: makeDigest() }) });
 
     // 200 km → "200.0" km, 200 Wh/km → "200" Wh/km, 40 kWh → "40.0".
-    expect(within(cardOf('Distance')).getByText('200.0')).toBeInTheDocument();
+    expect(within(cardOf('Distance')).getByText('200.00')).toBeInTheDocument();
     expect(within(cardOf('Distance')).getByText('km')).toBeInTheDocument();
-    expect(within(cardOf('Energy')).getByText('40.0')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('200')).toBeInTheDocument();
+    expect(within(cardOf('Energy')).getByText('40.00')).toBeInTheDocument();
+    expect(within(cardOf('Efficiency')).getByText('200.00')).toBeInTheDocument();
     expect(within(cardOf('Efficiency')).getByText('Wh/km')).toBeInTheDocument();
 
     // Regression guards: the old code divided miles by 1609.344 → "0.1", and
     // multiplied Wh/km by 1.609 even in km mode → "322". Neither may appear.
     expect(screen.queryByText('0.1')).toBeNull();
-    expect(screen.queryByText('322')).toBeNull();
+    expect(screen.queryByText('321.87')).toBeNull();
   });
 
   it('converts to mi + Wh/mi and NOT the pre-fix double-converted output', () => {
     renderWidget({ size: TALL, distanceUnit: 'mi', query: makeQuery({ data: makeDigest() }) });
 
     // 200 km → 124.274 mi → "124.3"; 200 Wh/km → 321.87 Wh/mi → "322".
-    expect(within(cardOf('Distance')).getByText('124.3')).toBeInTheDocument();
+    expect(within(cardOf('Distance')).getByText('124.27')).toBeInTheDocument();
     expect(within(cardOf('Distance')).getByText('mi')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('322')).toBeInTheDocument();
+    expect(within(cardOf('Efficiency')).getByText('321.87')).toBeInTheDocument();
     expect(within(cardOf('Efficiency')).getByText('Wh/mi')).toBeInTheDocument();
 
     // Regression guards: pre-fix distance collapsed to "0.1"; pre-fix efficiency
@@ -235,14 +248,15 @@ describe('WeeklySummaryCardWidget — unit conversion', () => {
 // ── C. Layout branches ──────────────────────────────────────────────────────
 
 describe('WeeklySummaryCardWidget — layouts', () => {
-  it('compact (1x1) shows a single big distance number + unit label, no title', () => {
+  it('compact (1x1) identifies a single big distance number and unit label', () => {
     renderWidget({ size: COMPACT, distanceUnit: 'km' });
 
     // 200 km at 0 decimals → "200"; label interpolates the unit + "this week".
-    expect(screen.getByText('200')).toBeInTheDocument();
-    expect(screen.getByText(/km\s+this week/i)).toBeInTheDocument();
+    expect(screen.getByText('200.00')).toBeInTheDocument();
+    expect(screen.getByText('km')).toBeInTheDocument();
+    expect(screen.getByText('this week')).toBeInTheDocument();
     // No StatCards and no header title in the compact tile.
-    expect(screen.queryByText('Weekly summary')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Weekly summary' })).toBeInTheDocument();
     expect(screen.queryByText('Distance')).toBeNull();
   });
 
@@ -268,7 +282,7 @@ describe('WeeklySummaryCardWidget — layouts', () => {
     expect(screen.queryByText('Efficiency')).toBeNull();
     // …they appear in the compact inline row instead.
     expect(screen.getByText('$5.60')).toBeInTheDocument();
-    expect(screen.getByText('200 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('200.00 Wh/km')).toBeInTheDocument();
   });
 
   it('wide (3x2) promotes cost + efficiency to StatCards', () => {
@@ -284,7 +298,7 @@ describe('WeeklySummaryCardWidget — layouts', () => {
 
 describe('WeeklySummaryCardWidget — lifecycle', () => {
   it('renders only a skeleton while the digest is loading', () => {
-    const { container } = renderWidget({ size: TALL, query: makeQuery({ isLoading: true }) });
+    const { container } = renderWidget({ size: TALL, vehicleId: 7, query: makeQuery({ isLoading: true, data: undefined }) });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
     expect(screen.queryByText('Weekly summary')).toBeInTheDocument();
@@ -294,6 +308,7 @@ describe('WeeklySummaryCardWidget — lifecycle', () => {
   it('surfaces a query error instead of the misleading empty state', () => {
     renderWidget({
       size: TALL,
+      vehicleId: 7,
       query: makeQuery({ data: undefined, error: new Error('boom'), isError: true }),
     });
 
@@ -325,6 +340,19 @@ describe('WeeklySummaryCardWidget — lifecycle', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
+
+  it('retains all four metrics when a background refresh fails', () => {
+    const refetch = vi.fn();
+    renderWidget({ size: TALL, query: makeQuery({
+      error: new Error('refresh failed'), isError: true, refetch,
+    }) });
+    for (const label of ['Distance', 'Energy', 'Cost', 'Efficiency']) {
+      expect(screen.getByText(label)).toBeVisible();
+    }
+    expect(within(cardOf('Cost')).getByText('$5.60')).toBeVisible();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ── E. Vehicle-id resolution ────────────────────────────────────────────────
@@ -340,22 +368,30 @@ describe('WeeklySummaryCardWidget — vehicle resolution', () => {
     expect(mockUseWeeklyDigest).toHaveBeenCalledWith('3');
   });
 
-  it('resolves to "0" when neither a prop nor a fleet vehicle exists', () => {
+  it('disables the digest rather than querying vehicle zero when no vehicle exists', () => {
     renderWidget({ vehicles: undefined });
-    expect(mockUseWeeklyDigest).toHaveBeenCalledWith('0');
+    expect(mockUseWeeklyDigest).toHaveBeenCalledWith('');
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('does not query invalid vehicle identifier %s', vehicleId => {
+    renderWidget({ vehicleId });
+    expect(mockUseWeeklyDigest).toHaveBeenCalledWith('');
   });
 });
 
 // ── F. Null safety ──────────────────────────────────────────────────────────
 
 describe('WeeklySummaryCardWidget — null safety', () => {
-  it('coalesces missing numeric fields to zero without rendering NaN', () => {
+  it('keeps missing numeric fields unknown without rendering fake zeros or NaN', () => {
     // A backend that omits fields (typed non-null but nullable on the wire).
-    const sparse = { drives: 0 } as unknown as WeeklyDigestData;
+    const sparse = { drives: 0 };
     const { container } = renderWidget({ size: TALL, distanceUnit: 'km', query: makeQuery({ data: sparse }) });
 
-    expect(within(cardOf('Distance')).getByText('0.0')).toBeInTheDocument();
-    expect(within(cardOf('Cost')).getByText('$0.00')).toBeInTheDocument();
+    for (const label of ['Distance', 'Energy', 'Cost', 'Efficiency']) {
+      expect(within(cardOf(label)).getAllByText('—').length).toBeGreaterThan(0);
+      expect(within(cardOf(label)).queryByText('0.00')).toBeNull();
+      expect(within(cardOf(label)).queryByText('$0.00')).toBeNull();
+    }
     // Zero baselines → em-dash trend, never "NaN".
     expect(container.textContent ?? '').not.toContain('NaN');
   });

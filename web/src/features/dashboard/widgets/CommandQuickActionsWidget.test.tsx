@@ -30,7 +30,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -85,6 +85,7 @@ const SIZE_MEDIUM: WidgetSize = { cols: 2, rows: 2 };
 const SIZE_WIDE: WidgetSize = { cols: 4, rows: 3 };
 
 interface VehiclesOverrides {
+  error?: Error;
   data?: { id: number }[] | undefined;
   isLoading?: boolean;
   isFetching?: boolean;
@@ -157,6 +158,29 @@ describe('visibleCommandsForSize', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('CommandQuickActionsWidget', () => {
+  it('distinguishes failed vehicle discovery from an empty fleet and retries it', () => {
+    const refetch = vi.fn();
+    vehiclesMock.mockReturnValue(makeVehiclesQuery({ data: undefined, error: new Error('discovery failed'), isError: true, refetch }));
+    renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
+    expect(screen.queryByText('No vehicle selected')).toBeNull();
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains selected action identities after fleet refresh failure', () => {
+    const refetch = vi.fn();
+    vehiclesMock.mockReturnValue(makeVehiclesQuery({ isError: true, error: new Error('refresh failed'), refetch }));
+    renderWidget(<CommandQuickActionsWidget size={SIZE_WIDE} />);
+    expect(screen.getByRole('button', { name: 'Trunk' })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Frunk' }));
+    expect(mutateMock).toHaveBeenCalledWith(
+      { vehicleId: 42, command: 'actuate_frunk' },
+      expect.objectContaining({ onSettled: expect.any(Function) }),
+    );
+  });
+
   it('renders the title and the 6-command medium set (Flash/Trunk are wide-only)', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 

@@ -137,7 +137,19 @@ export default function DriveDetailPage() {
         </AlertBanner>
       ) : null}
 
-      <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <nav aria-label={t('driveDetail.report.sections', 'Drive report sections')} data-print-hide
+        className="sticky top-0 z-20 flex items-center gap-2 overflow-x-auto rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-2 shadow-sm">
+        {[reportSections[1], reportSections[0], reportSections[2], reportSections[4], reportSections[3], ...reportSections.slice(5)].map((section) => (
+          <a key={section.id} href={`#${section.id}`}
+            className="shrink-0 rounded-lg px-3 py-2 hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
+            <Text as="span" variant="bodySm">{section.label}</Text>
+          </a>
+        ))}
+      </nav>
+      <DriveDetailSection id="overview" testId="drive-detail-summary" title={reportSections[1].label} available={available}>
+        {drive && stats ? <HeroGauges drive={drive} stats={stats} chartData={chartData} meaningful={hasMeaningfulDriveStats} /> : null}
+      </DriveDetailSection>
+      <div className="grid min-w-0 items-start gap-4 xl:grid-cols-2">
         <DriveDetailSection id="journey" title={reportSections[0].label} available={drive != null}>
           {drive ? <JourneyDetailsPanel drive={drive} /> : null}
         </DriveDetailSection>
@@ -151,10 +163,6 @@ export default function DriveDetailPage() {
           ) : null}
         </DriveDetailSection>
       </div>
-      <DriveDetailSection id="overview" testId="drive-detail-summary" title={reportSections[1].label} available={available}>
-        {drive && stats ? <HeroGauges drive={drive} stats={stats} meaningful={hasMeaningfulDriveStats} /> : null}
-      </DriveDetailSection>
-
       <div id="energy" className="grid min-w-0 scroll-mt-24 gap-4 xl:grid-cols-2">
         <DriveDetailSection id="energy-evidence" title={t('driveDetail.moreDetails', 'More details')} available={available}>
           {drive && stats ? <MoreDetailsPanel drive={drive} stats={stats} chartData={chartData} /> : null}

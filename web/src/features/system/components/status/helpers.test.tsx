@@ -130,16 +130,16 @@ describe('formatUptime', () => {
 
 describe('formatBytes', () => {
   it('formats within each binary unit at one decimal place', () => {
-    expect(formatBytes(512)).toBe('512.0 B')
-    expect(formatBytes(1024)).toBe('1.0 KB')
-    expect(formatBytes(1536)).toBe('1.5 KB')
-    expect(formatBytes(1024 * 1024)).toBe('1.0 MB')
-    expect(formatBytes(1024 * 1024 * 1024)).toBe('1.0 GB')
-    expect(formatBytes(1024 ** 4)).toBe('1.0 TB')
+    expect(formatBytes(512)).toBe('512.00 B')
+    expect(formatBytes(1024)).toBe('1.00 KB')
+    expect(formatBytes(1536)).toBe('1.50 KB')
+    expect(formatBytes(1024 * 1024)).toBe('1.00 MB')
+    expect(formatBytes(1024 * 1024 * 1024)).toBe('1.00 GB')
+    expect(formatBytes(1024 ** 4)).toBe('1.00 TB')
   })
 
   it('extends into PB and never overflows the unit table (no "undefined")', () => {
-    expect(formatBytes(3 * 1024 ** 5)).toBe('3.0 PB')
+    expect(formatBytes(3 * 1024 ** 5)).toBe('3.00 PB')
     // Beyond an exabyte the index is clamped to PB rather than reading past
     // the array — the pre-fix bug rendered "… undefined" here.
     const huge = formatBytes(1024 ** 7)
@@ -148,16 +148,16 @@ describe('formatBytes', () => {
   })
 
   it('treats zero, negative and non-finite byte counts as 0 B', () => {
-    expect(formatBytes(0)).toBe('0 B')
-    expect(formatBytes(-1024)).toBe('0 B')
-    expect(formatBytes(Number.NaN)).toBe('0 B')
-    expect(formatBytes(Infinity)).toBe('0 B')
-    expect(formatBytes(undefined as unknown as number)).toBe('0 B')
+    expect(formatBytes(0)).toBe('0.00 B')
+    expect(formatBytes(-1024)).toBe('0.00 B')
+    expect(formatBytes(Number.NaN)).toBe('0.00 B')
+    expect(formatBytes(Infinity)).toBe('0.00 B')
+    expect(formatBytes(undefined as unknown as number)).toBe('0.00 B')
   })
 
   it('keeps sub-1-byte fractional values in the B bucket', () => {
     // Pre-fix this floored the index to -1 and read sizes[-1] === undefined.
-    expect(formatBytes(0.5)).toBe('0.5 B')
+    expect(formatBytes(0.5)).toBe('0.50 B')
   })
 })
 

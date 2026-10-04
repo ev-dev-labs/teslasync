@@ -321,6 +321,7 @@ export default function ChargingDetailPage() {
     displayCost != null && displayEnergyWh > 0
       ? displayCost / (displayEnergyWh / 1000)
       : session.billed_rate_per_kwh ?? null;
+  const displayPerKwhRate = perKwhRate ?? settingsCostPerKwh;
 
   const costValue =
     displayCost != null
@@ -534,7 +535,7 @@ export default function ChargingDetailPage() {
             subtitle={
               billedCost != null
                 ? t('charging.detail.teslaInvoice', 'Tesla invoice')
-                : session.cost_decimal == null && displayEnergyWh > 0
+                : session.cost_decimal == null && displayEnergyWh > 0 && settingsCostPerKwh != null
                   ? t('charging.detail.atRate', {
                       currencySymbol,
                       costPerKwh: settingsCostPerKwh,
@@ -545,7 +546,9 @@ export default function ChargingDetailPage() {
           />
           <MetricCard
             label={t('charging.detail.perKwh', 'Per kWh')}
-            value={`${formatCurrency(perKwhRate ?? settingsCostPerKwh)}/kWh`}
+            value={displayPerKwhRate != null
+              ? `${formatCurrency(displayPerKwhRate)}/kWh`
+              : '—'}
             icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
             color="amber"
             subtitle={perKwhRate == null ? t('charging.detail.fromSettings', 'from settings') : undefined}

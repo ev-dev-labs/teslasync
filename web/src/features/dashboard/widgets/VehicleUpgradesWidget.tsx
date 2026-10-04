@@ -1,20 +1,25 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpCircle, Link2 } from 'lucide-react';
-import { Badge } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { Badge, Subhead, Text } from '@/components/ui';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useVehicleUpgrades, useVehicles } from '@/api/hooks/useVehicles';
 import { useShareLinks } from '@/api/hooks/useSharing';
 import { useDrives } from '@/api/hooks/useDriving';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { combineDataStates } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetDetailCard } from './shared';
 import type { WidgetProps } from './types';
 
 /** Safely extract a string from an unknown value */
 function asString(val: unknown): string | null {
   if (val == null) return null;
   if (typeof val === 'string' && val.length > 0) return val;
-  if (typeof val === 'number') return String(val);
+  if (typeof val === 'number' && Number.isFinite(val)) return String(val);
   return null;
 }
 
@@ -25,16 +30,19 @@ interface ParsedUpgrade {
   eligible: boolean;
 }
 
-export function parseUpgrades(data: Record<string, unknown> | null | undefined): ParsedUpgrade[] {
+export function parseUpgrades(
+  data: Record<string, unknown> | null | undefined,
+  unknownName = 'Unknown Upgrade',
+): ParsedUpgrade[] {
   if (!data) return [];
 
   // Handle an "upgrades" array in the envelope
   const upgrades = data.upgrades;
   if (Array.isArray(upgrades)) {
     return upgrades
-      .filter((u): u is Record<string, unknown> => u != null && typeof u === 'object')
+      .filter((u): u is Record<string, unknown> => u != null && typeof u === 'object' && !Array.isArray(u))
       .map((u) => ({
-        name: asString(u.name) ?? asString(u.title) ?? 'Unknown Upgrade',
+        name: asString(u.name) ?? asString(u.title) ?? unknownName,
         price: asString(u.price) ?? asString(u.cost),
         description: asString(u.description) ?? asString(u.summary),
         eligible: u.eligible !== false,
@@ -44,7 +52,7 @@ export function parseUpgrades(data: Record<string, unknown> | null | undefined):
   // Fallback: treat top-level keys as individual upgrades
   const result: ParsedUpgrade[] = [];
   for (const [key, val] of Object.entries(data)) {
-    if (val == null || typeof val !== 'object') continue;
+    if (val == null || typeof val !== 'object' || Array.isArray(val)) continue;
     const rec = val as Record<string, unknown>;
     result.push({
       name: asString(rec.name) ?? key,
@@ -67,10 +75,13 @@ export function daysUntil(dateStr: string | null): number | null {
 export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatDate: fmtDate } = useDateFormat();
-  const { data: vehicles } = useVehicles();
-  const numericId = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const stringId = numericId > 0 ? String(numericId) : undefined;
+  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const vehiclesQuery = useVehicles();
+  const numericId = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id ?? 0;
+  const stringId = Number.isSafeInteger(numericId) && numericId > 0 ? String(numericId) : undefined;
+  const vehiclesState = useDataState(vehiclesQuery);
 
+  const upgradesQuery = useVehicleUpgrades(stringId);
   const {
     data: envelope,
     isLoading: upgradesLoading,
@@ -79,23 +90,36 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
     isError: upgradesError,
     dataUpdatedAt: upgradesUpdatedAt,
     refetch: refetchUpgrades,
-  } = useVehicleUpgrades(stringId);
+  } = upgradesQuery;
 
   // Get the most recent drive to show share links
-  const { data: drivesData } = useDrives(stringId);
+  const drivesQuery = useDrives(stringId);
+  const { data: drivesData } = drivesQuery;
   const recentDriveId = useMemo(() => {
-    const drives = drivesData ?? [];
-    return drives.length > 0 ? String(drives[0].id) : '';
-  }, [drivesData]);
+    const id = stringId ? safeArray(drivesData)[0]?.id : undefined;
+    return id != null && Number.isSafeInteger(id) && id > 0 ? String(id) : '';
+  }, [drivesData, stringId]);
 
-  const { data: shareLinksData } = useShareLinks(recentDriveId);
+  const shareLinksQuery = useShareLinks(recentDriveId);
+  const { data: shareLinksData } = shareLinksQuery;
 
   const upgradesData = envelope?.data ?? null;
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  const upgrades = useMemo(() => parseUpgrades(upgradesData), [upgradesData]);
-  const shareLinks = shareLinksData ?? [];
+  const unknownName = t('widget.subscriptions.unknown', 'Unknown');
+  const upgrades = useMemo(() => parseUpgrades(upgradesData, unknownName), [upgradesData, unknownName]);
+  const upgradesKnown = Array.isArray(upgradesData?.upgrades) || upgrades.length > 0;
+  const upgradesState = useDataState(upgradesQuery, {
+    partial: envelope !== undefined && !upgradesKnown,
+  });
+  const drivesState = useDataState(drivesQuery, { partial: drivesData !== undefined && !Array.isArray(drivesData) });
+  const shareLinksState = useDataState(shareLinksQuery, {
+    partial: shareLinksData !== undefined && (!Array.isArray(shareLinksData)
+      || safeArray(shareLinksData).some(link => link.expires_at != null && daysUntil(link.expires_at) == null)),
+  });
+  const sharingState = recentDriveId ? shareLinksState : drivesState;
+  const shareLinks = recentDriveId ? safeArray(shareLinksData) : [];
 
   const eligibleCount = useMemo(
     () => upgrades.filter((u) => u.eligible).length,
@@ -106,7 +130,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
     () => shareLinks.filter((l) => {
       if (!l.expires_at) return true;
       const days = daysUntil(l.expires_at);
-      return days == null || days > 0;
+      return days != null && days > 0;
     }),
     [shareLinks],
   );
@@ -118,36 +142,59 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
     return withExpiry[0] ?? null;
   }, [activeShareLinks]);
 
-  const shellProps = {
-    loading: upgradesLoading,
-    updatedAt: upgradesUpdatedAt ?? 0,
-    isFetching: upgradesFetching,
-    isStale: upgradesStale,
-    isError: upgradesError,
-    onRefresh: () => refetchUpgrades(),
+  const refresh = () => {
+    if (!stringId) {
+      void vehiclesQuery.refetch();
+      return;
+    }
+    void refetchUpgrades();
+    if (!isCompact) {
+      void drivesQuery.refetch();
+      if (recentDriveId) void shareLinksQuery.refetch();
+    }
   };
+  const sources = isCompact ? [upgradesState] : [upgradesState, drivesState, ...(recentDriveId ? [shareLinksState] : [])];
+  const combined = combineDataStates(sources);
+  const hasData = sources.some(source => source.hasData);
+  const state = !stringId ? vehiclesState : isCompact ? upgradesState : {
+    ...upgradesState,
+    ...combined,
+    hasData,
+    fatalError: hasData ? null : sources.find(source => source.fatalError)?.fatalError ?? null,
+    status: !hasData && sources.some(source => source.fatalError) ? 'initialFailure' as const : combined.status,
+    retry: refresh,
+  };
+  const shellProps = {
+    title: t('widget.upgrades.title', 'Upgrades & sharing'),
+    loading: upgradesLoading,
+    dataState: state,
+    updatedAt: stringId ? state.updatedAt ?? upgradesUpdatedAt ?? 0 : vehiclesState.updatedAt ?? 0,
+    isFetching: stringId ? upgradesFetching || (!isCompact && state.isRefreshing) : vehiclesQuery.isFetching,
+    isStale: stringId ? upgradesStale || state.status === 'stale' : vehiclesQuery.isStale,
+    isError: stringId ? upgradesError || state.refreshError != null || state.fatalError != null : vehiclesQuery.isError,
+    onRefresh: refresh,
+  };
+  const emptyMessage = t('widget.emptyMessage', 'This widget has no qualifying data yet.');
+  const formatPrice = (price: string | null) => {
+    if (price == null) return null;
+    // The opaque vendor payload does not guarantee a currency; never invent "$".
+    const number = Number(price);
+    return price.trim() !== '' && Number.isFinite(number) ? fmtNumber(number) : price;
+  };
+  if (!stringId) {
+    return <WidgetShell {...shellProps}>
+      <EmptyState icon={<ArrowUpCircle className="h-5 w-5" />}
+        message={t('widget.noVehicle', 'No vehicle')}
+        actionTo={{ label: t('widget.chooseVehicle', 'Choose vehicle'), to: '/vehicles' }} />
+    </WidgetShell>;
+  }
 
   // ── Compact layout (1×2): upgrade count ──
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
-          <ArrowUpCircle className="h-4 w-4 text-emerald-400" />
-          {upgrades.length > 0 ? (
-            <>
-              <span className="text-2xl font-bold text-[var(--text-primary)]">
-                {eligibleCount}
-              </span>
-              <span className="text-2xs text-[var(--text-muted)] tracking-wider">
-                {t('widget.upgrades.available', 'available')}
-              </span>
-            </>
-          ) : (
-            <Badge variant="success" size="sm" className="min-h-[44px] min-w-[44px] flex items-center justify-center">
-              {t('widget.upgrades.upToDate', 'Up to date')}
-            </Badge>
-          )}
-        </div>
+        <WidgetBigNumber value={upgradesKnown ? fmtInt(eligibleCount) : null} animated={false} align="center"
+          label={t('widget.upgrades.available', 'available')} />
       </WidgetShell>
     );
   }
@@ -155,45 +202,46 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
   // ── Standard / Wide layout ──
   return (
     <WidgetShell
-      title={t('widget.upgrades.title', 'Upgrades & sharing')}
       icon={<ArrowUpCircle className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
       <div className="overflow-y-auto h-full space-y-3">
         {/* Upgrades section */}
         <div>
-          <h4 className="text-2xs text-[var(--text-muted)] tracking-wider mb-2">
+          <Subhead className="mb-2">
             {t('widget.upgrades.upgradesHeading', 'Available upgrades')}
-          </h4>
-          {upgrades.length > 0 ? (
+          </Subhead>
+          {upgradesState.fatalError ? (
+            <QueryError error={upgradesState.fatalError} onRetry={() => { void refetchUpgrades(); }} />
+          ) : upgradesState.status === 'initial' ? <Skeleton className="h-20" /> : upgrades.length > 0 ? (
             <div className="space-y-2">
               {upgrades.map((upgrade, index) => (
                 <div
                   key={`${upgrade.name}-${index}`}
-                  className="flex items-start justify-between gap-2 py-1.5 px-1 border-b border-white/[0.06] last:border-b-0"
+                  className="flex items-start justify-between gap-2 py-1.5 px-1 border-b border-[var(--border-default)] last:border-b-0"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-[var(--text-primary)] truncate">
+                      <Text variant="bodySm" className="truncate">
                         {upgrade.name}
-                      </span>
+                      </Text>
                       {upgrade.price && (
                         <Badge variant="neutral" size="sm">
-                          ${upgrade.price}
+                          {formatPrice(upgrade.price)}
                         </Badge>
                       )}
                     </div>
                     {upgrade.description && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
+                      <Text variant="bodySm" className="mt-0.5 truncate">
                         {upgrade.description}
-                      </p>
+                      </Text>
                     )}
                     {isWide && (
-                      <span className="text-2xs text-[var(--text-muted)] mt-0.5 block">
+                      <Text variant="caption" className="mt-0.5 block">
                         {upgrade.eligible
                           ? t('widget.upgrades.eligible', 'Eligible')
                           : t('widget.upgrades.notEligible', 'Not eligible')}
-                      </span>
+                      </Text>
                     )}
                   </div>
                   <Badge
@@ -208,49 +256,39 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-2 py-3 justify-center">
-              <span className="text-sm text-emerald-400" aria-hidden="true">✅</span>
-              <span className="text-sm text-[var(--text-secondary)]">
-                {t('widget.upgrades.allApplied', 'All upgrades applied')}
-              </span>
-            </div>
+            <EmptyState /* no-action: eligibility evidence cannot be created in this widget */
+              message={emptyMessage} className="py-3" />
           )}
         </div>
 
         {/* Divider */}
-        <div className="border-t border-white/[0.08]" />
+        <div className="border-t border-[var(--border-default)]" />
 
         {/* Share Links section */}
         <div>
-          <h4 className="text-2xs text-[var(--text-muted)] tracking-wider mb-2 flex items-center gap-1.5">
+          <Subhead className="mb-2 flex items-center gap-1.5">
             <Link2 className="h-3 w-3" />
             {t('widget.upgrades.shareLinksHeading', 'Share links')}
-          </h4>
-          {activeShareLinks.length > 0 ? (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between py-1 px-1">
-                <span className="text-2xs text-[var(--text-muted)] tracking-wide">
-                  {t('widget.upgrades.activeLinks', 'Active links')}
-                </span>
-                <span className="text-sm text-[var(--text-primary)] font-medium">
-                  {activeShareLinks.length}
-                </span>
-              </div>
-              {nearestExpiry && (
-                <div className="flex items-center justify-between py-1 px-1">
-                  <span className="text-2xs text-[var(--text-muted)] tracking-wide">
-                    {t('widget.upgrades.nearestExpiry', 'Nearest expiry')}
-                  </span>
-                  <Badge variant="warning" size="sm">
-                    {fmtDate(nearestExpiry.expires_at) ?? '—'}
-                  </Badge>
-                </div>
-              )}
-            </div>
+          </Subhead>
+          {sharingState.fatalError ? (
+            <QueryError error={sharingState.fatalError} onRetry={() => {
+              void drivesQuery.refetch();
+              if (recentDriveId) void shareLinksQuery.refetch();
+            }} />
+          ) : sharingState.status === 'initial' ? <Skeleton className="h-16" /> : activeShareLinks.length > 0 ? (
+            <WidgetDetailCard entries={[
+              { label: t('widget.upgrades.activeLinks', 'Active links'), value: fmtInt(activeShareLinks.length) },
+              ...(nearestExpiry ? [{
+                label: t('widget.upgrades.nearestExpiry', 'Nearest expiry'),
+                value: fmtDate(nearestExpiry.expires_at) ?? '—',
+              }] : []),
+            ]} />
           ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            <EmptyState
               icon={<Link2 className="h-5 w-5" />}
-              message={t('widget.upgrades.noShareLinks', 'No active share links')}
+              message={recentDriveId && !Array.isArray(shareLinksData)
+                ? emptyMessage : t('widget.upgrades.noShareLinks', 'No active share links')}
+              actionTo={{ label: t('nav.drives', 'Drives'), to: '/drives' }}
               className="py-2"
             />
           )}

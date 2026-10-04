@@ -73,7 +73,10 @@ vi.mock('@/api/devtools', async () => {
 
 vi.mock('@/api/hooks/useAdmin', async () => ({
   ...await vi.importActual<typeof import('@/api/hooks/useAdmin')>('@/api/hooks/useAdmin'),
-  useWebErrorsSummary: () => ({ data: { total: 0, top: [] }, isLoading: false }),
+  useWebErrorsSummary: () => ({
+    data: { total: 0, top: [], window_seconds: 3600, as_of: '2026-01-02T03:04:05Z' },
+    isLoading: false,
+  }),
 }));
 
 import { getAPICallLogs, getAPICallLogStats, getErrorStats } from '@/api/devtools';
@@ -226,11 +229,15 @@ describe('ApiLogsPage', () => {
       by_code: { TIMEOUT: { count: 3, last_seen: '2026-01-02T03:04:05Z', last_message: 'upstream timeout' } },
     });
     renderPage('/api-logs?status=5xx');
-    expect(await screen.findByText('3 errors · uptime 2h')).toBeInTheDocument();
+    const backend = await screen.findByRole('region', { name: 'Backend runtime errors' });
+    expect(within(backend).getByText('Recorded errors')).toBeInTheDocument();
+    expect(await within(backend).findAllByText('3')).toHaveLength(2);
+    expect(within(backend).getByText('2h')).toBeInTheDocument();
     expect(screen.getByText('upstream timeout')).toBeInTheDocument();
     expect(screen.getByText(/API call totals and service counts use the View settings range/)).toBeInTheDocument();
     expect(screen.getByText(/Since the current API process started/)).toBeInTheDocument();
-    expect(screen.getByText('Frontend errors (last hour)')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Frontend error reports' })).toBeInTheDocument();
+    expect(screen.getByText('Last hour; independent of API call filters.')).toBeInTheDocument();
     expect(mockedRuntime).toHaveBeenCalledTimes(1);
   });
 
@@ -719,7 +726,9 @@ describe('ApiLogsPage', () => {
     expect(screen.getByText('/vehicles')).toBeInTheDocument();
     expect(screen.getByText(/"ok": true/)).toBeInTheDocument();
     expect(screen.getByText('1,234')).toBeInTheDocument();
-    expect(screen.getByText('3 errors · uptime 2h')).toBeInTheDocument();
+    const backend = screen.getByRole('region', { name: 'Backend runtime errors' });
+    expect(within(backend).getByText('3')).toBeInTheDocument();
+    expect(within(backend).getByText('2h')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled();
   });

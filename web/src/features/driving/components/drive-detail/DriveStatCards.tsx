@@ -7,7 +7,7 @@ import { AnimatedNumber } from '@/components/data-display';
 import { StaggerContainer, StaggerItem } from '@/components/motion';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { IconStatCard } from './IconStatCard';
 import { formatDuration } from './helpers';
 import type { DriveDetail } from '@/types/driving';
@@ -27,7 +27,7 @@ interface DriveStatCardsProps {
  * "unknown". A genuine 0 still renders "0%".
  */
 function formatBatteryPct(pct: number | null | undefined): string {
-  return pct == null ? '—' : `${fmtInt(pct)}%`;
+  return pct == null ? '—' : `${fmtNumber(pct)}%`;
 }
 
 export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
@@ -58,12 +58,12 @@ export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
       <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         <StaggerItem><IconStatCard icon={Route} color="#00f0ff" value={<AnimatedNumber value={distanceDisplay} decimals={displayPrecision} suffix={` ${distanceUnit}`} />} label={t('driveDetail.distance', 'Distance')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Clock} color="#f59e0b" value={formatDuration(durationMin)} label={t('driveDetail.duration', 'Duration')} /></StaggerItem>
-        <StaggerItem><IconStatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={stats.maxSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.maxSpeed', 'Max Speed')} /></StaggerItem>
-        <StaggerItem><IconStatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={stats.avgSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.avgSpeed', 'Avg Speed')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={stats.maxSpd} decimals={displayPrecision} suffix={` ${speedUnit}`} />} label={t('driveDetail.maxSpeed', 'Max Speed')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={stats.avgSpd} decimals={displayPrecision} suffix={` ${speedUnit}`} />} label={t('driveDetail.avgSpeed', 'Avg Speed')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Battery} color="#10b981" value={socLabel} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Zap} color="#f59e0b" value={fmtWithUnit(stats.powerMax, 'kW')} label={t('driveDetail.maxPower', 'Max Power')} /></StaggerItem>
-        <StaggerItem><IconStatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={Math.round(stats.elevGain)} suffix=" m ↑" />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
-        <StaggerItem><IconStatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={Math.round(stats.elevLoss)} suffix=" m ↓" />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={stats.elevGain} decimals={displayPrecision} suffix=" m ↑" />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={stats.elevLoss} decimals={displayPrecision} suffix=" m ↓" />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>
         {hasEnergy && (
           <StaggerItem><IconStatCard icon={DollarSign} color="#10b981" value={formatEnergyCost(energyKwh)} label={t('driveDetail.tripCost', 'Trip Cost')} /></StaggerItem>
         )}

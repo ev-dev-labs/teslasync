@@ -79,7 +79,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.batteryHealthAnalytics.title', 'Battery analytics')}
+      title={t('widget.batteryHealthAnalytics.title', 'Battery analytics')}
       icon={<HeartPulse className="h-3.5 w-3.5" />}
       {...shellProps}
     >

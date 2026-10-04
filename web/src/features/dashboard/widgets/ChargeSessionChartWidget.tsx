@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Zap } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import { averageKnown, deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
@@ -16,26 +16,27 @@ import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { classifyChargingSource } from '@/lib/chargerKind';
+
+type ChartChargerType = 'home' | 'supercharger' | 'dc' | 'unknown';
 
 /** Classify a charging session into a charger-type bucket for color-coding. */
-export function classifyChargerType(session: ChargingSession): string {
-  const ft = (session.charger_type ?? '').toLowerCase();
-
-  if (ft.includes('supercharger') || ft.includes('tesla')) return 'supercharger';
-  if (ft && ft !== '<invalid>' && ft !== '') return 'dc';
-  return 'home';
+export function classifyChargerType(session: ChargingSession): ChartChargerType {
+  const kind = classifyChargingSource(session.charger_type);
+  return kind === 'acHome' ? 'home' : kind === 'dcFast' ? 'dc' : kind;
 }
 
-const CHARGER_TYPE_LABEL: Record<string, string> = {
+const CHARGER_TYPE_LABEL: Record<ChartChargerType, string> = {
   home: 'Home / AC',
   supercharger: 'Supercharger',
   dc: 'DC fast',
+  unknown: 'Unknown',
 };
 
 interface ChartDatum extends ChartDataRow {
   label: string;
   energy: number | null;
-  type: string;
+  type: ChartChargerType;
 }
 
 export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProps) {
@@ -71,6 +72,12 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;
   const tick = isWide ? axisTick : axisTickSm;
+  const energyAxisLabels = useMemo(() => [0, ...chartData.map(point => point.energy)
+    .filter((value): value is number => value != null && Number.isFinite(value))]
+    .map(value => `${fmt(value)}`), [chartData, fmt]);
+  const energyAxisWidth = useMeasuredAxisWidth({
+    labels: energyAxisLabels, fontSize: tick.fontSize, minWidth: 36, padding: 20, enabled: !isCompact,
+  });
 
   const stats: ChartSummaryStat[] = useMemo(() => {
     if (!hasData) return [];
@@ -86,6 +93,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.chargeSessionChart.title', 'Charge sessions')}
         loading={isLoading && !sessions}
         error={!sessions && error ? String(error) : null}
         dataState={sessions ? deriveDataState(query, { provenance: 'historical', partial: chartData.some(d => d.energy == null) }) : undefined}
@@ -143,28 +151,28 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
               className="min-h-0 flex-1"
             >
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+                <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                   {chartGrid}
                   <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
                   <YAxis
                     tick={tick}
                     tickLine={false}
                     axisLine={false}
-                    width={36}
+                    width={energyAxisWidth}
                     tickFormatter={(v: number) => `${fmt(v)}`}
                   />
                   <Tooltip
                     content={<ChartTooltip />}
                     formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
                       `${fmt(value)} ${unitPrefs.energy}`,
-                      t(`widget.chargeSessionChart.type.${props.payload?.type ?? ''}`, CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? ''),
+                      t(`widget.chargeSessionChart.type.${props.payload?.type ?? 'unknown'}`, CHARGER_TYPE_LABEL[props.payload?.type ?? 'unknown']),
                     ]}
                     labelFormatter={(label: string) => label}
                     cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                   />
                   <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
                     {chartData.map((d, i) => (
-                      <Cell key={i} fill={CHARGER_COLORS[d.type] ?? '#6366f1'} />
+                      <Cell key={i} fill={CHARGER_COLORS[d.type] ?? CHARGER_COLORS.Other} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -173,12 +181,14 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
 
             {/* Legend */}
             <div className="flex min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 pb-1">
-              {(['home', 'supercharger', 'dc'] as const).map((type) => (
+              {(['home', 'supercharger', 'dc', 'unknown'] as const)
+                .filter(type => type !== 'unknown' || chartData.some(point => point.type === 'unknown'))
+                .map((type) => (
                 <div key={type} className="flex items-center gap-1">
                   <span
                     aria-hidden="true"
                     className="inline-block h-2 w-2 rounded-full"
-                    style={{ background: CHARGER_COLORS[type] }}
+                    style={{ background: CHARGER_COLORS[type] ?? CHARGER_COLORS.Other }}
                   />
                   <span className={dashboardTokens.metricLabel}>
                     {t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type])}

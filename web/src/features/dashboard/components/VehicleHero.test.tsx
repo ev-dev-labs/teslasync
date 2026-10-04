@@ -229,7 +229,7 @@ describe('VehicleHero', () => {
     expect(screen.getByText(/^48(\.0+)? kW$/)).toBeInTheDocument();
     expect(screen.getByText('Charge rate')).toBeInTheDocument();
     // "1.5h" appears in the charge banner AND the Time-to-Full stat.
-    expect(screen.getAllByText('1.5h')).toHaveLength(2);
+    expect(screen.getAllByText('1.50h')).toHaveLength(2);
     expect(screen.getByText(/Done ~/)).toBeInTheDocument();
   });
 

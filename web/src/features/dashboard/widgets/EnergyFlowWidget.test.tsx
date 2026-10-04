@@ -294,7 +294,7 @@ describe('EnergyFlowWidget — node derivation', () => {
 
     const battery = nodeById('battery');
     expect(battery?.value).toBe(72);
-    expect(battery?.formattedValue).toBe('72%');
+    expect(battery?.formattedValue).toBe('72.00%');
     expect(screen.getByTestId('node-battery-label')).toHaveTextContent('Battery');
   });
 
@@ -305,7 +305,7 @@ describe('EnergyFlowWidget — node derivation', () => {
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Consuming');
     expect(motor?.value).toBe(12_300);
-    expect(motor?.formattedValue).toBe('12.3 kW');
+    expect(motor?.formattedValue).toBe('12.30 kW');
   });
 
   it('labels the motor "Regenerating" and uses the magnitude of a negative power', () => {
@@ -315,7 +315,7 @@ describe('EnergyFlowWidget — node derivation', () => {
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Regenerating');
     expect(motor?.value).toBe(8_500);
-    expect(screen.getByTestId('node-motor-value')).toHaveTextContent('8.5 kW');
+    expect(screen.getByTestId('node-motor-value')).toHaveTextContent('8.50 kW');
   });
 
   it('labels the motor "Standby" and preserves a measured zero power', () => {
@@ -324,7 +324,7 @@ describe('EnergyFlowWidget — node derivation', () => {
 
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Standby');
-    expect(motor?.formattedValue).toBe('0.0 kW');
+    expect(motor?.formattedValue).toBe('0.00 kW');
   });
 
   it('adds a charger node with "N.N kW" only while charging', () => {
@@ -333,7 +333,7 @@ describe('EnergyFlowWidget — node derivation', () => {
 
     const charger = nodeById('charger');
     expect(charger?.value).toBe(48);
-    expect(charger?.formattedValue).toBe('48.0 kW');
+    expect(charger?.formattedValue).toBe('48.00 kW');
     expect(screen.getByTestId('node-charger')).toBeInTheDocument();
   });
 
@@ -428,8 +428,8 @@ describe('EnergyFlowWidget — null safety', () => {
   it('retains measured SoC and power on a failed cached refresh', () => {
     setState({ state: makeState({ battery_level: 72, power: 12_300 }), isError: true });
     renderWidget();
-    expect(nodeById('battery')?.formattedValue).toBe('72%');
-    expect(nodeById('motor')?.formattedValue).toBe('12.3 kW');
+    expect(nodeById('battery')?.formattedValue).toBe('72.00%');
+    expect(nodeById('motor')?.formattedValue).toBe('12.30 kW');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });

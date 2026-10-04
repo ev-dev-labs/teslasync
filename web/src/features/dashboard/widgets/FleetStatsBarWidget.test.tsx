@@ -10,7 +10,7 @@
  *     surfaced as 0.5 km). Also covers the mile branch and the non-finite guard.
  *   - the default widget component across every render branch: the full
  *     four-tile grid (with the corrected distance + the online caption /
- *     percentage that the `trend`-less items used to silently drop), the
+ *     percentage rendered as current-value sublabels, not comparison trends), the
  *     vehicles-only and analytics-only partial-data paths, the empty state, the
  *     loading skeleton, the query-error path, the compact layout, and the
  *     manual-refresh interaction. Also pins the trailing-30-day analytics
@@ -36,7 +36,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -193,24 +193,24 @@ describe('FleetStatsBarWidget', () => {
     expect(screen.getByText('3')).toBeInTheDocument(); // online now
 
     // Corrected distance: 1234 km → "1,234.0" km (NOT the 1000×-off "1.2").
-    expect(screen.getByText('1,234.0')).toBeInTheDocument();
+    expect(screen.getByText('1,234.00')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
     expect(screen.queryByText('1.2')).not.toBeInTheDocument();
 
     // Energy passes through unconverted.
-    expect(screen.getByText('250.0')).toBeInTheDocument();
+    expect(screen.getByText('250.00')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
 
     // Not the empty state.
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
 
-  it('renders the online caption and percentage that the trend-less items used to drop', () => {
+  it('renders the online caption and percentage without inventing a comparison trend', () => {
     renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
 
-    // These only render because the widget now pairs `trend` with `trendValue`.
     expect(screen.getByText('3 online')).toBeInTheDocument();
-    expect(screen.getByText('75%')).toBeInTheDocument();
+    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(screen.queryAllByText('no change')).toHaveLength(0);
   });
 
   it('requests the trailing 30-day analytics window', () => {
@@ -225,7 +225,7 @@ describe('FleetStatsBarWidget', () => {
     renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
 
     expect(screen.getByText('No fleet data available')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No fleet data available').closest('[role="status"]')).not.toBeNull();
     // The stat grid is gone.
     expect(screen.queryByText('Vehicles')).not.toBeInTheDocument();
   });
@@ -249,34 +249,41 @@ describe('FleetStatsBarWidget', () => {
 
     renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('1,234.0')).toBeInTheDocument();
+    expect(screen.getByText('1,234.00')).toBeInTheDocument();
     // Both counts collapse to zero with an empty fleet…
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
-    // …and the online-percentage trend is suppressed (no vehicles to divide by).
-    expect(screen.queryByText('75%')).not.toBeInTheDocument();
+    // …and the online-percentage caption is suppressed (no vehicles to divide by).
+    expect(screen.queryByText('75.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
 
-  it('renders a loading skeleton with no grid or empty state while first fetching', () => {
+  it('keeps resolved vehicle metrics while analytics is still loading', () => {
     fleetAnalyticsMock.mockReturnValue(analyticsQuery(undefined, { isLoading: true }));
 
     const { container } = renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Vehicles')).not.toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('Vehicles')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(within(screen.getByText('Distance (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(screen.getByText('Energy (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
 
-  it('surfaces a query error instead of the stat grid', () => {
+  it('keeps vehicle metrics and unknown analytics after a partial source failure', () => {
     fleetAnalyticsMock.mockReturnValue(
       analyticsQuery(undefined, { error: new Error('boom'), isError: true }),
     );
 
     renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
 
-    // WidgetShell swaps the whole body for the QueryError banner.
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Vehicles')).not.toBeInTheDocument();
+    // The affected source is partial; retained vehicle metrics remain readable.
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Vehicles')).toBeInTheDocument();
+    expect(within(screen.getByText('Distance (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(screen.getByText('Energy (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
 
@@ -288,7 +295,7 @@ describe('FleetStatsBarWidget', () => {
     expect(screen.getByText('Online now')).toBeInTheDocument();
     expect(screen.getByText('Distance (30d)')).toBeInTheDocument();
     expect(screen.getByText('Energy (30d)')).toBeInTheDocument();
-    expect(screen.getByText('1,234.0')).toBeInTheDocument();
+    expect(screen.getByText('1,234.00')).toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

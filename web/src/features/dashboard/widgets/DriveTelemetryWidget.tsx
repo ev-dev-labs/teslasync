@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, areaGradient, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, useMeasuredAxisWidth, areaGradient, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
@@ -122,7 +122,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.driveTelemetry.duration', 'Duration'),
-        value: knownNumber(latestDrive.durationS) == null ? null : fmtInt(latestDrive.durationS / 60),
+        value: knownNumber(latestDrive.durationS) == null ? null : fmtNumber(latestDrive.durationS / 60),
         unit: t('widget.driveTelemetry.min', 'min'),
       },
     ];
@@ -141,6 +141,26 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   }, [latestDrive, unitPrefs.distance, efficiencyUnit, t, fmtNumber, fmtInt]);
 
   const tick = isWide ? axisTick : axisTickSm;
+  const axisLabels = useMemo(() => {
+    const speed = [0];
+    const power = [0];
+    let maxSpeed = 0;
+    for (const point of chartData) {
+      if (point.speed != null && Number.isFinite(point.speed)) {
+        speed.push(point.speed);
+        maxSpeed = Math.max(maxSpeed, point.speed);
+      }
+      if (point.power != null && Number.isFinite(point.power)) power.push(point.power);
+    }
+    speed.push(maxSpeed + 10);
+    return { speed: speed.map(value => fmt(value)), power: power.map(value => fmt(value)) };
+  }, [chartData, fmt]);
+  const speedAxisWidth = useMeasuredAxisWidth({
+    labels: axisLabels.speed, fontSize: tick.fontSize, enabled: !isCompact, minWidth: 36, padding: 20,
+  });
+  const powerAxisWidth = useMeasuredAxisWidth({
+    labels: axisLabels.power, fontSize: tick.fontSize, enabled: !isCompact, minWidth: 36, padding: 20,
+  });
 
   const chart = useMemo(() => {
     if (chartData.length === 0) return null;
@@ -167,7 +187,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
           data={chartData}
-          margin={{ top: 4, right: 4, bottom: 0, left: isCompact ? -30 : -10 }}
+          margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
           {...chartAnimation}
         >
           {areaGradient('power-pos', palette.series[1])}
@@ -190,7 +210,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             tick={isCompact ? false : tick}
             tickLine={false}
             axisLine={false}
-            width={isCompact ? 0 : 36}
+            width={isCompact ? 0 : speedAxisWidth}
             domain={[0, 'dataMax + 10']}
             tickFormatter={(v: number) => fmt(v)}
           />
@@ -202,7 +222,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             tick={isCompact ? false : tick}
             tickLine={false}
             axisLine={false}
-            width={isCompact ? 0 : 36}
+            width={isCompact ? 0 : powerAxisWidth}
             tickFormatter={(v: number) => fmt(v)}
           />
 
@@ -266,12 +286,13 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         )}
       </EmbeddedChart>
     );
-  }, [chartData, isCompact, isWide, tick, unitPrefs.speed, unitPrefs.power, unitPrefs.distance, t, palette, fmt]);
+  }, [chartData, isCompact, isWide, tick, speedAxisWidth, powerAxisWidth, unitPrefs.speed, unitPrefs.power, unitPrefs.distance, t, palette, fmt]);
 
   // Compact layout
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.driveTelemetry.title', 'Drive telemetry')}
         loading={isLoading}
         dataState={trust.hasData ? trust : undefined}
         error={trust.fatalError?.message ?? null}

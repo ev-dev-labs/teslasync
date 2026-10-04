@@ -2,11 +2,13 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
+import { QueryError, Skeleton } from '@/components/feedback';
+import { Badge, SectionTitle, Text } from '@/components/ui';
 
 import { FadeIn } from '@/components/motion';
 
 import { useDrives } from '@/api/hooks/useDriving';
-import { useMotorLatest, type MotorHistoryQuery } from '@/api/hooks/useVehicles';
+import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignalQueryInvalidation } from '@/hooks/useSignalQueryInvalidation';
 import { useUnits } from '@/hooks/useUnits';
@@ -30,6 +32,8 @@ import {
   DrivingTips,
   GrokDynamicsBriefing,
   DynamicsTripToolbar,
+  RideOverview,
+  PowertrainSummary,
 } from '../components/driving-dynamics';
 import {
   isOpenDrive,
@@ -86,11 +90,8 @@ export default function DrivingDynamicsPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const vehicleIdNum = vehicleId ?? 0;
 
-  /* ---- page-owned data ----
-   * Live cockpit stays on /latest. History panels share one drive-window
-   * /motor query. The drives list is server-scoped to the date filter, plus
-   * a tiny latest page so an in-progress drive is never dropped. */
-  const motorLatestQuery = useMotorLatest(vehicleIdNum, INTERVALS.REALTIME);
+  /* Selected-drive evidence and current vehicle state are separate sources.
+   * The page freshness indicator follows the selector, never parked motors. */
   const timezone = useTimezone('vehicle');
   const [driveParam, setDriveParam] = useUrlString('drive');
 
@@ -129,7 +130,7 @@ export default function DrivingDynamicsPage() {
     [tempUnit],
   );
 
-  /* ---- shared date filter (used by SpeedGear + DriveAnalytics) ---- */
+  /* ---- shared date filter for selection and deeper range analytics ---- */
   const { start: startDate, end: endDate, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'driving-dynamics.range',
     timezone,
@@ -147,12 +148,11 @@ export default function DrivingDynamicsPage() {
   });
 
   const filteredDrives = useMemo(() => {
-    const inRange = (rangeDrivesQuery.data ?? []).filter((d) => {
-      const driveDate = d.startTs?.slice(0, 10) ?? '';
-      return driveDate >= startDate && driveDate <= endDate;
-    });
+    // The server owns timezone-aware, instant-bounded range filtering.
+    // Comparing the UTC date slice again drops trips near local midnight.
+    const inRange = rangeDrivesQuery.data ?? [];
     return mergeOpenDrives(inRange, latestDrivesQuery.data ?? []);
-  }, [rangeDrivesQuery.data, latestDrivesQuery.data, startDate, endDate]);
+  }, [rangeDrivesQuery.data, latestDrivesQuery.data]);
 
   const selectedDrive = useMemo(
     () => pickDynamicsDrive(filteredDrives, driveParam),
@@ -172,17 +172,19 @@ export default function DrivingDynamicsPage() {
   }, [selectedDrive]);
 
   /* ================================================================ */
-  /*  RENDER — full-width responsive bento                             */
+  /* Ride first → sampled evidence → current vehicle → wider context. */
+  /* Every group stays visible when one independent source is absent. */
   /* ================================================================ */
 
   return (
     <PageContainer
       title={t('dynamics.title', 'Driving Dynamics')}
-      subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces, and Grok’s powertrain read')}
-      query={motorLatestQuery}
+      subtitle={t('dynamics.review.subtitle', 'Understand one ride: energy outcome, powertrain evidence, and the signals behind it.')}
+      query={rangeDrivesQuery}
+      busy={rangeDrivesQuery.isLoading}
     >
-      <div className="space-y-6">
-        <section aria-label={t('dynamics.section.trip', 'Trip review')}>
+      <div className="min-w-0 space-y-8 sm:space-y-10">
+        <section aria-label={t('dynamics.section.trip', 'Trip review')} className="space-y-4">
           <DynamicsTripToolbar
             startDate={startDate}
             endDate={endDate}
@@ -190,102 +192,118 @@ export default function DrivingDynamicsPage() {
             selectedDriveId={selectedDriveId}
             onSelectDrive={(id) => setDriveParam(id)}
           />
+          {rangeDrivesQuery.isLoading ? (
+            <Skeleton className="h-12" />
+          ) : rangeDrivesQuery.isError ? (
+            <QueryError error={rangeDrivesQuery.error} onRetry={() => void rangeDrivesQuery.refetch()} />
+          ) : null}
+          {latestDrivesQuery.isError ? (
+            <QueryError error={latestDrivesQuery.error} onRetry={() => void latestDrivesQuery.refetch()} />
+          ) : null}
+          <FadeIn>
+            <RideOverview drive={selectedDrive} />
+          </FadeIn>
+          <FadeIn delay={0.05}>
+            <PowertrainSummary vehicleId={vehicleId} historyQuery={historyQuery} />
+          </FadeIn>
         </section>
 
-        {/* 1 — KPI band: full-width motor summary metrics */}
-        <section aria-label={t('dynamics.section.summary', 'Motor summary metrics')}>
+        {/* Selected ride: sample-level measurements, then detailed traces. */}
+        <section aria-labelledby="dynamics-evidence-heading" className="min-w-0 space-y-4 sm:space-y-5">
+          <div className="space-y-2">
+            <SectionTitle id="dynamics-evidence-heading">
+              {t('dynamics.review.evidence', 'Inside this ride')}
+            </SectionTitle>
+            <Text as="p" variant="bodySm" color="secondary">
+              {t('dynamics.review.evidenceDescription', 'Power delivery, recovered power, axle load, and temperature — sampled only within the selected trip window.')}
+            </Text>
+          </div>
           <SummaryStats
             vehicleId={vehicleId}
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
             historyQuery={historyQuery}
           />
-        </section>
-
-        {/* 2 — Live cockpit: hero motor gauges beside pedal usage */}
-        <FadeIn delay={0.05}>
-          <section
-            aria-label={t('dynamics.section.live', 'Live cockpit')}
-            className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5"
-          >
-            <LiveMotorStatus
-              vehicleId={vehicleId}
-              toTemperatureDisplay={toTemperatureDisplay}
-              tempUnit={tempUnit}
-            />
-            <PedalUsage vehicleId={vehicleId} />
-          </section>
-        </FadeIn>
-
-        {/* 2b — Grok: Tesla powertrain briefing from the same live signals */}
-        <FadeIn delay={0.07}>
-          <section aria-label={t('dynamics.grok.section', "Grok's powertrain read")}>
-            <GrokDynamicsBriefing vehicleId={vehicleId} />
-          </section>
-        </FadeIn>
-
-        {/* 3 — Driving inputs: speed/gear, g-force, autopilot */}
-        <FadeIn delay={0.1}>
-          <section
-            aria-label={t('dynamics.section.inputs', 'Driving inputs')}
-            className="grid grid-cols-1 gap-4 md:grid-cols-2 3xl:grid-cols-3 xl:gap-5"
-          >
-            <SpeedGearPanel
-              vehicleId={vehicleId}
-              filteredDrives={filteredDrives}
-              toSpeedDisplay={toSpeedDisplay}
-              speedUnit={speedUnit}
-            />
-            <GForcePanel vehicleId={vehicleId} />
-            <AutopilotSection vehicleId={vehicleId} />
-          </section>
-        </FadeIn>
-
-        {/* 4 — Motor efficiency insights (3-up band) */}
-        <section aria-label={t('dynamics.section.efficiency', 'Motor efficiency')}>
           <MotorEfficiencyInsights
             vehicleId={vehicleId}
             historyQuery={historyQuery}
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
           />
-        </section>
-
-        {/* 5 — Motor telemetry history charts (reflow to more columns) */}
-        <section aria-label={t('dynamics.section.history', 'Motor history')}>
           <MotorHistoryCharts
             vehicleId={vehicleId}
             toSpeedDisplay={toSpeedDisplay}
             speedUnit={speedUnit}
             historyQuery={historyQuery}
           />
+          <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} />
         </section>
 
-        {/* 6 — Driving coach (score, style, trend, patterns, per-drive) */}
-        <section aria-label={t('dynamics.coach.title', 'Driving Coach')}>
-          <DrivingCoachSection vehicleId={vehicleIdStr} />
+        {/* Current state is deliberately below the historical ride review.
+         * These subscriptions keep polling/SSE behaviour, but never fill gaps
+         * in the trip summary with unrelated parked readings. */}
+        <section aria-labelledby="dynamics-live-heading" className="min-w-0 space-y-4 sm:space-y-5">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <SectionTitle id="dynamics-live-heading">
+                {t('dynamics.review.live', 'Vehicle now')}
+              </SectionTitle>
+              <Badge variant="info" size="sm">{t('dynamics.review.liveBadge', 'Current signals · not trip history')}</Badge>
+            </div>
+            <Text as="p" variant="bodySm" color="secondary">
+              {t('dynamics.review.liveDescription', 'Latest reported motor, pedal, G-force, gear, and cruise state for this vehicle. These readings may be parked or older than now and do not describe the selected ride.')}
+            </Text>
+          </div>
+          <FadeIn delay={0.05}>
+            <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+              <LiveMotorStatus
+                vehicleId={vehicleId}
+                toTemperatureDisplay={toTemperatureDisplay}
+                tempUnit={tempUnit}
+              />
+              <PedalUsage vehicleId={vehicleId} />
+            </div>
+          </FadeIn>
+          <GrokDynamicsBriefing vehicleId={vehicleId} />
+          <FadeIn delay={0.1}>
+            <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 3xl:grid-cols-3 xl:gap-5">
+              <SpeedGearPanel
+                vehicleId={vehicleId}
+                filteredDrives={filteredDrives}
+                toSpeedDisplay={toSpeedDisplay}
+                speedUnit={speedUnit}
+              />
+              <GForcePanel vehicleId={vehicleId} />
+              <AutopilotSection vehicleId={vehicleId} />
+            </div>
+          </FadeIn>
         </section>
 
-        {/* 7 — Drive analytics (range filter + distribution + profile) */}
-        <section
-          aria-label={t('dynamics.driveAnalytics', 'Drive Analytics')}
-          className="space-y-6"
-        >
-          <DriveAnalyticsSection
-            filteredDrives={filteredDrives}
-            toDistanceDisplay={toDistanceDisplay}
-            toSpeedDisplay={toSpeedDisplay}
-            distanceUnit={distanceUnit}
-            speedUnit={speedUnit}
-          />
+        {/* Wider context retains every coach/analytics function except the
+         * redundant per-drive scores list (still available to other callers). */}
+        <section aria-labelledby="dynamics-context-heading" className="min-w-0 space-y-5 sm:space-y-6">
+          <div className="space-y-2">
+            <SectionTitle id="dynamics-context-heading">
+              {t('dynamics.review.context', 'Beyond this ride')}
+            </SectionTitle>
+            <Text as="p" variant="bodySm" color="secondary">
+              {t('dynamics.review.contextDescription', 'Vehicle coaching covers the last 30 days. Speed and power analytics cover loaded trips in the selected date range, plus any current drive. Neither is a score for this ride.')}
+            </Text>
+          </div>
+          <DrivingCoachSection vehicleId={vehicleIdStr} showPerDriveScores={false} />
+          <div className="space-y-4 sm:space-y-5">
+            <SectionTitle>
+              {t('dynamics.review.rangeAnalytics', 'Date-range trip context')}
+            </SectionTitle>
+            <DriveAnalyticsSection
+              filteredDrives={filteredDrives}
+              toDistanceDisplay={toDistanceDisplay}
+              toSpeedDisplay={toSpeedDisplay}
+              distanceUnit={distanceUnit}
+              speedUnit={speedUnit}
+            />
+          </div>
         </section>
-
-        {/* 8 — Driving style recommendations */}
-        <FadeIn delay={0.15}>
-          <section aria-label={t('dynamics.recommendations', 'Driving Style Recommendations')}>
-            <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} />
-          </section>
-        </FadeIn>
       </div>
     </PageContainer>
   );

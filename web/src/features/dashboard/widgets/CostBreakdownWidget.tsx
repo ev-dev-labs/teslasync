@@ -4,7 +4,7 @@ import { PieChart as PieIcon, DollarSign, TrendingDown, Fuel } from 'lucide-reac
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, useThemeChartPalette,
   EmbeddedChart, ChartTooltip, BarChart, Bar, XAxis, YAxis,
-  chartMargin, chartAnimation, axisTickSm,
+  chartMargin, chartAnimation, axisTickSm, useMeasuredAxisWidth,
   type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState, Skeleton } from '@/components/feedback';
@@ -79,6 +79,18 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
     }));
   }, [monthlyEntries, palette]);
 
+  const canUseDonut = donutData.every((entry) => entry.value != null && entry.value >= 0)
+    && donutData.some((entry) => entry.value != null && entry.value > 0);
+  const axisLabels = useMemo(
+    () => [0, ...donutData.map((entry) => entry.value)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => formatAmount(value)),
+    [donutData, formatAmount],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: 10, minWidth: 45, padding: 20, enabled: !isCompact && !canUseDonut,
+  });
+
   const rankedItems = useMemo((): RankedItem[] => {
     return monthlyEntries.flatMap((entry, i) => {
       const value = knownNumber(entry.ev_cost);
@@ -113,8 +125,6 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
       || [totalCost, totalSavings, costPerDist, monthlySavings].some((value) => value == null)
     ),
   });
-  const canUseDonut = donutData.every((entry) => entry.value != null && entry.value >= 0)
-    && donutData.some((entry) => entry.value != null && entry.value > 0);
   const primaryCost = monthlyEntries.length > 0 ? latestMonthCost : totalCost;
   const shellProps = {
     title: t('widget.costBreakdown.title', 'Cost breakdown'),
@@ -233,9 +243,9 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
                 />
               </PieChart>
               ) : (
-                <BarChart data={donutData} margin={chartMargin} {...chartAnimation}>
+                <BarChart data={donutData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                   <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis tick={axisTickSm} width={45} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatAmount(value)} />
+                  <YAxis tick={axisTickSm} width={axisWidth} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatAmount(value)} />
                   <Tooltip content={<ChartTooltip valueFormatter={(value) => formatAmount(value)} />} />
                   <Bar dataKey="value" name={t('widget.costBreakdown.cost', 'Cost')} fill={palette.primary} maxBarSize={32} radius={[4, 4, 0, 0]} />
                 </BarChart>

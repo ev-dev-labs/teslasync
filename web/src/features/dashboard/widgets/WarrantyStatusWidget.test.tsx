@@ -324,9 +324,9 @@ describe('WarrantyStatusWidget — standard layout', () => {
     warrantyMock.mockReturnValue(makeResult({ data: populated() }));
     renderWidget();
     // 50,000 mi limit, 20,000 mi current, 30,000 mi remaining.
-    expect(screen.getByText('50,000 mi')).toBeInTheDocument();
-    expect(screen.getByText('20,000 mi')).toBeInTheDocument();
-    expect(screen.getByText('30,000 mi')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('20,000.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('30,000.00 mi')).toBeInTheDocument();
     // The old bug fed raw miles into an SI-meters converter → ~31 mi.
     expect(screen.queryByText('31 mi')).toBeNull();
   });
@@ -335,9 +335,9 @@ describe('WarrantyStatusWidget — standard layout', () => {
     unitsMock.mockReturnValue({ unitPrefs: { distance: 'km' } });
     warrantyMock.mockReturnValue(makeResult({ data: populated() }));
     renderWidget();
-    // 50,000 mi → 80,467 km; 20,000 mi → 32,187 km.
-    expect(screen.getByText('80,467 km')).toBeInTheDocument();
-    expect(screen.getByText('32,187 km')).toBeInTheDocument();
+    // One mile is exactly 1.609344 kilometres.
+    expect(screen.getByText('80,467.20 km')).toBeInTheDocument();
+    expect(screen.getByText('32,186.88 km')).toBeInTheDocument();
   });
 
   it('renders dated coverage rows and the "Included" branch with correct badges', () => {
@@ -378,7 +378,7 @@ describe('WarrantyStatusWidget — standard layout', () => {
 // ── Compact layout ───────────────────────────────────────────────────────────
 
 describe('WarrantyStatusWidget — compact layout', () => {
-  it('renders the days-left hero + Active badge and no panel title', () => {
+  it('renders the days-left hero, Active badge and panel title', () => {
     warrantyMock.mockReturnValue(
       makeResult({ data: envelope({ warranty_expiry_date: future(100) }) }),
     );
@@ -386,8 +386,7 @@ describe('WarrantyStatusWidget — compact layout', () => {
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('days left')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
-    // The compact variant is title-less.
-    expect(screen.queryByText('Warranty status')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Warranty status', level: 3 })).toBeInTheDocument();
   });
 
   it('shows the empty state in the compact variant when no data has landed', () => {

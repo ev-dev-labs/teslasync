@@ -38,7 +38,7 @@ export interface MetricSwitcherMetric<P> {
    * numeric Y value for that day. Defaults to `(p) => p.value` so the
    * canonical `{date, value}` shape is supported with zero config.
    */
-  getValue?: (point: P) => number;
+  getValue?: (point: P) => number | null;
   /** Optional tooltip value formatter. */
   formatValue?: (value: number) => string;
   /**
@@ -213,10 +213,11 @@ export function MetricSwitcherChart<P extends { date: string }>({
   const chartType = active?.chart ?? 'bar';
   const color = active?.color ?? 'var(--theme-primary, #3b82f6)';
   const gradId = `metricSwitcherGrad-${active?.key ?? 'x'}`;
-  const yAxis = resolveYAxisProps(
-    projected.map((point) => (point as Record<string, unknown>)[valueKey] as number),
-    chartType,
-  );
+  const numericValues = projected.flatMap((point) => {
+    const value = point[valueKey];
+    return typeof value === 'number' && Number.isFinite(value) ? [value] : [];
+  });
+  const yAxis = resolveYAxisProps(numericValues, chartType);
 
   const switcher = (
     <PillFilterBar
@@ -246,7 +247,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
       size="compact"
       height={height}
       action={combinedAction}
-      empty={projected.length === 0}
+      empty={numericValues.length === 0}
       emptyMessage={emptyMessage}
       data={projected}
       dataColumns={[
@@ -255,6 +256,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
           key: valueKey,
           label: active?.label ?? t('chart.col.value', 'Value'),
           format: (value) => {
+            if (value == null) return formatReading(value);
             const numeric = typeof value === 'number' ? value : Number(value);
             return active?.formatValue && Number.isFinite(numeric)
               ? active.formatValue(numeric)

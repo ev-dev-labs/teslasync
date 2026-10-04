@@ -26,7 +26,8 @@
     },
     "waiting": {
       "title": "Waiting for upstream",
-      "message": "We're pausing requests briefly. Data will refresh automatically."
+      "message": "We're pausing requests briefly. Data will refresh automatically.",
+      "retryMessage": "Requests are paused briefly. Wait before retrying."
     },
     "chunkLoad": {
       "body": "A new version was deployed. Click reload to load the latest assets."

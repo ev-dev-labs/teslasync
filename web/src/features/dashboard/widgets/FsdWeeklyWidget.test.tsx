@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { fsdInsights } from '@/features/driving/components/fsd-insights/__tests__/fixtures';
 import type { WidgetSize } from './types';
+import { fmtNumber } from '@/lib/numberFormat';
 
 const { fsdRangeMock, vehiclesMock, unitsMock } = vi.hoisted(() => ({
   fsdRangeMock: vi.fn(),
@@ -69,8 +70,8 @@ function renderWidget(over: Partial<{ vehicleId: number; cols: number }> = {}) {
 beforeEach(() => {
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
   unitsMock.mockReturnValue({
-    formatDistance: (meters: number | null, options?: { precision?: number }) =>
-      meters == null ? '—' : `${(meters / 1000).toFixed(options?.precision ?? 1)} km`,
+    formatDistance: (meters: number | null) =>
+      meters == null ? '—' : `${fmtNumber(meters / 1000)} km`,
   });
   fsdRangeMock.mockReturnValue({
     data: fsdInsights({
@@ -98,12 +99,56 @@ beforeEach(() => {
 });
 
 describe('FsdWeeklyWidget', () => {
+  describe.each([1, 2, 3])('identifying heading at cols=%i', (cols) => {
+    it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+      'keeps exactly one visible shell heading when %s',
+      (state) => {
+        if (state === 'loading') fsdRangeMock.mockReturnValue({ ...fsdRangeMock(), data: undefined, isLoading: true });
+        if (state === 'empty') fsdRangeMock.mockReturnValue({ ...fsdRangeMock(), data: undefined });
+        if (state === 'initial failure' || state === 'retained failure') {
+          fsdRangeMock.mockReturnValue({
+            ...fsdRangeMock(),
+            ...(state === 'initial failure' ? { data: undefined } : {}),
+            isError: true,
+            error: new Error('offline'),
+          });
+        }
+        const { container } = renderWidget({ cols, ...(state === 'empty' ? { vehicleId: 0 } : {}) });
+        const headings = screen.getAllByRole('heading', { name: 'FSD this week', level: 3 });
+        expect(headings).toHaveLength(1);
+        expect(headings[0]).toBeVisible();
+        if (state === 'populated' || state === 'retained failure') {
+          expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
+          expect(screen.getByText('40.00%')).toBeInTheDocument();
+          if (cols > 1) expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
+        }
+        if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+        if (state === 'empty') expect(screen.getByText('Select a vehicle')).toBeInTheDocument();
+        if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+        if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      },
+    );
+  });
+
+  it('keeps measured values and drill-through links when refreshing fails', () => {
+    fsdRangeMock.mockReturnValue({
+      ...fsdRangeMock(),
+      isError: true,
+      error: new Error('offline'),
+      fetchStatus: 'paused',
+    });
+    renderWidget();
+    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
+    expect(screen.getByText('40.00%')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'FSD insights' })).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
   it('shows this week FSD, share, last-week change, and drill-through links', () => {
     renderWidget();
 
-    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.0 km');
-    expect(screen.getByTestId('fsd-weekly-share')).toHaveTextContent('40.0%');
-    expect(screen.getByTestId('fsd-weekly-change')).toHaveTextContent('+3.0 pts');
+    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
+    expect(screen.getByText('40.00%')).toBeInTheDocument();
+    expect(screen.getByText('+3.00 pts')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
     expect(screen.getByRole('link', { name: 'Weekly digest' })).toHaveAttribute('href', '/weekly-digest');
   });
@@ -136,8 +181,7 @@ describe('FsdWeeklyWidget', () => {
     renderWidget();
 
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('—');
-    expect(screen.getByTestId('fsd-weekly-share')).toHaveTextContent('—');
-    expect(screen.getByTestId('fsd-weekly-change')).toHaveTextContent('—');
-    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
   });
 });

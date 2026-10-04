@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trophy, Route, Zap, Car, Leaf, DollarSign, CalendarDays } from 'lucide-react';
-import { AnimatedNumber } from '@/components/data-display';
+import { useDataState } from '@/hooks/useDataState';
 import { EmptyState } from '@/components/feedback';
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -9,10 +9,11 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
@@ -20,8 +21,10 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
+  const query = useLifetimeStats(id > 0 ? String(id) : undefined);
   const {
-    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useLifetimeStats(id > 0 ? String(id) : undefined);
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = query;
+  const dataState = useDataState(query, { provenance: 'historical' });
 
   const { unitPrefs } = useUnits();
   // convertDistanceFromSI expects SI meters and maps to the user's unit.
@@ -49,24 +52,24 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
     return [
       {
         label: t('widget.lifetimeStats.totalDistance', 'Total distance'),
-        value: fmtNumber(displayDistance),
+        value: isFiniteNumber(data.total_distance_km) ? fmtNumber(displayDistance) : null,
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.lifetimeStats.totalDrives', 'Total drives'),
-        value: fmtInt(data.total_drives ?? 0),
+        value: isFiniteNumber(data.total_drives) ? fmtInt(data.total_drives) : null,
         icon: <Car className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.lifetimeStats.totalEnergy', 'Total energy'),
-        value: fmtNumber(data.total_energy_kwh ?? 0),
+        value: isFiniteNumber(data.total_energy_kwh) ? fmtNumber(data.total_energy_kwh) : null,
         unit: 'kWh',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.lifetimeStats.co2Saved', 'CO₂ saved'),
-        value: fmtNumber(data.co2_offset_kg ?? 0),
+        value: isFiniteNumber(data.co2_offset_kg) ? fmtNumber(data.co2_offset_kg) : null,
         unit: 'kg',
         icon: <Leaf className="h-3.5 w-3.5" />,
       },
@@ -84,17 +87,17 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
     return [
       {
         label: t('widget.lifetimeStats.totalCost', 'Total cost'),
-        value: formatCurrency(data.total_charging_cost ?? 0),
+        value: isFiniteNumber(data.total_charging_cost) ? formatCurrency(data.total_charging_cost) : null,
         icon: <DollarSign className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.lifetimeStats.ownershipDays', 'Ownership days'),
-        value: fmtInt(data.ownership_days ?? 0),
+        value: isFiniteNumber(data.ownership_days) ? fmtInt(data.ownership_days) : null,
         icon: <CalendarDays className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.lifetimeStats.avgDailyDistance', 'Avg daily distance'),
-        value: fmtNumber(avgDailyDisplay),
+        value: isFiniteNumber(data.total_distance_km) && data.ownership_days > 0 ? fmtNumber(avgDailyDisplay) : null,
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
@@ -110,6 +113,8 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.lifetimeStats.title', 'Lifetime stats')}
+        dataState={data || isLoading || isError ? dataState : undefined}
         loading={isLoading}
         error={isError && !data ? String(error ?? t('widget.lifetimeStats.error', 'Unable to load lifetime stats')) : null}
         updatedAt={dataUpdatedAt}
@@ -119,15 +124,11 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
         onRefresh={handleRefresh}
       >
         {data ? (
-          <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <AnimatedNumber
-              value={displayDistance}
-              className="text-2xl font-bold text-[var(--text-primary)]"
-            />
-            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
-              {distanceUnit} {t('widget.lifetimeStats.lifetime', 'lifetime')}
-            </span>
-          </div>
+          <WidgetBigNumber
+            value={isFiniteNumber(data.total_distance_km) ? fmtNumber(displayDistance) : null}
+            subtitle={`${distanceUnit} ${t('widget.lifetimeStats.lifetime', 'lifetime')}`}
+            align="center"
+          />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Trophy className="h-5 w-5" />}
@@ -142,6 +143,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   // Standard / Wide
   return (
     <WidgetShell
+      dataState={data || isLoading || isError ? dataState : undefined}
       title={t('widget.lifetimeStats.title', 'Lifetime stats')}
       icon={<Trophy className="h-3.5 w-3.5 text-amber-400" />}
       loading={isLoading}

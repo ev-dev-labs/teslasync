@@ -48,6 +48,20 @@ beforeEach(() => {
 })
 
 describe('DataTable — standard toolbar controls', () => {
+  it('removes redundant embedded framing while preserving table controls and rows', () => {
+    const view = render(<DataTable variant="embedded" tableId="test:embedded" columns={REORDER_COLS}
+      data={ROWS} keyExtractor={row => row.id} />);
+    const frame = view.container.querySelector('[data-grid-frame]');
+    expect(frame).toHaveAttribute('data-grid-variant', 'embedded');
+    expect(frame).not.toHaveClass('border', 'rounded-xl', 'shadow-e1');
+    expect(screen.getByRole('columnheader', { name: /Name/ })).toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'List density' })).toBeInTheDocument();
+    view.rerender(<DataTable tableId="test:embedded" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />);
+    expect(frame).toHaveAttribute('data-grid-variant', 'standalone');
+    expect(frame).toHaveClass('border', 'rounded-xl', 'shadow-e1');
+  });
+
   it('offers persistent per-table density without changing untouched global density', async () => {
     document.body.dataset.density = 'compact'
     const view = render(<DataTable tableId="test:density" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
@@ -625,10 +639,8 @@ describe('DataTable — cohesive paging footer', () => {
     expect(frame).toHaveClass('border', 'overflow-visible', 'p-0', 'space-y-0')
     expect(screen.getByText('Drive evidence').parentElement?.parentElement).toHaveClass('rounded-t-xl')
     expect(footer).toHaveClass('rounded-b-xl')
-    const hint = screen.getByText('With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page.')
-    expect(frame).not.toContainElement(hint)
-    expect(frame.nextElementSibling).toBe(hint)
-    expect(screen.getByRole('table')).toHaveAttribute('aria-describedby', hint.id)
+    expect(screen.queryByText(/With the table focused/)).toBeNull()
+    expect(screen.getByRole('table')).not.toHaveAttribute('aria-describedby')
   })
 
   it('lets the complete Columns popup escape a short two-row frame without escaping the scrolling viewport', () => {

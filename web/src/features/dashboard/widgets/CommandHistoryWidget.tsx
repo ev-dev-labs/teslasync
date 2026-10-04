@@ -118,7 +118,7 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
     dataUpdatedAt,
     refetch,
   } = query;
-  const state = useDataState(query, { provenance: 'historical' });
+  const state = useDataState({ ...query, data: commands ?? undefined }, { provenance: 'historical' });
   const displayState = vid === undefined && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
 
   const isCompact = size.cols <= 1;
@@ -142,8 +142,9 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
   );
 
   const handleRefresh = useCallback(() => {
-    void refetch();
-  }, [refetch]);
+    if (vid === undefined) void vehicleQuery.refetch();
+    else void refetch();
+  }, [vid, vehicleQuery.refetch, refetch]);
 
   const lastEntry = list.length > 0 ? list[0] : null;
 

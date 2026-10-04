@@ -40,6 +40,11 @@ user forever, and "only what this page already loaded" is a free, honest proxy
 for "relevant to what the user is doing". Unknown state (`-1` sentinels) never
 produces a hint.
 
+The cache subscription changes its snapshot only when decoded onboarding
+evidence changes. Creating pending queries, changing unrelated cache entries,
+or refetching an unchanged count must not invalidate a concurrent route render.
+Observed updates and removals still refresh the hints without extra requests.
+
 Tours still exist and are still complete — they are reachable from the tour
 launcher (help button, command palette, settings card). No tour declares an
 `autoStart` predicate; `features/onboarding/__tests__/tours.test.ts` fails if one

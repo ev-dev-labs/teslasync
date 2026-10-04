@@ -21,7 +21,7 @@ function nextMilestone(total: number): number {
 }
 
 export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, fmtInt, precision: displayPrecision } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -75,7 +75,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.mileageStats.nextMilestone', 'Next milestone'),
-        value: milestone == null ? null : fmtInt(milestone),
+        value: milestone == null ? null : fmtNumber(milestone),
         unit: distanceUnit,
         trend: 'up' as const,
         trendValue: monthsToMilestone > 0
@@ -84,9 +84,10 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
         icon: <Target className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, dailyAvgDisplay, distanceUnit, milestone, monthsToMilestone, t, fmtNumber, fmtInt]);
+  }, [data, dailyAvgDisplay, distanceUnit, milestone, monthsToMilestone, t, fmtNumber]);
 
   const shellProps = {
+    title: t('widget.mileageStats.title', 'Mileage stats'),
     loading: isLoading,
     dataState: data != null || isLoading || isError || error ? trust : undefined,
     updatedAt: dataUpdatedAt,
@@ -101,7 +102,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell {...shellProps}>
         {hasData ? (
-          <WidgetBigNumber value={dailyAvgDisplay} decimals={displayPrecision} unit={`${distanceUnit}/${t('widget.mileageStats.day', 'day')}`} />
+          <WidgetBigNumber value={dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay)} unit={`${distanceUnit}/${t('widget.mileageStats.day', 'day')}`} />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
@@ -116,7 +117,6 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
   // Standard / Wide
   return (
     <WidgetShell
-      title={t('widget.mileageStats.title', 'Mileage stats')}
       icon={<TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >

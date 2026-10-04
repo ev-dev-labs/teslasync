@@ -56,9 +56,18 @@ import type { WidgetSize } from './types';
 // i18n passthrough: returns the English default so the widget's copy
 // ("Geofence Status", "No geofences configured", "Inside"/"Outside"/"Disabled",
 // "No zone", "Radius", "Refresh") is asserted verbatim.
+const markerTranslation = vi.hoisted(() => ({
+  label: undefined as string | undefined,
+  calls: vi.fn(),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
+      if (key === 'maps.animatedMarker.label') {
+        markerTranslation.calls(key, defaultValue, options);
+        if (options?.ns === 'translation' && markerTranslation.label !== undefined) return markerTranslation.label;
+      }
       const template = typeof defaultValue === 'string' ? defaultValue : key;
       const vars = typeof defaultValue === 'string' ? options : undefined;
       return vars
@@ -72,19 +81,26 @@ vi.mock('react-i18next', () => ({
 // Stub the leaflet primitives the widget imports directly so no real map is
 // instantiated in jsdom. Each renders a testable element carrying the props the
 // widget wires (fence circle colour, marker position).
+const markerCapture = vi.hoisted(() => vi.fn());
+
 vi.mock('@/components/maps', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const { vehicleIcon } = await vi.importActual<typeof import('@/components/maps/vehicleIcon')>('@/components/maps/vehicleIcon');
   return {
+    MapInvalidator: () => null,
+    vehicleIcon,
     Circle: ({ pathOptions }: { pathOptions?: { color?: string } }) =>
       React.createElement('div', {
         'data-testid': 'fence-circle',
         'data-color': pathOptions?.color,
       }),
-    Marker: ({ position }: { position: [number, number] }) =>
-      React.createElement('div', {
+    Marker: (props: { position: [number, number]; icon?: ReturnType<typeof vehicleIcon>; title?: string }) => {
+      markerCapture(props);
+      return React.createElement('div', {
         'data-testid': 'vehicle-marker',
-        'data-pos': JSON.stringify(position),
-      }),
+        'data-pos': JSON.stringify(props.position),
+      });
+    },
     MapContainer: ({ children }: { children?: ReactNode }) =>
       React.createElement('div', { 'data-testid': 'map-container' }, children),
     MapTileLayer: () => React.createElement('div', { 'data-testid': 'map-tile' }),
@@ -130,6 +146,20 @@ vi.mock('@/api/hooks/useLocations', () => ({
 }));
 
 import GeofenceWidget, { haversineMeters } from './GeofenceWidget';
+
+it.each([1, 2, 3])('identifies geofence status at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Geofence status' })).toBeInTheDocument();
+});
+
+it('does not declare a vehicle outside a fence when its position is unknown', () => {
+  useVehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
+  useVehicleStateMock.mockReturnValue(makeState(null));
+  useGeofencesMock.mockReturnValue(makeFenceResult([makeFence()]));
+  renderWidget();
+  expect(screen.queryByText('Outside')).not.toBeInTheDocument();
+  expect(screen.getByText('—')).toBeInTheDocument();
+});
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -218,14 +248,19 @@ const workFence = makeFence({
 });
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <GeofenceWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Geofence status');
+  return view;
 }
 
 beforeEach(() => {
+  markerTranslation.label = undefined;
+  markerTranslation.calls.mockClear();
+  markerCapture.mockClear();
   useVehiclesMock.mockReset();
   useVehicleStateMock.mockReset();
   useGeofencesMock.mockReset();
@@ -299,11 +334,13 @@ describe('GeofenceWidget — vehicle resolution', () => {
 // ── Render states ────────────────────────────────────────────────────────────
 
 describe('GeofenceWidget — states', () => {
-  it('renders a loading skeleton while the vehicle-state query is pending', () => {
+  it('retains configured fences with unknown membership while position is pending', () => {
     useVehicleStateMock.mockReturnValue(makeState(null, { isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Home')).toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.queryByText('Outside')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inside')).not.toBeInTheDocument();
     expect(screen.queryByText('Geofence status')).toBeInTheDocument();
   });
 
@@ -330,8 +367,8 @@ describe('GeofenceWidget — fence status branches', () => {
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Work')).toBeInTheDocument();
     // useUnits (real) reads the global km setting: 500 m → "0.5 km", 2000 m → "2.0 km".
-    expect(screen.getByText(/Radius:\s*0\.5\s*km/)).toBeInTheDocument();
-    expect(screen.getByText(/Radius:\s*2\.0\s*km/)).toBeInTheDocument();
+    expect(screen.getByText('Radius: 0.50 km')).toBeInTheDocument();
+    expect(screen.getByText('Radius: 2.00 km')).toBeInTheDocument();
   });
 
   it('marks a fence the vehicle is within as Inside and a distant one as Outside', () => {
@@ -350,24 +387,24 @@ describe('GeofenceWidget — fence status branches', () => {
     expect(screen.queryByText('Outside')).toBeNull();
   });
 
-  it('treats every fence as Outside when the vehicle position is unknown (0,0)', () => {
+  it('treats membership as unknown when the vehicle position is unknown (0,0)', () => {
     useVehicleStateMock.mockReturnValue(makeState({ lat: 0, lon: 0 }));
     renderWidget({ cols: 2, rows: 4 });
-    // Both fences enabled but position unknown → distance Infinity → Outside.
-    expect(screen.getAllByText('Outside')).toHaveLength(2);
+    expect(screen.queryByText('Outside')).not.toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
     expect(screen.queryByText('Inside')).toBeNull();
     // Position unknown also suppresses the map even at a tall height.
     expect(screen.queryByTestId('widget-map')).toBeNull();
   });
 
-  it('falls back to an em dash + "0.0 km" for a fence missing its name and radius', () => {
+  it('keeps an absent name and radius unknown instead of reporting a zero radius', () => {
     const partial = makeFence({ id: 'x' });
     delete (partial as Partial<Geofence>).name;
     delete (partial as Partial<Geofence>).radius;
     useGeofencesMock.mockReturnValue(makeFenceResult([partial]));
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText(/Radius:\s*0\.0\s*km/)).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('Radius: —')).toBeInTheDocument();
     expect(screen.queryByText(/undefined|NaN/)).toBeNull();
   });
 });
@@ -375,11 +412,11 @@ describe('GeofenceWidget — fence status branches', () => {
 // ── Compact (1×1) variant ────────────────────────────────────────────────────
 
 describe('GeofenceWidget — compact', () => {
-  it('renders the current-zone badge and suppresses the widget title', () => {
+  it('identifies the current-zone badge with a widget heading', () => {
     renderWidget({ cols: 1, rows: 1 });
     // Vehicle is inside "Home"; the compact badge shows the active zone name.
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.queryByText('Geofence status')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Geofence status' })).toBeInTheDocument();
     expect(screen.queryByText('No zone')).toBeNull();
   });
 
@@ -433,6 +470,75 @@ describe('GeofenceWidget — refresh + freshness', () => {
 // ── Map section (rows ≥ 3 + known coords) ────────────────────────────────────
 
 describe('GeofenceWidget — map', () => {
+  it.each([2, 3])('uses the real shared vehicle DivIcon without a default image URL at %i columns', cols => {
+    renderWidget({ cols, rows: 4 });
+    const props = markerCapture.mock.lastCall?.[0] as {
+      position: [number, number];
+      icon?: ReturnType<typeof import('@/components/maps')['vehicleIcon']>;
+      title?: string;
+    };
+    expect(props.position).toEqual([SF_LAT, SF_LON]);
+    expect(props.title).toBe('Vehicle position');
+    expect(props.icon).toBeDefined();
+    expect(props.icon?.options.iconSize).toEqual([28, 28]);
+    expect(props.icon?.options.iconAnchor).toEqual([14, 14]);
+    const element = props.icon?.createIcon();
+    expect(element).toBeInstanceOf(HTMLDivElement);
+    expect(element?.querySelector('img')).toBeNull();
+    expect(element?.querySelector('div')?.style.width).toBe('28px');
+    expect(props.icon?.options.html).toContain('background:#00f0ff');
+    expect(screen.getByTestId('vehicle-marker')).toHaveAttribute('data-pos', JSON.stringify([SF_LAT, SF_LON]));
+    expect(screen.getByTestId('widget-map')).toHaveAttribute('data-zoom', '12');
+    expect(screen.getAllByTestId('fence-circle')).toHaveLength(2);
+  });
+
+  it.each([2, 3])('names the actual focusable Leaflet vehicle marker with localized copy at %i columns', async cols => {
+    markerTranslation.label = 'מיקום הרכב';
+    renderWidget({ cols, rows: 4 });
+    const props = markerCapture.mock.lastCall?.[0] as {
+      position: [number, number];
+      icon: ReturnType<typeof import('@/components/maps')['vehicleIcon']>;
+      title: string;
+    };
+    expect(props.title).toBe(markerTranslation.label);
+    expect(props.title.trim()).not.toBe('');
+    expect(markerTranslation.calls).toHaveBeenCalledWith(
+      'maps.animatedMarker.label', 'Vehicle position', { ns: 'translation' },
+    );
+    const L = await vi.importActual<typeof import('leaflet')>('leaflet');
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const map = L.map(container, { zoomControl: false, attributionControl: false, zoomAnimation: false })
+      .setView(props.position, 12);
+    try {
+      const marker = L.marker(props.position, { icon: props.icon, title: props.title }).addTo(map);
+      expect(marker.getElement()).toHaveAttribute('role', 'button');
+      expect(marker.getElement()).toHaveAttribute('tabindex', '0');
+      expect(marker.getElement()).toHaveAccessibleName(markerTranslation.label);
+      expect(marker.getElement()?.querySelector('img')).toBeNull();
+    } finally {
+      map.remove();
+      container.remove();
+    }
+  });
+
+  it.each([2, 3])('keeps both map-host ancestors in the allocated flex chain at %i columns', cols => {
+    renderWidget({ cols, rows: 4 });
+    const map = screen.getByTestId('widget-map');
+    const mapHost = map.parentElement;
+    const bodyHost = mapHost?.parentElement;
+    expect(mapHost).toHaveClass('flex', 'flex-col', 'flex-1', 'min-h-0');
+    expect(bodyHost).toHaveClass('flex', 'flex-col', 'flex-1', 'min-h-0');
+    expect(mapHost).not.toHaveClass('h-40');
+    expect(mapHost).not.toHaveClass('min-h-[120px]');
+    expect(bodyHost).not.toHaveClass('h-full');
+    expect(map).toHaveAttribute('data-center', JSON.stringify([SF_LAT, SF_LON]));
+    expect(map).toHaveAttribute('data-zoom', '12');
+    expect(screen.getAllByTestId('fence-circle')).toHaveLength(2);
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Work')).toBeInTheDocument();
+  });
+
   it('renders the map centred on the vehicle with a colour-coded circle per fence + a marker', () => {
     renderWidget({ cols: 2, rows: 4 });
 
@@ -456,6 +562,8 @@ describe('GeofenceWidget — map', () => {
     expect(screen.queryByTestId('widget-map')).toBeNull();
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Work')).toBeInTheDocument();
+    const list = screen.getByText('Home').closest('li')?.parentElement?.parentElement;
+    expect(list?.parentElement).toHaveClass('flex', 'h-full', 'flex-col');
   });
 });
 

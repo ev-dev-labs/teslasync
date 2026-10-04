@@ -11,6 +11,9 @@ import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates } from '@/api/dataState';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 /**
  * Convert a fleet-analytics `total_distance_km` value to the user's display
@@ -27,10 +30,27 @@ export function toDistanceDisplay(totalDistanceKm: number, to: DistanceUnitPref)
 }
 
 export default function FleetStatsBarWidget({ size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const { data: analytics, isLoading: analyticsLoading, error, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsIsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
+  const vehiclesQuery = useVehicles();
+  const analyticsQuery = useFleetAnalytics(30);
+  const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
+  const { data: analytics, isLoading: analyticsLoading, error, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsIsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = analyticsQuery;
+  const vehiclesState = useDataState(vehiclesQuery);
+  const analyticsState = useDataState(analyticsQuery, { provenance: 'historical' });
+  const combined = combineDataStates([vehiclesState, analyticsState]);
+  const retained = vehicles !== undefined || analytics !== undefined;
+  const refresh = () => {
+    void vehiclesQuery.refetch?.();
+    void refetchAnalytics();
+  };
+  const dataState = {
+    ...combined,
+    fatalError: retained ? null : analyticsState.fatalError ?? vehiclesState.fatalError,
+    hasData: retained,
+    data: retained ? { vehicles, analytics } : undefined,
+    retry: refresh,
+  };
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
@@ -58,35 +78,34 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
     return [
       {
         label: t('widget.fleetStatsBar.vehicles', 'Vehicles'),
-        value: stats.vehicleCount,
+        value: vehicles == null ? null : fmtInt(stats.vehicleCount),
         icon: <Car className="h-3.5 w-3.5" />,
-        trend: 'flat',
-        trendValue: `${stats.onlineCount} ${t('widget.fleetStatsBar.online', 'online')}`,
+        sublabel: vehicles == null ? undefined : `${fmtInt(stats.onlineCount)} ${t('widget.fleetStatsBar.online', 'online')}`,
       },
       {
         label: t('widget.fleetStatsBar.onlineNow', 'Online now'),
-        value: stats.onlineCount,
+        value: vehicles == null ? null : fmtInt(stats.onlineCount),
         icon: <Wifi className="h-3.5 w-3.5" />,
-        trend: 'flat',
-        trendValue: onlinePct,
+        sublabel: onlinePct,
       },
       {
         label: t('widget.fleetStatsBar.distance30d', 'Distance (30d)'),
-        value: fmtNumber(stats.totalDistance),
+        value: isFiniteNumber(analytics?.total_distance_km) ? fmtNumber(stats.totalDistance) : null,
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.fleetStatsBar.energy30d', 'Energy (30d)'),
-        value: fmtNumber(stats.totalEnergy),
+        value: isFiniteNumber(analytics?.total_energy_kwh) ? fmtNumber(stats.totalEnergy) : null,
         unit: 'kWh',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
     ];
-  }, [stats, t, distanceUnit, fmtNumber]);
+  }, [stats, vehicles, analytics, t, distanceUnit, fmtNumber, fmtInt]);
 
   return (
     <WidgetShell
+      dataState={retained || isLoading || dataState.fatalError ? dataState : undefined}
       title={t('widget.fleetStatsBar.title', 'Fleet stats')}
       icon={<Car className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
@@ -95,7 +114,7 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
       isFetching={analyticsFetching}
       isStale={analyticsStale}
       isError={analyticsIsError}
-      onRefresh={() => refetchAnalytics()}
+      onRefresh={refresh}
     >
       {hasData ? (
         <WidgetStatGrid stats={items} compact={isCompact} cols={4} />

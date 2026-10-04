@@ -392,6 +392,19 @@ describe('CommandHistoryWidget vehicle resolution', () => {
 // ── Component: refresh interaction ─────────────────────────────────────────
 
 describe('CommandHistoryWidget refresh', () => {
+  it('retries vehicle discovery rather than the disabled history query', () => {
+    const vehiclesRefetch = vi.fn();
+    const historyRefetch = vi.fn();
+    mockUseVehicles.mockReturnValue({
+      data: undefined, isError: true, error: new Error('discovery failed'), refetch: vehiclesRefetch,
+    } as unknown as ReturnType<typeof useVehicles>);
+    mockUseCommandHistory.mockReturnValue(qr({ data: undefined, refetch: historyRefetch }));
+    renderWidget(STANDARD);
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+    expect(vehiclesRefetch).toHaveBeenCalledTimes(1);
+    expect(historyRefetch).not.toHaveBeenCalled();
+  });
+
   it('invokes refetch when the freshness refresh control is activated', () => {
     const refetch = vi.fn();
     mockUseCommandHistory.mockReturnValue(

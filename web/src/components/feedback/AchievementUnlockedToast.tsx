@@ -197,7 +197,7 @@ export function AchievementUnlockedToastStack({
       className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[110] flex flex-col gap-3 pointer-events-none safe-bottom"
       data-print-hide
     >
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="sync">
         {events.map(e => (
           <AchievementUnlockedToast
             key={e.achievement.id}

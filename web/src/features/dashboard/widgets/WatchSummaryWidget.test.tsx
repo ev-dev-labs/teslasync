@@ -8,7 +8,7 @@
  *   1. `getBatteryColor` — the SoC → accent-color band utility (an export):
  *        > 50 % emerald, > 20 % amber, ≤ 20 % red, with the two boundaries pinned.
  *   2. Two layouts driven by `size.cols`:
- *        - compact (cols <= 1): a title-less watch face — a LinearGauge whose
+ *        - compact (cols <= 1): a titled watch face — a LinearGauge whose
  *          progress stroke is `getBatteryColor(level)`, a StatusBadge, the
  *          SI→preference converted range, and a pulsing charging indicator.
  *        - standard (cols >= 2): a titled "Watch Summary" shell with a battery
@@ -245,20 +245,20 @@ describe('WatchSummaryWidget — standard layout', () => {
 
     // Title + hero battery.
     expect(screen.getByText('Watch summary')).toBeInTheDocument();
-    expect(screen.getByText('72')).toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
     expect(screen.getByText('Online')).toBeInTheDocument();
 
     // Range: 300 km → 300000 m → 300000 / 1609.344 = 186.4 → "186" mi.
     expect(screen.getByText('Range')).toBeInTheDocument();
-    expect(screen.getByText('186')).toBeInTheDocument();
+    expect(screen.getByText('186.41')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
 
     // Lock + cabin temp + last seen.
     expect(screen.getByText('Lock')).toBeInTheDocument();
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.getByText('Cabin')).toBeInTheDocument();
-    expect(screen.getByText('21')).toBeInTheDocument();
+    expect(screen.getByText('21.00')).toBeInTheDocument();
     expect(screen.getByText('°C')).toBeInTheDocument();
     expect(screen.getByText('Last seen')).toBeInTheDocument();
   });
@@ -274,9 +274,9 @@ describe('WatchSummaryWidget — standard layout', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // 300 km → "300" km (no unit lift artefacts) and 20 °C → 68 °F.
-    expect(screen.getByText('300')).toBeInTheDocument();
+    expect(screen.getByText('300.00')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
-    expect(screen.getByText('68')).toBeInTheDocument();
+    expect(screen.getByText('68.00')).toBeInTheDocument();
     expect(screen.getByText('°F')).toBeInTheDocument();
     // The mi label must NOT appear once the preference is km.
     expect(screen.queryByText('mi')).not.toBeInTheDocument();
@@ -313,7 +313,7 @@ describe('WatchSummaryWidget — state badge variants', () => {
 });
 
 describe('WatchSummaryWidget — compact layout', () => {
-  it('renders the gauge %, status badge and converted range with no section title', () => {
+  it('renders the compact heading, gauge, status badge and converted range', () => {
     useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
     useWatchSummaryMock.mockReturnValue(
       makeSummaryQuery({ data: makeSummary({ battery_level: 72, range_km: 300, state: 'online' }) }),
@@ -321,12 +321,11 @@ describe('WatchSummaryWidget — compact layout', () => {
 
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByText('72')).toBeInTheDocument(); // gauge value
+    expect(screen.getByText('72.00')).toBeInTheDocument(); // gauge value
     expect(screen.getByText('%')).toBeInTheDocument(); // gauge unit
     expect(screen.getByText('online')).toBeInTheDocument(); // StatusBadge
     expect(screen.getByText(/186/)).toBeInTheDocument(); // converted range
-    // Compact mode drops the header title.
-    expect(screen.queryByText('Watch summary')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
   });
 
   it('paints the gauge progress stroke with the healthy-band color at high SoC', () => {
@@ -380,13 +379,13 @@ describe('WatchSummaryWidget — empty states (never a blank panel)', () => {
     expect(screen.getByText('No watch data')).toBeInTheDocument();
   });
 
-  it('renders the title-less empty state when summary is absent (compact)', () => {
+  it('keeps the compact heading when summary is absent', () => {
     useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: null }));
 
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('No watch data')).toBeInTheDocument();
-    expect(screen.queryByText('Watch summary')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
   });
 });
 
@@ -429,7 +428,7 @@ describe('WatchSummaryWidget — graceful degradation on error', () => {
 
     // Content is still on screen …
     expect(screen.getByText('Watch summary')).toBeInTheDocument();
-    expect(screen.getByText('72')).toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
     // … the full-panel QueryError is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
@@ -467,7 +466,7 @@ describe('WatchSummaryWidget — null-safety', () => {
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
 
-    expect(screen.getByText('50')).toBeInTheDocument();
+    expect(screen.getByText('50.00')).toBeInTheDocument();
     // range, lock, cabin temp and last-seen all collapse to the "—" placeholder.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
     // No state → no badge chip.

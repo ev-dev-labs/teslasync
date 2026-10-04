@@ -50,6 +50,11 @@ import { MemoryRouter } from 'react-router-dom';
 import type { MileageStats } from '@/types/analytics';
 import MileageStatsWidget from './MileageStatsWidget';
 
+it.each([1, 2, 3])('identifies mileage statistics at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
+});
+
 // jsdom lacks matchMedia; AnimatedNumber (compact big number) and DataFreshness
 // both read it during render. Report `prefers-reduced-motion: reduce` so the
 // AnimatedNumber tween is skipped and the value lands on its target
@@ -153,11 +158,13 @@ function renderWidget(
   size: { cols: number; rows: number } = { cols: 2, rows: 2 },
   vehicleId?: number,
 ) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <MileageStatsWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Mileage stats');
+  return view;
 }
 
 beforeEach(() => {
@@ -190,9 +197,9 @@ describe('MileageStatsWidget — standard layout (km)', () => {
     expect(screen.getByText('Next milestone')).toBeInTheDocument();
 
     // daily = 900 / 30 = 30 km/day (1 dp) → weekly ×7, monthly ×30.
-    expect(screen.getByText('30.0')).toBeInTheDocument();
-    expect(screen.getByText('210')).toBeInTheDocument();
-    expect(screen.getByText('900')).toBeInTheDocument();
+    expect(screen.getByText('30.00')).toBeInTheDocument();
+    expect(screen.getByText('210.00')).toBeInTheDocument();
+    expect(screen.getByText('900.00')).toBeInTheDocument();
 
     // Every stat chip carries the km unit.
     expect(screen.getAllByText('km')).toHaveLength(4);
@@ -207,7 +214,7 @@ describe('MileageStatsWidget — standard layout (km)', () => {
 
     // lifetime 45 000 → next milestone 50 000; remaining 5 000 at 30 km/day
     // ≈ round(5000 / 30 / 30) = 6 months.
-    expect(screen.getByText('50,000')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00')).toBeInTheDocument();
     expect(screen.getByText('~6 mo')).toBeInTheDocument();
   });
 
@@ -220,9 +227,9 @@ describe('MileageStatsWidget — standard layout (km)', () => {
 
     // 20 000 is itself a milestone, so we must round up to 30 000 (remaining
     // 10 000 at 10 km/day ≈ 33 months) rather than reporting "0 remaining".
-    expect(screen.getByText('30,000')).toBeInTheDocument();
+    expect(screen.getByText('30,000.00')).toBeInTheDocument();
     expect(screen.getByText('~33 mo')).toBeInTheDocument();
-    expect(screen.getByText('10.0')).toBeInTheDocument();
+    expect(screen.getByText('10.00')).toBeInTheDocument();
   });
 });
 
@@ -236,15 +243,15 @@ describe('MileageStatsWidget — unit conversion', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // 30 km/day = 30 000 m / 1609.344 ≈ 18.6 mi/day.
-    expect(screen.getByText('18.6')).toBeInTheDocument();
+    expect(screen.getByText('18.64')).toBeInTheDocument();
     expect(screen.getAllByText('mi')).toHaveLength(4);
     // The km value must NOT leak through — proves the conversion ran.
-    expect(screen.queryByText('30.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('30.00')).not.toBeInTheDocument();
   });
 });
 
 describe('MileageStatsWidget — compact layout', () => {
-  it('renders the daily-average big number and a "{unit}/day" caption, no title', () => {
+  it('identifies the daily-average big number and "{unit}/day" caption', () => {
     useMileageStatsMock.mockReturnValue(
       makeQuery({ data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }) }),
     );
@@ -252,10 +259,10 @@ describe('MileageStatsWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     // Reduced motion → AnimatedNumber lands on 30 (0 dp) immediately.
-    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText('30.00')).toBeInTheDocument();
     expect(screen.getByText('km/day')).toBeInTheDocument();
     // Compact drops the header title and the stat grid.
-    expect(screen.queryByText('Mileage stats')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
     expect(screen.queryByText('Daily avg')).not.toBeInTheDocument();
   });
 
@@ -265,12 +272,12 @@ describe('MileageStatsWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No mileage data')).toBeInTheDocument();
-    expect(screen.queryByText('Mileage stats')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
   });
 });
 
 describe('MileageStatsWidget — query states', () => {
-  it('renders a skeleton while loading with no title or empty message', () => {
+  it('retains its heading above a loading skeleton without an empty message', () => {
     useMileageStatsMock.mockReturnValue(
       makeQuery({ isLoading: true, data: undefined }),
     );
@@ -398,8 +405,8 @@ describe('MileageStatsWidget — graceful degradation on transient error', () =>
 
     // Data is still on screen …
     expect(screen.getByText('Mileage stats')).toBeInTheDocument();
-    expect(screen.getByText('30.0')).toBeInTheDocument();
-    expect(screen.getByText('50,000')).toBeInTheDocument();
+    expect(screen.getByText('30.00')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();

@@ -14,7 +14,7 @@ interface MediaNavigationPanelProps {
 }
 
 export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigationPanelProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -91,7 +91,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
                       </span>
                     )}
                     {locationData.minutes_to_arrival != null && (
-                      <span>{fmtInt(locationData.minutes_to_arrival)} {t('common.minShort', 'min')}</span>
+                      <span>{fmtNumber(locationData.minutes_to_arrival)} {t('common.minShort', 'min')}</span>
                     )}
                   </div>
                 </div>

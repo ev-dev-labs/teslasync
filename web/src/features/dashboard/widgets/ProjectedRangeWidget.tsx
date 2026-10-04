@@ -24,7 +24,7 @@ function healthBadge(score: number, t: (k: string, d: string) => string) {
 }
 
 export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -70,7 +70,7 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
 
   // Comparison bar: projected / EPA ratio (clamped 0-100%)
   const rangePct = projectedRange != null && epaRange != null && epaRange > 0
-    ? Math.max(0, Math.min(100, Math.round((projectedRange / epaRange) * 100)))
+    ? Math.max(0, Math.min(100, (projectedRange / epaRange) * 100))
     : null;
 
   // Factors list for wide view — derived from available data fields
@@ -94,14 +94,14 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
       {
         icon: <Mountain className="size-4" />,
         label: t('widget.projectedRange.cycles', 'Battery cycles'),
-        value: knownNumber(data?.total_cycles) != null ? fmtNumber(data?.total_cycles) : null,
+        value: knownNumber(data?.total_cycles) != null ? fmtInt(data?.total_cycles) : null,
       },
     ];
-  }, [data, avgDaily, distanceUnit, t, fmtNumber]);
+  }, [data, avgDaily, distanceUnit, t, fmtNumber, fmtInt]);
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.projectedRange.title', 'Projected range')}
+      title={t('widget.projectedRange.title', 'Projected range')}
       icon={isCompact ? undefined : <Navigation className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={data != null || isLoading || isError || error ? trust : undefined}
@@ -113,7 +113,7 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
     >
       <div className="flex min-w-0 flex-col gap-3">
         <WidgetBigNumber
-          value={projectedRange != null ? Math.round(projectedRange) : null}
+          value={projectedRange != null ? fmtNumber(projectedRange) : null}
           unit={distanceUnit}
           label={t('widget.projectedRange.projected', 'Projected')}
           badge={badge && {
@@ -180,7 +180,7 @@ function ComparisonBar({
       </div>
       {rangePct != null && (
         <p className={`${dashboardTokens.metricLabel} mt-1`}>
-          {rangePct}% {t('widget.projectedRange.ofEpa', 'of EPA rated')}
+          {fmtNumber(rangePct)}% {t('widget.projectedRange.ofEpa', 'of EPA rated')}
         </p>
       )}
     </div>

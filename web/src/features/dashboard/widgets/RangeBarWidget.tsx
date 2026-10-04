@@ -68,7 +68,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
     >
       <div className="flex min-w-0 flex-col gap-3">
         <WidgetBigNumber
-          value={range.primaryConverted != null ? Math.round(range.primaryConverted) : null}
+          value={range.primaryConverted != null ? fmtNumber(range.primaryConverted) : null}
           unit={distanceUnit}
           label={range.usesRated || !range.hasData ? t('widget.ratedRange', 'Rated range') : t('widget.idealRange', 'Ideal range')}
           animated={false}

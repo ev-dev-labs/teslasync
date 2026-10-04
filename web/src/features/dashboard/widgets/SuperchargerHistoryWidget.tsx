@@ -9,6 +9,10 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+import { WidgetStatGrid } from './shared';
 
 /**
  * Parse an entry's ISO start timestamp to epoch milliseconds. A missing or
@@ -27,19 +31,30 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   const { formatCurrency } = useFormatting();
   const { formatEnergy } = useUnits();
 
+  const query = useTeslaChargingHistory();
   const {
     data,
     isLoading,
-    error,
     isFetching,
     isStale,
     isError,
     dataUpdatedAt,
     refetch,
-  } = useTeslaChargingHistory();
+  } = query;
 
-  const entries = data?.entries ?? [];
+  const entries = safeArray(data?.entries);
   const summary = data?.summary;
+  const dataState = useDataState({
+    ...query,
+    data: data ?? (!isLoading && !query.isPending && !isError ? null : undefined),
+  }, {
+    provenance: 'historical', unavailable: entries.length === 0,
+    partial: entries.length > 0 && (
+      knownNumber(summary?.total_wh) == null
+      || knownNumber(summary?.total_spend) == null
+      || entries.some((entry) => knownNumber(entry.usage_wh) == null)
+    ),
+  });
   const isCompact = size.cols <= 1;
 
   const rankedItems: RankedItem[] = useMemo(() => {
@@ -48,30 +63,30 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
       .slice(0, 10);
 
     return sorted.map((entry) => {
-      const wh = entry.usage_wh ?? 0;
-      const cost = entry.total_due ?? 0;
+      const wh = knownNumber(entry.usage_wh);
+      const cost = knownNumber(entry.total_due);
       return {
         id: entry.id,
         label: entry.site_location_name ?? '—',
-        value: wh,
-        formattedValue: formatEnergy(wh),
-        badge: cost > 0
+        value: wh ?? 0,
+        formattedValue: wh == null ? '—' : formatEnergy(wh),
+        badge: cost != null
           ? { text: formatCurrency(cost), variant: 'neutral' as const }
           : undefined,
-        barColor: 'bg-yellow-400',
+        barColor: 'bg-[var(--text-secondary)]',
       };
     });
   }, [entries, formatCurrency, formatEnergy]);
 
-  const totalWh = summary?.total_wh ?? 0;
-  const totalSpend = summary?.total_spend ?? 0;
+  const totalWh = knownNumber(summary?.total_wh);
+  const totalSpend = knownNumber(summary?.total_spend);
 
   // Compact: show 30-day Supercharger spend as big number
   if (isCompact) {
     return (
       <WidgetShell
-        loading={isLoading}
-        error={error ? String(error) : null}
+        title={t('widget.superchargerHistory.title', 'Supercharger history')}
+        dataState={dataState}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -80,8 +95,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
       >
         {entries.length > 0 ? (
           <WidgetBigNumber
-            value={totalSpend}
-            unit={t('widget.superchargerHistory.currencyUnit', '$')}
+            value={totalSpend == null ? null : formatCurrency(totalSpend)}
             label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}
           />
         ) : (
@@ -99,9 +113,8 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.superchargerHistory.title', 'Supercharger history')}
-      icon={<Zap className="h-3.5 w-3.5 text-yellow-400" />}
-      loading={isLoading}
-      error={error ? String(error) : null}
+      icon={<Zap className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
+      dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -114,21 +127,18 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
             <WidgetRankedList
               items={rankedItems}
               maxItems={10}
-              showBars
+              showBars={entries.every((entry) => knownNumber(entry.usage_wh) != null)}
               emptyMessage={t('widget.superchargerHistory.noData', 'No Supercharger sessions')}
               emptyIcon={<Zap className="h-5 w-5" />}
             />
           </div>
 
           {/* Totals row */}
-          <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 px-1">
-            <span className="text-xs text-[var(--text-secondary)]">
-              {t('widget.superchargerHistory.totals', '30-day totals')}
-            </span>
-            <div className="flex items-center gap-3 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
-              <span>{formatEnergy(totalWh)}</span>
-              <span>{formatCurrency(totalSpend)}</span>
-            </div>
+          <div className="border-t border-[var(--border-subtle)] pt-2">
+            <WidgetStatGrid stats={[
+              { label: t('widget.superchargerHistory.totals', '30-day totals'), value: totalWh == null ? '—' : formatEnergy(totalWh) },
+              { label: t('widget.superchargerHistory.compactLabel', '30-day Supercharger'), value: totalSpend == null ? '—' : formatCurrency(totalSpend) },
+            ]} />
           </div>
         </div>
       ) : (

@@ -6,6 +6,7 @@ import { setGlobalPrecision, setGlobalLocale } from '../lib/numberFormat'
 import { resolveLocale } from '../lib/locale'
 import { subscribe } from '../lib/broadcast'
 import { TOPICS } from '../lib/broadcastTopics'
+import { useDataState } from './useDataState'
 
 // Re-export per-channel notification sound preferences so callers can
 // import everything settings-related from `@/hooks/useSettings`. The
@@ -78,13 +79,16 @@ function sanitizePrecision(v: number | null | undefined): number {
  * `useFormatting`.
  */
 export function useSettings() {
-  const { data: settings, refetch } = useQuery({
+  const query = useQuery({
     queryKey: ['settings'],
     queryFn: getSettings,
     staleTime: 5 * 60 * 1000,
     refetchOnMount: 'always',
     retry: 1,
   })
+  const { data: settings, refetch } = query
+  const settingsState = useDataState(query)
+  const settingsUnavailable = !settingsState.hasData || settings == null
 
   // Backend may return `locale: ''` when the column has never been
   // written. `??` does NOT catch empty strings, so any consumer that
@@ -127,6 +131,8 @@ export function useSettings() {
     const rangeType: 'rated' | 'ideal' = s.preferred_range === 'ideal' ? 'ideal' : 'rated'
     return {
       settings: s,
+      settingsState,
+      settingsUnavailable,
       isMiles: s.unit_of_length === 'mi',
       isFahrenheit: s.unit_of_temp === 'F',
       isPSI: (s.unit_of_pressure ?? 'bar') === 'psi',
@@ -135,5 +141,5 @@ export function useSettings() {
       density,
       rangeType,
     }
-  }, [s, decimals, locale])
+  }, [s, decimals, locale, settingsState, settingsUnavailable])
 }

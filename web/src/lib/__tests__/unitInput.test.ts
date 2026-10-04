@@ -92,6 +92,28 @@ describe('computed metric input units', () => {
 })
 
 describe('parseForUnit', () => {
+  it.each(['0x10', '0b10', '0o10'])('rejects non-decimal input in strict mode: %s', text => {
+    expect(parseForUnit(text, 'number', s(), { strict: true })).toBeNull()
+  })
+
+  it.each(['sv-SE', 'fi-FI', 'ar-EG', 'fa-IR'])(
+    'round-trips a native negative temperature in %s without losing its sign',
+    locale => {
+      const text = new Intl.NumberFormat(locale).format(-1234.5)
+      expect(parseForUnit(text, 'temperature', s({ locale }))).toBe(-1234.5)
+    },
+  )
+
+  it.each([
+    ['en-US', '1,2'],
+    ['en-US', '1,,234'],
+    ['en-US', '1.2,34'],
+    ['de-DE', '1.23,45'],
+    ['fr-FR', '1 23,45'],
+  ])('rejects malformed grouping in a quantity for %s: %s', (locale, text) => {
+    expect(parseForUnit(text, 'energy', s({ locale }))).toBeNull()
+  })
+
   it('returns null for empty / whitespace-only input', () => {
     for (const unit of ['distance', 'energy', 'temperature', 'speed', 'percent', 'currency'] as UnitKind[]) {
       expect(parseForUnit('', unit, s())).toBeNull()

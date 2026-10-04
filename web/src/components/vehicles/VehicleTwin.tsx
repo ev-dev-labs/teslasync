@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -326,16 +326,13 @@ function ChargingUnderglow() {
   const { ids } = useTwinCtx();
   return (
     <g pointerEvents="none">
-      <motion.ellipse
-        cx={298}
-        cy={255}
-        rx={190}
-        ry={16}
-        fill="rgba(34,197,94,0.18)"
-        filter={`url(#${ids.glow})`}
-        animate={ambientFrames({ opacity: [0.2, 0.55, 0.2], rx: [160, 205, 160] })}
+      <motion.g
+        animate={ambientFrames({ opacity: [0.2, 0.55, 0.2], scaleX: [160 / 190, 205 / 190, 160 / 190] })}
         transition={ambientLoop({ duration: 2.4, repeat: Infinity, ease: 'easeInOut' })}
-      />
+      >
+        <ellipse cx={298} cy={255} rx={190} ry={16}
+          fill="rgba(34,197,94,0.18)" filter={`url(#${ids.glow})`} />
+      </motion.g>
       <motion.path
         d="M 152 246 C 240 253 360 253 446 244"
         fill="none"
@@ -373,8 +370,9 @@ function WheelSVG({
       {/* Sidewall */}
       <circle cx={cx} cy={cy} r={34} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.06)" strokeWidth={0.7} />
       <motion.g
+        data-svg-wheel-rotor={cx === FRONT_WHEEL_CX ? 'front' : 'rear'}
         initial={shouldSpin ? { rotate: 0 } : false}
-        animate={shouldSpin ? { rotate: driving ? -360 : -1080 } : undefined}
+        animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
         transition={
           shouldSpin
             ? {
@@ -382,7 +380,7 @@ function WheelSVG({
               repeat: driving ? Infinity : 0,
               ease: 'linear',
             }
-            : undefined
+            : { duration: 0, repeat: 0 }
         }
         style={{ transformOrigin: `${cx}px ${cy}px` }}
       >
@@ -1111,16 +1109,13 @@ function ChargePortIndicator({
             animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
             transition={ambientLoop({ duration: 1.2, repeat: Infinity, ease: 'easeInOut' })}
           />
-          <motion.circle
-            cx={cx}
-            cy={cy}
-            r={10}
-            fill="none"
-            stroke={C.chargeGreen}
-            strokeWidth={1}
-            animate={ambientFrames({ opacity: [0.75, 0, 0.75], r: [8, 18, 8] })}
+          <motion.g
+            animate={ambientFrames({ opacity: [0.75, 0, 0.75], scale: [0.8, 1.8, 0.8] })}
             transition={ambientLoop({ duration: 1.5, repeat: Infinity, ease: 'easeInOut' })}
-          />
+          >
+            <circle cx={cx} cy={cy} r={10} fill="none" vectorEffect="non-scaling-stroke"
+              stroke={C.chargeGreen} strokeWidth={1} />
+          </motion.g>
           <path
             d="M 532 129.5 L 526.5 138 L 532 138 L 529 144.5 L 538.5 134 L 533 134 Z"
             fill={C.chargeGreen}
@@ -1160,17 +1155,13 @@ function SecurityOverlay({
   return (
     <g>
       {sentryMode && (
-        <motion.ellipse
-          cx={cx}
-          cy={sentryY}
-          rx={16}
-          ry={7}
-          fill="none"
-          stroke={C.sentryGlow}
-          strokeWidth={1.2}
-          animate={ambientFrames({ opacity: [0.65, 0.18, 0.65], rx: [13, 21, 13] })}
+        <motion.g
+          animate={ambientFrames({ opacity: [0.65, 0.18, 0.65], scaleX: [13 / 16, 21 / 16, 13 / 16] })}
           transition={ambientLoop({ duration: 2, repeat: Infinity })}
-        />
+        >
+          <ellipse cx={cx} cy={sentryY} rx={16} ry={7} fill="none" vectorEffect="non-scaling-stroke"
+            stroke={C.sentryGlow} strokeWidth={1.2} />
+        </motion.g>
       )}
       {sentryMode && (
         <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
@@ -1293,7 +1284,7 @@ function PhotoWheelSpinner({
               repeat: driving ? Infinity : 0,
               ease: 'linear',
             }
-            : { duration: 0 }
+            : { duration: 0, repeat: 0 }
         }
       >
         <img
@@ -1444,9 +1435,26 @@ export function VehicleTwin({
   // subtree, and each helper re-evaluates on the way down. Without this
   // call the scene would keep animating until some unrelated state
   // change happened to repaint it.
-  useMotionPreference();
-  const width = SIZE_MAP[size];
+  const { reduce } = useMotionPreference();
+  const animateDriving = isDriving && !reduce;
+  const animateEntry = driveIn && !reduce;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const width = Math.min(SIZE_MAP[size], measuredWidth ?? SIZE_MAP[size]);
   const height = Math.round(width * ASPECT_RATIO);
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (node.clientWidth > 0) setMeasuredWidth(node.clientWidth);
+    const observer = new ResizeObserver(entries => {
+      const nextWidth = entries[0]?.contentRect.width;
+      if (nextWidth != null && Number.isFinite(nextWidth) && nextWidth > 0) {
+        setMeasuredWidth(nextWidth);
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   // Resolve paint: explicit `paint` prop wins, else fall back to the
   // per-vehicle override + Tesla-inferred paint via the hook. The hook is
@@ -1512,13 +1520,14 @@ export function VehicleTwin({
   return (
     <TwinContext.Provider value={ctxValue}>
       <motion.div
-        className={cn('relative inline-flex items-center justify-center overflow-hidden', className)}
-        style={{ width, height }}
+        ref={containerRef}
+        className={cn('relative inline-flex max-w-full items-center justify-center overflow-hidden', className)}
+        style={{ width: SIZE_MAP[size], height }}
         role="img"
         aria-label="Vehicle digital twin showing current physical state"
-        initial={driveIn ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
+        initial={animateEntry ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
         animate={driveIn ? { x: 0, opacity: 1, scale: 1 } : undefined}
-        transition={driveIn ? { duration: DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
+        transition={driveIn ? { duration: reduce ? 0 : DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
       >
         {photoState !== 'failed' && (
           <img
@@ -1543,8 +1552,8 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={driveIn && entrySpinOk}
-              driving={isDriving}
+              driveIn={animateEntry && entrySpinOk}
+              driving={animateDriving}
             />
             <PhotoWheelSpinner
               wheel="rear"
@@ -1553,8 +1562,8 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={driveIn && entrySpinOk}
-              driving={isDriving}
+              driveIn={animateEntry && entrySpinOk}
+              driving={animateDriving}
             />
           </>
         )}
@@ -1613,13 +1622,13 @@ export function VehicleTwin({
               interactive={interactive}
               photo={photoOn}
             />
-            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
-            <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
+            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={animateEntry} photo={photoOn} />
+            <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={animateEntry} photo={photoOn} />
           </g>
           {!photoOn && (
             <g id="wheels">
-              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
-              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
+              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={animateEntry} driving={animateDriving} />
+              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={animateEntry} driving={animateDriving} />
             </g>
           )}
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />

@@ -22,7 +22,7 @@
  *   - the gauge colour thresholds (green >95, amber >85, red otherwise);
  *   - null-safety: a data object whose numeric/array fields are null renders
  *     "0"/"0.00" placeholders instead of NaN / "undefined";
- *   - the compact (title-less, stats-hidden) layout variant;
+ *   - the compact (titled, stats-hidden) layout variant;
  *   - the freshness refresh interaction re-issuing the read;
  *   - the help tooltip's accessible label in the standard layout.
  *
@@ -77,6 +77,8 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import type { SleepEfficiencyData, SleepDrainEvent } from '@/types/energy';
 import type { WidgetProps } from './types';
 import { hasGaugeColor } from '@/test/gaugeTestUtils';
+import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
+import { act } from '@testing-library/react';
 
 const mockRequest = vi.mocked(request);
 const mockUseVehicles = vi.mocked(useVehicles);
@@ -169,6 +171,11 @@ beforeEach(() => {
   sleepRequest(makeData());
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols });
+  expect(screen.getByRole('heading', { name: 'Sleep efficiency', level: 3 })).toBeVisible();
+});
+
 // ── Vehicle resolution ──────────────────────────────────────────────────────
 
 describe('SleepEfficiencyWidget vehicle resolution', () => {
@@ -205,7 +212,38 @@ describe('SleepEfficiencyWidget vehicle resolution', () => {
 // ── States: loading / empty / error ─────────────────────────────────────────
 
 describe('SleepEfficiencyWidget states', () => {
-  it('renders a loading skeleton (no title, no empty copy) while fetching', () => {
+  it.each([1, 2, 4])('retains the gauge and recovers a failed refresh at %s columns', async (cols) => {
+    renderWidget({ vehicleId: 1, cols });
+    await screen.findByText('92.00');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    mockRequest.mockImplementation((path: string) => String(path).startsWith('/analytics/sleep')
+      ? Promise.reject(new Error('refresh')) : Promise.resolve([]));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
+    await screen.findByTestId('stale-refresh-warning');
+    expect(screen.getByText('92.00')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    sleepRequest(makeData());
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull());
+  });
+
+  it('recovers failed discovery without querying an unavailable vehicle', () => {
+    const refetch = vi.fn();
+    mockUseVehicles.mockReturnValue({ data: undefined, isError: true, error: new Error('vehicles'), refetch } as never);
+    renderWidget();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry/ }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(sleepCalls()).toHaveLength(0);
+  });
+
+  it.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('disables invalid vehicle %s', (vehicleId) => {
+    renderWidget({ vehicleId });
+    expect(screen.getByText('No sleep efficiency data')).toBeInTheDocument();
+    expect(sleepCalls()).toHaveLength(0);
+  });
+
+  it('keeps the heading with a loading skeleton and no empty copy while fetching', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget({ vehicleId: 1 });
 
@@ -245,13 +283,29 @@ describe('SleepEfficiencyWidget states', () => {
 // ── Populated gauge + stats ─────────────────────────────────────────────────
 
 describe('SleepEfficiencyWidget populated', () => {
+  it('reacts to precision and locale without rewriting measured history', async () => {
+    const data = makeData();
+    sleepRequest(data);
+    renderWidget({ vehicleId: 1 });
+    await screen.findByText('92.00');
+    try {
+      act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
+      expect(screen.getByText('92,000')).toBeInTheDocument();
+      expect(screen.getByText('12,000')).toBeInTheDocument();
+      expect(screen.getByText('60,000')).toBeInTheDocument();
+      expect(data.sleep_efficiency_pct).toBe(92);
+    } finally {
+      act(() => { setGlobalPrecision(2); setGlobalLocale('en-US'); });
+    }
+  });
+
   it('renders the title, gauge value/label and the three derived stat tiles', async () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText('Sleep efficiency')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Gauge: integer efficiency renders without decimals; "Efficiency" label.
-    expect(screen.getByText('92')).toBeInTheDocument();
+    expect(screen.getByText('92.00')).toBeInTheDocument();
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
 
     // Avg Drain/Day = sentry_off_drain_rate (0.5 %/hr) × 24 → "12.00".
@@ -260,7 +314,7 @@ describe('SleepEfficiencyWidget populated', () => {
 
     // Total Sleep = (3000 asleep + 600 offline) / 60 → "60".
     expect(screen.getByText('Total sleep')).toBeInTheDocument();
-    expect(screen.getByText('60')).toBeInTheDocument();
+    expect(screen.getByText('60.00')).toBeInTheDocument();
 
     // Wake Events = recent_events.length → 4.
     expect(screen.getByText('Wake events')).toBeInTheDocument();
@@ -282,27 +336,27 @@ describe('SleepEfficiencyWidget populated', () => {
     renderWidget({ vehicleId: 1 });
 
     // (1200 + 600) / 60 = 30 — NOT (1200+600+5000+4000)/60 = 180.
-    expect(await screen.findByText('30')).toBeInTheDocument();
+    expect(await screen.findByText('30.00')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.queryByText('180')).toBeNull();
+    expect(screen.queryByText('180.00')).toBeNull();
   });
 
   const colorCases = [
-    { pct: 98, color: '#10b981', name: 'green above 95%' },
-    { pct: 90, color: '#f59e0b', name: 'amber between 85% and 95%' },
-    { pct: 50, color: '#ef4444', name: 'red at or below 85%' },
+    { pct: 98, label: '98.00', color: '#10b981', name: 'green above 95%' },
+    { pct: 90, label: '90.00', color: '#f59e0b', name: 'amber between 85% and 95%' },
+    { pct: 50, label: '50.00', color: '#ef4444', name: 'red at or below 85%' },
   ];
-  colorCases.forEach(({ pct, color, name }) => {
+  colorCases.forEach(({ pct, label, color, name }) => {
     it(`paints the gauge ${name}`, async () => {
       sleepRequest(makeData({ sleep_efficiency_pct: pct }));
       const { container } = renderWidget({ vehicleId: 1 });
 
-      await screen.findByText(String(pct));
+      await screen.findByText(label);
       expect(hasGaugeColor(container, color)).toBe(true);
     });
   });
 
-  it('is null-safe: null numeric/array fields render 0 placeholders, never NaN/undefined', async () => {
+  it('keeps null numeric/array fields unknown without drawing a zero gauge', async () => {
     sleepRequest(
       makeData({
         sleep_efficiency_pct: null as unknown as number,
@@ -314,10 +368,10 @@ describe('SleepEfficiencyWidget populated', () => {
     renderWidget({ vehicleId: 1 });
 
     // Avg Drain/Day = (null ?? 0) × 24 → "0.00".
-    expect(await screen.findByText('0.00')).toBeInTheDocument();
+    expect(await screen.findAllByText('—')).toHaveLength(4);
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    // Gauge value + Total Sleep + Wake Events all collapse to "0".
-    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.queryByText('0.00')).toBeNull();
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });
 });
@@ -325,14 +379,13 @@ describe('SleepEfficiencyWidget populated', () => {
 // ── Layout variants ─────────────────────────────────────────────────────────
 
 describe('SleepEfficiencyWidget layout variants', () => {
-  it('renders the compact (title-less, stats-hidden) layout for a 1-column widget', async () => {
+  it('renders the compact (titled, stats-hidden) layout for a 1-column widget', async () => {
     renderWidget({ vehicleId: 1, cols: 1 });
 
     // Gauge value still renders in compact mode.
-    expect(await screen.findByText('92')).toBeInTheDocument();
+    expect(await screen.findByText('92.00')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    // Compact widgets drop the header title and the stat tiles.
-    expect(screen.queryByText('Sleep efficiency')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Sleep efficiency', level: 3 })).toBeVisible();
     expect(screen.queryByText('Avg drain/day')).toBeNull();
     expect(screen.queryByText('Efficiency')).toBeNull();
   });

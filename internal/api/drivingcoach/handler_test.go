@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -55,7 +56,7 @@ func coachRequest(query string) *http.Request {
 
 // mkDrive builds a driveAnalysis fixture with hasPowerRange=false (the shape
 // the production SQL currently emits — powerMin is always NULL).
-func mkDrive(id int64, date time.Time, distance, speedMax, speedAvg, powerMax, socStart, socEnd, temp float64) driveAnalysis {
+func mkDrive(id int64, date time.Time, distance, speedMax, speedAvg, powerMax, socStart, socEnd, temp, efficiency float64) driveAnalysis {
 	return driveAnalysis{
 		id:          id,
 		date:        date,
@@ -66,6 +67,37 @@ func mkDrive(id int64, date time.Time, distance, speedMax, speedAvg, powerMax, s
 		socStart:    socStart,
 		socEnd:      socEnd,
 		outsideTemp: temp,
+		efficiency:  efficiency,
+	}
+}
+
+func coachPercent(value float64) *float64 { return &value }
+
+func TestCoachingUsesRecordedConsumptionAndUnknownBraking(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		observed bool
+	}{{"missing braking evidence", false}, {"measured zero regeneration", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			drive := mkDrive(99, time.Now(), 14.5, 58, 41.4, 7.45, 90, 20, 18.5, 180.123456789)
+			drive.hasPowerRange = tc.observed
+			h := newHandlerForTest(&fakeCoachRepo{drives: []driveAnalysis{drive}})
+			rec := httptest.NewRecorder()
+			h.GetCoaching(rec, coachRequest("vehicle_id=1"))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status=%d, body=%s", rec.Code, rec.Body.String())
+			}
+			got := decodeCoach(t, rec)
+			if got.EfficiencyWhKm != drive.efficiency || got.BestEfficiencyWhKm != drive.efficiency {
+				t.Fatalf("recorded consumption was replaced or rounded: %+v", got)
+			}
+			if !tc.observed && got.Patterns.HardBrakePct != nil {
+				t.Fatal("missing power-range evidence must not become zero braking")
+			}
+			if tc.observed && (got.Patterns.HardBrakePct == nil || *got.Patterns.HardBrakePct != 0) {
+				t.Fatal("measured zero regeneration must remain known zero")
+			}
+		})
 	}
 }
 
@@ -213,17 +245,17 @@ func TestBuildDrivingRecommendations(t *testing.T) {
 		},
 		{
 			name: "hard_brake_medium",
-			p:    coachPatterns{HardBrakePct: 31},
+			p:    coachPatterns{HardBrakePct: coachPercent(31)},
 			want: []catImpact{{"braking", "medium"}},
 		},
 		{
 			name: "hard_brake_boundary_30_none",
-			p:    coachPatterns{HardBrakePct: 30},
+			p:    coachPatterns{HardBrakePct: coachPercent(30)},
 			want: []catImpact{{"general", "low"}},
 		},
 		{
 			name:   "combined_multiple_no_general",
-			p:      coachPatterns{HardAccelPct: 45, HighwayPct: 80, ShortTripPct: 60, ColdStartPct: 40, HardBrakePct: 35},
+			p:      coachPatterns{HardAccelPct: 45, HighwayPct: 80, ShortTripPct: 60, ColdStartPct: 40, HardBrakePct: coachPercent(35)},
 			avgEff: 200,
 			want: []catImpact{
 				{"acceleration", "high"},
@@ -467,9 +499,9 @@ func TestGetCoaching_HappyPath(t *testing.T) {
 
 	// Three drives in the same ISO week (2026-06-15 is a Monday), newest
 	// first, chosen so every derived field is hand-verifiable.
-	d0 := mkDrive(101, time.Date(2026, 6, 17, 8, 0, 0, 0, time.UTC), 10, 60, 40, 30, 80, 70, 20)  // efficient, eff 750
-	d1 := mkDrive(102, time.Date(2026, 6, 16, 8, 0, 0, 0, time.UTC), 20, 90, 85, 120, 90, 60, 10) // moderate, eff 1125
-	d2 := mkDrive(103, time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC), 3, 140, 30, 200, 50, 48, 0)  // aggressive, eff 500
+	d0 := mkDrive(101, time.Date(2026, 6, 17, 8, 0, 0, 0, time.UTC), 10, 60, 40, 30, 80, 70, 20, 750)
+	d1 := mkDrive(102, time.Date(2026, 6, 16, 8, 0, 0, 0, time.UTC), 20, 90, 85, 120, 90, 60, 10, 1125)
+	d2 := mkDrive(103, time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC), 3, 140, 30, 200, 50, 48, 0, 500)
 
 	repo := &fakeCoachRepo{drives: []driveAnalysis{d0, d1, d2}}
 	h := newHandlerForTest(repo)
@@ -497,8 +529,9 @@ func TestGetCoaching_HappyPath(t *testing.T) {
 		t.Errorf("best_efficiency_wh_km = %v, want 500", got.BestEfficiencyWhKm)
 	}
 	// weighted average efficiency: (750*1 + 1125*0.95 + 500*0.9025)/2.8525
-	if got.EfficiencyWhKm != 795.8 {
-		t.Errorf("efficiency_wh_km = %v, want 795.8", got.EfficiencyWhKm)
+	wantEfficiency := (750 + 1125*0.95 + 500*0.9025) / 2.8525
+	if math.Abs(got.EfficiencyWhKm-wantEfficiency) > 1e-9 {
+		t.Errorf("efficiency_wh_km = %v, want %v", got.EfficiencyWhKm, wantEfficiency)
 	}
 	// weighted average score: round((66*1 + 44*0.95 + 100*0.9025)/2.8525)
 	if got.OverallScore != 69 {
@@ -506,11 +539,11 @@ func TestGetCoaching_HappyPath(t *testing.T) {
 	}
 
 	wantPatterns := coachPatterns{
-		HardAccelPct: 66.7,
-		HardBrakePct: 0,
-		HighwayPct:   33.3,
-		ShortTripPct: 33.3,
-		ColdStartPct: 33.3,
+		HardAccelPct: 2.0 / float64(len(repo.drives)) * 100,
+		HardBrakePct: nil,
+		HighwayPct:   1.0 / float64(len(repo.drives)) * 100,
+		ShortTripPct: 1.0 / float64(len(repo.drives)) * 100,
+		ColdStartPct: 1.0 / float64(len(repo.drives)) * 100,
 	}
 	if got.Patterns != wantPatterns {
 		t.Errorf("patterns = %+v, want %+v", got.Patterns, wantPatterns)
@@ -547,8 +580,9 @@ func TestGetCoaching_HappyPath(t *testing.T) {
 	if wt.Score != 70 { // (66+44+100)/3
 		t.Errorf("weekly_trend[0].score = %d, want 70", wt.Score)
 	}
-	if wt.Efficiency != 791.7 { // round((750+1125+500)/3, .1)
-		t.Errorf("weekly_trend[0].efficiency = %v, want 791.7", wt.Efficiency)
+	wantWeeklyEfficiency := (750.0 + 1125 + 500) / 3
+	if math.Abs(wt.Efficiency-wantWeeklyEfficiency) > 1e-9 {
+		t.Errorf("weekly_trend[0].efficiency = %v, want %v", wt.Efficiency, wantWeeklyEfficiency)
 	}
 
 	if len(got.Recommendations) == 0 {
@@ -577,12 +611,12 @@ func TestGetCoaching_PerDriveCap(t *testing.T) {
 	base := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	drives := make([]driveAnalysis, 0, 61)
 	for i := 0; i < 61; i++ {
-		// distinct SoC drop keeps every drive's efficiency > 0 so it scores.
+		// Each fixture has positive recorded consumption for comparison.
 		drives = append(drives, mkDrive(
 			int64(1000+i),
 			base.AddDate(0, 0, -i),
 			10, 55, 40, 40,
-			80, 70, 20,
+			80, 70, 20, 750,
 		))
 	}
 	repo := &fakeCoachRepo{drives: drives}
@@ -613,9 +647,9 @@ func TestGetCoaching_WeeklyTrendGrouping(t *testing.T) {
 
 	// Two drives in ISO week A (2026-06-15/16) and one the prior Monday
 	// (2026-06-08, ISO week A-1). Repo yields newest-first.
-	weekA0 := mkDrive(1, time.Date(2026, 6, 16, 9, 0, 0, 0, time.UTC), 12, 60, 40, 40, 80, 70, 20)
-	weekA1 := mkDrive(2, time.Date(2026, 6, 15, 9, 0, 0, 0, time.UTC), 8, 60, 40, 40, 70, 60, 20)
-	weekB := mkDrive(3, time.Date(2026, 6, 8, 9, 0, 0, 0, time.UTC), 10, 60, 40, 40, 90, 80, 20)
+	weekA0 := mkDrive(1, time.Date(2026, 6, 16, 9, 0, 0, 0, time.UTC), 12, 60, 40, 40, 80, 70, 20, 625)
+	weekA1 := mkDrive(2, time.Date(2026, 6, 15, 9, 0, 0, 0, time.UTC), 8, 60, 40, 40, 70, 60, 20, 937.5)
+	weekB := mkDrive(3, time.Date(2026, 6, 8, 9, 0, 0, 0, time.UTC), 10, 60, 40, 40, 90, 80, 20, 750)
 
 	repo := &fakeCoachRepo{drives: []driveAnalysis{weekA0, weekA1, weekB}}
 	h := newHandlerForTest(repo)
@@ -663,8 +697,8 @@ func TestGetCoaching_NoEfficiency(t *testing.T) {
 	// socStart <= socEnd (battery rose / flat) -> efficiency stays 0 -> score
 	// 0 -> overall 0, best 0; the handler must not divide by zero or panic.
 	drives := []driveAnalysis{
-		mkDrive(1, time.Date(2026, 5, 2, 9, 0, 0, 0, time.UTC), 10, 60, 40, 30, 60, 60, 20),
-		mkDrive(2, time.Date(2026, 5, 1, 9, 0, 0, 0, time.UTC), 10, 60, 40, 30, 50, 55, 20),
+		mkDrive(1, time.Date(2026, 5, 2, 9, 0, 0, 0, time.UTC), 10, 60, 40, 30, 60, 60, 20, 0),
+		mkDrive(2, time.Date(2026, 5, 1, 9, 0, 0, 0, time.UTC), 10, 60, 40, 30, 50, 55, 20, 0),
 	}
 	repo := &fakeCoachRepo{drives: drives}
 	h := newHandlerForTest(repo)

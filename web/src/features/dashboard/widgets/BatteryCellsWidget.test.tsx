@@ -153,6 +153,11 @@ beforeEach(() => {
   batteryCellsMock.mockReturnValue(makeQuery(makeSummary()));
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget(<BatteryCellsWidget size={{ cols, rows: 4 }} />);
+  expect(screen.getByRole('heading', { name: 'Battery cells', level: 3 })).toBeVisible();
+});
+
 // ── cellStatus (pure) ────────────────────────────────────────────────────────
 describe('cellStatus', () => {
   it('classifies by absolute deviation from the average voltage', () => {
@@ -195,7 +200,7 @@ describe('BatteryCellsWidget', () => {
     batteryCellsMock.mockReturnValue(makeQuery(makeSummary(), { error: new Error('transient'), isError: true }));
     renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
     expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
-    expect(screen.getByText('17.0 mV')).toBeInTheDocument();
+    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -231,7 +236,7 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Avg V')).toBeInTheDocument();
     expect(screen.getByText('3.700 V')).toBeInTheDocument();
     expect(screen.getByText('Spread')).toBeInTheDocument();
-    expect(screen.getByText('17.0 mV')).toBeInTheDocument();
+    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
 
     // The temperature summary is a wide-only row — absent here.
     expect(screen.queryByText('Min temp')).not.toBeInTheDocument();
@@ -273,11 +278,10 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('26.0°C')).toBeInTheDocument();
   });
 
-  it('keeps per-cell values readable without compact title chrome', () => {
+  it('keeps per-cell values readable with the compact heading', () => {
     renderWidget(<BatteryCellsWidget size={SIZE_COMPACT} />);
 
-    // 1×1 widget: the title chrome is suppressed by design.
-    expect(screen.queryByText('Battery cells')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Battery cells', level: 3 })).toBeVisible();
     // Labels still render...
     expect(screen.getByText('C1')).toBeInTheDocument();
     expect(screen.getByText('3.701 V')).toBeInTheDocument();

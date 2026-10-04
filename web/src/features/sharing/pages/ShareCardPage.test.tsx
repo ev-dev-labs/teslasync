@@ -446,8 +446,8 @@ describe('ShareCardPage evidence and export behavior', () => {
       maxSpeedMps: 26.8224,
     })]);
     renderPage();
-    expect(screen.getAllByText('1 mi').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('60 mph').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1.0 mi').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('60.0 mph').length).toBeGreaterThan(0);
   });
 
   it('never leaks exact route addresses into UI or preview payload', () => {

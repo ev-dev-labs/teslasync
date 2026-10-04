@@ -343,7 +343,7 @@ describe('VehicleSpecsWidget populated detail card', () => {
 // ── Compact (1×1) layout ────────────────────────────────────────────────────
 
 describe('VehicleSpecsWidget compact layout', () => {
-  it('renders the title-less Model + Trim hero (no detail rows, no option badges)', async () => {
+  it('renders the titled Model + Trim hero (no detail rows, no option badges)', async () => {
     routeAll({
       specs: envelope(specsData({ car_type: 'Model X', trim_badging: 'Plaid' })),
       options: envelope({ ADX1: 'Enhanced Autopilot' }),
@@ -354,8 +354,7 @@ describe('VehicleSpecsWidget compact layout', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('Trim')).toBeInTheDocument();
     expect(screen.getByText('Plaid')).toBeInTheDocument();
-    // Compact drops the header title, the labelled detail rows, and options.
-    expect(screen.queryByText('Vehicle specs')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Vehicle specs', level: 3 })).toBeInTheDocument();
     expect(screen.queryByText('Paint color')).toBeNull();
     expect(screen.queryByText('Enhanced Autopilot')).toBeNull();
   });

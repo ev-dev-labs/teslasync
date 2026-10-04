@@ -131,6 +131,16 @@ vi.mock('@/components/charts', async () => {
   };
 });
 
+vi.mock('@/features/trips/components/TripReplayElevation', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+  return {
+    TripReplayElevation: (props: CapturedElevation) => {
+      captured.elevation = props;
+      return React.createElement('div', { 'data-testid': 'elevation-profile' });
+    },
+  };
+});
+
 // Keep StatCard / MetricCard REAL (they render the summary + stat text we
 // assert on); stub only PlaybackControls (its scrubber DOM needs layout
 // measurements jsdom can't supply) and capture its transport props.
@@ -157,7 +167,7 @@ import {
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive, DriveDetail, DrivePosition } from '@/types/driving';
 import type { TripReplayChartPoint } from '@/features/trips/components/TripReplayCharts';
-import type { ElevationDataPoint } from '@/components/charts';
+import type { TripReplayElevationPoint } from '../../components/TripReplayElevation';
 
 /* ── Captured-prop shapes ─────────────────────────────────────────── */
 
@@ -166,7 +176,7 @@ interface CapturedMap {
   currentIndex: number;
   onSeekToIndex: (i: number) => void;
   reduceMotion?: boolean;
-  height?: number;
+  height?: number | string;
 }
 interface CapturedCharts {
   data: TripReplayChartPoint[];
@@ -175,7 +185,7 @@ interface CapturedCharts {
   onSeekToIndex: (i: number) => void;
 }
 interface CapturedElevation {
-  data: ElevationDataPoint[];
+  data: TripReplayElevationPoint[];
   currentIndex: number;
   onClickIndex: (i: number) => void;
   distanceUnit: string;
@@ -469,6 +479,31 @@ describe('TripReplayPage populated', () => {
     expect(elevation.data[3].distance).toBeGreaterThan(elevation.data[1].distance);
   });
 
+  it('keeps unobserved elevation, power and speed as gaps instead of invented zeros', () => {
+    driveMock.mockReturnValue(makeDriveQuery({
+      data: makeDrive({ positions: [makePosition(0), makePosition(1)] }),
+    }));
+    renderPage();
+    expect((captured.charts as CapturedCharts).data.map(point => point.power)).toEqual([null, null]);
+    expect((captured.charts as CapturedCharts).data.map(point => point.speed)).toEqual([null, null]);
+    expect((captured.elevation as CapturedElevation).data.map(point => point.elevation)).toEqual([null, null]);
+  });
+
+  it('uses measured drive energy for efficiency rather than a battery-percentage proxy', () => {
+    renderPage();
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    expect(summary).toHaveTextContent(`${fmtNumber(3000 / 12)}Wh/km`);
+  });
+
+  it('places the live readouts and playback in the same outer map surface without metric panels', () => {
+    renderPage();
+    const stage = screen.getByRole('region', { name: 'Route map and live position' });
+    expect(stage).toContainElement(screen.getByTestId('trip-replay-map'));
+    expect(stage).toContainElement(screen.getByTestId('playback-controls'));
+    expect(stage).toContainElement(screen.getByTestId('replay-current-stats'));
+    expect(screen.getByTestId('replay-current-stats').querySelectorAll('[data-print-card]')).toHaveLength(0);
+  });
+
   it('hands the map its SI trail + initial playhead + resolved motion preference', () => {
     renderPage();
 
@@ -533,7 +568,7 @@ describe('TripReplayPage populated', () => {
 
     const p0 = POSITIONS[0];
     expect(screen.getByText(`${fmtNumber(convertSpeedFromSI(p0.speed!, 'km/h'))} km/h`)).toBeInTheDocument();
-    expect(screen.getByText(`${fmtNumber(p0.power!, 1)} kW`)).toBeInTheDocument();
+    expect(screen.getByText(`${fmtNumber(p0.power!)} kW`)).toBeInTheDocument();
     expect(screen.getByText(`${fmtInt(p0.batteryLevel)}%`)).toBeInTheDocument();
     expect(screen.getByText(`${fmtInt(p0.elevation!)} m`)).toBeInTheDocument();
     expect(

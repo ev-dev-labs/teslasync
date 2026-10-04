@@ -90,12 +90,12 @@ vi.mock('@/hooks/useUnits', () => ({
       if (meters == null) return '—';
       const value = h.distance === 'mi' ? meters / 1609.344 : meters / 1000;
       return `${value.toLocaleString('en-US', {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       })} ${h.distance}`;
     },
     formatEnergy: (wh: number | null | undefined) =>
-      wh == null ? '—' : `${(wh / 1000).toFixed(1)} kWh`,
+      wh == null ? '—' : `${(wh / 1000).toFixed(2)} kWh`,
   }),
 }));
 
@@ -455,8 +455,8 @@ describe('TrueCostPage evidence rendering', () => {
   it('converts canonical distance and cost/km to metric display units', () => {
     renderPage();
 
-    expect(screen.getByText('1,000.0 km')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.1000').length).toBeGreaterThan(0);
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.10').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Cost per km' })).toBeInTheDocument();
   });
 
@@ -464,8 +464,8 @@ describe('TrueCostPage evidence rendering', () => {
     h.distance = 'mi';
     renderPage();
 
-    expect(screen.getByText('621.4 mi')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.1609').length).toBeGreaterThan(0);
+    expect(screen.getByText('621.37 mi')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.16').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Cost per mi' })).toBeInTheDocument();
   });
 

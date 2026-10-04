@@ -147,6 +147,7 @@ import BatteryHealthPage, {
   buildRecommendations,
   computeEnergyBreakdown,
 } from './BatteryHealthPage';
+import { hasHealthMeasurement } from '../components/battery-health/helpers';
 import { CHART_COLORS } from '@/components/charts';
 import { gaugeTone, severityTokens } from '@/lib/tokens';
 import type { BatteryChargingAnalysis, BatteryHealthAnalytics } from '@/types/energy';
@@ -312,6 +313,29 @@ beforeEach(() => {
 /* ── Pure helpers ─────────────────────────────────────────────────── */
 
 describe('BatteryHealthPage · pure helpers', () => {
+  it('distinguishes absent health/capacity measurements from measured zero health', () => {
+    const missing = makeHealth({ current_soh: 0, estimated_capacity_wh: 0, history: [] });
+    expect(hasHealthMeasurement(missing)).toBe(false);
+    expect(buildInsights(missing, null, t).map((item) => item.title)).not.toContain('Health Concern');
+    expect(buildRecommendations(missing, t)).not.toContain('Your battery health looks great — keep up the good habits!');
+    const measuredZero = makeHealth({ current_soh: 0, estimated_capacity_wh: 1000 });
+    expect(hasHealthMeasurement(measuredZero)).toBe(true);
+    expect(buildInsights(measuredZero, null, t).map((item) => item.title)).toContain('Health Concern');
+    expect(hasHealthMeasurement(makeHealth({ current_soh: NaN }))).toBe(false);
+  });
+
+  it('retains fractional charging energy for display-boundary formatting rather than rounding pie slices early', () => {
+    const analysis = {
+      ...EMPTY_CHARGING_ANALYSIS, total_sessions: 2,
+      ac_energy_wh: 33333.333, dc_energy_wh: 66666.667,
+    };
+    const result = computeEnergyBreakdown(analysis);
+    expect(result?.pieData[0].value).toBe(analysis.ac_energy_wh / 1000);
+    expect(result?.pieData[1].value).toBe(analysis.dc_energy_wh / 1000);
+    expect(result?.totalEnergy).toBe(100);
+    expect(analysis.ac_energy_wh).toBe(33333.333);
+  });
+
   it('gaugeColor maps SoH bands to the CB-safe palette buckets', () => {
     expect(gaugeColor(95)).toBe(CHART_COLORS[1]);
     expect(gaugeColor(90)).toBe(CHART_COLORS[1]);
@@ -449,6 +473,18 @@ describe('BatteryHealthPage · states', () => {
 /* ── Component: happy-path render ─────────────────────────────────── */
 
 describe('BatteryHealthPage · dashboard render', () => {
+  it('does not turn missing capacity measurements into a zero-health service warning', () => {
+    healthMock.mockReturnValue(makeQuery({
+      data: makeHealth({ current_soh: 0, estimated_capacity_wh: 0, history: [] }),
+    }));
+    renderPage();
+    expect(metricCardValue('State of Health')).toContain('—');
+    expect(screen.queryByText('Degraded')).toBeNull();
+    expect(screen.queryByText('Health Concern')).toBeNull();
+    expect(screen.queryByText('Your battery health looks great — keep up the good habits!')).toBeNull();
+    expect(screen.getAllByText('Capacity measurements are not available yet; battery health cannot be assessed.').length).toBeGreaterThan(0);
+  });
+
   it('renders the full dashboard for a healthy battery and wires hooks with the selected vehicle', async () => {
     healthMock.mockReturnValue(makeQuery({
       data: makeHealth({ charging_analysis: MIXED_CHARGING_ANALYSIS }),
@@ -479,7 +515,7 @@ describe('BatteryHealthPage · dashboard render', () => {
 
     // Health verdict badge + a11y years-to-80 hero value.
     expect(screen.getByText('Excellent')).toBeInTheDocument();
-    expect(screen.getByText('8.5')).toBeInTheDocument();
+    expect(screen.getByText('8.50')).toBeInTheDocument();
 
     // Every chart section title is present (no gutted panels).
     expect(
@@ -644,7 +680,7 @@ describe('BatteryHealthPage · branches & resilience', () => {
     renderPage();
 
     expect(screen.getByText('Years to 80%')).toBeInTheDocument();
-    expect(screen.queryByText('8.5')).not.toBeInTheDocument();
+    expect(screen.queryByText('8.50')).not.toBeInTheDocument();
   });
 
   it('mounts the live indicator without duplicating the header vehicle picker', () => {
@@ -733,5 +769,18 @@ describe('BatteryHealthPage · design-system consistency', () => {
 
     // The standalone insights section keeps its section-level h2.
     expect(screen.getByRole('heading', { level: 2, name: 'Smart Insights' })).toBeInTheDocument();
+  });
+
+  it('gives thermal metrics enough width and wrapping labels to distinguish max from min', () => {
+    renderPage();
+
+    for (const label of ['Module Temp (Max)', 'Module Temp (Min)', 'Battery Heater', 'Temperature Spread']) {
+      const text = screen.getByText(label);
+      expect(text).toHaveClass('line-clamp-2');
+      expect(text.closest('[data-role="metric-label"]')).not.toHaveClass('truncate');
+      expect(text.closest('[data-role="metric-card"]')?.parentElement).toHaveClass(
+        '[grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr))]',
+      );
+    }
   });
 });

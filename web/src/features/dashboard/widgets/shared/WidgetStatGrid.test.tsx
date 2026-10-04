@@ -105,6 +105,13 @@ describe('WidgetStatGrid — mapping', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.queryByText('—')).toBeNull();
   });
+
+  it('renders a current-value sublabel without implying a comparison trend', () => {
+    render(<WidgetStatGrid stats={[makeStat({ value: 4, sublabel: '3 online' })]} />);
+    expect(screen.getByText('3 online')).toBeInTheDocument();
+    expect(screen.queryByText('no change')).toBeNull();
+    expect(screen.queryByText('—')).toBeNull();
+  });
 });
 
 // ── Trend chip branches ──────────────────────────────────────────────────────

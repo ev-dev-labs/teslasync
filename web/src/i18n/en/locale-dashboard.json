@@ -786,6 +786,8 @@
       "title": "Charge cost tracker",
       "totalEnergy": "Total energy",
       "sessions": "{{count}} sessions",
+      "sessions_one": "{{count}} session",
+      "sessions_other": "{{count}} sessions",
       "totalCost": "Total cost",
       "kwh": "kWh",
       "costPerDistance": "Cost / {{unit}}",
@@ -829,7 +831,8 @@
       "type": {
         "home": "Home / AC",
         "supercharger": "Supercharger",
-        "dc": "DC fast"
+        "dc": "DC fast",
+        "unknown": "Unknown"
       },
       "chargerType": "Charger type",
       "energyKwh": "Energy (kWh)",
@@ -850,7 +853,7 @@
     "chargingOptimizer": {
       "noData": "No optimizer data",
       "targetSocShort": "SOC {{pct}}%",
-      "savingsShort": "${{amount}}/mo",
+      "savingsShort": "{{amount}}/mo",
       "title": "Charging optimizer",
       "optimalStart": "Optimal start",
       "targetSoc": "Target SOC",
@@ -1555,6 +1558,8 @@
       "peak": "Peak",
       "title": "Speed heatmap",
       "drives": "{{count}} drives",
+      "drives_one": "{{count}} drive",
+      "drives_other": "{{count}} drives",
       "peakSpeed": "Peak avg {{speed}} {{unit}}",
       "slow": "Slow",
       "fast": "Fast",
@@ -1673,7 +1678,7 @@
       "averageUnavailable": "Average unavailable",
       "title": "Vampire drain",
       "avgDrain": "Avg drain",
-      "eventCount": "{{count}} events · {{hours}}h total",
+      "eventCount": "{{formattedCount}} events · {{hours}}h total",
       "trend": "Daily drain rate (last 30)",
       "noEvents": "No recent drain events",
       "noData": "No vampire drain data"

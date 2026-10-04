@@ -6,15 +6,15 @@ export type ThrottleStyle = 'conservative' | 'moderate' | 'aggressive';
 
 export interface MotorStats {
   totalReadings: number;
-  avgTorque: number;
-  maxTorque: number;
-  avgMotorTemp: number;
-  maxMotorTemp: number;
-  avgPower: number;
-  peakPower: number;
-  minPower: number;
-  peakRegen: number;
-  highTorquePct: number;
+  avgTorque: number | null;
+  maxTorque: number | null;
+  avgMotorTemp: number | null;
+  maxMotorTemp: number | null;
+  avgPower: number | null;
+  peakPower: number | null;
+  minPower: number | null;
+  peakRegen: number | null;
+  highTorquePct: number | null;
 }
 
 /* ---- Helper functions ---- */
@@ -56,11 +56,11 @@ export function computeMotorStats(motorHistory: MotorSnapshot[] | undefined): Mo
   if (h.length === 0) return null;
 
   const vals = (fn: (s: MotorSnapshot) => number | undefined | null) =>
-    h.map(fn).filter((v): v is number => v != null);
+    h.map(fn).filter((v): v is number => v != null && Number.isFinite(v));
 
-  const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
-  const max = (arr: number[]) => (arr.length > 0 ? Math.max(...arr) : 0);
-  const min = (arr: number[]) => (arr.length > 0 ? Math.min(...arr) : 0);
+  const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+  const max = (arr: number[]) => (arr.length > 0 ? Math.max(...arr) : null);
+  const min = (arr: number[]) => (arr.length > 0 ? Math.min(...arr) : null);
 
   const torques = vals((s) => {
     const f = s.torque_nm_front ?? 0;
@@ -90,6 +90,6 @@ export function computeMotorStats(motorHistory: MotorSnapshot[] | undefined): Mo
     highTorquePct:
       torques.length > 0
         ? (torques.filter((t) => t > 200).length / torques.length) * 100
-        : 0,
+        : null,
   };
 }

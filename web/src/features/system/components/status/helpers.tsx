@@ -60,7 +60,7 @@ export function formatBytes(bytes: number): string {
   // Guard non-finite / non-positive input (missing API fields, negatives) and
   // clamp the unit index so a petabyte-scale value never indexes past the
   // `sizes` array (which produced "1.0 undefined" for >= 1 PB).
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  if (!Number.isFinite(bytes) || bytes <= 0) return `${fmtNumber(0)} B`;
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   const i = Math.min(Math.max(Math.floor(Math.log(bytes) / Math.log(k)), 0), sizes.length - 1);

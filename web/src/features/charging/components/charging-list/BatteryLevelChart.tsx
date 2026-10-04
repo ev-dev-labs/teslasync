@@ -31,14 +31,14 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
   const isEmpty = totalSessions === 0;
 
   return (
-    <GlassPanel className="p-6">
-      <PanelTitle className="mb-4 flex items-center gap-2">
+    <GlassPanel className="flex h-full flex-col p-5">
+      <PanelTitle className="mb-2 flex items-center gap-2">
         <BatteryCharging className="h-4 w-4 text-neon-amber" aria-hidden="true" />
         {t('charging.charts.batteryLevelAtStart', 'Battery Level at Charge Start')}
-        <Text as="span" variant="caption" className="ml-2">
-          {t('charging.charts.batteryLevelHint', 'How low do you typically go before charging?')}
-        </Text>
       </PanelTitle>
+      <Text as="p" variant="caption" className="mb-4">
+        {t('charging.charts.batteryLevelHint', 'How low do you typically go before charging?')}
+      </Text>
       <EmbeddedChart
         title={t('charging.charts.batteryLevelAtStart', 'Battery Level at Charge Start')}
         ariaLabel={t(
@@ -55,9 +55,9 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
           'charging.charts.batteryLevelEmpty',
           'No charge-start levels to chart yet.',
         )}
-        fluid={false}
-        mobileHeight={144}
-        height={176}
+        className="flex-1"
+        mobileHeight={192}
+        height={256}
       >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={buckets}>

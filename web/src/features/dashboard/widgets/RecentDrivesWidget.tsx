@@ -18,7 +18,7 @@ import type { Drive } from '../types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -40,7 +40,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       id: drive.id,
       icon: <Route className="h-4 w-4" aria-hidden="true" />,
       title: distance == null ? '—' : `${fmtNumber(convertDistanceFromSI(distance, unitPrefs.distance))} ${unitPrefs.distance}`,
-      subtitle: `${duration == null ? '—' : fmtInt(duration / 60)} ${t('widget.recentDrives.durationUnit', 'min')} · ${startSoc ?? '?'}% → ${endSoc ?? '?'}% · ${formatDateShort(drive.start_ts)}`,
+      subtitle: `${duration == null ? '—' : fmtNumber(duration / 60)} ${t('widget.recentDrives.durationUnit', 'min')} · ${startSoc == null ? '?' : fmtNumber(startSoc)}% → ${endSoc == null ? '?' : fmtNumber(endSoc)}% · ${formatDateShort(drive.start_ts)}`,
       timestamp: drive.start_ts,
       color: 'var(--accent-primary)',
       href: `/drives/${drive.id}`,

@@ -5,6 +5,10 @@ import { useVehicles, useMediaLatest } from '@/api/hooks/useVehicles';
 import { formatDurationClock } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 /**
  * Clamp a raw percentage into the inclusive 0–100 range. A non-finite input
@@ -46,9 +50,19 @@ function ProgressBar({ elapsed, duration, label }: { elapsed: number; duration: 
 
 export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { fmtNumber } = useNumberFormatting();
+  const vehicleQuery = useVehicles();
+  const { data: vehicles } = vehicleQuery;
+  const vehicleState = useDataState(vehicleQuery);
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: media, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useMediaLatest(id, 5_000);
+  const query = useMediaLatest(id, 5_000);
+  const { data: media, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const state = useDataState({ ...query, data: media ?? undefined }, { provenance: 'live' });
+  const displayState = !id && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
+  const recover = () => {
+    if (!id) void vehicleQuery.refetch();
+    else void refetch();
+  };
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isTall = size.rows >= 2;
@@ -58,10 +72,10 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
   const album = media?.now_playing_album;
   const source = media?.playback_source ?? media?.now_playing_station;
   const status = media?.playback_status;
-  const elapsed = media?.now_playing_elapsed ?? 0;
-  const duration = media?.now_playing_duration ?? 0;
-  const volume = media?.audio_volume;
-  const volumeMax = media?.audio_volume_max ?? 11;
+  const elapsed = knownNumber(media?.now_playing_elapsed);
+  const duration = knownNumber(media?.now_playing_duration);
+  const volume = knownNumber(media?.audio_volume);
+  const volumeMax = knownNumber(media?.audio_volume_max);
 
   const isPlaying = status === 'Playing';
 
@@ -70,19 +84,20 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
       title={isCompact ? undefined : t('widget.nowPlaying', 'Now playing')}
       icon={<Music className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
+      dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={recover}
     >
       {media ? (
         isCompact ? (
           /* ── Compact 1×1 ── */
           <div className="flex flex-col items-center justify-center h-full gap-1 text-center px-1">
             <Music className="h-5 w-5 text-neon-cyan shrink-0" aria-hidden="true" />
-            <p className="text-xs font-semibold text-[var(--text-primary)] truncate w-full">{title}</p>
-            <p className="text-2xs text-[var(--text-secondary)] truncate w-full">{artist}</p>
+            <p className={`${dashboardTokens.metricLabel} w-full`} title={title}>{title}</p>
+            <p className={`${dashboardTokens.metricLabel} w-full`} title={artist}>{artist}</p>
           </div>
         ) : (
           /* ── Standard / Tall ── */
@@ -92,10 +107,10 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
                 <Music className="h-5 w-5 text-neon-cyan" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-[var(--text-primary)] truncate">{title}</p>
-                <p className="text-xs text-[var(--text-secondary)] truncate">{artist}</p>
+                <p className={dashboardTokens.secondaryMetric} title={title}>{title}</p>
+                <p className={dashboardTokens.metricLabel} title={artist}>{artist}</p>
                 {isTall && album && (
-                  <p className="text-xs text-[var(--text-muted)] truncate">{album}</p>
+                  <p className={dashboardTokens.metricLabel} title={album}>{album}</p>
                 )}
               </div>
               {isPlaying && (
@@ -105,7 +120,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
               )}
             </div>
 
-            {duration > 0 && (
+            {duration != null && duration > 0 && elapsed != null && (
               <div className="space-y-1">
                 <ProgressBar elapsed={elapsed} duration={duration} label={t('widget.playbackProgress', 'Playback progress')} />
                 <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
@@ -126,20 +141,20 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
                 {volume != null && (
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
                     <Volume2 className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    <div
+                    {volumeMax != null && volumeMax > 0 && <div
                       role="progressbar"
                       aria-label={t('widget.volume', 'Volume')}
                       aria-valuemin={0}
                       aria-valuemax={volumeMax}
-                      aria-valuenow={volume}
+                      aria-valuenow={Math.min(volumeMax, Math.max(0, volume))}
                       className="flex-1 h-1 rounded-full bg-[var(--surface-2)] overflow-hidden"
                     >
                       <div
                         className="h-full rounded-full bg-[var(--text-secondary)]"
                         style={{ width: `${volumePercent(volume, volumeMax)}%` }}
                       />
-                    </div>
-                    <span className="text-2xs tabular-nums">{volume}</span>
+                    </div>}
+                    <span className={dashboardTokens.metricLabel}>{fmtNumber(volume)}</span>
                   </div>
                 )}
               </div>

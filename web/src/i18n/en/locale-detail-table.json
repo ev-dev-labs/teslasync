@@ -51,9 +51,6 @@
       "collapse": "Collapse row",
       "column": "Expand row"
     },
-    "pagination": {
-      "keyboardHint": "With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page."
-    },
     "bulkActions": {
       "region": "Bulk actions",
       "selected": "{{count}} selected",

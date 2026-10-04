@@ -45,10 +45,12 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * dashboard tests.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { inputPreferences } from '@/test/inputPreferences';
+import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 
 // jsdom lacks matchMedia; framer-motion (useReducedMotion, read by the
 // freshness chip) reads it at module load. Report reduced motion so the
@@ -70,9 +72,21 @@ vi.hoisted(() => {
   }
 });
 
-const { optimizerMock, vehiclesMock } = vi.hoisted(() => ({
+const { optimizerMock, vehiclesMock, settingsMock } = vi.hoisted(() => ({
   optimizerMock: vi.fn(),
   vehiclesMock: vi.fn(),
+  settingsMock: vi.fn(),
+}));
+vi.mock('@/hooks/useSettings', () => ({ useSettings: () => settingsMock() }));
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatTime: (value: string | Date) => {
+      const hour = value instanceof Date ? value.getHours() : Number(value.slice(11, 13));
+      return settingsMock().settings.locale === 'en-GB'
+        ? `${String(hour).padStart(2, '0')}:00`
+        : `${hour % 12 || 12} AM`.replace('AM', hour >= 12 ? 'PM' : 'AM');
+    },
+  }),
 }));
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
@@ -112,6 +126,11 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 });
 
 import ChargingOptimizerWidget from './ChargingOptimizerWidget';
+
+it.each([1, 2, 3])('identifies the optimizer at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Charging optimizer' })).toBeInTheDocument();
+});
 import type { WidgetSize } from './types';
 import type { ChargingOptimizerData } from '@/types/charging';
 
@@ -183,32 +202,105 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <ChargingOptimizerWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charging optimizer');
+  return view;
 }
 
 beforeEach(() => {
+  settingsMock.mockReturnValue({ settings: inputPreferences() });
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
   optimizerMock.mockReset();
   vehiclesMock.mockReset();
   optimizerMock.mockReturnValue(makeQuery({ data: DATA }));
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
 });
+afterEach(() => {
+  cleanup();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
+});
 
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('ChargingOptimizerWidget', () => {
+  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 2 }])(
+    'retains all populated mode content on refresh failure and retries at %j', (size) => {
+      const refetch = vi.fn();
+      optimizerMock.mockReturnValue(makeQuery({ data: DATA, isError: true, error: new Error('refresh'), refetch }));
+      const view = renderWidget(size);
+      expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+      expect(screen.getByText('2 AM')).toBeInTheDocument();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+      expect(refetch).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('recovers failed vehicle discovery without leaving a disabled skeleton', () => {
+    const refetch = vi.fn();
+    vehiclesMock.mockReturnValue(makeQuery({ isError: true, error: new Error('vehicles'), refetch }));
+    optimizerMock.mockReturnValue(makeQuery({ isLoading: false }));
+    renderWidget();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry/ }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(optimizerMock).toHaveBeenCalledWith(null);
+  });
+
+  it.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+    'disables invalid numeric identity %s', (vehicleId) => {
+      renderWidget(undefined, vehicleId);
+      expect(optimizerMock).toHaveBeenLastCalledWith(null);
+    },
+  );
+
+  it('reacts to clock format changes in the headline and timeline', () => {
+    const size = { cols: 4, rows: 2 };
+    const view = renderWidget(size);
+    expect(screen.getByTitle('6 PM — Peak')).toBeInTheDocument();
+    settingsMock.mockReturnValue({ settings: inputPreferences({ locale: 'en-GB' }) });
+    view.rerender(<MemoryRouter><ChargingOptimizerWidget size={size} /></MemoryRouter>);
+    expect(screen.getByText('02:00')).toBeInTheDocument();
+    expect(screen.getByTitle('18:00 — Peak')).toBeInTheDocument();
+  });
+
+  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 2 }])(
+    'reacts to EUR/de-DE preferences without rewriting the savings at %j',
+    (size) => {
+      const cost = Object.freeze({ ...COST, potential_monthly_savings: 45.6789 });
+      optimizerMock.mockReturnValue(makeQuery({ data: Object.freeze({ ...DATA, cost_analysis: cost }) }));
+      const view = renderWidget(size);
+      const compact = size.cols === 1;
+      expect(screen.getByText(compact ? '$45.68/mo' : '$45.68')).toBeInTheDocument();
+      act(() => {
+        settingsMock.mockReturnValue({ settings: inputPreferences({
+          currency_symbol: '€', locale: 'de-DE', decimal_precision: 3,
+        }) });
+        setGlobalPrecision(3);
+        setGlobalLocale('de-DE');
+      });
+      view.rerender(<MemoryRouter><ChargingOptimizerWidget size={size} /></MemoryRouter>);
+      expect(screen.getByText(compact ? '€45,679/mo' : '€45,679')).toBeInTheDocument();
+      expect(screen.getByText(compact ? 'SOC 80,000%' : '80,000%')).toBeInTheDocument();
+      expect(cost.potential_monthly_savings).toBe(45.6789);
+      expect(optimizerMock).toHaveBeenLastCalledWith('7');
+    },
+  );
   it('compact layout shows the optimal-start headline, SOC caption + savings badge', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('2 AM')).toBeInTheDocument();
-    expect(screen.getByText('SOC 80%')).toBeInTheDocument();
-    expect(screen.getByText('$45/mo')).toBeInTheDocument();
+    expect(screen.getByText('SOC 80.00%')).toBeInTheDocument();
+    expect(screen.getByText('$45.00/mo')).toBeInTheDocument();
 
     // Compact is title-less and never renders the standard metric grid.
-    expect(screen.queryByText('Charging optimizer')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging optimizer' })).toBeInTheDocument();
     expect(screen.queryByText('Optimal start')).not.toBeInTheDocument();
   });
 
@@ -220,8 +312,8 @@ describe('ChargingOptimizerWidget', () => {
 
     // Headline + caption still render; the $0 badge must not appear.
     expect(screen.getByText('2 AM')).toBeInTheDocument();
-    expect(screen.getByText('SOC 80%')).toBeInTheDocument();
-    expect(screen.queryByText('$0/mo')).not.toBeInTheDocument();
+    expect(screen.getByText('SOC 80.00%')).toBeInTheDocument();
+    expect(screen.queryByText('$0.00/mo')).not.toBeInTheDocument();
   });
 
   it('compact layout shows the empty state when there is no data', () => {
@@ -229,7 +321,7 @@ describe('ChargingOptimizerWidget', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No optimizer data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No optimizer data').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByText('2 AM')).not.toBeInTheDocument();
   });
 
@@ -245,11 +337,11 @@ describe('ChargingOptimizerWidget', () => {
 
     // Metric values: real formatter output.
     expect(screen.getByText('2 AM')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
-    expect(screen.getByText('$45')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByText('$45.00')).toBeInTheDocument();
 
     // Peak-usage line + optimized badge (15% < 30%).
-    expect(screen.getByText('Peak charging: 15%')).toBeInTheDocument();
+    expect(screen.getByText('Peak charging: 15.00%')).toBeInTheDocument();
     expect(screen.getByText('Optimized')).toBeInTheDocument();
 
     // The 24h timeline belongs to the wide layout only.
@@ -262,7 +354,7 @@ describe('ChargingOptimizerWidget', () => {
     );
     renderWidget();
 
-    expect(screen.getByText('Peak charging: 40%')).toBeInTheDocument();
+    expect(screen.getByText('Peak charging: 40.00%')).toBeInTheDocument();
     expect(screen.getByText('Can improve')).toBeInTheDocument();
     expect(screen.queryByText('Optimized')).not.toBeInTheDocument();
   });
@@ -315,7 +407,7 @@ describe('ChargingOptimizerWidget', () => {
 
   it('normalizes malformed start hours to a valid clock label (formatHour hardening)', () => {
     const cases: Array<[number, string]> = [
-      [Number.NaN, '12 AM'],
+      [Number.NaN, '—'],
       [25, '1 AM'],
       [-1, '11 PM'],
       [24, '12 AM'],
@@ -393,18 +485,16 @@ describe('ChargingOptimizerWidget', () => {
 
     expect(() => renderWidget()).not.toThrow();
 
-    // Missing schedule → hour 0 → "12 AM"; missing SOC → "0%"; missing cost → "$0".
-    expect(screen.getByText('12 AM')).toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(screen.getByText('$0')).toBeInTheDocument();
-    // Peak 0% → still "Optimized".
-    expect(screen.getByText('Optimized')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('Optimized')).not.toBeInTheDocument();
 
     // The valid recommendation survives; the null entry collapses to two
     // em-dash placeholders (title + description) without a badge.
     expect(screen.getByText('Valid tip')).toBeInTheDocument();
     expect(screen.getByText('Still shown')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getAllByText('—')).toHaveLength(6);
   });
 
   it('is null-safe: non-array cost hours + recommendations do not crash the wide timeline', () => {

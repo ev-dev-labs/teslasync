@@ -168,11 +168,11 @@ describe('SavingsCalculator — comparison cards', () => {
     expect(screen.getByText('Monthly Savings')).toBeInTheDocument();
 
     // Per-distance sub labels use the display distance unit at 3-dp.
-    expect(screen.getByText('$0.156/km')).toBeInTheDocument();
-    expect(screen.getByText('$0.042/km')).toBeInTheDocument();
+    expect(screen.getByText('$0.16/km')).toBeInTheDocument();
+    expect(screen.getByText('$0.04/km')).toBeInTheDocument();
     expect(screen.getByText('over selected period')).toBeInTheDocument();
     // ~ prefix + yearly at 0-dp + interpolated "/ year" fallback.
-    expect(screen.getByText('~$880 / year')).toBeInTheDocument();
+    expect(screen.getByText('~$879.72 / year')).toBeInTheDocument();
   });
 
   it('renders the editable inputs alongside the cards and is not marked busy', () => {
@@ -313,14 +313,14 @@ describe('SavingsCalculator — non-finite input guard', () => {
 describe('SavingsCalculator — distance-unit fallback', () => {
   it('falls back to "km" when distanceUnit is blank', () => {
     renderCalc({ distanceUnit: '   ' });
-    expect(screen.getByText('$0.156/km')).toBeInTheDocument();
-    expect(screen.getByText('$0.042/km')).toBeInTheDocument();
+    expect(screen.getByText('$0.16/km')).toBeInTheDocument();
+    expect(screen.getByText('$0.04/km')).toBeInTheDocument();
   });
 
   it('passes a real distance unit through into the per-distance labels', () => {
     renderCalc({ distanceUnit: 'mi' });
-    expect(screen.getByText('$0.156/mi')).toBeInTheDocument();
-    expect(screen.getByText('$0.042/mi')).toBeInTheDocument();
+    expect(screen.getByText('$0.16/mi')).toBeInTheDocument();
+    expect(screen.getByText('$0.04/mi')).toBeInTheDocument();
   });
 });
 

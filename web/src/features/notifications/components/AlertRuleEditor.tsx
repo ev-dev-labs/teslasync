@@ -644,16 +644,17 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
   // pick the first explicit selection, else the first fleet vehicle.
   // The preview is a hint, not a guarantee — the user can target
   // many vehicles and we show one representative name here.
-  const previewVehicleName = useMemo<string | undefined>(() => {
+  const previewVehicle = useMemo(() => {
     if (editor.vehicle_selection.kind === 'specific') {
       const firstId = editor.vehicle_selection.vehicle_ids[0]
       if (firstId != null) {
         const match = vehicles.find(v => v.id === firstId)
-        if (match?.display_name) return match.display_name
+        if (match) return match
       }
     }
-    return vehicles[0]?.display_name
+    return vehicles[0]
   }, [editor.vehicle_selection, vehicles])
+  const previewVehicleName = previewVehicle?.display_name
 
   // Apply pending hydration AFTER the `useFormDraft`
   // render-time reset has committed (see `pendingHydrationRef` declaration
@@ -1083,15 +1084,26 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
     const msgTemplate = normalizeMsgTemplateForSave(editor.msg_template)
     const baseBody = {
       message,
+      name: editor.name,
+      signal_name: editor.kind === 'signal' ? editor.signal_name : undefined,
+      op: editor.op,
+      value_num: valueKindForState(editor) === 'number' ? parseOptionalNumber(editor.value_num) : null,
+      value_text: valueKindForState(editor) === 'text' ? editor.value_text : null,
+      value_bool: valueKindForState(editor) === 'bool' ? editor.value_bool : null,
+      value_min: valueKindForState(editor) === 'range' ? parseOptionalNumber(editor.value_min) : null,
+      value_max: valueKindForState(editor) === 'range' ? parseOptionalNumber(editor.value_max) : null,
+      vehicle_id: previewVehicle?.id,
+      vehicle_name: previewVehicleName,
+      vehicle_timezone: previewVehicle?.timezone,
       msg_template: msgTemplate,
       include_title: editor.include_title,
     }
     testRuleMut.mutate(target ? { ...baseBody, target } : baseBody)
   }, [
     allChannelIds,
-    editor.include_title,
-    editor.message,
-    editor.msg_template,
+    editor,
+    previewVehicle,
+    previewVehicleName,
     t,
     testChannelIds,
     testRuleMut,
@@ -1815,11 +1827,12 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
                     op: editor.op,
                     severity: editor.severity,
                     vehicle_name: previewVehicleName,
-                    value_num: parseOptionalNumber(editor.value_num),
-                    value_text: editor.value_text || null,
-                    value_bool: editor.value_bool,
-                    value_min: parseOptionalNumber(editor.value_min),
-                    value_max: parseOptionalNumber(editor.value_max),
+                    vehicle_timezone: previewVehicle?.timezone,
+                    value_num: valueKindForState(editor) === 'number' ? parseOptionalNumber(editor.value_num) : null,
+                    value_text: valueKindForState(editor) === 'text' ? editor.value_text : null,
+                    value_bool: valueKindForState(editor) === 'bool' ? editor.value_bool : null,
+                    value_min: valueKindForState(editor) === 'range' ? parseOptionalNumber(editor.value_min) : null,
+                    value_max: valueKindForState(editor) === 'range' ? parseOptionalNumber(editor.value_max) : null,
                     metric_id: editor.metric_id || null,
                     metric_window: editor.metric_window || null,
                     metric_op: editor.metric_op,

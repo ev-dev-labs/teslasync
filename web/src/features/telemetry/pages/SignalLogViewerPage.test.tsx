@@ -450,14 +450,14 @@ describe('SignalLogViewerPage', () => {
     expect(mockedRequest.mock.calls[0][0]).toContain('limit=250');
 
     // Pagination indicator: page 1 of 2 (ceil(30 / 25)).
-    await screen.findByText('1 / 2');
+    await screen.findByRole('button', { name: 'Page 1 of 2' });
     const nextBtn = screen.getByRole('button', { name: 'Next page' });
     expect(nextBtn).toBeEnabled();
 
     fireEvent.click(nextBtn);
 
     // Advanced to the final page; Next is now disabled.
-    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
   });
 });

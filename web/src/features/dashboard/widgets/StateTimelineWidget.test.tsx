@@ -26,8 +26,8 @@
  * the freshness control and empty state are exercised for real.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { WidgetProps } from './types';
@@ -75,7 +75,7 @@ const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const echo = (_k: string, d: string) => d;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -122,6 +122,40 @@ beforeEach(() => {
   mockVehicles.mockReturnValue({ data: [{ id: 1 }] });
   mockSummary.mockReturnValue(makeQuery({ data: [] }));
   mockTimeline.mockReturnValue(makeQuery({ data: [] }));
+});
+
+describe.each([1, 2, 3])('StateTimelineWidget — identifying heading at cols=%i', (cols) => {
+  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+    'keeps exactly one visible shell heading when %s',
+    (state) => {
+      const populated = state === 'populated' || state === 'retained failure';
+      const failed = state === 'initial failure' || state === 'retained failure';
+      mockSummary.mockReturnValue(makeQuery({
+        data: populated ? summaryRows() : state === 'empty' ? [] : undefined,
+        isLoading: state === 'loading',
+        isError: failed,
+        error: failed ? new Error('offline') : null,
+      }));
+      mockTimeline.mockReturnValue(makeQuery({
+        data: populated ? timelineRows() : state === 'empty' ? [] : undefined,
+        isLoading: state === 'loading',
+        isError: failed,
+        error: failed ? new Error('offline') : null,
+      }));
+      const { container } = renderWidget({ size: { cols, rows: 2 } });
+      const headings = screen.getAllByRole('heading', { name: 'State timeline', level: 3 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toBeVisible();
+      if (populated) {
+        expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
+        if (cols === 3) expect(screen.getByText('24h timeline')).toBeInTheDocument();
+      }
+      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'empty') expect(screen.getByText('No state data available')).toBeInTheDocument();
+      if (state === 'initial failure') expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
+      if (state === 'retained failure') expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
+    },
+  );
 });
 
 describe('buildSegments (utility)', () => {
@@ -207,35 +241,61 @@ describe('StateTimelineWidget — standard layout (≥2 col)', () => {
     expect(screen.getByText('idle')).toBeInTheDocument();
     expect(screen.getByText('3h 0m')).toBeInTheDocument();
     expect(screen.getByText('1h 0m')).toBeInTheDocument();
-    expect(screen.getByText('75.0%')).toBeInTheDocument();
-    expect(screen.getByText('25.0%')).toBeInTheDocument();
+    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(screen.getByText('25.00%')).toBeInTheDocument();
     // Stacked bar segments carry the state/percentage tooltip.
-    expect(screen.getByTitle('driving: 75.0%')).toBeInTheDocument();
-    expect(screen.getByTitle('idle: 25.0%')).toBeInTheDocument();
+    expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
+    expect(screen.getByTitle('idle: 25.00%')).toBeInTheDocument();
     // The 24h stripe is wide-only — it must NOT appear here even with timeline data.
     expect(screen.queryByText('24h timeline')).not.toBeInTheDocument();
   });
 });
 
 describe('StateTimelineWidget — compact layout (≤1 col)', () => {
-  it('renders the stacked bar + integer legend, no title and no rows', () => {
+  it('renders the title, stacked bar + integer legend without duration rows', () => {
     mockSummary.mockReturnValue(makeQuery({ data: summaryRows() }));
     renderWidget({ size: { cols: 1, rows: 1 } });
 
-    // No shell title in the 1×1 slot.
-    expect(screen.queryByRole('heading', { name: 'State timeline' })).not.toBeInTheDocument();
+    // The shell identifies even a 1×1 slot.
+    expect(screen.getByRole('heading', { name: 'State timeline', level: 3 })).toBeVisible();
     // Legend: label + integer percentage (no decimals, no duration rows).
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('idle')).toBeInTheDocument();
-    expect(screen.getByText('75%')).toBeInTheDocument();
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(screen.getByText('25.00%')).toBeInTheDocument();
     expect(screen.queryByText('3h 0m')).not.toBeInTheDocument();
     // Stacked bar is still present in the compact slot.
-    expect(screen.getByTitle('driving: 75.0%')).toBeInTheDocument();
+    expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
   });
 });
 
 describe('StateTimelineWidget — wide layout (≥3 col)', () => {
+  it('preserves retained transitions when the independent summary source fails', () => {
+    mockSummary.mockReturnValue(makeQuery({ isError: true, error: new Error('summary unavailable') }));
+    mockTimeline.mockReturnValue(makeQuery({ data: timelineRows() }));
+    renderWidget({ size: { cols: 4, rows: 3 } });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('24h timeline')).toBeInTheDocument();
+    expect(screen.getByTitle('driving: 100.00 min')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+  it('keeps the summary readable while the independent transition query loads', () => {
+    mockSummary.mockReturnValue(makeQuery({ data: summaryRows() }));
+    mockTimeline.mockReturnValue(makeQuery({ isLoading: true }));
+    const { container } = renderWidget({ size: { cols: 4, rows: 3 } });
+    expect(screen.getByText('3h 0m')).toBeInTheDocument();
+    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+  });
+
+  it('shows transition failure locally without erasing retained summary history', () => {
+    mockSummary.mockReturnValue(makeQuery({ data: summaryRows() }));
+    mockTimeline.mockReturnValue(makeQuery({ isError: true, error: new Error('timeline unavailable') }));
+    renderWidget({ size: { cols: 4, rows: 3 } });
+    expect(screen.getByText('3h 0m')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
+  });
   it('adds the 24h transition stripe alongside the state rows', () => {
     mockSummary.mockReturnValue(makeQuery({ data: summaryRows() }));
     mockTimeline.mockReturnValue(makeQuery({ data: timelineRows() }));
@@ -246,13 +306,13 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     expect(screen.getByText('3h 0m')).toBeInTheDocument();
     // Wide-only stripe: label + per-transition tooltips.
     expect(screen.getByText('24h timeline')).toBeInTheDocument();
-    expect(screen.getByTitle('driving: 100 min')).toBeInTheDocument();
-    expect(screen.getByTitle('idle: 50 min')).toBeInTheDocument();
+    expect(screen.getByTitle('driving: 100.00 min')).toBeInTheDocument();
+    expect(screen.getByTitle('idle: 50.00 min')).toBeInTheDocument();
   });
 });
 
 describe('StateTimelineWidget — loading / empty / error', () => {
-  it('shows a skeleton while loading (no title, no empty state)', () => {
+  it('retains the title while loading (skeleton, no empty state)', () => {
     mockSummary.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     mockTimeline.mockReturnValue(makeQuery({ data: undefined }));
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
@@ -273,20 +333,75 @@ describe('StateTimelineWidget — loading / empty / error', () => {
     expect(screen.queryByText('driving')).not.toBeInTheDocument();
   });
 
-  it('degrades to the empty state (never a crash) when the removed endpoints error', () => {
+  it('reports an initial source failure rather than masquerading as an empty history', () => {
     // /vehicle-states/{summary,timeline} were dropped in Phase-42, so these
     // queries always error in production — the widget must stay non-blank.
     mockSummary.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('410 Gone') }));
     mockTimeline.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('410 Gone') }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByText('No state data available')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
     // The refresh control stays available so the user can retry.
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
 
 describe('StateTimelineWidget — refresh + vehicle resolution', () => {
+  it('retries only the empty summary while preserving usable wide transition history', () => {
+    const summaryRefetch = vi.fn();
+    const timelineRefetch = vi.fn();
+    mockSummary.mockReturnValue(makeQuery({ data: [], refetch: summaryRefetch }));
+    mockTimeline.mockReturnValue(makeQuery({ data: timelineRows(), refetch: timelineRefetch }));
+    renderWidget({ size: { cols: 4, rows: 3 } });
+    const empty = screen.getByText('No state data available').closest<HTMLElement>('[role="status"]')!;
+    fireEvent.click(within(empty).getByRole('button', { name: 'Refresh' }));
+    expect(summaryRefetch).toHaveBeenCalledOnce();
+    expect(timelineRefetch).not.toHaveBeenCalled();
+    expect(screen.getByText('24h timeline')).toBeInTheDocument();
+  });
+
+  it('retries only the empty wide timeline while preserving the state summary', () => {
+    const summaryRefetch = vi.fn();
+    const timelineRefetch = vi.fn();
+    mockSummary.mockReturnValue(makeQuery({ data: summaryRows(), refetch: summaryRefetch }));
+    mockTimeline.mockReturnValue(makeQuery({ data: [], refetch: timelineRefetch }));
+    renderWidget({ size: { cols: 4, rows: 3 } });
+    const empty = screen.getByText('No state data available').closest<HTMLElement>('[role="status"]')!;
+    fireEvent.click(within(empty).getByRole('button', { name: 'Refresh' }));
+    expect(timelineRefetch).toHaveBeenCalledOnce();
+    expect(summaryRefetch).not.toHaveBeenCalled();
+    expect(screen.getByText('3h 0m')).toBeInTheDocument();
+  });
+
+  it('retries both sources from the completely empty history state', () => {
+    const summaryRefetch = vi.fn();
+    const timelineRefetch = vi.fn();
+    mockSummary.mockReturnValue(makeQuery({ data: [], refetch: summaryRefetch }));
+    mockTimeline.mockReturnValue(makeQuery({ data: [], refetch: timelineRefetch }));
+    renderWidget();
+    const empty = screen.getByText('No state data available').closest<HTMLElement>('[role="status"]')!;
+    fireEvent.click(within(empty).getByRole('button', { name: 'Refresh' }));
+    expect(summaryRefetch).toHaveBeenCalledOnce();
+    expect(timelineRefetch).toHaveBeenCalledOnce();
+  });
+
+  it('navigates to fleet discovery when no vehicle exists instead of querying an empty identifier', () => {
+    mockVehicles.mockReturnValue({ data: [] });
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<StateTimelineWidget size={{ cols: 2, rows: 2 }} />} />
+          <Route path="/vehicles" element={<div>Fleet destination</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('link', { name: 'Fleet' }));
+    expect(screen.getByText('Fleet destination')).toBeInTheDocument();
+    expect(mockSummary).toHaveBeenCalledWith('');
+    expect(mockTimeline).toHaveBeenCalledWith('');
+  });
+
   it('refetches BOTH analytics queries when the refresh control is activated', () => {
     const summaryRefetch = vi.fn();
     const timelineRefetch = vi.fn();

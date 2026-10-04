@@ -173,8 +173,9 @@ describe('AuditLogPage — data states', () => {
       expect(screen.getByRole('columnheader', { name: header })).toBeInTheDocument();
     }
 
-    // CSV export is reachable by its accessible name (icon-only control).
-    expect(screen.getByRole('button', { name: 'Download CSV' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    expect(screen.getByRole('menuitem', { name: 'Download as CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Download as JSON' })).toBeInTheDocument();
 
     // The hook hits the un-prefixed path (request() adds /api/v1).
     expect(mockedRequest).toHaveBeenCalledWith('/system/audit', expect.anything());
@@ -206,7 +207,7 @@ describe('AuditLogPage — data states', () => {
     expect(screen.queryByRole('table')).toBeNull();
     // Search + export chrome only appears once there is data to filter.
     expect(screen.queryByPlaceholderText(SEARCH_PLACEHOLDER)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Download CSV' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Export list' })).toBeNull();
   });
 
   it('announces a fetch failure through a role="alert" region', async () => {

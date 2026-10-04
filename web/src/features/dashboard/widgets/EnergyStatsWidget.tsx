@@ -1,7 +1,7 @@
 import { useCallback, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, BatteryCharging, Leaf, DollarSign, Route, TrendingUp } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { Caption } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
@@ -78,6 +78,15 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
 
   const hasData = !!data;
   const hasChartData = chartData.some((point) => point.energy != null);
+  const axisLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.energy)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => fmt(value)),
+    [chartData, fmt],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
 
   // Build stat items for the grid
   const stats = useMemo((): StatGridItem[] => {
@@ -153,7 +162,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
       <WidgetShell {...shellProps}>
         {hasData ? (
           <WidgetBigNumber
-            value={knownNumber(data.total_wh) == null ? null : convertEnergyFromSI(data.total_wh, unitPrefs.energy)}
+            value={knownNumber(data.total_wh) == null ? null : fmtNumber(convertEnergyFromSI(data.total_wh, unitPrefs.energy))}
             unit={unitPrefs.energy}
             align="center"
           />
@@ -202,7 +211,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
               className="shrink-0"
             >
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
+                <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                   {chartGrid}
                   <XAxis
                     dataKey="date"
@@ -214,7 +223,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
                     tick={tick}
                     tickLine={false}
                     axisLine={false}
-                    width={40}
+                    width={axisWidth}
                     tickFormatter={(v: number) => fmt(v)}
                   />
                   <Tooltip

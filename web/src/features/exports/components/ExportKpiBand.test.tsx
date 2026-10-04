@@ -120,7 +120,7 @@ describe('ExportKpiBand', () => {
   it('renders the storage footprint as a binary-unit byte string (formatBytes)', () => {
     renderBand({ totalBytes: 1536 });
 
-    expect(screen.getByText('1.5 KB')).toBeInTheDocument();
+    expect(screen.getByText('1.50 KB')).toBeInTheDocument();
   });
 
   it('collapses a zero storage footprint to an em-dash (formatBytes zeroAsEmpty)', () => {

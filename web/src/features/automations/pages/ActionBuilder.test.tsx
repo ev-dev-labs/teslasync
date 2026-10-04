@@ -358,7 +358,7 @@ describe('ActionFields — set_setting', () => {
     expect(lastAction(onChange)).toEqual({
       kind: 'action_set_setting',
       setting_key: 'charge_limit',
-      value_num: 0,
+      value_num: null,
     });
     fireEvent.change(screen.getByLabelText('Value'), { target: { value: '80' } });
     expect(lastAction(onChange).value_num).toBe(80);
@@ -379,7 +379,58 @@ describe('ActionFields — set_setting', () => {
   it('derives the "number" value type from an existing numeric value', () => {
     renderBuilder([{ kind: 'action_set_setting', setting_key: 'x', value_num: 42 }]);
     expect((screen.getByLabelText('Value type') as HTMLSelectElement).value).toBe('number');
-    expect((screen.getByLabelText('Value') as HTMLInputElement).value).toBe('42');
+    expect((screen.getByLabelText('Value') as HTMLInputElement).value).toBe('42.00');
+  });
+
+  it('parses locale decimals without truncation and retains the numeric editor when cleared', () => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ locale: 'de-DE', decimal_precision: 3 }),
+    } as ReturnType<typeof useSettings>);
+    const { onChange } = renderBuilder([
+      { kind: 'action_set_setting', setting_key: 'threshold', value_num: 1.25 },
+    ]);
+    const input = screen.getByLabelText('Value');
+    expect(input).toHaveValue('1,250');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '12,375' } });
+    expect(lastAction(onChange).value_num).toBe(12.375);
+    fireEvent.change(input, { target: { value: '' } });
+    expect(lastAction(onChange).value_num).toBeNull();
+    expect(screen.getByLabelText('Value type')).toHaveValue('number');
+    expect(input).toHaveValue('');
+    fireEvent.change(input, { target: { value: '12invalid' } });
+    fireEvent.blur(input);
+    expect(lastAction(onChange).value_num).toBeNull();
+    expect(screen.getByLabelText('Value type')).toHaveValue('number');
+    expect(screen.getByText('Enter a valid number')).toBeInTheDocument();
+  });
+
+  it('uses the locale parser when converting text to a numeric setting', () => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ locale: 'de-DE' }),
+    } as ReturnType<typeof useSettings>);
+    const { onChange } = renderBuilder([
+      { kind: 'action_set_setting', setting_key: 'threshold', value_text: '1,25' },
+    ]);
+    fireEvent.change(screen.getByLabelText('Value type'), { target: { value: 'number' } });
+    expect(lastAction(onChange).value_num).toBe(1.25);
+    expect(screen.getByLabelText('Value')).toHaveValue('1,25');
+  });
+
+  it('updates displayed locale and precision without rewriting the canonical setting', () => {
+    const actions: AutomationActionStepInput[] = [
+      { kind: 'action_set_setting', setting_key: 'threshold', value_num: 12.3456 },
+    ];
+    const onChange = vi.fn();
+    const view = render(<ActionBuilder actions={actions} channels={[]} onChange={onChange} />);
+    expect(screen.getByLabelText('Value')).toHaveValue('12.35');
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ locale: 'de-DE', decimal_precision: 3 }),
+    } as ReturnType<typeof useSettings>);
+    view.rerender(<ActionBuilder actions={actions} channels={[]} onChange={onChange} />);
+    expect(screen.getByLabelText('Value')).toHaveValue('12,346');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(actions[0]).toMatchObject({ value_num: 12.3456 });
   });
 
   it('derives the "boolean" value type + label from an existing boolean value', () => {

@@ -92,7 +92,7 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell title={t('widget.drivingCoach.title', 'Driving coach')} {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
           <WidgetBigNumber value={score == null ? null : fmtInt(score)} align="center" animated={false} />
           {savingsPct != null && savingsPct > 0 && (

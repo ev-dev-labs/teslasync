@@ -40,7 +40,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * dashboard tests.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -109,7 +109,7 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return { ...actual, ...chartTestDoubles, useMeasuredAxisWidth: vi.fn(actual.useMeasuredAxisWidth) };
 });
 
 // useThemeChartPalette() calls useTheme(), which throws outside a
@@ -159,6 +159,7 @@ vi.mock('recharts', async () => {
       {
         'data-testid': 'area-chart',
         'data-points': String(Array.isArray(props.data) ? props.data.length : 0),
+        'data-margin': JSON.stringify(props.margin),
       },
       React.createElement('svg', null, props.children as ReactNode),
     );
@@ -178,12 +179,19 @@ vi.mock('recharts', async () => {
     React.createElement('g', { 'data-testid': 'reference-line', 'data-y': String(props.y ?? '') });
   const XAxis = (props: P) =>
     React.createElement('g', { 'data-testid': 'x-axis', 'data-key': String(props.dataKey ?? '') });
-  const YAxis = () => React.createElement('g', { 'data-testid': 'y-axis' });
+  const YAxis = (props: P) => React.createElement('g', {
+    'data-testid': 'y-axis',
+    'data-width': String(props.width),
+    'data-domain': JSON.stringify(props.domain),
+    'data-tick': JSON.stringify(props.tick),
+    'data-label': (props.tickFormatter as (v: number) => string)(95.123456),
+  });
   const Tooltip = () => React.createElement('g', { 'data-testid': 'tooltip' });
   return { ...actual, ResponsiveContainer, AreaChart, Area, CartesianGrid, ReferenceLine, XAxis, YAxis, Tooltip };
 });
 
 import BatteryDegradationTrendWidget from './BatteryDegradationTrendWidget';
+import { useMeasuredAxisWidth } from '@/components/charts';
 import type { WidgetSize } from './types';
 import type { DegradationData } from '@/types/energy';
 
@@ -255,10 +263,43 @@ function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: numbe
 }
 
 beforeEach(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  vi.mocked(useMeasuredAxisWidth).mockClear();
   degradationMock.mockReset();
   vehiclesMock.mockReset();
   degradationMock.mockReturnValue(makeQuery({ data: makeData() }));
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe('BatteryDegradationTrendWidget axis gutter', () => {
+  it.each([2, 3])('measures complete percent labels and explicit bounds at %i columns', cols => {
+    degradationMock.mockReturnValue(makeQuery({ data: makeData({
+      monthly_trend: [
+        { month: 'Jan', avg_health: 95.123456 },
+        { month: 'Feb', avg_health: 96 },
+        { month: 'Mar', avg_health: Number.NaN },
+        { month: 'Apr', avg_health: null },
+      ],
+    }) }));
+    renderWidget({ cols, rows: 2 });
+    const options = vi.mocked(useMeasuredAxisWidth).mock.lastCall![0];
+    expect(options.labels).toEqual(['95.123456%', '96%', '93.123456%', '80%', '100%']);
+    expect(options.fontSize).toBe(10);
+    expect(options.minWidth).toBe(60);
+    expect(options.padding).toBe(24);
+    const axis = screen.getByTestId('y-axis');
+    expect(Number(axis.getAttribute('data-width'))).toBeGreaterThanOrEqual(Math.ceil('95.123456%'.length * 10 * 0.75) + 24);
+    expect(axis).toHaveAttribute('data-label', '95.123456%');
+    expect(axis).toHaveAttribute('data-domain', JSON.stringify(['dataMin - 2', 100]));
+    expect(JSON.parse(screen.getByTestId('area-chart').getAttribute('data-margin')!).left).toBe(4);
+  });
+
+  it('keeps compact summaries chart-free and disables measurement', () => {
+    renderWidget({ cols: 1, rows: 1 });
+    expect(screen.queryByTestId('area-chart')).toBeNull();
+    expect(vi.mocked(useMeasuredAxisWidth).mock.lastCall![0].enabled).toBe(false);
+  });
 });
 
 /* ── Specs ────────────────────────────────────────────────────────── */
@@ -268,7 +309,7 @@ describe('BatteryDegradationTrendWidget', () => {
     degradationMock.mockReturnValue(makeQuery({ data: makeData(), error: new Error('transient'), isError: true }));
     renderWidget();
     expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '3');
-    expect(screen.getByText('95.4%')).toBeInTheDocument();
+    expect(screen.getByText('95.40%')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -280,7 +321,7 @@ describe('BatteryDegradationTrendWidget', () => {
 
     // SoH prefers current_health_pct (95.4), formatted to one decimal.
     expect(screen.getByText('SoH')).toBeInTheDocument();
-    expect(screen.getByText('95.4%')).toBeInTheDocument();
+    expect(screen.getByText('95.40%')).toBeInTheDocument();
 
     // Degradation stat is present with its "/mo" unit and rate value.
     expect(screen.getByText('Degradation')).toBeInTheDocument();
@@ -337,8 +378,8 @@ describe('BatteryDegradationTrendWidget', () => {
     renderWidget();
 
     // 0 must win over the legacy 88 → "0.0%", never "88.0%".
-    expect(screen.getByText('0.0%')).toBeInTheDocument();
-    expect(screen.queryByText('88.0%')).not.toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.queryByText('88.00%')).not.toBeInTheDocument();
   });
 
   it('falls back to the legacy current_health when the pct field is absent', () => {
@@ -347,7 +388,7 @@ describe('BatteryDegradationTrendWidget', () => {
     );
     renderWidget();
 
-    expect(screen.getByText('88.0%')).toBeInTheDocument();
+    expect(screen.getByText('88.00%')).toBeInTheDocument();
   });
 
   it('keeps a genuine zero degradation rate visible', () => {

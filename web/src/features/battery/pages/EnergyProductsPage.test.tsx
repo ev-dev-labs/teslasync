@@ -256,11 +256,11 @@ describe('EnergyProductsPage — ready dashboard', () => {
     expect(within(summary).getByText('Energy Sites')).toBeInTheDocument();
     expect(within(summary).getByText('With Solar')).toBeInTheDocument();
     expect(within(summary).getByText('Total Capacity')).toBeInTheDocument();
-    expect(within(summary).getByText('13.5 kWh')).toBeInTheDocument();
+    expect(within(summary).getByText('13.50 kWh')).toBeInTheDocument();
 
     // Site card header + stats.
     expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
-    expect(screen.getByText('87.5%')).toBeInTheDocument(); // charge
+    expect(screen.getByText('87.50%')).toBeInTheDocument(); // charge
     expect(screen.getByText('Powerwall')).toBeInTheDocument(); // Type card (battery → Powerwall)
 
     // Site configuration section (own query) — deterministic SI values.
@@ -270,15 +270,15 @@ describe('EnergyProductsPage — ready dashboard', () => {
     // nodes, and the meter announces the reading with its range.
     const reserve = screen.getByRole('meter', { name: /backup reserve/i });
     expect(reserve).toHaveAttribute('aria-valuenow', '20');
-    expect(reserve).toHaveAttribute('aria-valuetext', '20%');
-    expect(screen.getByText('5.0 kW')).toBeInTheDocument(); // rated power (W → kW)
+    expect(reserve).toHaveAttribute('aria-valuetext', '20.00%');
+    expect(screen.getByText('5.00 kW')).toBeInTheDocument(); // rated power (W → kW)
     expect(screen.getByText(/Firmware: 23\.44\.0/)).toBeInTheDocument(); // firmware label + version
     expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument(); // timezone
     expect(screen.getByText('tou capable')).toBeInTheDocument(); // component chip (underscored → spaced)
     expect(screen.getByText('PG&E EV2-A')).toBeInTheDocument(); // TOU rate plan
 
     // "13.5 kWh" appears in KPI total + card capacity + rated energy.
-    expect(screen.getAllByText('13.5 kWh').length).toBe(3);
+    expect(screen.getAllByText('13.50 kWh').length).toBe(3);
 
     // Refresh affordances expose accessible names on icon-only controls.
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeInTheDocument();
@@ -328,7 +328,7 @@ describe('EnergyProductsPage — ready dashboard', () => {
 
     const summary = screen.getByRole('region', { name: 'Energy summary' });
     // 2 sites, 1 with solar, 1 storm-ready; 13500 + 13500 Wh → "27.0 kWh".
-    expect(within(summary).getByText('27.0 kWh')).toBeInTheDocument();
+    expect(within(summary).getByText('27.00 kWh')).toBeInTheDocument();
     // Both site cards rendered.
     expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
     expect(screen.getByText('Cabin')).toBeInTheDocument();
@@ -374,7 +374,7 @@ describe('EnergyProductsPage — loading / error / empty', () => {
     const summary = screen.getByRole('region', { name: 'Energy summary' });
     expect(within(summary).getByText('Energy Sites')).toBeInTheDocument();
     // Total capacity of an empty fleet is 0 Wh → "0 Wh".
-    expect(within(summary).getByText('0 Wh')).toBeInTheDocument();
+    expect(within(summary).getByText('0.00 Wh')).toBeInTheDocument();
   });
 
   it('invokes the refresh mutation when the header action is clicked', () => {
@@ -447,16 +447,16 @@ describe('fmtEnergy / fmtPower', () => {
   });
 
   it('scales at the 1000 SI boundary (Wh↔kWh, W↔kW)', () => {
-    expect(fmtEnergy(999)).toBe('999 Wh');
-    expect(fmtEnergy(1000)).toBe('1.0 kWh');
-    expect(fmtEnergy(13500)).toBe('13.5 kWh');
-    expect(fmtPower(500)).toBe('500 W');
-    expect(fmtPower(5000)).toBe('5.0 kW');
+    expect(fmtEnergy(999)).toBe('999.00 Wh');
+    expect(fmtEnergy(1000)).toBe('1.00 kWh');
+    expect(fmtEnergy(13500)).toBe('13.50 kWh');
+    expect(fmtPower(500)).toBe('500.00 W');
+    expect(fmtPower(5000)).toBe('5.00 kW');
   });
 
   it('uses magnitude so negative (export) values still scale', () => {
-    expect(fmtPower(-2000)).toBe('-2.0 kW');
-    expect(fmtEnergy(0)).toBe('0 Wh');
+    expect(fmtPower(-2000)).toBe('-2.00 kW');
+    expect(fmtEnergy(0)).toBe('0.00 Wh');
   });
 });
 

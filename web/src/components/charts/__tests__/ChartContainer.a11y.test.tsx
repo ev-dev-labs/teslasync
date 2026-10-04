@@ -398,17 +398,18 @@ describe('ChartContainer accessibility contract', () => {
       '[contain:layout_size]',
     );
     expect(chart).not.toHaveClass('h-full');
+    expect(chart).not.toHaveClass('[&>.recharts-responsive-container]:flex-1');
   });
 
-  it('keeps fluid embedded sizing bounded by the shared fallback height', () => {
+  it.each([false, true])('fills the fluid plot inside a bounded=%s host without changing fallback heights', bounded => {
     renderChart(
-      <div className="h-72">
+      <div className={bounded ? 'h-72' : 'flex flex-col'}>
         <EmbeddedChart
           title="Fluid widget"
           ariaLabel="Fluid embedded chart"
           fluid
         >
-          <div>chart</div>
+          <div className="recharts-responsive-container h-full" data-testid="responsive-plot">chart</div>
         </EmbeddedChart>
       </div>,
     );
@@ -419,6 +420,10 @@ describe('ChartContainer accessibility contract', () => {
     expect(figure).toHaveAttribute('data-chart-fluid', 'true');
     expect(figure).toHaveClass('h-full', 'min-h-0', 'max-h-full');
     expect(chart).toHaveClass(
+      'flex',
+      'flex-col',
+      '[&>.recharts-responsive-container]:flex-1',
+      '[&>.recharts-responsive-container]:min-h-0',
       'h-full',
       'min-h-[var(--chart-height-mobile)]',
       'sm:min-h-[var(--chart-height-desktop)]',
@@ -429,6 +434,7 @@ describe('ChartContainer accessibility contract', () => {
       '--chart-height-mobile': '200px',
       '--chart-height-desktop': '240px',
     });
+    expect(screen.getByTestId('responsive-plot').parentElement).toBe(chart);
   });
 
   it('renders contextual empty copy without exposing an empty chart image', () => {

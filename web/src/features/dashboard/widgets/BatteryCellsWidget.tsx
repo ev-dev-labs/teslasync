@@ -81,7 +81,7 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.batteryCells.title', 'Battery cells')}
+      title={t('widget.batteryCells.title', 'Battery cells')}
       icon={<Cpu className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={data != null || isLoading || isError || error ? trust : undefined}

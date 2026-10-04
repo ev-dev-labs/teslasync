@@ -17,9 +17,9 @@ export interface TripReplayChartPoint {
    *  store, so `syncMethod="value"` is required on the provider. */
   time: number;
   /** Speed in user-preferred units. */
-  speed: number;
+  speed: number | null;
   /** Power in kW. */
-  power: number;
+  power: number | null;
 }
 
 export interface TripReplayChartsProps {
@@ -110,7 +110,7 @@ function TimelineChart({
       height={height}
     >
       {({ hiddenSeries }) => (
-        data.length > 0 ? (
+        data.some(point => point.speed != null || point.power != null) ? (
           <ResponsiveContainer width="100%" height={height}>
             <AreaChart
             data={data}
@@ -171,6 +171,7 @@ function TimelineChart({
               stroke={CHART_COLORS[0]}
               fill="url(#speedGrad)"
               isAnimationActive={false}
+              connectNulls={false}
               hide={hiddenSeries?.isHidden('speed')}
             />
             <Area
@@ -181,6 +182,7 @@ function TimelineChart({
               stroke={CHART_COLORS[1]}
               fill="url(#powerGrad)"
               isAnimationActive={false}
+              connectNulls={false}
               hide={hiddenSeries?.isHidden('power')}
             />
             {cursorTime != null && (

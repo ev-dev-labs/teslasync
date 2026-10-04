@@ -23,7 +23,7 @@ describe('Configured-rate cost estimates', () => {
   it('keeps all cost rows visible, with explicit unknown gas comparison and estimate caveat', () => {
     render(<CostSavingsPanel drive={driveFixture({ distanceM: 50000, energyUsedWh: 10000 })} stats={statsFixture()} />);
     expect(value('Trip cost')).toBe('$1.20');
-    expect(value('Cost / km')).toBe('$0.024');
+    expect(value('Cost / km')).toBe('$0.02');
     expect(value('Gas cost (equivalent)')).toBe('—');
     expect(value('Savings vs gas')).toBe('—');
     expect(screen.getByText(/not a charging invoice/)).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe('Configured-rate cost estimates', () => {
   it('uses SI meters and user-selected miles with the real formatting hook', () => {
     Object.assign(settings.current, { unit_of_length: 'mi', gas_price_per_unit: 4 });
     render(<CostSavingsPanel drive={driveFixture({ distanceM: 40233.6, energyUsedWh: 10000 })} stats={statsFixture()} />);
-    expect(value('Cost / mi')).toBe('$0.048');
+    expect(value('Cost / mi')).toBe('$0.05');
     expect(value('Gas cost (equivalent)')).toBe('$4.00');
     expect(value('Savings vs gas')).toBe('$2.80');
     expect(value('Savings %')).toBe('70.00%');

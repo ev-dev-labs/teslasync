@@ -5,13 +5,13 @@
  * frequency) plus an average-power line, sourced from `useSpeedProfile()`.
  * Everything on the wire is SI: the distribution's `avg_power_w` is watts and
  * `optimalSpeedMps` is metres-per-second, BUT the API's `speed_bucket` LABELS
- * are miles-per-hour strings (`'34-67'` = 34-67 mph — the Go handler buckets on
+ * are miles-per-hour strings (`'33.55-67.11'` = 34-67 mph — the Go handler buckets on
  * `6.7056 mps = 15 mph`). The widget converts at the render boundary via
  * `convertSpeedFromSI` / `convertPowerFromSI` + `useUnits().unitPrefs`. Its
  * behaviour surface — the thing under test:
  *
  *   1. Two responsive layouts driven by `size.cols`:
- *        - compact (cols <= 1): a title-less shell with just the "Most Common"
+ *        - compact (cols <= 1): a titled shell with just the "Most Common"
  *          + "Sweet Spot" summary stats (no "Peak Freq", no chart), or an
  *          EmptyState.
  *        - standard/wide (cols >= 2): a titled "Speed Profile" shell with the
@@ -47,10 +47,12 @@
  * reaches for router context.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { ReactElement } from 'react';
+import { chartMargin } from '@/components/charts';
 import type { SpeedProfileData, SpeedBucket } from '@/types/driving';
-import SpeedProfileWidget from './SpeedProfileWidget';
+import SpeedProfileWidget, { frequencyAxisWidth } from './SpeedProfileWidget';
 
 // jsdom lacks matchMedia; DataFreshness → useMotionPreference reads it during
 // render. Install a benign stub before any component mounts.
@@ -76,6 +78,7 @@ const { useSpeedProfileMock, useVehiclesMock, useUnitsMock } = vi.hoisted(() => 
   useVehiclesMock: vi.fn(),
   useUnitsMock: vi.fn(),
 }));
+const chartGeometry = vi.hoisted(() => ({ enabled: false }));
 
 vi.mock('@/api/hooks/useDriving', () => ({
   useSpeedProfile: (vehicleId?: string) => useSpeedProfileMock(vehicleId),
@@ -100,7 +103,15 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  const { cloneElement, createElement } = await import('react');
+  return {
+    ...actual,
+    ...chartTestDoubles,
+    ResponsiveContainer: (props: { children: ReactElement<{ width?: number; height?: number }> }) =>
+      chartGeometry.enabled
+        ? cloneElement(props.children, { width: 640, height: 200 })
+        : createElement(actual.ResponsiveContainer, props),
+  };
 });
 
 vi.mock('@/components/ui/ThemeProvider', async (importOriginal) => {
@@ -174,6 +185,11 @@ const TWO_BUCKETS: SpeedBucket[] = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  chartGeometry.enabled = false;
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    font: '',
+    measureText: (label: string) => ({ width: label.length * 6 }),
+  } as unknown as CanvasRenderingContext2D);
   // Sensible defaults so a test that forgets to seed a hook still renders
   // rather than crashing on a destructure of `undefined`.
   useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
@@ -181,8 +197,118 @@ beforeEach(() => {
   useSpeedProfileMock.mockReturnValue(makeQuery());
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Speed profile', level: 3 })).toBeVisible();
+});
+
+describe('percentage axis label width', () => {
+  it('reserves measured text width plus tick and edge spacing', () => {
+    const measure = vi.fn((label: string) => label === '100.00%' ? 43.2 : 30);
+    expect(frequencyAxisWidth(['0.00%', '100.00%'], measure)).toBe(56);
+    expect(measure).toHaveBeenCalledWith('100.00%');
+  });
+
+  it('preserves locale separators and increased precision instead of abbreviating labels', () => {
+    const measure = (label: string) => label.length * 7;
+    expect(frequencyAxisWidth(['0,00 %', '100,00 %'], measure)).toBe(68);
+    expect(frequencyAxisWidth(['100.00000000%'], measure)).toBe(103);
+    expect(frequencyAxisWidth(['١٠٠٫٠٠٪'], measure)).toBe(61);
+  });
+
+  it.each([2, 3])('measures actual formatted percentage labels in the %s-column chart font', cols => {
+    renderWidget({ cols, rows: 4 });
+    const context = vi.mocked(HTMLCanvasElement.prototype.getContext).mock.results[0].value as CanvasRenderingContext2D;
+    expect(context.font).toMatch(new RegExp(`^${cols === 3 ? 11 : 10}px `));
+    expect(frequencyAxisWidth(['100.00%'], label => context.measureText(label).width)).toBe(54);
+  });
+
+  it('retains the 35px minimum for empty or narrow labels', () => {
+    expect(frequencyAxisWidth([], () => 0)).toBe(35);
+    expect(frequencyAxisWidth(['0%'], () => 1)).toBe(35);
+  });
+
+  it('does not measure a canvas for the compact summary', () => {
+    renderWidget({ cols: 1, rows: 4 });
+    expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
+  });
+
+  it('remeasures complete formatted source labels using the inherited font after fonts are ready', async () => {
+    const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts');
+    const originalFontFamily = document.body.style.fontFamily;
+    let ready!: () => void;
+    const fontReady = new Promise<void>(resolve => { ready = resolve; });
+    Object.defineProperty(document, 'fonts', { configurable: true, value: { ready: fontReady } });
+    document.body.style.fontFamily = 'AxisIntegrationFont';
+    let characterWidth = 6;
+    const measureText = vi.fn((label: string) => ({ width: label.length * characterWidth }));
+    const context = { font: '', measureText } as unknown as CanvasRenderingContext2D;
+    vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue(context);
+    useSpeedProfileMock.mockReturnValue(makeQuery({ data: makeData({ distribution: TWO_BUCKETS }) }));
+    try {
+      renderWidget({ cols: 3, rows: 4 });
+      expect(context.font).toBe('11px AxisIntegrationFont');
+      expect(measureText).toHaveBeenCalledWith('100.00%');
+      expect(measureText).toHaveBeenCalledWith('75.00%');
+      expect(measureText.mock.calls.filter(([label]) => label === '75.00%')).toHaveLength(2);
+      expect(frequencyAxisWidth(['100.00%'], label => context.measureText(label).width)).toBe(54);
+      characterWidth = 8;
+      await act(async () => { ready(); await fontReady; });
+      expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalledTimes(4);
+      expect(context.font).toBe('11px AxisIntegrationFont');
+      expect(measureText.mock.calls.filter(([label]) => label === '75.00%')).toHaveLength(4);
+      expect(frequencyAxisWidth(['100.00%'], label => context.measureText(label).width)).toBe(68);
+    } finally {
+      cleanup();
+      document.body.style.fontFamily = originalFontFamily;
+      if (originalFonts) Object.defineProperty(document, 'fonts', originalFonts);
+      else Reflect.deleteProperty(document, 'fonts');
+    }
+  });
+
+  describe('power axis label width', () => {
+    it.each([2, 3])('measures complete signed and grouped power labels at %i columns', cols => {
+      chartGeometry.enabled = true;
+      const measureText = vi.fn((label: string) => ({ width: label.length * 6 }));
+      const context = { font: '', measureText };
+      Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+        configurable: true, value: () => context,
+      });
+      useUnitsMock.mockReturnValue({ unitPrefs: { speed: 'km/h', power: 'W' } });
+      useSpeedProfileMock.mockReturnValue(makeQuery({
+        data: makeData({
+          distribution: [
+            bucket({ avg_power_w: -123456.789, readings: 30 }),
+            bucket({ avg_power_w: 987654.321, readings: 10 }),
+            bucket({ avg_power_w: undefined, readings: 0 }),
+            bucket({ avg_power_w: Number.NaN, readings: 0 }),
+          ],
+        }),
+      }));
+      const { container } = renderWidget({ cols, rows: 4 });
+      expect(measureText).toHaveBeenCalledWith('-123,456.79');
+      expect(measureText).toHaveBeenCalledWith('987,654.32');
+      expect(context.font).toMatch(new RegExp(`^${cols === 3 ? 11 : 10}px `));
+      expect(measureText.mock.calls.flat()).not.toEqual(
+        expect.arrayContaining(['null', 'undefined', 'NaN']),
+      );
+      expect(measureText).toHaveBeenCalledWith('100.00%');
+      const axes = container.querySelectorAll('.recharts-yAxis');
+      expect(axes).toHaveLength(2);
+      expect(axes[0].querySelector('.recharts-cartesian-axis-tick-value')).toHaveAttribute(
+        'x', String(chartMargin.left + 54 - 8),
+      );
+      expect(axes[1].querySelector('.recharts-cartesian-axis-tick-value')).toHaveAttribute(
+        'x', String(640 - chartMargin.right - 86 + 8),
+      );
+      expect(axes[1].querySelector('.recharts-cartesian-axis-tick-value')).toHaveAttribute('text-anchor', 'start');
+    });
+  });
+});
+
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 describe('SpeedProfileWidget — standard layout (km/h)', () => {
@@ -194,15 +320,15 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Speed profile')).toBeInTheDocument();
-    // Most common = highest-frequency bucket = '34-67' mph → 54-108 km/h.
+    // Most common = highest-frequency bucket = '33.55-67.11' mph → 54-108 km/h.
     expect(screen.getByText('Most common')).toBeInTheDocument();
-    expect(screen.getByText('54-108')).toBeInTheDocument();
+    expect(screen.getByText('54.00-108.00')).toBeInTheDocument();
     // 30 of 40 readings → 75.0%.
     expect(screen.getByText('Peak freq')).toBeInTheDocument();
-    expect(screen.getByText('75.0%')).toBeInTheDocument();
-    // Sweet spot falls back to the lowest-power bucket '101-134' mph → 162-216 km/h.
+    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    // Sweet spot falls back to the lowest-power bucket '100.66-134.22' mph → 162-216 km/h.
     expect(screen.getByText('Lowest power range')).toBeInTheDocument();
-    expect(screen.getByText('162-216')).toBeInTheDocument();
+    expect(screen.getByText('162.00-216.00')).toBeInTheDocument();
     // Speed stats carry the km/h unit chip.
     expect(screen.getAllByText('km/h').length).toBeGreaterThan(0);
   });
@@ -222,7 +348,7 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
     // 15 mph = 24.14 km/h, 30 mph = 48.28 km/h → "54-108". The pre-fix code
     // treated 15/30 as m/s and rendered "54-108". (Single bucket → it is both
     // the most-common and the sweet-spot stat, hence getAllByText.)
-    expect(screen.getAllByText('54-108').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('54.00-108.00').length).toBeGreaterThan(0);
     expect(screen.queryByText('24-48')).not.toBeInTheDocument();
   });
 
@@ -239,9 +365,9 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // optimalSpeedMps 20 m/s → 72 km/h (single number, no range dash).
-    expect(screen.getByText('72')).toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
     expect(screen.getByText('Most common')).toBeInTheDocument();
-    expect(screen.getByText('54-108')).toBeInTheDocument();
+    expect(screen.getByText('54.00-108.00')).toBeInTheDocument();
   });
 
   it('formats a "75+" open-ended bucket via the numeric branch', () => {
@@ -257,8 +383,8 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // 75 mph = 120.7 km/h → "270+"; optimal 25 m/s → 90 km/h.
-    expect(screen.getByText('270+')).toBeInTheDocument();
-    expect(screen.getByText('90')).toBeInTheDocument();
+    expect(screen.getByText('270.00+')).toBeInTheDocument();
+    expect(screen.getByText('90.00')).toBeInTheDocument();
   });
 
   it('falls back to the camelCase speedBucket label when snake_case is absent', () => {
@@ -272,9 +398,9 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // 30 mph = 48.28 km/h, 45 mph = 72.42 km/h → "108-162".
-    expect(screen.getByText('108-162')).toBeInTheDocument();
+    expect(screen.getByText('108.00-162.00')).toBeInTheDocument();
     // optimal 10 m/s → 36 km/h.
-    expect(screen.getByText('36')).toBeInTheDocument();
+    expect(screen.getByText('36.00')).toBeInTheDocument();
   });
 });
 
@@ -288,8 +414,8 @@ describe('SpeedProfileWidget — unit conversion (mph)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // mph is the source unit → the bucket edges pass through unchanged.
-    expect(screen.getByText('34-67')).toBeInTheDocument();
-    expect(screen.getByText('101-134')).toBeInTheDocument();
+    expect(screen.getByText('33.55-67.11')).toBeInTheDocument();
+    expect(screen.getByText('100.66-134.22')).toBeInTheDocument();
     expect(screen.getAllByText('mph').length).toBeGreaterThan(0);
     // The km/h conversion must NOT leak through.
     expect(screen.queryByText('24-48')).not.toBeInTheDocument();
@@ -312,7 +438,7 @@ describe('SpeedProfileWidget — sweet-spot null safety', () => {
 
     // Most common still resolves; sweet spot degrades to a dash rather than
     // throwing or picking a zero-power bucket.
-    expect(screen.getByText('54-108')).toBeInTheDocument();
+    expect(screen.getByText('54.00-108.00')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
@@ -339,9 +465,8 @@ describe('SpeedProfileWidget — compact layout', () => {
 
     expect(screen.getByText('Most common')).toBeInTheDocument();
     expect(screen.getByText('Lowest power range')).toBeInTheDocument();
-    expect(screen.getByText('54-108')).toBeInTheDocument();
-    // Compact drops the header title and the peak-frequency stat.
-    expect(screen.queryByText('Speed profile')).not.toBeInTheDocument();
+    expect(screen.getByText('54.00-108.00')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Speed profile', level: 3 })).toBeVisible();
     expect(screen.queryByText('Peak freq')).not.toBeInTheDocument();
   });
 
@@ -353,7 +478,7 @@ describe('SpeedProfileWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No speed data')).toBeInTheDocument();
-    expect(screen.queryByText('Speed profile')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Speed profile', level: 3 })).toBeVisible();
   });
 });
 
@@ -373,7 +498,7 @@ describe('SpeedProfileWidget — wide layout', () => {
 });
 
 describe('SpeedProfileWidget — query states', () => {
-  it('renders a skeleton while loading with no title or empty message', () => {
+  it('keeps the heading with a loading skeleton and no empty message', () => {
     useSpeedProfileMock.mockReturnValue(
       makeQuery({ isLoading: true, data: undefined }),
     );
@@ -424,7 +549,7 @@ describe('SpeedProfileWidget — query states', () => {
 
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.getByText('Speed profile')).toBeInTheDocument();
-    expect(screen.getByText('54-108')).toBeInTheDocument();
+    expect(screen.getByText('54.00-108.00')).toBeInTheDocument();
     expect(container.querySelector('.bg-red-400')).toBeInTheDocument();
   });
 });

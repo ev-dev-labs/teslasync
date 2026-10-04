@@ -18,7 +18,7 @@
  *     the 3-card cap, and the badge being hidden when there is no headroom;
  *   - null-safety — a recommendation missing category/tip/impact renders em
  *     dashes and no `undefined` leaks to the DOM;
- *   - the compact (1×1) variant — score + savings badge, title-less, with its
+ *   - the compact (1×1) variant — heading + score + savings badge, with its
  *     own empty state;
  *   - a11y — the decorative lightbulb icons are hidden from the a11y tree and
  *     the freshness Refresh control exposes an accessible name that wires back
@@ -140,6 +140,11 @@ beforeEach(() => {
   useVehiclesMock.mockReset();
   useVehiclesMock.mockReturnValue({ data: [] });
   useDrivingCoachMock.mockReturnValue(makeResult());
+});
+
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Driving coach', level: 3 })).toBeVisible();
 });
 
 // ── Pure helper: computeSavingsPct ───────────────────────────────────────────
@@ -328,7 +333,7 @@ describe('DrivingCoachWidget — populated (full size)', () => {
 // ── Compact (1×1) variant ────────────────────────────────────────────────────
 
 describe('DrivingCoachWidget — compact (1×1)', () => {
-  it('renders the score and savings badge without the widget title or "/ 100"', () => {
+  it('renders its heading, score and savings badge without "/ 100"', () => {
     useDrivingCoachMock.mockReturnValue(
       makeResult({
         data: makeCoachData({
@@ -341,7 +346,7 @@ describe('DrivingCoachWidget — compact (1×1)', () => {
     renderWidget({ cols: 1, rows: 1 });
     expect(screen.getByText('91')).toBeInTheDocument();
     expect(screen.getByText('Potential savings: 25%')).toBeInTheDocument();
-    expect(screen.queryByText('Driving coach')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Driving coach', level: 3 })).toBeVisible();
     expect(screen.queryByText('/ 100')).toBeNull();
   });
 

@@ -18,7 +18,7 @@
  *   3. The health-primary-then-motor `??` fallback chain for each stat, and the
  *      em-dash placeholder when a reading is absent.
  *   4. Responsive layout: standard renders a titled shell + gauge + stat row;
- *      compact (cols ≤ 1) drops the title and the stat row.
+ *      compact (cols ≤ 1) keeps its identity and drops the stat row.
  *   5. Loading / error / empty branches (never a blank panel), including the
  *      hardening that keeps the skeleton up while the default vehicle is still
  *      resolving from `useVehicles` (rather than flashing "No drivetrain data").
@@ -221,7 +221,7 @@ describe('DrivetrainHealthWidget', () => {
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.getByText('Rear motor temp')).toBeInTheDocument();
-    expect(screen.getByText('52')).toBeInTheDocument();
+    expect(screen.getByText('52.00')).toBeInTheDocument();
   });
 
   it('keeps a retained categorical assessment visible after a failed refresh', () => {
@@ -245,11 +245,11 @@ describe('DrivetrainHealthWidget', () => {
 
     // Stats: health-primary temps + motor-sourced stator + drive state.
     expect(screen.getByText('Motor temp')).toBeInTheDocument();
-    expect(screen.getByText('55')).toBeInTheDocument();
+    expect(screen.getByText('55.00')).toBeInTheDocument();
     expect(screen.getByText('Stator temp')).toBeInTheDocument();
-    expect(screen.getByText('48')).toBeInTheDocument();
+    expect(screen.getByText('48.00')).toBeInTheDocument();
     expect(screen.getByText('Inverter')).toBeInTheDocument();
-    expect(screen.getByText('40')).toBeInTheDocument();
+    expect(screen.getByText('40.00')).toBeInTheDocument();
     expect(screen.getByText('Drive state')).toBeInTheDocument();
     expect(screen.getByText('Drive')).toBeInTheDocument();
 
@@ -280,11 +280,11 @@ describe('DrivetrainHealthWidget', () => {
     renderWidget();
 
     // 55°C → 131°F; every temperature stat now reads in °F.
-    expect(screen.getByText('131')).toBeInTheDocument();
+    expect(screen.getByText('131.00')).toBeInTheDocument();
     expect(screen.getAllByText('°F')).toHaveLength(4);
 
     // The Celsius reading + unit must be gone once converted.
-    expect(screen.queryByText('55')).not.toBeInTheDocument();
+    expect(screen.queryByText('55.00')).not.toBeInTheDocument();
     expect(screen.queryByText('°C')).not.toBeInTheDocument();
   });
 
@@ -305,20 +305,19 @@ describe('DrivetrainHealthWidget', () => {
     renderWidget();
 
     // Motor Temp falls back to motor_temp_c_front, Inverter to inverter_temp_c.
-    expect(screen.getByText('30')).toBeInTheDocument();
-    expect(screen.getByText('44')).toBeInTheDocument();
-    expect(screen.getByText('33')).toBeInTheDocument();
+    expect(screen.getByText('30.00')).toBeInTheDocument();
+    expect(screen.getByText('44.00')).toBeInTheDocument();
+    expect(screen.getByText('33.00')).toBeInTheDocument();
     expect(screen.getByText('Park')).toBeInTheDocument();
   });
 
-  it('drops the title and stats in the compact 1-column layout', () => {
+  it('keeps the heading while omitting detailed stats in the compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     // The gauge (with its status label) still renders.
     expect(screen.getByText('Healthy')).toBeInTheDocument();
 
-    // Compact hides the title and the stat row.
-    expect(screen.queryByText('Drivetrain health')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drivetrain health' })).toBeInTheDocument();
     expect(screen.queryByText('Motor temp')).not.toBeInTheDocument();
   });
 
@@ -336,14 +335,14 @@ describe('DrivetrainHealthWidget', () => {
     expect(screen.getByText('Motor temp')).toBeInTheDocument();
   });
 
-  it('shows the empty state without a title in the compact layout', () => {
+  it('keeps the compact heading when both sources are empty', () => {
     healthMock.mockReturnValue(makeQuery({ data: null }));
     motorMock.mockReturnValue(makeQuery({ data: null }));
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No drivetrain data')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.queryByText('Drivetrain health')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drivetrain health' })).toBeInTheDocument();
   });
 
   it('keeps motor evidence visible while the assessment is loading', () => {
@@ -351,7 +350,7 @@ describe('DrivetrainHealthWidget', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(screen.getByText('48')).toBeInTheDocument();
+    expect(screen.getByText('48.00')).toBeInTheDocument();
     // No header/gauge while loading.
     expect(screen.queryByText('Drivetrain health')).toBeInTheDocument();
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
@@ -364,7 +363,7 @@ describe('DrivetrainHealthWidget', () => {
     renderWidget();
 
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    expect(screen.getByText('48')).toBeInTheDocument();
+    expect(screen.getByText('48.00')).toBeInTheDocument();
 
     // The error panel replaces the gauge + header (and its refresh control).
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();

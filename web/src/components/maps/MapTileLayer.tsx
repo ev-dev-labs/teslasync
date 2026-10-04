@@ -16,11 +16,11 @@ type TileDef = { url: string; attribution: string }
 
 const freeTiles: Record<MapStyle, TileDef> = {
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a>', // i18n-ignore (brand name in HTML attribution required by tile provider terms)
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', // i18n-ignore (brand name)
   },
   streets: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', // i18n-ignore (brand name)
   },
   satellite: {
@@ -60,7 +60,7 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
   })
   // PWA-07: satellite and terrain basemaps are photographic raster tiles and
   // are by far the heaviest thing a map page downloads. Under low-bandwidth
-  // mode they fall back to the lightweight vector-derived dark basemap. The
+  // mode they fall back to the lightweight dark street basemap. The
   // provider selection below is untouched — an operator who configured Azure
   // or Google still gets their provider, just its cheapest style.
   const { richMapTiles } = useDataSaverPolicy()
@@ -78,6 +78,11 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
     <TileLayer
       url={t.url}
       attribution={t.attribution}
+      // CARTO's former anonymous dark tiles now return an API-key watermark.
+      // Darken only OSM's raster layer, leaving route and marker colors intact.
+      className={tiles === freeTiles && t === freeTiles.dark
+        ? '[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]'
+        : undefined}
       // Defer tile requests until the pan/zoom gesture settles so a drag does
       // not fire a request storm on a constrained link.
       updateWhenIdle={!richMapTiles}
@@ -89,8 +94,17 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
 export function MapInvalidator() {
   const map = useMap()
   useEffect(() => {
-    const timer = setTimeout(() => map.invalidateSize(), 100)
-    return () => clearTimeout(timer)
+    const invalidate = () => map.invalidateSize({ animate: false })
+    const timer = setTimeout(invalidate, 100)
+    const container = map.getContainer()
+    const observer = container && typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(invalidate)
+      : undefined
+    if (container && observer) observer.observe(container)
+    return () => {
+      clearTimeout(timer)
+      observer?.disconnect()
+    }
   }, [map])
   return null
 }
@@ -105,12 +119,8 @@ export function MapInvalidator() {
  * map corner instead of having to be styled by every page that
  * adopts it.
  *
- * On enter/exit fullscreen, leaflet's own ResizeObserver picks up
- * the size change and re-tiles automatically — `MapInvalidator`'s
- * 100 ms `invalidateSize()` only runs at mount, so we additionally
- * call it on every `fullscreenchange` to defend against the rare
- * case where leaflet misses the resize (covered observationally on
- * Firefox 124).
+ * Fullscreen changes also invalidate size explicitly so the control works
+ * on maps that do not mount the resize-observing `MapInvalidator`.
  *
  * The `:fullscreen` rule in `web/src/index.css` sizes the leaflet
  * container to the viewport so the map fills the screen.
@@ -152,12 +162,7 @@ export function MapFullscreenControl({
   const containerRef = useRef<HTMLElement | null>(null)
   containerRef.current = map.getContainer()
 
-  // Keep leaflet's tile grid in sync with the new viewport. Leaflet
-  // already re-fires `invalidateSize()` on its own ResizeObserver,
-  // but on browsers that defer the resize until the next paint we'd
-  // briefly see grey bands at the right/bottom edges. This safety
-  // net pays the cost of one extra `invalidateSize()` call per
-  // toggle, which is cheap.
+  // Keep fullscreen sizing correct even without a MapInvalidator child.
   useEffect(() => {
     const onChange = () => {
       requestAnimationFrame(() => map.invalidateSize())

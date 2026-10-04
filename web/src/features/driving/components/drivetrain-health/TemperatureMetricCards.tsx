@@ -27,7 +27,7 @@ export function TemperatureMetricCards({
   peakPower,
   loading = false,
 }: TemperatureMetricCardsProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
@@ -92,7 +92,7 @@ export function TemperatureMetricCards({
       <StaggerItem>
         <MetricCard
           label={t('drivetrain.healthScore', 'Health Score')}
-          value={`${safeHealthScore}%`}
+          value={`${fmtNumber(safeHealthScore)}%`}
           icon={<Heart className="h-4 w-4" aria-hidden="true" />}
           color={
             overallHealth === 'good'
@@ -106,7 +106,7 @@ export function TemperatureMetricCards({
       <StaggerItem>
         <MetricCard
           label={t('drivetrain.peakPower', 'Peak Power')}
-          value={peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—'}
+          value={peakPower > 0 ? `${fmtNumber(peakPower)} kW` : '—'}
           icon={<Zap className="h-4 w-4" aria-hidden="true" />}
           color="purple"
         />

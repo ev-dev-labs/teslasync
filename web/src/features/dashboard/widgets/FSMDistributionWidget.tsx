@@ -11,6 +11,10 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates } from '@/api/dataState';
+import { WidgetBigNumber } from './shared';
+import { fmtNumber as formatDurationNumber } from '@/lib/numberFormat';
 
 /* ── State colors for donut chart ──────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -27,11 +31,12 @@ function stateColor(state: string): string {
 
 /* ── Duration formatter (ms → human readable) ──────────────────── */
 function fmtDuration(ms: number, t: (k: string, d: string) => string): string {
-  const totalMin = ms / 60_000;
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  const totalMin = Math.round(ms / 60_000);
   const hrs = Math.floor(totalMin / 60);
-  const mins = Math.round(totalMin % 60);
-  if (hrs === 0) return `${mins}${t('widget.fsmDistribution.min', 'm')}`;
-  return `${hrs}${t('widget.fsmDistribution.hr', 'h')} ${mins}${t('widget.fsmDistribution.min', 'm')}`;
+  const mins = totalMin % 60;
+  if (hrs === 0) return `${formatDurationNumber(mins, 0)}${t('widget.fsmDistribution.min', 'm')}`;
+  return `${formatDurationNumber(hrs, 0)}${t('widget.fsmDistribution.hr', 'h')} ${formatDurationNumber(mins, 0)}${t('widget.fsmDistribution.min', 'm')}`;
 }
 
 /* ── Donut segment data ────────────────────────────────────────── */
@@ -42,9 +47,10 @@ interface DonutSegment extends ChartDataRow {
 }
 
 function buildDonutData(stats: Record<string, number> | undefined): DonutSegment[] {
-  const entries = Object.entries(stats ?? {}).filter(([, v]) => (v ?? 0) > 0);
+  if (stats != null && (typeof stats !== 'object' || Array.isArray(stats))) return [];
+  const entries = Object.entries(stats ?? {}).filter(([, v]) => typeof v === 'number' && Number.isFinite(v) && v > 0);
   const total = entries.reduce((sum, [, v]) => sum + (v ?? 0), 0);
-  if (total === 0) return [];
+  if (total === 0 || !Number.isFinite(total)) return [];
   return entries
     .map(([state, value]) => ({
       state,
@@ -117,23 +123,25 @@ function TransitionRow({
 
 /* ── Main widget ───────────────────────────────────────────────── */
 export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const id = vehicleId ?? vehicles?.[0]?.id ?? null;
-  const idStr = id != null ? String(id) : '';
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
+  const id = vehicleId ?? vehicles?.[0]?.id;
+  const idStr = typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? String(id) : '';
 
+  const statsQuery = useFSMStats(idStr);
   const {
     data: statsData,
-    error: statsError,
     isLoading: statsLoading,
     isFetching: statsFetching,
     isStale: statsStale,
     isError: statsIsError,
     dataUpdatedAt: statsUpdatedAt,
     refetch: refetchStats,
-  } = useFSMStats(idStr);
+  } = statsQuery;
 
+  const transitionsQuery = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
   const {
     data: transitionsData,
     isLoading: transitionsLoading,
@@ -142,7 +150,17 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
     isError: transitionsIsError,
     dataUpdatedAt: transitionsUpdatedAt,
     refetch: refetchTransitions,
-  } = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
+  } = transitionsQuery;
+  const rawStats = statsData?.stats;
+  const invalidStats = rawStats != null && (
+    typeof rawStats !== 'object' || Array.isArray(rawStats) ||
+    Object.values(rawStats).some(value => typeof value !== 'number' || !Number.isFinite(value) || value < 0)
+  );
+  const statsState = useDataState(statsQuery, { partial: invalidStats });
+  const transitionsState = useDataState(transitionsQuery, {
+    partial: transitionsData?.data != null && !Array.isArray(transitionsData.data),
+  });
+  const vehiclesState = useDataState(vehiclesQuery);
 
   const isCompact = size.cols <= 1;
 
@@ -159,36 +177,55 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
 
   const hasData = segments.length > 0;
 
-  /* Freshness: merge from both queries */
-  const updatedAt = Math.max(statsUpdatedAt ?? 0, transitionsUpdatedAt ?? 0);
-  const isFetching = statsFetching || transitionsFetching;
-  const isStale = statsStale || transitionsStale;
-  const isError = statsIsError || transitionsIsError;
   // Keep the skeleton up while the default vehicle is still resolving from
   // useVehicles: the FSM queries are disabled for an empty id and would report
   // "not loading", so without this gate the widget flashes its empty state
   // before the first fetch can even start.
   const isLoading =
     statsLoading || transitionsLoading || (vehicleId == null && vehiclesLoading);
-  // Surface the primary (stats) fetch failure through the shell so a genuine
-  // error is distinguishable from a legitimately-empty distribution instead of
-  // both collapsing into the same "no data" placeholder.
-  const shellError = statsError ? String(statsError) : null;
-
   const handleRefresh = useCallback(() => {
-    refetchStats();
-    refetchTransitions();
-  }, [refetchStats, refetchTransitions]);
+    if (!idStr) {
+      void vehiclesQuery.refetch();
+      return;
+    }
+    void refetchStats();
+    void refetchTransitions();
+  }, [idStr, vehiclesQuery.refetch, refetchStats, refetchTransitions]);
+  const hasPayload = statsState.hasData || transitionsState.hasData;
+  const sourceError = statsState.fatalError ?? transitionsState.fatalError;
+  const combined = combineDataStates([statsState, transitionsState]);
+  const mergedState = {
+    ...combined,
+    data: statsData ?? transitionsData,
+    hasData: hasPayload,
+    fatalError: hasPayload ? null : sourceError,
+    refreshError: hasPayload ? combined.refreshError ?? sourceError : null,
+    status: !hasPayload && sourceError ? 'initialFailure' as const : combined.status,
+    retry: handleRefresh,
+  };
+  const resolvingVehicle = !idStr && !hasPayload;
+  const state = resolvingVehicle ? vehiclesState : mergedState;
+  const sourceTimes = [
+    statsState.hasData ? statsUpdatedAt : 0,
+    transitionsState.hasData ? transitionsUpdatedAt : 0,
+  ].filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0);
+  const updatedAt = resolvingVehicle
+    ? vehiclesQuery.dataUpdatedAt
+    : sourceTimes.length > 0 ? Math.min(...sourceTimes) : 0;
+  const isFetching = resolvingVehicle ? vehiclesQuery.isFetching : statsFetching || transitionsFetching;
+  const isStale = resolvingVehicle ? vehiclesQuery.isStale : statsStale || transitionsStale;
+  const isError = resolvingVehicle ? vehiclesQuery.isError : statsIsError || transitionsIsError;
 
-  /* Compact view: current state badge + time in current state */
+  /* Compact view: state with the largest share of recorded time */
   if (isCompact) {
     const currentState = segments[0]?.state ?? '—';
     const currentMs = segments[0]?.value ?? 0;
 
     return (
       <WidgetShell
+        title={t('widget.fsmDistribution.title', 'State distribution')}
         loading={isLoading}
-        error={shellError}
+        dataState={state}
         updatedAt={updatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -201,12 +238,12 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               className="inline-block h-3 w-3 rounded-full"
               style={{ backgroundColor: stateColor(currentState) }}
             />
-            <span className="text-sm font-semibold text-[var(--text-primary)]">
-              {t(`widget.fsmDistribution.state.${currentState}`, currentState)}
-            </span>
-            <span className="text-xs text-[var(--text-secondary)]">
-              {fmtDuration(currentMs, t)}
-            </span>
+            <WidgetBigNumber
+              value={t(`widget.fsmDistribution.state.${currentState}`, currentState)}
+              subtitle={fmtDuration(currentMs, t)}
+              align="center"
+              size="secondary"
+            />
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -225,15 +262,16 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
       title={t('widget.fsmDistribution.title', 'State distribution')}
       icon={<GitBranch className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
-      error={shellError}
+      dataState={state}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {hasData ? (
-        <div className="flex flex-col gap-3 h-full">
+      <div className="flex flex-col gap-3 h-full">
+        {hasData ? (
+          <>
           {/* Donut chart */}
           <EmbeddedChart
             title={t('widget.fsmDistribution.title', 'State distribution')}
@@ -294,11 +332,20 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                   {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
                 </span>
                 <span className="text-2xs text-[var(--text-muted)] tabular-nums">
-                  {fmtInt(seg.pct)}%
+                  {fmtNumber(seg.pct)}%
                 </span>
               </div>
             ))}
           </div>
+
+          </>
+        ) : (
+          <EmptyState /* no-action: independent transition history remains visible below when available */
+            icon={<GitBranch className="h-5 w-5" />}
+            message={t('widget.fsmDistribution.noData', 'No state data available')}
+            className="py-4"
+          />
+        )}
 
           {/* Transitions feed */}
           {transitions.length > 0 && (
@@ -317,14 +364,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               ))}
             </div>
           )}
-        </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<GitBranch className="h-5 w-5" />}
-          message={t('widget.fsmDistribution.noData', 'No state data available')}
-          className="py-4"
-        />
-      )}
+      </div>
     </WidgetShell>
   );
 }

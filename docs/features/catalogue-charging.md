@@ -53,3 +53,18 @@ prior-period comparison does not imply that no previous charging occurred.
 Daily power and cost trends omit unknown observations instead of inventing
 zeroes, while retaining genuine zero readings. Blended cost pairs each recorded
 cost with that session's energy; unpriced sessions cannot dilute the rate.
+
+The AC/DC insight recognizes explicit AC, home, and wall-connector labels using
+the same charger classification as the overview. A nonempty AC label is not
+evidence of DC charging. Type-level cost and cost-per-energy remain unknown if
+any session in that type has an unrecorded cost; recorded zero-cost sessions
+alone contribute to the free-charging count and energy.
+
+The optimizer's **Most-used recorded location** shows the share of recent
+sessions clustered at the busiest recorded coordinates, not a verified home
+address. Missing location evidence is unknown, not 0% home charging. Its
+location recommendation compares recorded costs without claiming a home
+location or guaranteed savings. The existing `home_charging_pct` API key
+is retained, but its location-cluster meaning is made explicit in the UI.
+Hourly cost patterns combine locations; they do not prove an off-peak tariff.
+Savings are disclosed as illustrative rather than guaranteed.

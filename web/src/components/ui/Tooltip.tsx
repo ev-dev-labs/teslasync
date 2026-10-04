@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactElement,
@@ -160,6 +161,19 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
     setHorizontalOffset(left - desiredLeft);
   }, [side]);
 
+  // Opacity-hidden bubbles still expand scrollable bounds before interaction.
+  useLayoutEffect(() => {
+    updatePosition();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(updatePosition) : null;
+    if (triggerRef.current) observer?.observe(triggerRef.current);
+    if (tooltipRef.current) observer?.observe(tooltipRef.current);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [content, updatePosition]);
+
   // Stable per-mount fingerprint for the dev-time warn so we don't
   // de-duplicate across distinct callsites that happen to share the same
   // forbidden class.
@@ -224,7 +238,8 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
           // surface still reads as a separate floating layer in
           // Windows High Contrast.
           'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
-          'opacity-0 scale-95 transition-all duration-fast motion-reduce:transition-none',
+          // Viewport corrections must not animate with the hover/focus reveal.
+          'opacity-0 scale-95 transition-[opacity,transform] duration-fast motion-reduce:transition-none',
           'group-hover/tip:opacity-100 group-hover/tip:scale-100',
           'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
           sideClasses[side],

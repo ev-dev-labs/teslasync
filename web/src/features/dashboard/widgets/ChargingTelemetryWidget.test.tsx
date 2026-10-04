@@ -29,13 +29,15 @@
  * exercised for real. Network is never touched — the two data hooks are mocked
  * and driven per-test.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { ChargingTelemetry } from '@/api/types';
 import type { WidgetProps } from './types';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { inputPreferences } from '@/test/inputPreferences';
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
 vi.mock('react-i18next', () => ({
@@ -66,8 +68,22 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import ChargingTelemetryWidget from './ChargingTelemetryWidget';
 
+it.each([1, 2, 3])('identifies charging telemetry at %i columns', (cols) => {
+  renderWidget({ size: { cols, rows: 4 } });
+  expect(screen.getByRole('heading', { name: 'Charging telemetry' })).toBeInTheDocument();
+});
+
 const mockUseVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockLive = useChargingTelemetryLatest as unknown as ReturnType<typeof vi.fn>;
+
+function applyPreferences(overrides: Parameters<typeof inputPreferences>[0] = {}) {
+  const settings = inputPreferences(overrides);
+  setGlobalPrecision(settings.decimal_precision ?? 2);
+  setGlobalLocale(settings.locale ?? 'en-US');
+}
+
+beforeEach(() => { applyPreferences(); });
+afterEach(() => { applyPreferences(); });
 
  
 function makeQuery(over: Record<string, unknown> = {}) {
@@ -109,13 +125,15 @@ function makeTelemetry(over: Partial<ChargingTelemetry> = {}): ChargingTelemetry
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <ChargingTelemetryWidget size={{ cols: 2, rows: 2 }} {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charging telemetry');
+  return view;
 }
 
 beforeEach(() => {
@@ -126,15 +144,46 @@ beforeEach(() => {
 });
 
 describe('ChargingTelemetryWidget — power unit conversion (1000× regression guard)', () => {
+  it.each([
+    { cols: 1, rows: 1 },
+    { cols: 2, rows: 2 },
+  ])('reacts to precision and locale without rewriting canonical watts at %j', (size) => {
+    const telemetry = Object.freeze(makeTelemetry({
+      charger_power_w: 11234.567,
+      charger_voltage: 240.125,
+      charger_actual_current: 32.125,
+      charger_phases: 3,
+    }));
+    mockLive.mockReturnValue(makeQuery({ data: telemetry }));
+    renderWidget({ size });
+
+    const compact = size.cols === 1;
+    expect(screen.getByText(compact ? '11.23 kW' : '11.23')).toBeInTheDocument();
+    act(() => { applyPreferences({ decimal_precision: 3, locale: 'de-DE' }); });
+    expect(screen.getByText(compact ? '11,235 kW' : '11,235')).toBeInTheDocument();
+    if (compact) {
+      expect(screen.getByText('240,125V · 32,125A')).toBeInTheDocument();
+    } else {
+      expect(screen.getByText('240,125')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+    }
+    act(() => { applyPreferences({ decimal_precision: 0, locale: 'en-US' }); });
+    expect(screen.getByText(compact ? '11 kW' : '11')).toBeInTheDocument();
+    expect(telemetry.charger_power_w).toBe(11234.567);
+    expect(telemetry.charger_voltage).toBe(240.125);
+    expect(telemetry.charger_actual_current).toBe(32.125);
+    expect(mockLive).toHaveBeenLastCalledWith(1, 5000);
+  });
+
   it('renders SI watts as kW in the standard layout, never the raw watt magnitude', () => {
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ charger_power_w: 11000 }) }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // 11000 W → 11.0 kW (value + separate unit chip).
-    expect(screen.getByText('11.0')).toBeInTheDocument();
+    expect(screen.getByText('11.00')).toBeInTheDocument();
     expect(screen.getAllByText('kW').length).toBeGreaterThan(0);
     // The raw watt magnitude with a kW suffix (the bug) must never appear.
-    expect(screen.queryByText('11,000.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('11,000.00')).not.toBeInTheDocument();
   });
 
   it('shows the converted kW power (not raw watts) in the compact layout', () => {
@@ -145,9 +194,9 @@ describe('ChargingTelemetryWidget — power unit conversion (1000× regression g
     );
     renderWidget({ size: { cols: 1, rows: 1 } });
 
-    expect(screen.getByText('11.0 kW')).toBeInTheDocument();
-    expect(screen.getByText('240V · 32A')).toBeInTheDocument();
-    expect(screen.queryByText('11,000.0 kW')).not.toBeInTheDocument();
+    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('240.00V · 32.00A')).toBeInTheDocument();
+    expect(screen.queryByText('11,000.00 kW')).not.toBeInTheDocument();
   });
 
   it('keeps a null charger_power_w unknown instead of synthesizing zero', () => {
@@ -155,7 +204,7 @@ describe('ChargingTelemetryWidget — power unit conversion (1000× regression g
     renderWidget({ size: { cols: 1, rows: 1 } });
 
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0.0 kW')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 });
@@ -175,9 +224,9 @@ describe('ChargingTelemetryWidget — standard layout stats', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('Voltage')).toBeInTheDocument();
-    expect(screen.getByText('240')).toBeInTheDocument();
+    expect(screen.getByText('240.00')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
-    expect(screen.getByText('32')).toBeInTheDocument();
+    expect(screen.getByText('32.00')).toBeInTheDocument();
     expect(screen.getByText('Power')).toBeInTheDocument();
     expect(screen.getByText('Phases')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
@@ -216,8 +265,8 @@ describe('ChargingTelemetryWidget — wide layout (efficiency, badge, sparkline)
     renderWidget({ size: { cols: 4, rows: 2 } });
 
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('91')).toBeInTheDocument();
-    expect(screen.queryByText('100')).not.toBeInTheDocument();
+    expect(screen.getByText('91.15')).toBeInTheDocument();
+    expect(screen.queryByText('100.00')).not.toBeInTheDocument();
   });
 
   it('keeps the efficiency stat visible as unknown when pilot current is unavailable', () => {
@@ -329,7 +378,7 @@ describe('ChargingTelemetryWidget — loading / error states', () => {
 
     // Data present → the error is a subtle freshness signal, not a full panel.
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    expect(screen.getByText('11.0')).toBeInTheDocument();
+    expect(screen.getByText('11.00')).toBeInTheDocument();
   });
 });
 
@@ -349,7 +398,7 @@ describe('ChargingTelemetryWidget — refresh + vehicle resolution', () => {
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ ts: 't3', charger_power_w: 6000 }) }));
     rerender(tree(2));
     expect(container.querySelector('svg[role="img"]')).toBeNull();
-    expect(screen.getByText('6.0')).toBeInTheDocument();
+    expect(screen.getByText('6.00')).toBeInTheDocument();
   });
   it('refetches charging telemetry when the refresh control is activated', () => {
     const refetch = vi.fn();

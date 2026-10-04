@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
+import { useDataState } from '@/hooks/useDataState';
+import { safeArray } from '@/lib/safeArray';
 import type { SoftwareUpdate } from '@/types/vehicle-systems';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed } from './shared';
@@ -119,10 +121,12 @@ function CompactView({ latest, t }: { latest: SoftwareUpdate; t: TranslateFn }) 
 
 export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
   const vid = vehicleId ?? vehicles?.[0]?.id;
-  const vidStr = vid != null ? String(vid) : '';
+  const vidStr = typeof vid === 'number' && Number.isSafeInteger(vid) && vid > 0 ? String(vid) : '';
 
+  const updatesQuery = useSoftwareUpdates(vidStr);
   const {
     data: updates,
     isLoading,
@@ -131,7 +135,10 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
     isError,
     dataUpdatedAt,
     refetch,
-  } = useSoftwareUpdates(vidStr);
+  } = updatesQuery;
+  const updatesState = useDataState(updatesQuery, { partial: updates !== undefined && !Array.isArray(updates) });
+  const vehiclesState = useDataState(vehiclesQuery);
+  const dataState = vidStr ? updatesState : vehiclesState;
 
   const isCompact = size.cols <= 1;
 
@@ -139,7 +146,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
   // even when the API returns rows in an arbitrary order (the feed re-sorts by
   // the same key, so this keeps every surface in agreement).
   const sorted = useMemo<SoftwareUpdate[]>(() => {
-    const list = updates ?? [];
+    const list = safeArray(updates);
     return [...list].sort(
       (a, b) => new Date(updateTimestamp(b)).getTime() - new Date(updateTimestamp(a)).getTime(),
     );
@@ -169,18 +176,23 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
   const latest = sorted.length > 0 ? sorted[0] : null;
 
   const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    if (!vidStr) {
+      void vehiclesQuery.refetch();
+      return;
+    }
+    void refetch();
+  }, [vidStr, vehiclesQuery.refetch, refetch]);
 
   return (
     <WidgetShell
       title={t('widget.softwareUpdateHistory', 'Update history')}
       icon={<Download className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
+      dataState={dataState}
+      updatedAt={vidStr ? dataUpdatedAt : vehiclesQuery.dataUpdatedAt}
+      isFetching={vidStr ? isFetching : vehiclesQuery.isFetching}
+      isStale={vidStr ? isStale : vehiclesQuery.isStale}
+      isError={vidStr ? isError : vehiclesQuery.isError}
       onRefresh={handleRefresh}
     >
       {isCompact ? (

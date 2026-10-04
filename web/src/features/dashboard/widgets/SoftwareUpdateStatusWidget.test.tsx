@@ -36,7 +36,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -140,7 +140,7 @@ function cfg(
   fields: Record<string, unknown> | null = {},
   over: Record<string, unknown> = {},
 ): never {
-  return { data: fields, isLoading: false, ...over } as never;
+  return qr({ data: fields, ...over });
 }
 
 function renderWidget(size: WidgetSize = FULL, props: Partial<WidgetProps> = {}) {
@@ -193,8 +193,41 @@ describe('SoftwareUpdateStatusWidget — vehicle resolution', () => {
 });
 
 describe('SoftwareUpdateStatusWidget — shell states', () => {
+  it('preserves the installed version while config fails, without inventing up-to-date health', () => {
+    const refetchState = vi.fn();
+    const refetchConfig = vi.fn();
+    mockState.mockReturnValue(stateResult('2025.20.1', { refetch: refetchState }));
+    mockConfig.mockReturnValue(qr({ isError: true, error: new Error('Config unavailable'), refetch: refetchConfig }));
+    const { container } = renderWidget();
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.getByText('2025.20.1')).toBeInTheDocument();
+    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(refetchState).toHaveBeenCalledOnce();
+    expect(refetchConfig).toHaveBeenCalledOnce();
+  });
+
+  it('preserves a loaded pending update while the independent current-state query is still loading', () => {
+    mockState.mockReturnValue(qr({ isLoading: true, data: undefined }));
+    mockConfig.mockReturnValue(cfg({ software_update_version: '2025.30.1', software_update_download_pct: 45 }));
+    const { container } = renderWidget();
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.getByText('2025.30.1')).toBeInTheDocument();
+    expect(screen.getByText('45.00%')).toBeInTheDocument();
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101])('keeps invalid progress %s out of known percentage readouts', progress => {
+    mockConfig.mockReturnValue(cfg({ software_update_version: '2025.30.1', software_update_download_pct: progress }));
+    const { container } = renderWidget();
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.getByText('2025.30.1')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/NaN|Infinity|-1%|101%/);
+    expect(screen.queryByText('Downloading')).not.toBeInTheDocument();
+  });
+
   it('shows a skeleton (never a blank panel) and no refresh control while loading', () => {
     mockState.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
+    mockConfig.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
@@ -283,7 +316,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
 
     // "Downloading" appears twice: the status badge AND the MetricBar label.
     expect(screen.getAllByText('Downloading')).toHaveLength(2);
-    expect(screen.getByText('45%')).toBeInTheDocument();
+    expect(screen.getByText('45.00%')).toBeInTheDocument();
     expect(screen.getByText('2025.26.5')).toBeInTheDocument();
     // The install bar must not be present.
     expect(screen.queryByText('Installing')).toBeNull();
@@ -300,7 +333,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     renderWidget(FULL);
 
     expect(screen.getAllByText('Installing')).toHaveLength(2);
-    expect(screen.getByText('60%')).toBeInTheDocument();
+    expect(screen.getByText('60.00%')).toBeInTheDocument();
     expect(screen.queryByText('Downloading')).toBeNull();
   });
 
@@ -342,9 +375,9 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     renderWidget(FULL);
 
     expect(screen.getAllByText('Installing')).toHaveLength(2);
-    expect(screen.getByText('30%')).toBeInTheDocument();
+    expect(screen.getByText('30.00%')).toBeInTheDocument();
     // The download percentage must not leak through.
-    expect(screen.queryByText('50%')).toBeNull();
+    expect(screen.queryByText('50.00%')).toBeNull();
     expect(screen.queryByText('Downloading')).toBeNull();
   });
 });
@@ -380,7 +413,7 @@ describe('SoftwareUpdateStatusWidget — tall-only detail rows', () => {
     expect(container.textContent).not.toContain('Est. time');
     expect(container.textContent).not.toContain('Scheduled');
     // The download bar itself still renders regardless of height.
-    expect(screen.getByText('45%')).toBeInTheDocument();
+    expect(screen.getByText('45.00%')).toBeInTheDocument();
   });
 });
 
@@ -407,21 +440,23 @@ describe('SoftwareUpdateStatusWidget — null-safety & hardening', () => {
 
     expect(screen.queryByText('No software data')).toBeNull();
     expect(screen.getByText('2025.30.1')).toBeInTheDocument();
-    expect(screen.getByText('45%')).toBeInTheDocument();
+    expect(screen.getByText('45.00%')).toBeInTheDocument();
     // Current version degrades gracefully rather than crashing.
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 });
 
 describe('SoftwareUpdateStatusWidget — refresh wiring', () => {
-  it('invokes the state refetch when the freshness control is activated', () => {
+  it('invokes both state and config refetch when the freshness control is activated', () => {
     const refetch = vi.fn();
+    const refetchConfig = vi.fn();
     mockState.mockReturnValue(stateResult('2025.20.1', { refetch }));
-    mockConfig.mockReturnValue(cfg({}));
+    mockConfig.mockReturnValue(cfg({}, { refetch: refetchConfig }));
     renderWidget(FULL);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
+    expect(refetchConfig).toHaveBeenCalledTimes(1);
   });
 });

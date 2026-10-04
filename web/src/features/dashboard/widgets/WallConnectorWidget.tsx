@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plug } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useTeslaWCChargingHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber, sumKnown } from '@/api/dataState';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -136,6 +136,15 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
   const hasData = chartData.length > 0;
+  const axisLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.energy_kwh)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => fmt(value)),
+    [chartData, fmt],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
 
   const handleRefresh = useCallback(() => {
     refetchSites();
@@ -161,7 +170,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
-        {...(isCompact ? shellProps : {})}
+        {...shellProps}
         loading={false}
         dataState={dataState}
         updatedAt={sitesUpdatedAt}
@@ -273,7 +282,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                 {chartGrid}
                 <XAxis
                   dataKey="date"
@@ -285,7 +294,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
                   tick={tick}
                   tickLine={false}
                   axisLine={false}
-                  width={40}
+                  width={axisWidth}
                   tickFormatter={(v: number) => fmt(v)}
                 />
                 <Tooltip

@@ -7,6 +7,7 @@ import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
+import { useDataState } from '@/hooks/useDataState';
 
 const SEVERITY_HEX: Record<Severity, string> = {
   info: '#0ea5e9',
@@ -24,7 +25,9 @@ const SEVERITY_ICONS: Record<Severity, React.ReactNode> = {
 
 export default function AlertFeedWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: alerts, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useAlerts();
+  const query = useAlerts();
+  const { data: alerts, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const state = useDataState({ ...query, data: alerts ?? undefined }, { provenance: 'historical' });
 
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
@@ -62,7 +65,7 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
       title={t('widget.alertFeed', 'Alert feed')}
       icon={<Bell className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={{ ...state, status: state.status === 'initial' && !isLoading ? 'unavailable' : state.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}

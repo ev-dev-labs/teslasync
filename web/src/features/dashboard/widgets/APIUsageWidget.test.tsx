@@ -142,10 +142,10 @@ describe('APIUsageWidget — standard / wide layout', () => {
     expect(screen.getByText('Total calls (24h)')).toBeInTheDocument();
     expect(screen.getByText('12,345')).toBeInTheDocument();
     expect(screen.getByText('Avg response')).toBeInTheDocument();
-    expect(screen.getByText('123.4')).toBeInTheDocument();
+    expect(screen.getByText('123.40')).toBeInTheDocument();
     expect(screen.getByText('ms')).toBeInTheDocument();
     expect(screen.getByText('Error rate')).toBeInTheDocument();
-    expect(screen.getByText('2.0')).toBeInTheDocument();
+    expect(screen.getByText('2.00')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
   });
@@ -159,7 +159,7 @@ describe('APIUsageWidget — standard / wide layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('12.0')).toBeInTheDocument();
+    expect(screen.getByText('12.00')).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
     // StatCard renders a down arrow for the negative trend.
     expect(screen.getByText('↓')).toBeInTheDocument();
@@ -174,7 +174,7 @@ describe('APIUsageWidget — standard / wide layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('3.0')).toBeInTheDocument();
+    expect(screen.getByText('3.00')).toBeInTheDocument();
     expect(screen.queryByText('High')).not.toBeInTheDocument();
     expect(screen.queryByText('↓')).not.toBeInTheDocument();
   });
@@ -220,7 +220,7 @@ describe('APIUsageWidget — compact layout', () => {
 
     expect(screen.getByText('500')).toBeInTheDocument();
     const errorLine = screen.getByText(/errors/);
-    expect(errorLine.textContent).toContain('12.5%');
+    expect(errorLine.textContent).toContain('12.50%');
     expect(errorLine.textContent).toContain('errors');
   });
 
@@ -281,7 +281,7 @@ describe('APIUsageWidget — query states', () => {
     expect(screen.getByText('Total calls (24h)')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(4);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
-    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
   });
 });
 
@@ -351,7 +351,7 @@ describe('APIUsageWidget — graceful degradation on transient error', () => {
       }));
       renderWidget({ cols: 3, rows: 2 });
       expect(screen.getAllByText('0')).toHaveLength(2);
-      expect(screen.getByText('0.0')).toBeInTheDocument();
+      expect(screen.getByText('0.00')).toBeInTheDocument();
       expect(screen.getByText('—')).toBeInTheDocument();
       expect(screen.queryByText('High')).not.toBeInTheDocument();
     });

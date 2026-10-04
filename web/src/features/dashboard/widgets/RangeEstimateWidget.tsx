@@ -49,6 +49,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
 
   return (
     <WidgetShell
+      title={t('widget.range', 'Range')}
       loading={isLoading}
       dataState={stateData != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}

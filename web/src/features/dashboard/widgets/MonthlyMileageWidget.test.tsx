@@ -101,6 +101,11 @@ import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import MonthlyMileageWidget, { shortMonth, currentMonthKey } from './MonthlyMileageWidget';
 
+it.each([1, 2, 3])('identifies monthly mileage at %i columns', (cols) => {
+  renderWidget({ size: { cols, rows: 4 } });
+  expect(screen.getByRole('heading', { name: 'Monthly mileage' })).toBeInTheDocument();
+});
+
 const mockMileage = useMonthlyMileage as unknown as ReturnType<typeof vi.fn>;
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 
@@ -132,13 +137,15 @@ function makeBucket(over: Partial<MonthlyMileageBucket> = {}): MonthlyMileageBuc
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <MonthlyMileageWidget size={{ cols: 2, rows: 2 }} {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Monthly mileage');
+  return view;
 }
 
 beforeEach(() => {
@@ -267,7 +274,7 @@ describe('MonthlyMileageWidget — standard layout + conversion', () => {
 });
 
 describe('MonthlyMileageWidget — compact layout', () => {
-  it('renders the stats but no title and no chart in the compact (1-col) slot', () => {
+  it('identifies the stats without adding a chart in the compact slot', () => {
     mockMileage.mockReturnValue(
       makeQuery({
         data: [
@@ -283,7 +290,7 @@ describe('MonthlyMileageWidget — compact layout', () => {
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('150')).toBeInTheDocument();
     // ...but the compact slot has no shell title and no chart.
-    expect(screen.queryByRole('heading', { name: 'Monthly mileage' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Monthly mileage' })).toBeInTheDocument();
     expect(container.querySelector('.recharts-responsive-container')).toBeNull();
   });
 });

@@ -49,26 +49,31 @@ import { MemoryRouter } from 'react-router-dom';
 
 import type { Drive } from '@/api/types';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
 import SpeedHeatmapWidget, { buildHeatmap, speedToColor, lerpColor } from './SpeedHeatmapWidget';
 import type { WidgetSize } from './types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-// i18n passthrough: returns the English default and interpolates {{var}} tokens
-// so count/speed-bearing copy ("3 drives", "Peak avg 45 mph") assert as real.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
-      const template = typeof defaultValue === 'string' ? defaultValue : key;
-      const vars = typeof defaultValue === 'string' ? options : undefined;
-      return vars
-        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(vars[name] ?? ''))
-        : template;
-    },
-    i18n: { language: 'en', changeLanguage: vi.fn() },
-  }),
-}));
+// Drive grammar uses real catalog resolution; other copy uses its fallback.
+vi.mock('react-i18next', async () => {
+  const { createEnglishI18n } = await import('@/test/createEnglishI18n');
+  const i18n = await createEnglishI18n();
+  return {
+    useTranslation: () => ({
+      t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
+        if (key === 'widget.speedHeatmap.drives') {
+          return i18n.t(key, { ...options, defaultValue: typeof defaultValue === 'string' ? defaultValue : key });
+        }
+        const template = typeof defaultValue === 'string' ? defaultValue : key;
+        const vars = typeof defaultValue === 'string' ? options : undefined;
+        return vars
+          ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(vars[name] ?? ''))
+          : template;
+      },
+      i18n: { language: 'en', changeLanguage: vi.fn() },
+    }),
+  };
+});
 
 const { useVehiclesMock, useQueryMock, requestMock, useUnitsMock } = vi.hoisted(() => ({
   useVehiclesMock: vi.fn(),
@@ -159,7 +164,7 @@ interface CapturedQuery {
   enabled: boolean;
 }
 function lastQueryOptions(): CapturedQuery {
-  return useQueryMock.mock.calls.at(-1)?.[0] as CapturedQuery;
+  return useQueryMock.mock.calls[useQueryMock.mock.calls.length - 1]?.[0] as CapturedQuery;
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
@@ -180,6 +185,11 @@ beforeEach(() => {
   useQueryMock.mockReturnValue(makeResult());
   requestMock.mockResolvedValue([]);
   useUnitsMock.mockReturnValue({ unitPrefs: { speed: 'mph' } });
+});
+
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Speed heatmap', level: 3 })).toBeVisible();
 });
 
 // ── Pure helper: buildHeatmap ────────────────────────────────────────────────
@@ -389,6 +399,18 @@ describe('SpeedHeatmapWidget — states', () => {
 // ── Populated (full size) ────────────────────────────────────────────────────
 
 describe('SpeedHeatmapWidget — populated (full size)', () => {
+  it.each([
+    { cols: 2, count: 1, label: '1 drive' },
+    { cols: 2, count: 2, label: '2 drives' },
+    { cols: 3, count: 1, label: '1 drive' },
+    { cols: 3, count: 2, label: '2 drives' },
+  ])('renders catalog drive grammar for $count drives at $cols columns', ({ cols, count, label }) => {
+    useQueryMock.mockReturnValue(makeResult({
+      data: Array.from({ length: count }, (_, index) => makeDrive({ id: index + 1 })),
+    }));
+    renderWidget({ cols, rows: 2 });
+    expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
+  });
   it('retains the sampled heatmap after a background error and discloses its bounded scope', () => {
     useQueryMock.mockReturnValue(makeResult({
       data: [makeDrive()],
@@ -414,7 +436,7 @@ describe('SpeedHeatmapWidget — populated (full size)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('3 drives')).toBeInTheDocument();
-    const peak = fmtNumber(convertSpeedFromSI(20, 'mph'), 0);
+    const peak = '44.74';
     expect(screen.getByText(`Peak avg ${peak} mph`)).toBeInTheDocument();
     expect(screen.getByText('Slow')).toBeInTheDocument();
     expect(screen.getByText('Fast')).toBeInTheDocument();
@@ -454,12 +476,12 @@ describe('SpeedHeatmapWidget — compact (1×1)', () => {
     useQueryMock.mockReturnValue(makeResult({ data: [makeDrive({ avg_speed_mps: 20 })] }));
     renderWidget({ cols: 1, rows: 1 });
 
-    expect(screen.getByText(fmtNumber(convertSpeedFromSI(20, 'mph'), 0))).toBeInTheDocument();
+    expect(screen.getByText('44.74')).toBeInTheDocument();
     expect(screen.getByText('Peak')).toBeInTheDocument();
     expect(screen.getByText('mph')).toBeInTheDocument();
-    // No SVG heatmap and no widget title in the compact variant.
+    // Compact keeps its peak reading and heading without adding a heatmap.
     expect(screen.queryByRole('img')).toBeNull();
-    expect(screen.queryByText('Speed heatmap')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Speed heatmap', level: 3 })).toBeVisible();
   });
 
   it('shows an em-dash instead of a peak when there is no drive data', () => {

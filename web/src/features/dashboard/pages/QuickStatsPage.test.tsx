@@ -306,11 +306,11 @@ describe('QuickStatsPage', () => {
     }
 
     // Distance: 12345 km → identity → "12,345 km".
-    expect(screen.getByText('12,345 km')).toBeInTheDocument();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
     // Energy: 450 kWh → *1000 → formatEnergy(450000) → "450 kWh".
     expect(screen.getByText('450 kWh')).toBeInTheDocument();
     // Cost: formatCurrency(321, 0) → "$321".
-    expect(screen.getByText('$321')).toBeInTheDocument();
+    expect(screen.getByText('$321.00')).toBeInTheDocument();
     // Efficiency: 158 Wh/km, km branch is identity → "158.00 Wh/km".
     expect(screen.getByText('158.00 Wh/km')).toBeInTheDocument();
     expect(screen.getByText('210.00 kg')).toBeInTheDocument();
@@ -323,11 +323,11 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     // 12345 km * 1000 / 1609.344 ≈ 7670.8 → fmtInt → "7,671 mi".
-    expect(screen.getByText('7,671 mi')).toBeInTheDocument();
+    expect(screen.getByText('7,670.83 mi')).toBeInTheDocument();
     // 158 Wh/km * 1.609344 = 254.276… → "254.28 Wh/mi".
     expect(screen.getByText('254.28 Wh/mi')).toBeInTheDocument();
     // The identity-unit strings must be gone once converted.
-    expect(screen.queryByText('12,345 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('12,345.00 km')).not.toBeInTheDocument();
     expect(screen.queryByText('158.00 Wh/km')).not.toBeInTheDocument();
   });
 
@@ -367,7 +367,7 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     expect(screen.getByText('Distance driven')).toBeInTheDocument();
-    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
     expect(screen.getByText('0 kWh')).toBeInTheDocument();
     expect((captured.fleet.entries as unknown[]).length).toBe(0);
   });

@@ -289,6 +289,30 @@ describe('efficiencyColor', () => {
     expect(efficiencyColor(240)).toBe('#ef4444');
     expect(efficiencyColor(999)).toBe('#ef4444');
   });
+
+  describe('recorded statistics coverage', () => {
+    it('keeps missing measurements unknown without rendering a zero efficiency gauge', () => {
+      setDriving({ data: {
+        ...makeStats(), avgEfficiencyWhKm: null, avgSpeedKmh: null,
+        topSpeedKmh: null, regenEnergyWh: null, regenRatio: null,
+      } }, { data: [] });
+      renderPage();
+      const metrics = screen.getByRole('region', { name: 'Key metrics' });
+      expect(within(metrics).getAllByText('—')).toHaveLength(5);
+      expect(screen.getByText('No efficiency summary available yet')).toBeInTheDocument();
+    });
+
+    it('retains measured zero rather than treating it as missing', () => {
+      setDriving({ data: {
+        ...makeStats(), avgEfficiencyWhKm: 0, avgSpeedKmh: 0,
+        topSpeedKmh: 0, regenEnergyWh: 0, regenRatio: 0,
+      } }, { data: [] });
+      renderPage();
+      const metrics = screen.getByRole('region', { name: 'Key metrics' });
+      expect(within(metrics).getAllByText('0.00').length).toBeGreaterThanOrEqual(2);
+      expect(screen.queryByText('No efficiency summary available yet')).not.toBeInTheDocument();
+    });
+  });
 });
 
 /* ── getEfficiency: measured SI energy → Wh/km ───────────────────────────── */
@@ -355,7 +379,7 @@ describe('EfficiencyPage', () => {
     expect(screen.queryByText('432')).toBeNull();
     expect(screen.getByText('5,000')).toBeInTheDocument();
     // Efficiency (5.0 km/kWh), CO₂ (300 kg) and drive count (42) round-trip.
-    expect(screen.getByText('5.0')).toBeInTheDocument();
+    expect(screen.getByText('5.00')).toBeInTheDocument();
     expect(screen.getByText('300')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
   });
@@ -367,7 +391,7 @@ describe('EfficiencyPage', () => {
     // 60 km/h → 37.28 mph, 5000 km → 3,107 mi, 200 Wh/km → 321.87 Wh/mi.
     expect(screen.getByText('37.28')).toBeInTheDocument();
     expect(screen.getByText('3,107')).toBeInTheDocument();
-    expect(screen.getByText('321.87')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Key metrics' })).getByText('321.87')).toBeInTheDocument();
     expect(screen.getAllByText('Wh/mi').length).toBeGreaterThan(0);
     // The km figures must NOT leak through under the imperial preference.
     expect(screen.queryByText('60.00')).toBeNull();
@@ -382,12 +406,12 @@ describe('EfficiencyPage', () => {
     expect(row).not.toBeNull();
     const cells = within(row as HTMLElement);
     // 4 × 50 km = 200 km total (pre-fix double-conversion collapsed this to 0).
-    expect(cells.getByText('200')).toBeInTheDocument();
+    expect(cells.getByText('200.00')).toBeInTheDocument();
     // 20 m/s → 72 km/h avg (pre-fix double-conversion inflated this to 259).
-    expect(cells.getByText('72 km/h')).toBeInTheDocument();
+    expect(cells.getByText('72.00 km/h')).toBeInTheDocument();
     // Avg consumption for the bucket is the raw 150 Wh/km.
     expect(cells.getByText('150')).toBeInTheDocument();
-    expect(cells.queryByText('259 km/h')).toBeNull();
+    expect(cells.queryByText('259.20 km/h')).toBeNull();
   });
 
   it('exposes accessible landmark + chart regions once data is present', () => {

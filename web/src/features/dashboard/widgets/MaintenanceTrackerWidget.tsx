@@ -143,6 +143,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   }, [maintRefetch, recordsQuery, forecastQuery]);
 
   const shellProps = {
+    title: t('widget.maintenance.title', 'Maintenance'),
     loading: isLoading,
     dataState: {
       ...combined,
@@ -191,7 +192,6 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   // ── Standard layout (2×4): split view ──
   return (
     <WidgetShell
-      title={t('widget.maintenance.title', 'Maintenance')}
       icon={<Wrench className="h-3.5 w-3.5 text-amber-400" />}
       {...shellProps}
     >
@@ -235,8 +235,8 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
               <StaleRefreshWarning state={forecastTrust} />
               {forecastTrust.fatalError && <QueryError error={forecastTrust.fatalError} onRetry={forecastTrust.retry ?? undefined} />}
               <WidgetStatGrid cols={3} stats={[
-                { label: t('widget.maintenance.overdue', 'Overdue'), value: forecast?.overdue_count },
-                { label: t('widget.maintenance.soon', 'Soon'), value: forecast?.due_soon_count },
+                { label: t('widget.maintenance.overdue', 'Overdue'), value: forecast?.overdue_count == null ? null : fmtInt(forecast.overdue_count) },
+                { label: t('widget.maintenance.soon', 'Soon'), value: forecast?.due_soon_count == null ? null : fmtInt(forecast.due_soon_count) },
                 { label: t('widget.maintenance.dailyDistance', 'Daily distance'), value: forecast?.km_per_day == null ? null : fmtNumber(toDistanceDisplay(forecast.km_per_day)), unit: forecast?.km_per_day == null ? undefined : `${distanceUnit}/${t('widget.maintenance.dayUnit', 'day')}` },
               ]} />
               <p className={dashboardTokens.metricLabel}>

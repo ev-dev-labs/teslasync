@@ -422,6 +422,7 @@
     },
     "waiting": {
       "message": "We're pausing requests briefly. Data will refresh automatically.",
+      "retryMessage": "Requests are paused briefly. Wait before retrying.",
       "title": "Waiting for upstream"
     }
   },
@@ -1761,9 +1762,6 @@
       "unavailableLoadedValues": "Some saved selections are not present in the loaded rows. Clear the filter to reset them.",
       "valueCount": "{{selected}} of {{total}} loaded values selected",
       "values": "Available values"
-    },
-    "pagination": {
-      "keyboardHint": "With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page."
     },
     "search": {
       "loadedRows": "Search loaded rows"

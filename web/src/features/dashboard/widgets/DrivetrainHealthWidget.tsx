@@ -137,7 +137,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell title={t('widget.drivetrainHealth.title', 'Drivetrain health')} {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
           <WidgetStatusGrid cells={assessment} compact />
           {!hasData && <p className={dashboardTokens.metricLabel}>{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</p>}

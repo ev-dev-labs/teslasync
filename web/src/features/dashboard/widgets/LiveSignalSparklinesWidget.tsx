@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Sparkline } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignals, useSignalGaps, useSignalHistory } from '@/api/hooks/useTelemetry';
 
@@ -10,6 +10,8 @@ import { NEON_COLORS } from '@/components/charts';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 const DEFAULT_SIGNALS = [
   'BatteryLevel',
@@ -42,7 +44,8 @@ export function formatSignalName(name: string): string {
 export function extractNumericValue(value: unknown): number | null {
   if (typeof value === 'number' && isFinite(value)) return value;
   if (typeof value === 'string') {
-    const n = parseFloat(value);
+    if (value.trim() === '') return null;
+    const n = Number(value);
     if (isFinite(n)) return n;
   }
   return null;
@@ -58,13 +61,18 @@ interface SignalRowProps {
 
 function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: SignalRowProps) {
   const { fmtNumber } = useNumberFormatting();
-  const { data: history } = useSignalHistory(vehicleId, encodeURIComponent(signal), 1);
+  const historyQuery = useSignalHistory(vehicleId, encodeURIComponent(signal), 1);
+  const { data: history } = historyQuery;
+  const historyState = useDataState({
+    ...historyQuery,
+    data: historyQuery.isError && (!Array.isArray(history?.data) || history.data.length === 0) ? undefined : history,
+  }, { provenance: 'historical' });
   const { t } = useTranslation('dashboard');
 
   const numericPoints = useMemo(() => {
-    const points = history?.data ?? [];
+    const points = Array.isArray(history?.data) ? history.data : [];
     return points
-      .map((p) => p.valueNum)
+      .map((p) => p?.valueNum)
       .filter((v): v is number => v != null && isFinite(v));
   }, [history]);
 
@@ -106,16 +114,16 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
 
       {/* Label + value */}
       <div className="flex-1 min-w-0">
-        <p className="text-2xs text-[var(--text-secondary)] truncate leading-tight">
+        <p className={dashboardTokens.metricLabel}>
           {label}
         </p>
-        <p className="text-xs font-bold text-[var(--text-primary)] leading-tight">
+        <p className={`${dashboardTokens.secondaryMetric} break-all`}>
           {currentValue != null ? fmtNumber(currentValue) : '—'}
         </p>
       </div>
 
       {/* Sparkline */}
-      {hasSparkline ? (
+      {historyState.fatalError ? <QueryError error={historyState.fatalError} onRetry={() => { void historyQuery.refetch(); }} /> : hasSparkline ? (
         <Sparkline
           data={numericPoints}
           color={color}
@@ -130,7 +138,8 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
       )}
 
       {/* Trend indicator — icon-only, so announce the direction to AT */}
-      <span role="img" aria-label={trendLabel} className="flex-shrink-0">
+      <StaleRefreshWarning state={historyState} />
+      <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="flex-shrink-0">
         <TrendIcon className="h-3 w-3" style={{ color: trendColor }} aria-hidden="true" />
       </span>
     </div>
@@ -142,8 +151,23 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { data: availableSignals, isLoading: signalsLoading } = useSignals(id);
-  const { data: liveData, isLoading: liveLoading, isFetching: liveFetching, isStale: liveStale, isError: liveError, dataUpdatedAt: liveUpdatedAt, refetch: refetchLive } = useSignalGaps(id);
+  const signalsQuery = useSignals(id);
+  const liveQuery = useSignalGaps(id);
+  const { data: availableSignals, isLoading: signalsLoading } = signalsQuery;
+  const { data: liveData, isLoading: liveLoading, isFetching: liveFetching, isStale: liveStale, isError: liveError, dataUpdatedAt: liveUpdatedAt, refetch: refetchLive } = liveQuery;
+  const signalsState = useDataState({
+    ...signalsQuery,
+    data: signalsQuery.isError && (!Array.isArray(availableSignals) || availableSignals.length === 0) ? undefined : availableSignals,
+  });
+  const liveState = useDataState({
+    ...liveQuery,
+    data: liveError && (!liveData || Object.keys(liveData).length === 0) ? undefined : liveData,
+  });
+  const dataState = useCombinedDataState([signalsState, liveState]);
+  const handleRefresh = () => {
+    void refetchLive();
+    void signalsQuery.refetch();
+  };
 
   const isLoading = signalsLoading || liveLoading;
 
@@ -153,7 +177,7 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
       ? (config.signals as unknown[]).filter((s): s is string => typeof s === 'string')
       : DEFAULT_SIGNALS;
 
-    const available = new Set(availableSignals ?? []);
+    const available = new Set(Array.isArray(availableSignals) ? availableSignals.filter((s) => typeof s === 'string') : []);
     if (available.size === 0) return raw.slice(0, 6);
 
     const filtered = raw.filter((s) => available.has(s));
@@ -172,11 +196,17 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
       title={t('widget.liveSparklines', 'Live signal sparklines')}
       icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
+      dataState={{
+        ...dataState, retry: handleRefresh, data: liveData ?? availableSignals,
+        hasData: liveData != null || availableSignals != null,
+        fatalError: signalsState.hasData || liveState.hasData ? null : signalsState.fatalError ?? liveState.fatalError,
+        status: id <= 0 ? 'unavailable' : dataState.status,
+      }}
       updatedAt={liveUpdatedAt}
       isFetching={liveFetching}
       isStale={liveStale}
       isError={liveError}
-      onRefresh={() => refetchLive()}
+      onRefresh={handleRefresh}
     >
       {configuredSignals.length === 0 ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -185,7 +215,7 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
           className="py-4"
         />
       ) : (
-        <div className={useTwoColumns ? 'grid grid-cols-2 gap-x-4' : undefined}>
+        <div className={useTwoColumns ? `grid ${dashboardTokens.columns[2]} gap-x-4` : undefined}>
           {configuredSignals.map((signal, i) => (
             <SignalSparklineRow
               key={signal}

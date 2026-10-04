@@ -13,12 +13,13 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
+  chartGrid,
+  axisTick,
   Tooltip,
   ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -42,11 +43,12 @@ export default function MotorHistoryCharts({
 
   // Same query key as useMotorStats, so the four history-derived panels
   // share one request and one cache entry while each refreshes on its own.
-  const { data: motorHistory } = useMotorHistory(vehicleId ?? 0, {
+  const query = useMotorHistory(vehicleId ?? 0, {
     limit: MOTOR_HISTORY_LIMIT,
     refetchInterval: INTERVALS.FAST,
     ...historyQuery,
   });
+  const { data: motorHistory } = query;
 
   // URL-persisted hidden-series state for the
   // power-vs-regen trace; users often want to isolate one or the other
@@ -103,7 +105,9 @@ export default function MotorHistoryCharts({
     [rpmChartData],
   );
 
-  const noData = (
+  const noData = query.isLoading ? <Skeleton className="h-48" /> : query.isError ? (
+    <QueryError error={query.error} onRetry={() => void query.refetch()} />
+  ) : (
     <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
       icon={<Activity className="h-5 w-5" />}
       message={t('dynamics.awaitingData', 'Awaiting motor telemetry data...')}
@@ -111,15 +115,18 @@ export default function MotorHistoryCharts({
   );
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5 3xl:grid-cols-3">
+    <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
       {/* Motor Power Over Time */}
-      <FadeIn delay={0.2}>
+      <FadeIn delay={0.1} className="min-w-0 xl:col-span-2">
         {/* chart-a11y:no-table dense per-sample telemetry trace; CSV export available */}
         <ChartContainer
           title={t('dynamics.powerOverTime', 'Motor Power Over Time')}
           subtitle={t('dynamics.powerOverTimeDesc', 'Drive and regen power from motor telemetry')}
           ariaLabel={t('dynamics.powerOverTime.aria', 'Motor power and regen over time area chart')}
           height={280}
+          loading={query.isLoading}
+          error={query.isError ? query.error : null}
+          onRetry={() => void query.refetch()}
           chartKey="motor-power-history"
           exportable
           exportFilename="motor-power"
@@ -131,11 +138,11 @@ export default function MotorHistoryCharts({
                   <ChartGradient id="powerAreaGrad" color="#06b6d4" />
                   <ChartGradient id="regenAreaGrad" color="#22c55e" />
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" kW" />
+                {chartGrid}
+                <XAxis dataKey="time" tick={axisTick} />
+                <YAxis tick={axisTick} unit=" kW" />
                 <Tooltip content={<ChartTooltip />} />
-                <ChartLegend state={powerHidden} wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <ChartLegend state={powerHidden} />
                 <Area {...AREA_DEFAULTS} dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} hide={powerHidden.isHidden('power')} />
                 <Area {...AREA_DEFAULTS} dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} hide={powerHidden.isHidden('regen')} />
               </AreaChart>
@@ -154,6 +161,9 @@ export default function MotorHistoryCharts({
           subtitle={t('dynamics.torqueHistoryDesc', 'Front and rear motor torque over time')}
           ariaLabel={t('dynamics.torqueHistory.aria', 'Front and rear motor torque over time line chart')}
           height={280}
+          loading={query.isLoading}
+          error={query.isError ? query.error : null}
+          onRetry={() => void query.refetch()}
           exportable
           exportFilename="torque-history"
           chartKey="motor-torque-history"
@@ -161,11 +171,11 @@ export default function MotorHistoryCharts({
           {torqueHasData ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={torqueChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" Nm" />
+                {chartGrid}
+                <XAxis dataKey="time" tick={axisTick} />
+                <YAxis tick={axisTick} unit=" Nm" />
                 <Tooltip content={<ChartTooltip />} />
-                <ChartLegend state={torqueHidden} wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <ChartLegend state={torqueHidden} />
                 <Line {...AREA_DEFAULTS} dataKey="front" stroke="#3b82f6" name={t('dynamics.torqueFront', 'Front Torque')} hide={torqueHidden.isHidden('front')} />
                 <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.torqueRear', 'Rear Torque')} hide={torqueHidden.isHidden('rear')} />
               </LineChart>
@@ -184,6 +194,9 @@ export default function MotorHistoryCharts({
           subtitle={t('dynamics.rpmHistoryDesc', 'Front and rear motor RPM over time')}
           ariaLabel={t('dynamics.rpmHistory.aria', 'Front and rear motor RPM over time line chart')}
           height={280}
+          loading={query.isLoading}
+          error={query.isError ? query.error : null}
+          onRetry={() => void query.refetch()}
           exportable
           exportFilename="motor-rpm"
           chartKey="motor-rpm-history"
@@ -191,11 +204,11 @@ export default function MotorHistoryCharts({
           {rpmHasData ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={rpmChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" RPM" />
+                {chartGrid}
+                <XAxis dataKey="time" tick={axisTick} />
+                <YAxis tick={axisTick} unit=" rpm" />
                 <Tooltip content={<ChartTooltip />} />
-                <ChartLegend state={rpmHidden} wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <ChartLegend state={rpmHidden} />
                 <Line {...AREA_DEFAULTS} dataKey="front" stroke="#06b6d4" name={t('dynamics.rpmFront', 'Front RPM')} hide={rpmHidden.isHidden('front')} />
                 <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.rpmRear', 'Rear RPM')} hide={rpmHidden.isHidden('rear')} />
               </LineChart>

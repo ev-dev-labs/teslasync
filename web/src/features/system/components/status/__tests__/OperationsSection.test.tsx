@@ -130,7 +130,7 @@ describe('OperationsSection — header success-rate badge', () => {
     renderSection()
 
     const badge = await screen.findByText(/success rate/i)
-    expect(badge).toHaveTextContent('95.0%')
+    expect(badge).toHaveTextContent('95.00%')
     expect(badge.className).toContain('bg-green-100')
     // Header title/description are visible even while the accordion is collapsed.
     expect(screen.getByText('Operations')).toBeInTheDocument()
@@ -142,7 +142,7 @@ describe('OperationsSection — header success-rate badge', () => {
     mockGetStats.mockResolvedValue(makeStats({ total_sent: 100, sent: 90, failed: 10 }))
     const { unmount } = renderSection()
     const warn = await screen.findByText(/success rate/i)
-    expect(warn).toHaveTextContent('90.0%')
+    expect(warn).toHaveTextContent('90.00%')
     expect(warn.className).toContain('bg-yellow-100')
     unmount()
 
@@ -150,7 +150,7 @@ describe('OperationsSection — header success-rate badge', () => {
     mockGetStats.mockResolvedValue(makeStats({ total_sent: 100, sent: 70, failed: 30 }))
     renderSection()
     const danger = await screen.findByText(/success rate/i)
-    expect(danger).toHaveTextContent('70.0%')
+    expect(danger).toHaveTextContent('70.00%')
     expect(danger.className).toContain('bg-red-100')
   })
 })
@@ -203,7 +203,7 @@ describe('OperationsSection — populated', () => {
     expect(screen.getByText('3/5')).toBeInTheDocument()
 
     // Gauge renders the integer success value and its label.
-    expect(screen.getByText('95')).toBeInTheDocument()
+    expect(screen.getByText('95.00')).toBeInTheDocument()
     expect(screen.getByText('Success')).toBeInTheDocument()
 
     // Notification-log row.
@@ -307,7 +307,7 @@ describe('OperationsSection — null safety', () => {
 
     renderSection()
     const badge = await screen.findByText(/success rate/i)
-    expect(badge).toHaveTextContent('100.0%')
+    expect(badge).toHaveTextContent('100.00%')
     expect(badge.className).toContain('bg-green-100')
 
     expand()

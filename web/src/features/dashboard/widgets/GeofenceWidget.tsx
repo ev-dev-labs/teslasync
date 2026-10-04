@@ -2,8 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Crosshair } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
-import { Circle, Marker } from '@/components/maps';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { Circle, Marker, vehicleIcon } from '@/components/maps';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { useVehicleState, useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -13,6 +13,8 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 /** Haversine distance in meters between two lat/lon points */
 export function haversineMeters(
@@ -33,12 +35,13 @@ export function haversineMeters(
 interface FenceStatus {
   id: string;
   name: string;
-  radius: number;
+  radius: number | null;
   latitude: number;
   longitude: number;
   enabled: boolean;
   inside: boolean;
   distanceM: number;
+  validMap: boolean;
 }
 
 export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
@@ -49,6 +52,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
+  const stateQuery = useVehicleState(id);
   const {
     data: stateData,
     isLoading: stateLoading,
@@ -57,8 +61,9 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
     isError: stateIsError,
     dataUpdatedAt: stateUpdatedAt,
     refetch: stateRefetch,
-  } = useVehicleState(id);
+  } = stateQuery;
 
+  const fenceQuery = useGeofences();
   const {
     data: geofences,
     isLoading: fenceLoading,
@@ -67,7 +72,13 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
     isError: fenceIsError,
     dataUpdatedAt: fenceUpdatedAt,
     refetch: fenceRefetch,
-  } = useGeofences();
+  } = fenceQuery;
+  const stateTrust = useDataState(stateQuery);
+  const fenceTrust = useDataState({
+    ...fenceQuery,
+    data: fenceIsError && (!Array.isArray(geofences) || geofences.length === 0) ? undefined : geofences,
+  });
+  const dataState = useCombinedDataState([stateTrust, fenceTrust]);
 
   const isLoading = stateLoading || fenceLoading;
   const isFetching = stateFetching || fenceFetching;
@@ -85,15 +96,19 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const state = stateData?.state;
   const vLat = state?.latitude ?? 0;
   const vLon = state?.longitude ?? 0;
-  const hasCoords = vLat !== 0 || vLon !== 0;
+  const hasCoords = state?.latitude != null && state.longitude != null &&
+    Number.isFinite(vLat) && Number.isFinite(vLon) &&
+    Math.abs(vLat) <= 90 && Math.abs(vLon) <= 180 && (vLat !== 0 || vLon !== 0);
 
   const fences: FenceStatus[] = useMemo(() => {
-    const raw = geofences ?? [];
-    return raw.map((g) => {
+    const raw = Array.isArray(geofences) ? geofences : [];
+    return raw.filter((g) => g != null).map((g) => {
       const gLat = g.latitude ?? 0;
       const gLon = g.longitude ?? 0;
-      const radius = g.radius ?? 0;
-      const dist = hasCoords
+      const radius = g.radius != null && Number.isFinite(g.radius) && g.radius >= 0 ? g.radius : null;
+      const validMap = g.latitude != null && g.longitude != null && Number.isFinite(gLat) &&
+        Number.isFinite(gLon) && Math.abs(gLat) <= 90 && Math.abs(gLon) <= 180 && radius != null;
+      const dist = hasCoords && validMap
         ? haversineMeters(vLat, vLon, gLat, gLon)
         : Infinity;
       return {
@@ -103,8 +118,9 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
         latitude: gLat,
         longitude: gLon,
         enabled: g.enabled ?? true,
-        inside: dist <= radius,
+        inside: radius != null && dist <= radius,
         distanceM: dist,
+        validMap,
       };
     });
   }, [geofences, vLat, vLon, hasCoords]);
@@ -115,14 +131,17 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   );
   const isCompact = size.cols <= 1;
   const isEmpty = fences.length === 0;
+  const markerIcon = useMemo(() => vehicleIcon(), []);
 
   /** Convert radius (meters) to user-preferred distance and format */
-  const fmtRadius = (meters: number): string => {
-    return `${fmtNumber(convertDistanceFromSI(meters, unitPrefs.distance))} ${unitPrefs.distance}`;
+  const fmtRadius = (meters: number | null): string => {
+    return meters != null ? `${fmtNumber(convertDistanceFromSI(meters, unitPrefs.distance))} ${unitPrefs.distance}` : '—';
   };
 
   const shellProps = {
+    title: t('widget.geofence.title', 'Geofence status'),
     loading: isLoading,
+    dataState: { ...dataState, retry: onRefresh, data: stateData ?? geofences, hasData: stateData != null || fences.length > 0 },
     updatedAt,
     isFetching,
     isStale,
@@ -142,7 +161,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
             </Badge>
           ) : (
             <Badge variant="neutral" size="sm">
-              {t('widget.geofence.noZone', 'No zone')}
+              {hasCoords && Array.isArray(geofences) && !fenceTrust.fatalError ? t('widget.geofence.noZone', 'No zone') : '—'}
             </Badge>
           )}
         </div>
@@ -155,32 +174,35 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.geofence.title', 'Geofence status')}
       icon={<Crosshair aria-hidden="true" className="h-3.5 w-3.5 text-neon-cyan" />}
       noPadding={showMap}
       {...shellProps}
     >
-      {isEmpty ? (
+      {fenceTrust.fatalError ? (
+        <QueryError error={fenceTrust.fatalError} onRetry={() => { void fenceRefetch(); }} />
+      ) : fenceLoading && isEmpty ? (
+        <Skeleton className="h-24" />
+      ) : isEmpty ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Crosshair aria-hidden="true" className="h-5 w-5" />}
           message={t('widget.geofence.noFences', 'No geofences configured')}
           className="py-4"
         />
       ) : (
-        <div className="flex h-full flex-col">
+        <div className={showMap ? 'flex flex-1 min-h-0 flex-col' : 'flex h-full flex-col'}>
           {/* Map section */}
           {showMap && (
-            <div className="h-40 min-h-[120px] flex-shrink-0">
+            <div className="flex flex-1 min-h-0 flex-col">
               <WidgetMapView
                 center={[vLat, vLon]}
                 zoom={12}
                 compact={false}
               >
-                {fences.map((f) => (
+                {fences.filter((f) => f.validMap).map((f) => (
                   <Circle
                     key={f.id}
                     center={[f.latitude, f.longitude]}
-                    radius={f.radius}
+                    radius={f.radius ?? 0}
                     pathOptions={{
                       color: f.inside ? '#22c55e' : '#6b7280',
                       fillColor: f.inside ? '#22c55e' : '#6b7280',
@@ -189,7 +211,11 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
                     }}
                   />
                 ))}
-                <Marker position={[vLat, vLon]} />
+                <Marker
+                  position={[vLat, vLon]}
+                  icon={markerIcon}
+                  title={t('maps.animatedMarker.label', 'Vehicle position', { ns: 'translation' })}
+                />
               </WidgetMapView>
             </div>
           )}
@@ -200,17 +226,17 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
               {fences.map((f) => (
                 <li
                   key={f.id}
-                  className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 min-h-[44px] ${
+                  className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 min-h-[44px] ${
                     f.inside && f.enabled
                       ? 'bg-green-500/10 ring-1 ring-green-500/30'
                       : 'bg-[var(--surface-2)]'
                   }`}
                 >
                   <div className="flex flex-col min-w-0">
-                    <span className="truncate text-sm font-medium text-[var(--text-primary)]">
+                    <span className={`${dashboardTokens.title} break-words`}>
                       {f.name}
                     </span>
-                    <span className="text-2xs text-[var(--text-muted)]">
+                    <span className={dashboardTokens.unit}>
                       {t('widget.geofence.radius', 'Radius')}: {fmtRadius(f.radius)}
                     </span>
                   </div>
@@ -225,7 +251,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
                       </Badge>
                     ) : (
                       <Badge variant="neutral" size="sm">
-                        {t('widget.geofence.outside', 'Outside')}
+                        {hasCoords && f.validMap ? t('widget.geofence.outside', 'Outside') : '—'}
                       </Badge>
                     )}
                   </div>

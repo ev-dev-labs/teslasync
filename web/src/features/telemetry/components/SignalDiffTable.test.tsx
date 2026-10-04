@@ -154,7 +154,7 @@ describe('asNumber', () => {
   });
 
   it('parses numeric strings but rejects blank / non-numeric ones', () => {
-    expect(asNumber('12.5')).toBe(12.5);
+    expect(asNumber('12.50')).toBe(12.5);
     expect(asNumber('  7  ')).toBe(7); // Number() trims surrounding whitespace
     expect(asNumber('')).toBeNull();
     expect(asNumber('   ')).toBeNull();
@@ -288,13 +288,13 @@ describe('SignalDiffTable — row content', () => {
 
   it('colours a positive Δ emerald with a signed value + percent', () => {
     renderTable();
-    const delta = within(rowFor('battery_level')).getByText(/\+8\.00 \(\+10\.0%\)/);
+    const delta = within(rowFor('battery_level')).getByText(/\+8\.00 \(\+10\.00%\)/);
     expect(delta.className).toContain('text-emerald-300');
   });
 
   it('colours a negative Δ rose with a signed value + percent', () => {
     renderTable();
-    const delta = within(rowFor('cabin_temp')).getByText(/-3\.00 \(-13\.6%\)/);
+    const delta = within(rowFor('cabin_temp')).getByText(/-3\.00 \(-13\.64%\)/);
     expect(delta.className).toContain('text-rose-300');
   });
 

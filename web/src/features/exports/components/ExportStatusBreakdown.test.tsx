@@ -170,9 +170,8 @@ describe('ExportStatusBreakdown', () => {
         stats: makeStats({ byStatus: { ready: 3, failed: 1 } }),
       });
 
-      // total = 4 → ready 75%, failed 25% (percentage rendered at 0 decimals).
-      expect(screen.getByText(/3\s*\S\s*75%/)).toBeInTheDocument();
-      expect(screen.getByText(/1\s*\S\s*25%/)).toBeInTheDocument();
+      expect(screen.getByText(/3\s*\S\s*75\.00%/)).toBeInTheDocument();
+      expect(screen.getByText(/1\s*\S\s*25\.00%/)).toBeInTheDocument();
     });
 
     it('renders the storage footer with a formatted byte total', () => {
@@ -184,7 +183,7 @@ describe('ExportStatusBreakdown', () => {
       });
 
       expect(screen.getByText('Storage used')).toBeInTheDocument();
-      expect(screen.getByText('2.0 MB')).toBeInTheDocument();
+      expect(screen.getByText('2.00 MB')).toBeInTheDocument();
     });
 
     it('renders an em dash for storage when no bytes have accumulated', () => {

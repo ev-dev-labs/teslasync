@@ -62,7 +62,11 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
             ) : null}
           </div>
           <Text as="p" variant="caption">{drive?.honesty ?? ledger.honesty}</Text>
-          <Table aria-label={t('physicsLedger.drive.title', 'Drive energy ledger')}>
+          <Table variant="embedded" className="md:table-fixed" aria-label={t('physicsLedger.drive.title', 'Drive energy ledger')}>
+            <colgroup>
+              <col className="md:w-[35%]" /><col className="md:w-[20%]" />
+              <col className="md:w-[35%]" /><col className="md:w-[10%]" />
+            </colgroup>
             <thead><tr>
               <th scope="col">{t('driveDetail.report.term', 'Physics term')}</th>
               <th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>
@@ -78,7 +82,8 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
               </tr>
             ))}</tbody>
           </Table>
-          <Table aria-label={t('driveDetail.report.reconciliation', 'Ledger reconciliation')}>
+          <Table variant="embedded" className="md:table-fixed" aria-label={t('driveDetail.report.reconciliation', 'Ledger reconciliation')}>
+            <colgroup><col className="md:w-[35%]" /><col className="md:w-[65%]" /></colgroup>
             <tbody>
               <tr><th scope="row">{t('physicsLedger.drive.predicted', 'Predicted (known terms)')}</th><td>{energy(drive?.predicted_wh)}</td></tr>
               <tr><th scope="row">{t('physicsLedger.drive.session', 'Session')}</th><td>{energy(drive?.session_wh)}</td></tr>

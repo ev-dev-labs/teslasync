@@ -341,9 +341,9 @@ describe('MapOverviewPage — full render', () => {
     ).toBeInTheDocument()
 
     // KPI band derives live status from the latest position (SI → km).
-    expect(await screen.findByText('90.0 km/h')).toBeInTheDocument()
+    expect(await screen.findByText('90.00 km/h')).toBeInTheDocument()
     expect(screen.getByText('Current speed')).toBeInTheDocument()
-    expect(screen.getByText('42°')).toBeInTheDocument()
+    expect(screen.getByText('42.00°')).toBeInTheDocument()
     expect(screen.getByText('37.5000, -121.9000')).toBeInTheDocument()
     expect(screen.getByText('Last updated')).toBeInTheDocument()
 
@@ -386,8 +386,8 @@ describe('MapOverviewPage — full render', () => {
     h.unit.current = 'mi'
     renderPage()
 
-    expect(await screen.findByText('55.9 mph')).toBeInTheDocument()
-    expect(screen.queryByText('90.0 km/h')).toBeNull()
+    expect(await screen.findByText('55.92 mph')).toBeInTheDocument()
+    expect(screen.queryByText('90.00 km/h')).toBeNull()
   })
 })
 
@@ -516,7 +516,7 @@ describe('MapOverviewPage — position loading', () => {
     expect(await screen.findByText('Location details')).toBeInTheDocument()
     // … but the KPI band shows skeletons, not half-populated metrics.
     expect(screen.queryByText('Current speed')).toBeNull()
-    expect(screen.queryByText('90.0 km/h')).toBeNull()
+    expect(screen.queryByText('90.00 km/h')).toBeNull()
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
   })
 })

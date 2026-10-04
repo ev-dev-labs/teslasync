@@ -27,8 +27,8 @@
  * map is stubbed so tests never touch canvas/leaflet.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -321,7 +321,43 @@ describe('groupSessions', () => {
 
 /* ── Page ─────────────────────────────────────────────── */
 
+afterEach(() => vi.restoreAllMocks())
+
 describe('TeslaChargingSessionsPage', () => {
+  it('updates billing precision and locale while mounted without changing canonical amounts', async () => {
+    // jsdom has no layout; expose a viewport so the real virtualizer renders rows.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(1024)
+    const session = makeSession({
+      site_location_name: 'Precision billing fixture',
+      total_cost: 1234.5678,
+      per_kwh_rate: 0.12345,
+      currency_code: 'EUR',
+    })
+    install({ sessions: [session] })
+    renderPage()
+    const table = await screen.findByRole('region', { name: 'Charging sessions table' })
+    await waitFor(() => expect(table.textContent).toContain('€1,234.57'))
+    fireEvent.click(within(table).getByRole('button', { name: /(?:reorder|show).*hide columns/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Rate/kWh' }))
+    fireEvent.click(within(table).getByRole('button', { name: /(?:reorder|show).*hide columns/i }))
+    expect(within(table).getByText('€0.12')).toBeInTheDocument()
+    fireEvent.click(within(table).getByRole('button', { name: 'Cost filter' }))
+    expect(screen.getByRole('checkbox', { name: '€1,234.57' })).toBeChecked()
+
+    act(() => setGlobalPrecision(4))
+    expect(within(table).getByText('€1,234.5678')).toBeInTheDocument()
+    expect(within(table).getByText('€0.1235')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: '€1,234.5678' })).toBeChecked()
+    act(() => setGlobalLocale('de-DE'))
+    expect(within(table).getByText('1.234,5678 €')).toBeInTheDocument()
+    expect(within(table).getByText('0,1235 €')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: '1.234,5678\u00a0€' })).toBeChecked()
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBe(table)
+    expect(session.total_cost).toBe(1234.5678)
+    expect(session.per_kwh_rate).toBe(0.12345)
+    expect(session.total_energy_added_wh).toBe(20000)
+  })
   it('renders the full dashboard once sessions + summary load', async () => {
     renderPage()
 
@@ -337,13 +373,13 @@ describe('TeslaChargingSessionsPage', () => {
     // KPI band derives from the SERVER summary (not the filtered sessions).
     expect(await screen.findByText('42')).toBeInTheDocument()
     expect(within(brief).getByText('3')).toBeInTheDocument()
-    expect(within(brief).getByText('60.0 kWh')).toBeInTheDocument()
+    expect(within(brief).getByText('60.00 kWh')).toBeInTheDocument()
     expect(within(brief).getByText('$15.00')).toBeInTheDocument()
     expect(within(brief).getByText('1h 10m')).toBeInTheDocument()
-    expect(screen.getByText('123.0 kWh')).toBeInTheDocument()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
     expect(screen.getByText('$99.50')).toBeInTheDocument()
-    expect(screen.getByText('$0.234')).toBeInTheDocument()
-    expect(screen.getByText('250')).toBeInTheDocument()
+    expect(screen.getByText('$0.23')).toBeInTheDocument()
+    expect(screen.getByText('250.00')).toBeInTheDocument()
     expect(screen.getAllByText('Total sessions').length).toBeGreaterThan(1)
     expect(screen.getByText('Peak power')).toBeInTheDocument()
 
@@ -389,7 +425,7 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByTestId('table-skeleton')).toBeInTheDocument()
 
     // KPI values are withheld — never a half-populated dashboard.
-    expect(screen.queryByText('123.0 kWh')).toBeNull()
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
     expect(screen.queryByText('$99.50')).toBeNull()
   })
 
@@ -401,7 +437,7 @@ describe('TeslaChargingSessionsPage', () => {
 
     // No stale/fabricated KPI values leak through the error branch.
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
-    expect(screen.queryByText('123.0 kWh')).toBeNull()
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
   })
 
   it('renders honest per-section empty states when there is no data', async () => {
@@ -420,7 +456,7 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getAllByText('0').length).toBeGreaterThan(0)
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
     expect(screen.getByText('No sessions in this analysis window')).toBeInTheDocument()
-    expect(screen.queryByText('123.0 kWh')).toBeNull()
+    expect(screen.queryByText('123.00 kWh')).toBeNull()
   })
 
   it('surfaces fee exposure and partial cost coverage as attention items', async () => {

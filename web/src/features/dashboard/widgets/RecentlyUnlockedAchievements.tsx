@@ -7,6 +7,8 @@ import { Button } from '@/components/ui';
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAchievementCelebrationPrefs } from '@/hooks/useAchievementCelebrationPrefs';
+import { useDataState } from '@/hooks/useDataState';
+import { safeArray } from '@/lib/safeArray';
 import { AchievementBadge } from '@/features/analytics/components/AchievementBadge';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -42,27 +44,33 @@ export function unlockedTs(unlockedAt: string | null): number {
  * widget slot doesn't disappear from the layout (avoids surprising the user
  * with a hole in their dashboard grid).
  *
- * Resilience: a background-refetch failure is surfaced only through the header
- * freshness indicator (`isError`) — the last-known badge strip stays on screen
- * rather than collapsing the whole widget to an error panel.
+ * Resilience: a background-refetch failure preserves the last-known strip
+ * with shared trust/recovery instead of replacing it with an error panel.
  */
 export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
-  const { data: vehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const idStr = Number.isSafeInteger(id) && id > 0 ? String(id) : undefined;
   const prefs = useAchievementCelebrationPrefs();
 
+  const lifetimeQuery = useLifetimeStats(idStr);
   const {
     data, isLoading,
     isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useLifetimeStats(id > 0 ? String(id) : undefined);
+  } = lifetimeQuery;
+  const lifetimeState = useDataState(lifetimeQuery, {
+    partial: data !== undefined && !Array.isArray(data?.achievements),
+  });
+  const vehiclesState = useDataState(vehiclesQuery);
 
   const isWide = (size?.cols ?? 0) >= 3;
   const limit = isWide ? 5 : 3;
 
   const recent = useMemo(() => {
-    const all = data?.achievements ?? [];
+    const all = safeArray(data?.achievements);
     return all
       .filter(a => a.unlocked && a.unlocked_at)
       .sort((a, b) => unlockedTs(b.unlocked_at) - unlockedTs(a.unlocked_at))
@@ -70,8 +78,12 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
   }, [data?.achievements, limit]);
 
   const handleRefresh = useCallback(() => {
+    if (!idStr) {
+      void vehiclesQuery.refetch();
+      return;
+    }
     void refetch();
-  }, [refetch]);
+  }, [idStr, vehiclesQuery.refetch, refetch]);
 
   const handleOpen = useCallback(
     (achievementId: string) => {
@@ -103,10 +115,11 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
       title={title}
       icon={icon}
       loading={isLoading}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
+      dataState={idStr ? lifetimeState : vehiclesState}
+      updatedAt={idStr ? dataUpdatedAt : vehiclesQuery.dataUpdatedAt}
+      isFetching={idStr ? isFetching : vehiclesQuery.isFetching}
+      isStale={idStr ? isStale : vehiclesQuery.isStale}
+      isError={idStr ? isError : vehiclesQuery.isError}
       onRefresh={handleRefresh}
     >
       {recent.length > 0 ? (

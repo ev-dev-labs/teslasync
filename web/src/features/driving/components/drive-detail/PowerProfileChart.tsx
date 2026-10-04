@@ -84,7 +84,7 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
       </ChartContainer>
       <div className="mt-3 space-y-2">
         <Text as="p" variant="caption">{t('driveDetail.report.powerMethod', 'Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.')}</Text>
-        <Table aria-label={t('driveDetail.powerProfile', 'Power profile')}>
+        <Table variant="embedded" aria-label={t('driveDetail.powerProfile', 'Power profile')}>
           <tbody>
             <tr><th scope="row">{t('driveDetail.maxPower', 'Maximum power')}</th><td>{max != null ? `${fmtInt(max)} kW` : '—'}</td></tr>
             <tr><th scope="row">{t('driveDetail.maxRegen', 'Maximum regen')}</th><td>{min != null && min < 0 ? `${fmtInt(min)} kW` : min != null ? '0 kW' : '—'}</td></tr>

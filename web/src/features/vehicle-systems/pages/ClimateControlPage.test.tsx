@@ -26,10 +26,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -290,6 +291,31 @@ beforeEach(() => {
   unitState.temp = 'C';
 });
 
+it('keeps temperature-delta classification raw while locale and precision change live', () => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+  const latest = climate({ insideTemp: 22.2345, driverTempSetting: 21 });
+  install({ latest, history: HISTORY });
+  const view = renderPage();
+  expect(screen.getByText('+1.23')).toBeInTheDocument();
+  expect(screen.getByText('Above target')).toBeInTheDocument();
+  try {
+    act(() => setGlobalLocale('de-DE'));
+    expect(screen.getByText('+1,23')).toBeInTheDocument();
+    expect(screen.getByText('Above target')).toBeInTheDocument();
+    act(() => setGlobalPrecision(0));
+    expect(screen.getByText('+1')).toBeInTheDocument();
+    expect(screen.getByText('Above target')).toBeInTheDocument();
+    expect(screen.queryByText('Near target')).not.toBeInTheDocument();
+    expect(latest.insideTemp).toBe(22.2345);
+    expect(latest.driverTempSetting).toBe(21);
+  } finally {
+    view.unmount();
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+  }
+});
+
 describe('ClimateControlPage — structure, wiring & a11y', () => {
   it('renders the title/subtitle and wires shared vehicle context to the hooks', () => {
     install({ latest: climate(), history: HISTORY });
@@ -355,7 +381,7 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
     expect(within(card('Steering wheel heat level')).getByText('Medium')).toBeInTheDocument();
     expect(within(card('Overheat protection')).getByText('On')).toBeInTheDocument();
     // passenger set temp converts + carries the °C suffix.
-    expect(within(card('Passenger setting')).getByText('20.0°C')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('20.00°C')).toBeInTheDocument();
   });
 
   it('renders seat-heater levels, cooling ventilation and auto-climate chips', () => {
@@ -379,23 +405,23 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
     const efficiency = screen.getByRole('region', { name: 'Comfort & efficiency' });
 
     // inside 22, set 21 → |Δ|=1 → score 90, delta +1, near target, excellent.
-    expect(within(overview).getByText('90')).toBeInTheDocument();
-    expect(within(overview).getByText('+1')).toBeInTheDocument();
+    expect(within(overview).getByText('90.00')).toBeInTheDocument();
+    expect(within(overview).getByText('+1.00')).toBeInTheDocument();
     expect(within(overview).getByText('Near target')).toBeInTheDocument();
     expect(within(overview).getByText('Excellent')).toBeInTheDocument();
 
     // efficiency: avg fan 5.0, peak 6.0, AC-on 50%, comfort 90%.
-    expect(within(efficiency).getByText('5.0')).toBeInTheDocument();
-    expect(within(efficiency).getByText('6.0')).toBeInTheDocument();
-    expect(within(efficiency).getByText('50%')).toBeInTheDocument();
-    expect(within(efficiency).getByText('90%')).toBeInTheDocument();
+    expect(within(efficiency).getByText('5.00')).toBeInTheDocument();
+    expect(within(efficiency).getByText('6.00')).toBeInTheDocument();
+    expect(within(efficiency).getByText('50.00%')).toBeInTheDocument();
+    expect(within(efficiency).getByText('90.00%')).toBeInTheDocument();
   });
 
   it('renders the history table with °C-converted cells', () => {
     renderPage();
     const table = screen.getByRole('table');
-    expect(within(table).getByText('18.0')).toBeInTheDocument(); // inside row (10:00)
-    expect(within(table).getByText('14.0')).toBeInTheDocument(); // outside row (11:00)
+    expect(within(table).getByText('18.00')).toBeInTheDocument(); // inside row (10:00)
+    expect(within(table).getByText('14.00')).toBeInTheDocument(); // outside row (11:00)
     expect(screen.getByRole('button', { name: 'Inside °C' })).toBeInTheDocument();
   });
 });
@@ -407,10 +433,10 @@ describe('ClimateControlPage — imperial (°F) unit boundary', () => {
     renderPage();
 
     // 20 °C → 68 °F on the passenger card (suffix flips with the preference).
-    expect(within(card('Passenger setting')).getByText('68.0°F')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('68.00°F')).toBeInTheDocument();
     // history: 18 °C → 64.4 °F cell; header unit flips to °F.
     const table = screen.getByRole('table');
-    expect(within(table).getByText('64.4')).toBeInTheDocument();
+    expect(within(table).getByText('64.40')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inside °F' })).toBeInTheDocument();
     // The AI boundary still receives raw SI °C, regardless of display prefs.
     expect(screen.getByTestId('ai-recommender')).toHaveAttribute('data-cabin', '22');
@@ -488,11 +514,11 @@ describe('ClimateControlPage — interactions', () => {
       within(within(table).getAllByRole('row')[1]).getAllByRole('cell')[1];
 
     // Default sort = timestamp desc → 12:00 sample (inside 10) is first.
-    expect(firstInsideCell()).toHaveTextContent('10.0');
+    expect(firstInsideCell()).toHaveTextContent('10.00');
 
     // Sort by "Inside" → desc puts the hottest (30) on top.
     fireEvent.click(screen.getByRole('button', { name: 'Inside °C' }));
-    expect(firstInsideCell()).toHaveTextContent('30.0');
+    expect(firstInsideCell()).toHaveTextContent('30.00');
   });
 });
 

@@ -237,7 +237,7 @@ describe('DestinationTransitionsPage', () => {
     );
     expect(
       quality.getByText('Visit recency (days)').parentElement,
-    ).toHaveTextContent('0.1');
+    ).toHaveTextContent('0.06');
 
     vi.mocked(Date.now).mockReturnValue(
       FROZEN_NOW + 10 * 86_400_000,
@@ -254,7 +254,7 @@ describe('DestinationTransitionsPage', () => {
       within(screen.getByTestId('destination-evidence-quality'))
         .getByText('Visit recency (days)')
         .parentElement,
-    ).toHaveTextContent('0.1');
+    ).toHaveTextContent('0.06');
   });
 
   it('keeps every shell visible with one live loading status', () => {

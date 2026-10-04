@@ -55,7 +55,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
 
   return (
     <FadeIn className="space-y-3">
-      <Table aria-label={t('driveDetail.temperatures', 'Temperatures')}>
+      <Table variant="embedded" aria-label={t('driveDetail.temperatures', 'Temperatures')}>
         <tbody>
           {[
             { id: 'outside', label: t('driveDetail.outsideTemp', 'Outside temperature'), value: stats.avgOutsideTemp },

@@ -283,7 +283,7 @@ describe('ChargeAdvisorPage', () => {
     view.rerenderPage();
 
     expect(screen.getByText('Live signal')).toBeInTheDocument();
-    expect(screen.getByText('Charge limit 85%')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit 85.00%')).toBeInTheDocument();
     expect(screen.getByText(/through 2026-06-02/)).toBeInTheDocument();
   });
 
@@ -292,7 +292,7 @@ describe('ChargeAdvisorPage', () => {
     const selector = screen.getByLabelText('Reserve floor');
     fireEvent.change(selector, { target: { value: '30' } });
     const sensitivity = within(screen.getByTestId('charge-advisor-sensitivity'));
-    expect(sensitivity.getByText('30%')).toBeInTheDocument();
+    expect(sensitivity.getByText('30.00%')).toBeInTheDocument();
     expect(sensitivity.getByText('Selected')).toBeInTheDocument();
   });
 
@@ -300,8 +300,8 @@ describe('ChargeAdvisorPage', () => {
     renderPage();
     const current = within(screen.getByTestId('charge-advisor-current'));
     expect(current.getByText('Live signal')).toBeInTheDocument();
-    expect(current.getByText('80%')).toBeInTheDocument();
-    expect(current.getByText('Charge limit 80%')).toBeInTheDocument();
+    expect(current.getByText('80.00%')).toBeInTheDocument();
+    expect(current.getByText('Charge limit 80.00%')).toBeInTheDocument();
   });
 
   it('keeps every shell visible with no selected vehicle', () => {
@@ -435,6 +435,6 @@ describe('ChargeAdvisorPage', () => {
     renderPage();
     expectEveryShell();
     expect(screen.queryByText('Already charging')).not.toBeInTheDocument();
-    expect(screen.queryByText('Charge limit 80%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge limit 80.00%')).not.toBeInTheDocument();
   });
 });

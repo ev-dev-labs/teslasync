@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useCallback, useRef, useSyncExternalStore } from 'react'
+import { notifyManager, useQueryClient } from '@tanstack/react-query'
 import type { Query, QueryClient } from '@tanstack/react-query'
 
 import { safeArray } from '@/lib/safeArray'
@@ -57,33 +57,6 @@ import type { AppSettings, FleetTelemetryCoverageResponse, LiveSignalsResponse }
 
 /** Cache events that can change decoded evidence. */
 const RELEVANT_EVENTS = new Set(['added', 'removed', 'updated'])
-
-/**
- * Monotonic revision of the query cache.
- *
- * `useSyncExternalStore` needs a snapshot that is cheap, referentially stable
- * between notifications, and different after one. A counter satisfies all
- * three; hashing the cache contents on every read would not be cheap, and
- * returning the cache object itself would not change identity on update.
- */
-function useQueryCacheRevision(queryClient: QueryClient): number {
-  const revisionRef = useRef(0)
-
-  const subscribe = useCallback(
-    (onStoreChange: () => void) =>
-      queryClient.getQueryCache().subscribe((event) => {
-        if (!RELEVANT_EVENTS.has(event.type)) return
-        revisionRef.current += 1
-        onStoreChange()
-      }),
-    [queryClient],
-  )
-
-  const getSnapshot = useCallback(() => revisionRef.current, [])
-  // Server snapshot is the same counter: this hook only ever runs in the
-  // browser, and returning a constant would make hydration disagree.
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
-}
 
 /** Every cached query under `root` that has actually observed a value. */
 function observedQueries(queryClient: QueryClient, root: string): Query[] {
@@ -252,6 +225,15 @@ export interface CachedOnboardingEvidence {
   hasElectricityTariff: boolean | undefined
 }
 
+const EVIDENCE_FIELDS: ReadonlyArray<keyof CachedOnboardingEvidence> = [
+  'driveCount',
+  'chargingSessionCount',
+  'automationCount',
+  'notificationChannelCount',
+  'hasLiveTelemetry',
+  'hasElectricityTariff',
+]
+
 /**
  * Subscribe to the query cache and decode onboarding evidence from it.
  *
@@ -260,13 +242,12 @@ export interface CachedOnboardingEvidence {
  */
 export function useCachedOnboardingEvidence(): CachedOnboardingEvidence {
   const queryClient = useQueryClient()
-  const revision = useQueryCacheRevision(queryClient)
-
-  return useMemo(
-    () => ({
-      // `revision` is the whole point of this dependency array: the cache is
-      // mutable and `queryClient` never changes identity, so without it this
-      // memo would freeze exactly as the original implementation did.
+  const snapshotRef = useRef<{
+    client: QueryClient
+    evidence: CachedOnboardingEvidence
+  } | null>(null)
+  const getSnapshot = useCallback(() => {
+    const evidence: CachedOnboardingEvidence = {
       driveCount: observedMaxLength(queryClient, 'drives', { arrayOnly: true }),
       chargingSessionCount: readChargingSessionCount(queryClient),
       automationCount: observedExactListLength(queryClient, ['automations']),
@@ -275,7 +256,35 @@ export function useCachedOnboardingEvidence(): CachedOnboardingEvidence {
       ]),
       hasLiveTelemetry: readLiveTelemetry(queryClient),
       hasElectricityTariff: readTariffConfigured(queryClient),
-    }),
-    [queryClient, revision],
+    }
+    const previous = snapshotRef.current
+    // Pending query creation must not invalidate an in-flight concurrent route
+    // render when the evidence is still unknown.
+    if (previous?.client === queryClient
+      && EVIDENCE_FIELDS.every(field => Object.is(previous.evidence[field], evidence[field]))) {
+      return previous.evidence
+    }
+    snapshotRef.current = { client: queryClient, evidence }
+    return evidence
+  }, [queryClient])
+
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    let active = true
+    const notify = notifyManager.batchCalls(() => {
+      if (active) onStoreChange()
+    })
+    const unsubscribe = queryClient.getQueryCache().subscribe(event => {
+      if (!RELEVANT_EVENTS.has(event.type)) return
+      const previous = snapshotRef.current?.evidence
+      if (getSnapshot() !== previous) notify()
+    })
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [queryClient, getSnapshot])
+
+  return useSyncExternalStore(
+    subscribe, getSnapshot, getSnapshot,
   )
 }

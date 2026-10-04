@@ -22,7 +22,8 @@
  * for their branch/edge behaviour.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -234,9 +235,12 @@ function kpiValue(label: string): string {
 beforeEach(() => {
   mockRequest.mockReset();
   window.localStorage.clear();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
 });
 afterEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
@@ -329,6 +333,35 @@ describe('buildTopLocations', () => {
 
 // ── Component — happy path ───────────────────────────────────────────────────
 describe('TeslaChargingHistoryPage — happy path', () => {
+  it('updates billing precision and locale while mounted without changing canonical amounts', async () => {
+    // jsdom has no layout; expose a viewport so the real virtualizer renders rows.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(1024);
+    const invoice = entry({
+      id: 1,
+      session_id: 1,
+      site_location_name: 'Precision billing fixture',
+      total_due: 1234.5678,
+      currency_code: 'EUR',
+    });
+    installRequest({ response: { ...RESPONSE, entries: [invoice] } });
+    renderPage();
+    const value = await screen.findByText('€1,234.57');
+    const row = value.closest('tr, [role="row"]');
+    expect(row).not.toBeNull();
+    const billing = within(row as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Cost filter' }));
+    expect(screen.getByRole('checkbox', { name: '€1,234.57' })).toBeChecked();
+    act(() => setGlobalPrecision(4));
+    expect(billing.getByText('€1,234.5678')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: '€1,234.5678' })).toBeChecked();
+    act(() => setGlobalLocale('de-DE'));
+    expect(billing.getByText('1.234,5678 €')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: '1.234,5678\u00a0€' })).toBeChecked();
+    expect(row).toBeInTheDocument();
+    expect(invoice.total_due).toBe(1234.5678);
+    expect(invoice.usage_wh).toBe(50000);
+  });
   it('renders the page shell, every section, and all panel headings', async () => {
     installRequest();
     renderPage();
@@ -373,7 +406,7 @@ describe('TeslaChargingHistoryPage — happy path', () => {
     expect(kpiValue('Total sessions')).toBe('3');
     expect(kpiValue('Total energy')).toMatch(/^115(?:\.0+)?\s*kWh$/);
     expect(kpiValue('Total spend')).toBe('$30.00');
-    expect(kpiValue('Avg cost/kWh')).toBe('$0.260');
+    expect(kpiValue('Avg cost/kWh')).toBe('$0.26');
     // Total Duration + Sites Visited are derived client-side from the entries.
     expect(kpiValue('Total duration')).toBe('1h 30m');
     expect(kpiValue('Sites visited')).toBe('2');

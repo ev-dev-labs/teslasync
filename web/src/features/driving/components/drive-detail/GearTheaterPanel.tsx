@@ -34,6 +34,7 @@ export function GearTheaterPanel({ driveId }: { driveId: string | undefined }) {
             </Text>
           ) : (
             <DataTable
+              variant="embedded"
               tableId="drive-detail:gear-events" name="drive-gear-events"
               data={events.map((event, index) => ({ ...event, index }))}
               keyExtractor={(event) => `${event.at}-${event.index}`}

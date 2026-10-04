@@ -229,7 +229,7 @@ describe('TripSummaryWidget', () => {
   it('renders real zero distance and counts', () => {
     tripsMock.mockReturnValue(makeQuery({ data: [makeTrip({ total_distance_m: 0, drive_count: 0, charge_count: 0 })] }));
     renderWidget();
-    expect(screen.getByText('0.0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
     expect(screen.getAllByText('0')).toHaveLength(2);
   });
 
@@ -252,7 +252,7 @@ describe('TripSummaryWidget', () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     // 50_000 m → 50.0 km; 90 min → "1h 30m"; counts pass through fmtInt.
-    expect(screen.getByText('50.0 km')).toBeInTheDocument();
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
     expect(screen.getByText('1h 30m')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('9')).toBeInTheDocument();
@@ -261,8 +261,8 @@ describe('TripSummaryWidget', () => {
     expect(screen.getByText('Recent trips')).toBeInTheDocument();
     expect(screen.getByText('Coastal Run')).toBeInTheDocument();
     expect(screen.getByText('City Hop')).toBeInTheDocument();
-    expect(screen.getByText('10.0 km')).toBeInTheDocument();
-    expect(screen.getByText('20.0 km')).toBeInTheDocument();
+    expect(screen.getByText('10.00 km')).toBeInTheDocument();
+    expect(screen.getByText('20.00 km')).toBeInTheDocument();
     expect(screen.getByText('45m')).toBeInTheDocument();
     expect(screen.getByText('20m')).toBeInTheDocument();
     expect(screen.getByText('3 drv')).toBeInTheDocument();
@@ -274,25 +274,25 @@ describe('TripSummaryWidget', () => {
     renderWidget();
 
     // 50_000 / 1609.344 = 31.07 → "31.1"; 10_000 → 6.2; 20_000 → 12.4.
-    expect(screen.getByText('31.1 mi')).toBeInTheDocument();
-    expect(screen.getByText('6.2 mi')).toBeInTheDocument();
-    expect(screen.getByText('12.4 mi')).toBeInTheDocument();
+    expect(screen.getByText('31.07 mi')).toBeInTheDocument();
+    expect(screen.getByText('6.21 mi')).toBeInTheDocument();
+    expect(screen.getByText('12.43 mi')).toBeInTheDocument();
 
     // The km-unit strings must be gone once converted.
-    expect(screen.queryByText('50.0 km')).not.toBeInTheDocument();
-    expect(screen.queryByText('10.0 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('50.00 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('10.00 km')).not.toBeInTheDocument();
   });
 
   it('compact layout drops each recent row to distance-only', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     // The last-trip stat grid still renders in compact.
-    expect(screen.getByText('50.0 km')).toBeInTheDocument();
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
     expect(screen.getByText('Drives')).toBeInTheDocument();
 
     // Recent rows keep their distance…
-    expect(screen.getByText('10.0 km')).toBeInTheDocument();
-    expect(screen.getByText('20.0 km')).toBeInTheDocument();
+    expect(screen.getByText('10.00 km')).toBeInTheDocument();
+    expect(screen.getByText('20.00 km')).toBeInTheDocument();
     // …but drop the duration + drive badge.
     expect(screen.queryByText('45m')).not.toBeInTheDocument();
     expect(screen.queryByText('3 drv')).not.toBeInTheDocument();
@@ -304,7 +304,7 @@ describe('TripSummaryWidget', () => {
 
     // The last-trip block still renders…
     expect(screen.getByText('Big Sur Loop')).toBeInTheDocument();
-    expect(screen.getByText('50.0 km')).toBeInTheDocument();
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
     // …but there is no "Recent Trips" list with a single trip.
     expect(screen.queryByText('Recent trips')).not.toBeInTheDocument();
     expect(screen.queryByText('Coastal Run')).not.toBeInTheDocument();
@@ -345,7 +345,7 @@ describe('TripSummaryWidget', () => {
     tripsMock.mockReturnValue(makeQuery({ data: [partial] }));
 
     expect(() => renderWidget()).not.toThrow();
-    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
     expect(screen.getByText('Sparse Trip')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(4);
   });

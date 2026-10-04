@@ -125,6 +125,9 @@ export interface Drive {
   duration_s: number
   /** Distance travelled in meters (SI canonical). */
   distance_m: number
+  /** Recorded drive endpoint odometers in meters (SI). */
+  start_odometer_m?: number | null
+  end_odometer_m?: number | null
   start_address: string | null
   end_address: string | null
   start_lat: number | null
@@ -908,6 +911,16 @@ export interface AlertTestTarget {
 }
 
 export interface AlertTestRequest {
+  name?: string
+  signal_name?: string
+  op?: AlertRuleOp
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  vehicle_name?: string
+  vehicle_timezone?: string
   message?: string
   target?: AlertTestTarget | null
   /**
@@ -942,6 +955,7 @@ export interface AlertMessagePreset {
   name: string
   description?: string
   template: string
+  example?: string
   kind?: '' | 'signal' | 'computed_metric'
   tags?: string[]
 }
@@ -952,6 +966,7 @@ export interface AlertMessagePreset {
  * the same inputs the production dispatch path uses.
  */
 export interface AlertMessagePreviewRequest {
+  vehicle_timezone?: string
   name?: string
   kind?: AlertRuleKind
   component_name?: string | null

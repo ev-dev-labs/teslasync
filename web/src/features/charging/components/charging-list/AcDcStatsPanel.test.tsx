@@ -90,10 +90,20 @@ describe('formatEnergyDisplay', () => {
 });
 
 describe('AcDcStatsPanel — energy split bar', () => {
+  it('keeps a DC-only split in its non-zero second track rather than the empty AC track', () => {
+    render(<AcDcStatsPanel breakdown={{
+      ac: makeBucket(),
+      dc: makeBucket({ energy: 157.5, count: 6 }),
+      total: { energy: 157.5, cost: 0, freeEnergy: 0, freeCount: 0 },
+    }} />);
+    expect(screen.getByRole('img', { name: 'Energy split: 0% AC, 100% DC' })).toHaveStyle({ gridTemplateColumns: '0% 100%' });
+    expect(screen.getByText('DC 100.00%')).toHaveClass('col-start-2');
+  });
+
   it('exposes an accessible split summary, both percentage chips, and MWh-scaled totals', () => {
     const { container } = render(<AcDcStatsPanel breakdown={mixedBreakdown()} />);
 
-    expect(screen.getByText('Charging stats by type')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging stats by type' })).toBeInTheDocument();
 
     // The bar is a single labelled image for AT: "30% AC, 70% DC".
     expect(

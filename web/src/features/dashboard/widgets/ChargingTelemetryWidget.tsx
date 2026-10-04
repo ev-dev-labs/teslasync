@@ -143,6 +143,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.chargingTelemetry.title', 'Charging telemetry')}
         loading={isLoading && !data}
         dataState={data ? deriveDataState(query, { provenance: 'live' }) : undefined}
         error={isError && !data ? String(error ?? t('widget.chargingTelemetry.error', 'Unable to load charging telemetry')) : null}

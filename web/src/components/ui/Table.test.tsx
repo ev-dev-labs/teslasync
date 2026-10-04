@@ -4,6 +4,21 @@ import { Table } from './Table';
 import { Button } from './Button';
 
 describe('Table', () => {
+  it('uses only row dividers when embedded inside an existing panel', () => {
+    const ref = createRef<HTMLTableElement>();
+    render(<Table variant="embedded" ref={ref} aria-label="Drive readings">
+      <thead><tr><th scope="col">Reading</th><th scope="col">Value</th></tr></thead>
+      <tbody><tr><th scope="row">Distance</th><td>40 km</td></tr></tbody>
+    </Table>);
+    const table = screen.getByRole('table', { name: 'Drive readings' });
+    expect(ref.current).toBe(table);
+    expect(table.parentElement).toHaveClass('border-0', 'rounded-none', 'overflow-x-auto');
+    expect(table.parentElement?.parentElement).toHaveAttribute('data-table-variant', 'embedded');
+    expect(table.parentElement?.parentElement).not.toHaveClass('border', 'p-3', 'rounded-xl', 'shadow-e1');
+    expect(screen.getByRole('rowheader', { name: 'Distance' })).toBeInTheDocument();
+    expect(table).toHaveClass('[&_tbody_tr]:border-b');
+  });
+
   it('renders a semantic table and forwards attributes, classes, and refs', () => {
     const ref = createRef<HTMLTableElement>();
 

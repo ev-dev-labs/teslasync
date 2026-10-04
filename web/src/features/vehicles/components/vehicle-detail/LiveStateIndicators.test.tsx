@@ -150,7 +150,7 @@ describe('LiveStateIndicators — speed badge', () => {
     const [speed] = badges()
 
     // SI value + precision are forwarded to the shared formatter untouched.
-    expect(mocks.formatSpeed).toHaveBeenCalledWith(20, { precision: 0 })
+    expect(mocks.formatSpeed).toHaveBeenCalledWith(20)
     expect(speed.dataset.variant).toBe('success')
     expect(speed.textContent).toBe('Speed: 20 km/h')
   })
@@ -167,7 +167,7 @@ describe('LiveStateIndicators — speed badge', () => {
     render(<LiveStateIndicators state={makeState({ speed: null as unknown as number })} />)
     const [speed] = badges()
 
-    expect(mocks.formatSpeed).toHaveBeenCalledWith(null, { precision: 0 })
+    expect(mocks.formatSpeed).toHaveBeenCalledWith(null)
     expect(speed.dataset.variant).toBe('neutral')
     expect(speed.textContent).not.toMatch(/NaN/)
     expect(speed.textContent).toBe('Speed: —')

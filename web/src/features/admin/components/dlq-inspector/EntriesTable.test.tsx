@@ -170,8 +170,8 @@ describe('EntriesTable', () => {
 
     // formatBytes output across units.
     expect(screen.getByText('512 B')).toBeInTheDocument()
-    expect(screen.getByText('2.0 KB')).toBeInTheDocument()
-    expect(screen.getByText('3.0 MB')).toBeInTheDocument()
+    expect(screen.getByText('2.00 KB')).toBeInTheDocument()
+    expect(screen.getByText('3.00 MB')).toBeInTheDocument()
 
     // Redeliveries: 3 rendered; 0 rendered.
     expect(screen.getByText('3')).toBeInTheDocument()
@@ -280,8 +280,8 @@ describe('EntriesTable', () => {
 
     expect(screen.getByText('0 B')).toBeInTheDocument()
     expect(screen.getByText('1023 B')).toBeInTheDocument()
-    expect(screen.getByText('1.0 KB')).toBeInTheDocument()
-    expect(screen.getByText('1.0 MB')).toBeInTheDocument()
+    expect(screen.getByText('1.00 KB')).toBeInTheDocument()
+    expect(screen.getByText('1.00 MB')).toBeInTheDocument()
   })
 
   it('does not crash and shows the empty message when rows is undefined', () => {

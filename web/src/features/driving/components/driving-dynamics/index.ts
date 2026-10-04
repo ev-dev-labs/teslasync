@@ -1,4 +1,6 @@
 export { default as LiveMotorStatus } from './LiveMotorStatus';
+export { default as RideOverview } from './RideOverview';
+export { default as PowertrainSummary } from './PowertrainSummary';
 export { default as GForcePanel } from './GForcePanel';
 export { default as PedalUsage } from './PedalUsage';
 export { default as SpeedGearPanel } from './SpeedGearPanel';

@@ -118,6 +118,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
 
   return (
     <WidgetShell
+      title={!vehicle || vehiclesLoading ? t('glance.overviewAria', 'Vehicle overview') : undefined}
       loading={vehiclesLoading}
       dataState={dataState}
       className="[&_.relative.h-full]:!h-auto [&_.relative.p-4]:!p-0 [&_.absolute.inset-0]:!bg-none [&_.mt-6]:!mt-3 [&_.mb-6]:!mb-3 [&_.gap-x-6]:!gap-x-3 [&_.text-2xl]:!text-lg"

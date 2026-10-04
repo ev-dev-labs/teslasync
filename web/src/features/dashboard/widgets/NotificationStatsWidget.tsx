@@ -2,15 +2,18 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Send, AlertTriangle, Radio, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge, DataTable, type Column } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import type { NotificationLog } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates, knownNumber } from '@/api/dataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 const STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning'> = {
   sent: 'success',
@@ -32,70 +35,75 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       const diffMin = Math.floor((Date.now() - ms) / 60_000);
       if (diffMin < 1) return t('widget.notificationStats.justNow', 'Just now');
       if (diffMin < 60)
-        return t('widget.notificationStats.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
+        return t('widget.notificationStats.minutesAgo', '{{minutes}}m ago', { minutes: fmtInt(diffMin) });
       const diffHrs = Math.floor(diffMin / 60);
       if (diffHrs < 24)
-        return t('widget.notificationStats.hoursAgo', '{{hours}}h ago', { hours: diffHrs });
+        return t('widget.notificationStats.hoursAgo', '{{hours}}h ago', { hours: fmtInt(diffHrs) });
       return formatDateTime(isoStr);
     },
-    [formatDateTime, t],
+    [formatDateTime, t, fmtInt],
   );
 
+  const statsQuery = useNotificationStats();
   const {
     data: stats,
     isLoading: statsLoading,
-    error: statsError,
     isFetching: statsFetching,
     isStale: statsStale,
     isError: statsIsError,
     dataUpdatedAt: statsUpdatedAt,
     refetch: statsRefetch,
-  } = useNotificationStats();
+  } = statsQuery;
 
+  const logsQuery = useNotificationLogs();
   const {
     data: logs,
     isLoading: logsLoading,
     refetch: logsRefetch,
-  } = useNotificationLogs();
+  } = logsQuery;
+  const statsState = useDataState({ ...statsQuery, data: stats ?? undefined }, {
+    partial: !!stats && [stats.total_sent, stats.sent, stats.failed, stats.enabled_channels].some(value => knownNumber(value) == null),
+  });
+  const logsState = useDataState({ ...logsQuery, data: logs ?? undefined }, { provenance: 'historical' });
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  const totalSent = stats?.total_sent ?? 0;
-  const sent = stats?.sent ?? 0;
-  const failed = stats?.failed ?? 0;
-  const enabledChannels = stats?.enabled_channels ?? 0;
-  const deliveryRate = totalSent > 0 ? (sent / totalSent) * 100 : 0;
+  const totalSent = knownNumber(stats?.total_sent);
+  const sent = knownNumber(stats?.sent);
+  const failed = knownNumber(stats?.failed);
+  const enabledChannels = knownNumber(stats?.enabled_channels);
+  const deliveryRate = totalSent != null && totalSent > 0 && sent != null ? (sent / totalSent) * 100 : null;
 
   const coreStats = useMemo((): StatGridItem[] => {
     if (!stats) return [];
     return [
       {
         label: t('widget.notificationStats.totalSent', 'Total sent (7d)'),
-        value: fmtInt(totalSent),
+        value: totalSent == null ? null : fmtInt(totalSent),
         icon: <Send className="h-3.5 w-3.5" />,
-        trend: totalSent > 0 ? 'up' as const : 'flat' as const,
-        trendValue: totalSent > 0 ? fmtInt(totalSent) : undefined,
+        trend: totalSent != null && totalSent > 0 ? 'up' as const : 'flat' as const,
+        trendValue: totalSent != null && totalSent > 0 ? fmtInt(totalSent) : undefined,
       },
       {
         label: t('widget.notificationStats.deliveryRate', 'Delivery rate'),
-        value: fmtNumber(deliveryRate),
-        unit: '%',
+        value: deliveryRate == null ? null : fmtNumber(deliveryRate),
+        unit: deliveryRate != null ? '%' : undefined,
         icon: <CheckCircle className="h-3.5 w-3.5" />,
-        trend: deliveryRate >= 95 ? 'up' as const : deliveryRate > 0 ? 'down' as const : 'flat' as const,
-        trendValue: deliveryRate >= 95 ? t('widget.notificationStats.healthy', 'Healthy') : undefined,
+        trend: deliveryRate != null && deliveryRate >= 95 ? 'up' as const : deliveryRate != null && deliveryRate > 0 ? 'down' as const : 'flat' as const,
+        trendValue: deliveryRate != null && deliveryRate >= 95 ? t('widget.notificationStats.healthy', 'Healthy') : undefined,
       },
       {
         label: t('widget.notificationStats.failed', 'Failed'),
-        value: fmtInt(failed),
+        value: failed == null ? null : fmtInt(failed),
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
-        valueColor: failed > 0 ? 'text-red-400' : undefined,
-        trend: failed > 0 ? 'down' as const : 'flat' as const,
-        trendValue: failed > 0 ? t('widget.notificationStats.needsAttention', 'Needs attention') : undefined,
+        valueColor: failed != null && failed > 0 ? 'text-red-400' : undefined,
+        trend: failed != null && failed > 0 ? 'down' as const : 'flat' as const,
+        trendValue: failed != null && failed > 0 ? t('widget.notificationStats.needsAttention', 'Needs attention') : undefined,
       },
       {
         label: t('widget.notificationStats.activeChannels', 'Active channels'),
-        value: fmtInt(enabledChannels),
+        value: enabledChannels == null ? null : fmtInt(enabledChannels),
         icon: <Radio className="h-3.5 w-3.5" />,
       },
     ];
@@ -134,7 +142,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       key: 'status',
       header: t('widget.notificationStats.status', 'Status'),
       render: (log) => (
-        <Badge variant={STATUS_VARIANT[log.status] ?? 'warning'}>
+        <Badge variant={Object.prototype.hasOwnProperty.call(STATUS_VARIANT, log.status) ? STATUS_VARIANT[log.status] : 'neutral'}>
           {log.status === 'sent' && <CheckCircle className="h-3 w-3 mr-1" />}
           {log.status === 'failed' && <XCircle className="h-3 w-3 mr-1" />}
           {log.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
@@ -156,30 +164,43 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
   ], [t, formatLogTime]);
 
   const handleRefresh = useCallback(() => {
-    statsRefetch();
-    logsRefetch();
+    void statsRefetch();
+    void logsRefetch();
   }, [statsRefetch, logsRefetch]);
+  const combined = isWide ? combineDataStates([statsState, logsState]) : statsState;
+  const displayState = {
+    ...combined,
+    data: stats ?? (isWide ? logs : undefined),
+    hasData: stats != null || (isWide && logs != null),
+    retry: handleRefresh,
+    status: combined.status === 'initial' && !statsLoading && !(isWide && logsLoading) ? 'unavailable' as const : combined.status,
+  };
 
   // Compact layout: single big number
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.notificationStats.title', 'Notification stats')}
         loading={statsLoading}
-        error={statsError ? String(statsError) : null}
+        dataState={displayState}
         updatedAt={statsUpdatedAt}
         isFetching={statsFetching}
         isStale={statsStale}
         isError={statsIsError}
         onRefresh={handleRefresh}
       >
-        {stats ? (
+        {statsState.fatalError ? (
+          <QueryError error={statsState.fatalError} onRetry={() => { void statsRefetch(); }} />
+        ) : stats ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(deliveryRate)}%</span>
-            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
-              {t('widget.notificationStats.deliveryRate', 'Delivery rate')}
-            </span>
-            {failed > 0 && (
-              <span className="text-2xs text-red-400 mt-0.5">
+            <WidgetBigNumber
+              value={deliveryRate == null ? null : fmtNumber(deliveryRate)}
+              unit="%"
+              label={t('widget.notificationStats.deliveryRate', 'Delivery rate')}
+              align="center"
+            />
+            {failed != null && failed > 0 && (
+              <span className={`${dashboardTokens.metricLabel} text-red-400 mt-0.5`}>
                 {fmtInt(failed)} {t('widget.notificationStats.failedLabel', 'failed')}
               </span>
             )}
@@ -195,7 +216,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
     );
   }
 
-  const isLoading = statsLoading || logsLoading;
+  const isLoading = statsLoading && !(isWide && logs != null);
 
   // Standard (2×2) and Wide (2×4)
   return (
@@ -203,18 +224,33 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       title={t('widget.notificationStats.title', 'Notification stats')}
       icon={<Bell className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={statsError ? String(statsError) : null}
+      dataState={displayState}
       updatedAt={statsUpdatedAt}
-      isFetching={statsFetching}
-      isStale={statsStale}
-      isError={statsIsError}
+      isFetching={statsFetching || (isWide && logsQuery.isFetching)}
+      isStale={statsStale || (isWide && logsQuery.isStale)}
+      isError={statsIsError || (isWide && logsQuery.isError)}
       onRefresh={handleRefresh}
     >
-      {stats ? (
-        <div className="space-y-3">
+      <div className="space-y-3">
+        {statsState.fatalError ? (
+          <QueryError error={statsState.fatalError} onRetry={() => { void statsRefetch(); }} />
+        ) : statsLoading && stats == null ? (
+          <Skeleton className="h-20 rounded-xl" />
+        ) : stats ? (
           <WidgetStatGrid stats={coreStats} cols={isWide ? 4 : 2} />
-
-          {isWide && recentLogs.length > 0 && (
+        ) : (
+          <EmptyState /* no-action: source activity supplies these statistics */
+            icon={<Bell className="h-5 w-5" />}
+            message={t('widget.notificationStats.noData', 'No notification data')}
+            className="py-4"
+          />
+        )}
+        {isWide && (
+          logsState.fatalError ? (
+            <QueryError error={logsState.fatalError} onRetry={() => { void logsRefetch(); }} />
+          ) : logsLoading && logs == null ? (
+            <Skeleton className="h-20 rounded-xl" />
+          ) : recentLogs.length > 0 ? (
             <DataTable
               tableId="dashboard:notification-stats-recent"
               columns={logColumns}
@@ -224,15 +260,14 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
               compact
               className="text-xs"
             />
-          )}
-        </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Bell className="h-5 w-5" />}
-          message={t('widget.notificationStats.noData', 'No notification data')}
-          className="py-4"
-        />
-      )}
+          ) : (
+            <EmptyState /* no-action: source activity supplies notification history */
+              message={t('widget.notificationStats.noData', 'No notification data')}
+              className="py-2"
+            />
+          )
+        )}
+      </div>
     </WidgetShell>
   );
 }

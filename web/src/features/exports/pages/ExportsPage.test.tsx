@@ -269,7 +269,7 @@ describe('ExportsPage — populated', () => {
     expect(kpiValue('Ready')).toBe('2');
     expect(kpiValue('In progress')).toBe('2');
     expect(kpiValue('Failed')).toBe('1');
-    expect(kpiValue('Total size')).toBe('5.0 MB');
+    expect(kpiValue('Total size')).toBe('5.00 MB');
   });
 
   it('renders a selectable row per job with a download link ONLY for ready jobs', () => {
@@ -299,8 +299,7 @@ describe('ExportsPage — populated', () => {
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
     // Storage footprint appears in the breakdown panel's "Storage Used" row.
     expect(screen.getByText('Storage used')).toBeInTheDocument();
-    // 5.0 MB shows in BOTH the KPI card and the breakdown footer.
-    expect(screen.getAllByText('5.0 MB').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('5.00 MB').length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -317,7 +316,7 @@ describe('ExportsPage — cell null-safety', () => {
     // Only the type + format cells fall back to the em-dash; size + actions
     // render real content (KB + a download link), so exactly two dashes.
     expect(within(table).getAllByText('—')).toHaveLength(2);
-    expect(within(table).getByText('1.0 KB')).toBeInTheDocument();
+    expect(within(table).getByText('1.00 KB')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download export j1' })).toBeInTheDocument();
   });
 });

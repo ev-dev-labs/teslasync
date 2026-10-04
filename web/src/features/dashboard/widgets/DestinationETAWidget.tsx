@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { Navigation2 } from 'lucide-react';
-import { AnimatedNumber } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
@@ -11,6 +10,8 @@ import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 function locationBadge(
   snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
@@ -32,6 +33,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
   const distanceUnit = unitPrefs.distance;
 
+  const query = useLocationSnapshotLatest(vid ?? 0);
   const {
     data: snapshot,
     isLoading,
@@ -41,7 +43,8 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useLocationSnapshotLatest(vid ?? 0);
+  } = query;
+  const dataState = useDataState({ ...query, data: (isError || error) && !snapshot ? undefined : !isLoading && !query.isPending ? snapshot ?? null : snapshot });
 
   const isCompact = size.cols <= 1;
 
@@ -49,12 +52,12 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
     snapshot.destination_name != null &&
     snapshot.destination_name !== '';
 
-  const milesToArrival = snapshot?.miles_to_arrival ?? 0;
-  const minutesToArrival = snapshot?.minutes_to_arrival ?? 0;
+  const milesToArrival = snapshot?.miles_to_arrival != null && Number.isFinite(snapshot.miles_to_arrival) && snapshot.miles_to_arrival >= 0 ? snapshot.miles_to_arrival : null;
+  const minutesToArrival = snapshot?.minutes_to_arrival != null && Number.isFinite(snapshot.minutes_to_arrival) && snapshot.minutes_to_arrival >= 0 ? snapshot.minutes_to_arrival : null;
   const destinationName = snapshot?.destination_name ?? '—';
 
-  const displayDistance = toDistanceDisplay(milesToArrival);
-  const progressPercent = isNavigating && milesToArrival > 0
+  const displayDistance = milesToArrival != null ? toDistanceDisplay(milesToArrival) : null;
+  const progressPercent = isNavigating && milesToArrival != null && milesToArrival > 0
     ? Math.max(0, Math.min(100, 100 - (milesToArrival / (milesToArrival + 1)) * 100))
     : 0;
 
@@ -69,7 +72,9 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   const blockingError = !snapshot && error ? String(error) : null;
 
   const shellProps = {
+    title: t('widget.destinationETA.title', 'Destination ETA'),
     loading: isLoading,
+    dataState,
     error: blockingError,
     updatedAt: dataUpdatedAt ?? 0,
     isFetching,
@@ -96,7 +101,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
       return (
         <WidgetShell {...shellProps}>
           <WidgetBigNumber
-            value={Math.round(minutesToArrival)}
+            value={minutesToArrival != null ? fmtNumber(minutesToArrival) : null}
             unit={t('widget.destinationETA.min', 'min')}
             label={t('widget.destinationETA.eta', 'ETA')}
           />
@@ -122,7 +127,6 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   if (!snapshot) {
     return (
       <WidgetShell
-        title={t('widget.destinationETA.title', 'Destination ETA')}
         icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
         {...shellProps}
       >
@@ -138,7 +142,6 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   if (!isNavigating) {
     return (
       <WidgetShell
-        title={t('widget.destinationETA.title', 'Destination ETA')}
         icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
         {...shellProps}
       >
@@ -158,15 +161,15 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   }
 
   // Navigating — full layout
-  const etaHours = Math.floor(minutesToArrival / 60);
-  const etaMins = Math.round(minutesToArrival % 60);
-  const etaDisplay = etaHours > 0
+  const roundedMinutes = minutesToArrival != null ? Math.round(minutesToArrival) : 0;
+  const etaHours = Math.floor(roundedMinutes / 60);
+  const etaMins = roundedMinutes % 60;
+  const etaDisplay = minutesToArrival == null ? '—' : etaHours > 0
     ? `${fmtInt(etaHours)}h ${fmtInt(etaMins)}m`
     : `${fmtInt(etaMins)}m`;
 
   return (
     <WidgetShell
-      title={t('widget.destinationETA.title', 'Destination ETA')}
       icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
       {...shellProps}
     >
@@ -174,30 +177,27 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
         {/* Destination name */}
         <div className="flex items-center gap-2 min-h-[44px]">
           <Navigation2 className="h-4 w-4 shrink-0 text-cyan-400" />
-          <span className="truncate text-sm font-medium text-[var(--text-primary)]">
+          <span className={`${dashboardTokens.title} min-w-0 break-words`}>
             {destinationName}
           </span>
         </div>
 
         {/* ETA countdown + distance */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="grid min-w-0 grid-cols-1 @xs:grid-cols-2 gap-3">
           <div className="flex flex-col items-center gap-0.5">
-            <AnimatedNumber
-              value={Math.round(minutesToArrival)}
-              className="text-3xl font-bold text-cyan-400"
+            <WidgetBigNumber
+              value={minutesToArrival != null ? fmtNumber(minutesToArrival) : null}
+              label={t('widget.destinationETA.eta', 'ETA')}
+              unit={t('widget.destinationETA.min', 'min')}
+              align="center"
             />
-            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
+            <span className={dashboardTokens.unit}>
               {etaDisplay}
             </span>
           </div>
 
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">
-              {fmtNumber(displayDistance)}
-            </span>
-            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
-              {distanceUnit}
-            </span>
+            <WidgetBigNumber value={displayDistance != null ? fmtNumber(displayDistance) : null} unit={distanceUnit} size="secondary" align="center" />
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
           <div
             className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
             role="progressbar"
-            aria-valuenow={Math.round(progressPercent)}
+            aria-valuenow={milesToArrival != null ? Math.round(progressPercent) : undefined}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={t('widget.destinationETA.progress', 'Trip progress')}
@@ -216,9 +216,9 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <div className="flex justify-between text-2xs text-[var(--text-muted)]">
+          <div className={`${dashboardTokens.unit} flex flex-wrap justify-between gap-1`}>
             <span>{t('widget.destinationETA.remaining', 'Remaining')}</span>
-            <span>{fmtNumber(displayDistance)} {distanceUnit}</span>
+            <span>{displayDistance != null ? `${fmtNumber(displayDistance)} ${distanceUnit}` : '—'}</span>
           </div>
         </div>
       </div>

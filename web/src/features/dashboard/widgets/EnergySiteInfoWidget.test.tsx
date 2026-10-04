@@ -204,9 +204,9 @@ describe('EnergySiteInfoWidget — full view (populated)', () => {
 
     // Labels + display-boundary conversions.
     expect(screen.getByText('Solar system')).toBeInTheDocument();
-    expect(screen.getByText('10.5 kW')).toBeInTheDocument();
+    expect(screen.getByText('10.50 kW')).toBeInTheDocument();
     expect(screen.getByText('Powerwalls')).toBeInTheDocument();
-    expect(screen.getByText('2 · 27.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
     expect(screen.getByText('Installation timezone')).toBeInTheDocument();
@@ -258,8 +258,8 @@ describe('EnergySiteInfoWidget — compact view', () => {
       info: infoQuery({ data: POPULATED }),
     });
 
-    expect(screen.getByText('10.5 kW')).toBeInTheDocument();
-    expect(screen.getByText('2 · 27.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('10.50 kW')).toBeInTheDocument();
+    expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
     const heading = screen.getByRole('heading', { name: 'Energy site', level: 3 });
     expect(heading).toBeVisible();
     expect(heading.parentElement?.querySelector('svg.lucide-home')).toBeInTheDocument();
@@ -367,8 +367,8 @@ describe('EnergySiteInfoWidget — refresh', () => {
       sites: sitesQuery({ data: [site(7)] }),
       info: infoQuery({ data: POPULATED, isError: true, error: new Error('refresh failed') }),
     });
-    expect(screen.getByText('10.5 kW')).toBeInTheDocument();
-    expect(screen.getByText('2 · 27.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('10.50 kW')).toBeInTheDocument();
+    expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
     expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -380,8 +380,8 @@ describe('EnergySiteInfoWidget — refresh', () => {
       sites: sitesQuery({ data: [site(7)] }),
       info: infoQuery({ data: infoResponse({ nameplate_power: 0, battery_count: 0, nameplate_energy: 0 }) }),
     });
-    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
-    expect(screen.getByText('0 · 0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('0 · 0.00 kWh')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
   });
 
@@ -390,7 +390,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
       sites: sitesQuery({ data: [site(7)] }),
       info: infoQuery({ data: infoResponse({ battery_count: undefined, nameplate_energy: 27_000 }) }),
     });
-    expect(screen.getByText('— · 27.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('— · 27.00 kWh')).toBeInTheDocument();
   });
 
   it('retains long firmware and installation timezone values without truncating their content', () => {

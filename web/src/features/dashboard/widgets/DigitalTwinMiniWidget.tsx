@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, ArrowUpRight, Lock, Unlock, Shield } from 'lucide-react';
@@ -39,14 +39,24 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
   const securityTrust = useDataState({ ...securityQuery, data: securityData ?? (secLoading || securityQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const chargingTrust = useDataState({ ...chargingQuery, data: chargingData ?? (chargingQuery.isLoading || chargingQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const vehiclesTrust = useDataState({ ...vehiclesQuery, data: vehicles ?? (vehiclesLoading || vehiclesQuery.isError ? undefined : []) });
-  const combined = combineDataStates(vehicle ? [stateTrust, securityTrust, chargingTrust] : [vehiclesTrust]);
   const hasTelemetry = vehicleStateData != null || securityData != null || chargingData != null;
+  // Vehicle metadata must not mask an initial failure of every telemetry source.
+  const combined = combineDataStates(vehicle
+    ? hasTelemetry ? [stateTrust, securityTrust, chargingTrust, vehiclesTrust] : [stateTrust, securityTrust, chargingTrust]
+    : [vehiclesTrust]);
+  const handleRefresh = useCallback(() => {
+    void refetchState();
+    void securityQuery.refetch?.();
+    void chargingQuery.refetch?.();
+    void vehiclesQuery.refetch?.();
+  }, [refetchState, securityQuery, chargingQuery, vehiclesQuery]);
+
   const dataState = {
     ...combined,
     status: !hasTelemetry && isLoading ? 'initial' : combined.status,
     data: vehicle ? [vehicleStateData, securityData, chargingData] : vehicles,
     hasData: hasTelemetry,
-    retry: () => { void refetchState(); void securityQuery.refetch?.(); void chargingQuery.refetch?.(); void vehiclesQuery.refetch?.(); },
+    retry: handleRefresh,
   } satisfies Parameters<typeof WidgetShell>[0]['dataState'];
 
   const twinState = useMemo(
@@ -67,7 +77,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
       isFetching={combined.isRefreshing || stateFetching}
       isStale={stateStale}
       isError={stateError}
-      onRefresh={() => { void refetchState(); void securityQuery.refetch?.(); void chargingQuery.refetch?.(); }}
+      onRefresh={handleRefresh}
       actions={
         <Link
           to="/digital-twin"

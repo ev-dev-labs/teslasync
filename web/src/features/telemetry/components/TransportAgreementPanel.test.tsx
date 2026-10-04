@@ -77,7 +77,7 @@ describe('TransportAgreementPanel', () => {
     );
 
     expect(screen.getByRole('region', { name: 'HTTP / MQTT agreement' })).toBeInTheDocument();
-    expect(screen.getAllByText('99.5%').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('99.50%').length).toBeGreaterThan(0);
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
     expect(screen.getByText('Producer time only; receipt fallbacks excluded')).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe('TransportAgreementPanel', () => {
 
     expect(screen.getByText('Not enough overlapping evidence')).toBeInTheDocument();
     expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
-    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
   });
 
   it('waits for the explicit signal query', () => {
@@ -154,7 +154,7 @@ describe('TransportAgreementPanel seven-day limit', () => {
 
     // Measured evidence from a previous render must not leak into the limit state.
     expect(screen.queryByText('VehicleSpeed')).toBeNull();
-    expect(screen.queryAllByText('99.5%')).toHaveLength(0);
+    expect(screen.queryAllByText('99.50%')).toHaveLength(0);
   });
 
   it('still queries at exactly the 168-hour boundary', () => {

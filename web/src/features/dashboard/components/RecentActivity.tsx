@@ -77,7 +77,7 @@ export function RecentActivity({
       items.push({
         type: 'drive',
         title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'))} ${distanceUnit} ${t('activity.drive', 'drive')}`,
-        subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_soc_pct ?? '?'}% → ${d.end_soc_pct ?? '?'}%`,
+        subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_soc_pct == null ? '?' : fmtNumber(d.start_soc_pct)}% → ${d.end_soc_pct == null ? '?' : fmtNumber(d.end_soc_pct)}%`,
         timeMs: toEpochMs(d.started_at),
       }),
     );
@@ -85,7 +85,7 @@ export function RecentActivity({
       items.push({
         type: 'charge',
         title: `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh ${t('activity.charged', 'charged')}`,
-        subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost)}` : ''}`,
+        subtitle: `${s.start_soc_pct == null ? '?' : fmtNumber(s.start_soc_pct)}% → ${s.end_soc_pct == null ? '?' : fmtNumber(s.end_soc_pct)}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost)}` : ''}`,
         timeMs: toEpochMs(s.started_at),
       }),
     );
@@ -178,14 +178,14 @@ export function RecentActivity({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-secondary)]">{t('perf.co2', 'CO₂ saved')}</span>
-              <span className="text-sm font-bold text-emerald-300">{fmtInt((analytics?.total_energy_kwh ?? 0) * 0.42)} kg</span>
+              <span className="text-sm font-bold text-emerald-300">{fmtNumber((analytics?.total_energy_kwh ?? 0) * 0.42)} kg</span>
             </div>
             {analytics?.most_efficient_vehicle && (
               <div className="mt-3 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
                 <p className="text-2xs text-[var(--text-muted)] tracking-wider">{t('perf.mostEfficient', 'Most efficient')}</p>
                 <p className="text-sm font-semibold text-emerald-300">{analytics.most_efficient_vehicle.name || '—'}</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {fmtInt(toEfficiencyDisplay(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
+                  {fmtNumber(toEfficiencyDisplay(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
                 </p>
               </div>
             )}

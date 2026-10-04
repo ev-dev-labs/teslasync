@@ -198,7 +198,7 @@ describe('VehicleCommandCenter — summary and readiness', () => {
     expect(screen.getByText('My Tesla')).toBeInTheDocument();
     expect(screen.getByText(/Model 3/)).toBeInTheDocument();
     expect(screen.getByText(/5YJ3E1EA7KF000000/)).toBeInTheDocument();
-    expect(await screen.findByText('85')).toBeInTheDocument();
+    expect(await screen.findByText('85.00')).toBeInTheDocument();
     expect(screen.getByText('400')).toBeInTheDocument();
     expect(screen.getByText('21')).toBeInTheDocument();
     expect(screen.getByTestId('command-readiness')).toBeInTheDocument();

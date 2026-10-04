@@ -7,6 +7,8 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 /**
  * True only when `(lat, lng)` is a usable GPS fix: both finite, inside the
@@ -42,13 +44,19 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
+  const query = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const dataState = useDataState({
+    ...query,
+    data: (query.error || query.isError) && !stateData?.state ? undefined :
+      !query.isLoading && !query.isPending && !query.error && !query.isError ? query.data ?? null : query.data,
+  });
   const state = stateData?.state;
   const isLive = stateData?.live ?? false;
 
   const lat = state?.latitude ?? 0;
   const lng = state?.longitude ?? 0;
-  const hasCoords = state != null && hasValidCoords(lat, lng);
+  const hasCoords = state?.latitude != null && state.longitude != null && hasValidCoords(lat, lng);
   const heading = normalizeHeading(state?.heading);
   const isCompact = size.cols <= 1;
   const isExpanded = size.cols >= 3 || size.rows >= 3;
@@ -63,9 +71,10 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.locationMap.title', 'Vehicle location map')}
+      title={t('widget.locationMap.title', 'Vehicle location map')}
       icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
+      dataState={dataState}
       noPadding
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
@@ -73,7 +82,7 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="h-full relative">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         <WidgetMapView
           center={center}
           zoom={isCompact ? 13 : 14}
@@ -95,19 +104,19 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
             aria-label={t('widget.locationMap.status', 'Vehicle location status')}
           >
             {!isLive && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-2xs text-amber-400 backdrop-blur-sm">
+              <span className={`${dashboardTokens.unit} inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-amber-300 backdrop-blur-sm`}>
                 <MapPin className="h-2.5 w-2.5" aria-hidden="true" />
                 {t('widget.locationMap.lastKnown', 'Last known position')}
               </span>
             )}
             {isExpanded && heading != null && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-2xs text-[var(--text-secondary)] backdrop-blur-sm">
+              <span className={`${dashboardTokens.unit} inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm`}>
                 <Navigation className="h-2.5 w-2.5" aria-hidden="true" />
-                {t('widget.locationMap.heading', 'Heading')}: {Math.round(heading)}°
+                {t('widget.locationMap.heading', 'Heading')}: {fmtNumber(heading)}°
               </span>
             )}
             {isExpanded && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-2xs text-[var(--text-secondary)] backdrop-blur-sm">
+              <span className={`${dashboardTokens.unit} inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm`}>
                 {fmtNumber(lat)}, {fmtNumber(lng)}
               </span>
             )}

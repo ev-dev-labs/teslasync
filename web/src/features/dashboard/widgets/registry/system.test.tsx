@@ -510,11 +510,23 @@ describe('version-info — lazy component wiring', () => {
     expect(screen.getByText('abcdef1')).toBeInTheDocument();
   });
 
-  it('shows the empty state when version data is missing', async () => {
+  it('keeps unresolved version data in initial loading even without an error or loading flag', async () => {
     mockUseVersionInfo.mockReturnValue(makeQuery({ data: undefined }));
-    await renderWidget('version-info', { cols: 2, rows: 2 });
+    const { container } = await renderWidget('version-info', { cols: 2, rows: 2 });
+
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+    expect(screen.queryByText('No version data available')).not.toBeInTheDocument();
+    expect(screen.queryByText('Go version')).not.toBeInTheDocument();
+  });
+
+  it('shows honest empty evidence when the version source resolves to null', async () => {
+    mockUseVersionInfo.mockReturnValue(makeQuery({ data: null, isSuccess: true }));
+    const { container } = await renderWidget('version-info', { cols: 2, rows: 2 });
 
     expect(screen.getByText('No version data available')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No version data available').closest('[role="status"]')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="initial"]')).toBeNull();
+    expect(screen.queryByText('Go version')).not.toBeInTheDocument();
   });
 });

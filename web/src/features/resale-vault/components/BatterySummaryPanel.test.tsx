@@ -28,15 +28,15 @@ describe('BatterySummaryPanel', () => {
   it('renders SOH, capacity, cycles, and health grade badge', () => {
     render(<BatterySummaryPanel battery={SAMPLE} />);
     expect(screen.getByText('A-')).toBeInTheDocument();
-    expect(screen.getByText('94.2%')).toBeInTheDocument();
-    expect(screen.getByText('210.5')).toBeInTheDocument();
+    expect(screen.getByText('94.20%')).toBeInTheDocument();
+    expect(screen.getByText('210.50')).toBeInTheDocument();
   });
 
   it('renders thermal exposure badges', () => {
     render(<BatterySummaryPanel battery={SAMPLE} />);
-    expect(screen.getByText(/Cold: 10%/)).toBeInTheDocument();
-    expect(screen.getByText(/Nominal: 80%/)).toBeInTheDocument();
-    expect(screen.getByText(/Hot: 10%/)).toBeInTheDocument();
+    expect(screen.getByText(/Cold: 10\.00%/)).toBeInTheDocument();
+    expect(screen.getByText(/Nominal: 80\.00%/)).toBeInTheDocument();
+    expect(screen.getByText(/Hot: 10\.00%/)).toBeInTheDocument();
   });
 
   it('renders recommendations list', () => {

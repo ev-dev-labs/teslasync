@@ -32,7 +32,7 @@
  *     the 10s poll interval.
  *   - shell states: loading skeleton, error `QueryError`, and empty state —
  *     never a blank panel.
- *   - standard vs compact layout (title suppressed at cols ≤ 1).
+ *   - standard vs compact layout (identifying title retained at every width).
  *   - Pa→display conversion (the hardening): 290 000 Pa → "2.9", not "2,900.0".
  *   - status colour bands from the Pa value: green / amber / red / grey across
  *     the shared helper's thresholds, plus the aggregate All-Normal vs
@@ -171,6 +171,35 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe.each([1, 2, 3])('TirePressureVisualWidget — identifying heading at cols=%i', (cols) => {
+  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+    'keeps exactly one visible shell heading when %s',
+    (state) => {
+      const populated = state === 'populated' || state === 'retained failure';
+      const failed = state === 'initial failure' || state === 'retained failure';
+      mockLatest.mockReturnValue(qr({
+        data: populated ? makeSnap() : undefined,
+        isLoading: state === 'loading',
+        isError: failed,
+        error: failed ? new Error('offline') : null,
+      }));
+      const { container } = renderWidget({ cols, rows: 2 });
+      const headings = screen.getAllByRole('heading', { name: 'Tire pressure', level: 3 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toBeVisible();
+      if (populated) {
+        expect(screen.getAllByText('2.50')).toHaveLength(4);
+        expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
+        expect(screen.getByText('All normal')).toBeInTheDocument();
+      }
+      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'empty') expect(screen.getByText('No tire pressure data')).toBeInTheDocument();
+      if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+      if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    },
+  );
+});
+
 describe('TirePressureVisualWidget — vehicle resolution', () => {
   it('prefers the explicit vehicleId prop over the vehicle list (with the 10s poll)', () => {
     mockVehicles.mockReturnValue(vehicles([7, 9]));
@@ -240,7 +269,7 @@ describe('TirePressureVisualWidget — layout', () => {
     expect(screen.getByText('RR')).toBeInTheDocument();
 
     // All four corners at 250 000 Pa → "2.5" (bar) and a green tire rect each.
-    expect(screen.getAllByText('2.5')).toHaveLength(4);
+    expect(screen.getAllByText('2.50')).toHaveLength(4);
     expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
 
     // Footer shows the user's pressure unit and the aggregate status.
@@ -249,12 +278,12 @@ describe('TirePressureVisualWidget — layout', () => {
     expect(screen.queryByText('Check pressure')).toBeNull();
   });
 
-  it('suppresses the title in the compact (cols ≤ 1) tile but still renders the values', () => {
+  it('retains the identifying title and all values in the compact (cols ≤ 1) tile', () => {
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('Tire pressure')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Tire pressure', level: 3 })).toBeVisible();
     expect(screen.getByText('FL')).toBeInTheDocument();
-    expect(screen.getAllByText('2.5')).toHaveLength(4);
+    expect(screen.getAllByText('2.50')).toHaveLength(4);
   });
 });
 
@@ -272,9 +301,9 @@ describe('TirePressureVisualWidget — Pa→display conversion (hardening)', () 
     );
     renderWidget(STANDARD);
 
-    expect(screen.getAllByText('2.9')).toHaveLength(4);
+    expect(screen.getAllByText('2.90')).toHaveLength(4);
     // Pre-fix, raw Pascals went straight through the kPa formatter (~1000×).
-    expect(screen.queryByText('2,900.0')).toBeNull();
+    expect(screen.queryByText('2,900.00')).toBeNull();
   });
 });
 
@@ -297,9 +326,9 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(1);
     expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(1);
 
-    expect(screen.getByText('2.5')).toBeInTheDocument();
-    expect(screen.getByText('2.4')).toBeInTheDocument();
-    expect(screen.getByText('2.0')).toBeInTheDocument();
+    expect(screen.getByText('2.50')).toBeInTheDocument();
+    expect(screen.getByText('2.40')).toBeInTheDocument();
+    expect(screen.getByText('2.00')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
 
     // Any non-success corner flips the aggregate badge.
@@ -321,7 +350,7 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(4);
-    expect(screen.getAllByText('3.5')).toHaveLength(4);
+    expect(screen.getAllByText('3.50')).toHaveLength(4);
     expect(screen.getAllByText('Check pressure')).toHaveLength(5);
   });
 
@@ -339,7 +368,7 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
     renderWidget(STANDARD);
 
     // The unique "2.0" front-left value renders in the danger text colour.
-    expect(screen.getByText('2.0').className).toContain('text-rose-300');
+    expect(screen.getByText('2.00').className).toContain('text-rose-300');
   });
 });
 
@@ -347,7 +376,7 @@ describe('TirePressureVisualWidget — null safety', () => {
   it('keeps tire readings and the diagram during a failed cached refresh', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap(), isError: true, error: new Error('refresh failed') }));
     const { container } = renderWidget(STANDARD);
-    expect(screen.getAllByText('2.5')).toHaveLength(4);
+    expect(screen.getAllByText('2.50')).toHaveLength(4);
     expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();

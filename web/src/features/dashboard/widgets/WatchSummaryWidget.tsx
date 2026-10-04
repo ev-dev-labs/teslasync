@@ -92,6 +92,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.watchSummary', 'Watch summary')}
         loading={isLoading}
         dataState={dataState}
         loadingContent={<div className="flex flex-col gap-2"><Skeleton className="h-16" /><Skeleton className="h-11" /></div>}
@@ -148,7 +149,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
         <div className="h-full flex flex-col gap-3">
           {/* Hero: Battery big number */}
           <WidgetBigNumber
-            value={batteryLevel}
+            value={batteryLevel == null ? null : fmtNumber(batteryLevel)}
             unit="%"
             label={t('widget.battery', 'Battery')}
             badge={

@@ -184,7 +184,7 @@ describe('ChargeStatusLiveWidget', () => {
     } as unknown as LiveState));
     renderWidget(<ChargeStatusLiveWidget size={size} />);
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
     expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
   });
   it('renders unknown readings as placeholders and keeps cached state if sessions fail', () => {
@@ -196,8 +196,8 @@ describe('ChargeStatusLiveWidget', () => {
     } as unknown as LiveState));
     sessionsMock.mockReturnValue({ data: undefined, isError: true, error: new Error('sessions failed') });
     renderWidget(<ChargeStatusLiveWidget size={SIZE_TALL} />);
-    expect(screen.queryByText('0.0 kW')).not.toBeInTheDocument();
-    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.getByText('Time left')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(5);
@@ -209,11 +209,11 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getByText('Charge status')).toBeInTheDocument();
     // Charging badge + primary power readout (rounded-motion → final value).
     expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('48.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('48.00 kW')).toBeInTheDocument();
     // Battery header + derived secondary metrics.
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('1h 30m')).toBeInTheDocument();
-    expect(screen.getByText('12.5 kWh')).toBeInTheDocument();
+    expect(screen.getByText('12.50 kWh')).toBeInTheDocument();
     // Secondary-metric labels.
     expect(screen.getByText('Voltage')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
@@ -223,7 +223,7 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getAllByText('—')).toHaveLength(2);
     // The rate/battery row is a tall-only extra — absent here.
     expect(screen.queryByText('Rate')).not.toBeInTheDocument();
-    expect(screen.queryByText('32 km/h')).not.toBeInTheDocument();
+    expect(screen.queryByText('32.00 km/h')).not.toBeInTheDocument();
   });
 
   it('adds the rate and battery row at tall size (rate converted to km/h)', () => {
@@ -231,10 +231,10 @@ describe('ChargeStatusLiveWidget', () => {
 
     expect(screen.getByText('Rate')).toBeInTheDocument();
     // 32000 m/h (SI) → 32 km/h under the default km preference.
-    expect(screen.getByText('32 km/h')).toBeInTheDocument();
+    expect(screen.getByText('32.00 km/h')).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
     // Battery % now appears twice: the status header and the extra row cell.
-    expect(screen.getAllByText('80%')).toHaveLength(2);
+    expect(screen.getAllByText('80.00%')).toHaveLength(2);
   });
 
   it('renders the compact charging view without the title chrome', () => {
@@ -245,8 +245,8 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
     expect(screen.queryByText('Time left')).not.toBeInTheDocument();
     // ...but still surfaces the power + battery essentials.
-    expect(screen.getByText('48.0 kW')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('48.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
   });
 
   it('renders the idle full view with the last-session summary', () => {
@@ -257,9 +257,9 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
-    expect(screen.getByText('64%')).toBeInTheDocument();
+    expect(screen.getByText('64.00%')).toBeInTheDocument();
     expect(screen.getByText('Last session')).toBeInTheDocument();
-    expect(screen.getByText('+12.5 kWh')).toBeInTheDocument();
+    expect(screen.getByText('+12.50 kWh')).toBeInTheDocument();
     // The charging badge must not render when idle.
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
   });
@@ -272,7 +272,7 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />);
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
-    expect(screen.getByText('64%')).toBeInTheDocument();
+    expect(screen.getByText('64.00%')).toBeInTheDocument();
     expect(screen.queryByText('Last session')).not.toBeInTheDocument();
     expect(screen.queryByText('Charge status')).not.toBeInTheDocument();
   });
@@ -306,7 +306,7 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('48.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('48.00 kW')).toBeInTheDocument();
   });
 
   it('shows a retryable error when no data is present', () => {

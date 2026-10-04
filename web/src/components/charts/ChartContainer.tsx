@@ -623,6 +623,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             'relative w-full min-w-0 max-w-full overflow-hidden [contain:layout_size]',
             fluid
               ? cn(
+                  // A minimum height is not a percentage-height basis for the plot.
+                  'flex flex-col [&>.recharts-responsive-container]:flex-1 [&>.recharts-responsive-container]:min-h-0',
                   'h-full min-h-[var(--chart-height-mobile)] max-h-full',
                   'sm:min-h-[var(--chart-height-desktop)]',
                 )
@@ -743,6 +745,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           )}
           {hasFallbackTable ? (
             <Table
+              variant="embedded"
               className={cn(
                 'w-full border-collapse text-xs',
                 'forced-colors:text-[CanvasText]',

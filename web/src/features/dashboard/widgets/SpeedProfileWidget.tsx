@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow, useThemeChartPalette } from '@/components/charts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow, useThemeChartPalette, useMeasuredAxisWidth, measureAxisLabelWidth } from '@/components/charts';
 import { useSpeedProfile } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -19,6 +19,10 @@ interface ChartDatum extends ChartDataRow {
   bucket: string;
   frequency: number | null;
   efficiency: number | null;
+}
+
+export function frequencyAxisWidth(labels: string[], measure: (label: string) => number): number {
+  return measureAxisLabelWidth(labels, measure, 35, 12);
 }
 
 function buildChartData(
@@ -49,13 +53,13 @@ function formatBucketLabel(
     const lo = parseFloat(parts[0]);
     const hi = parseFloat(parts[1]);
     if (!isNaN(lo) && !isNaN(hi)) {
-      return `${fmtInt(toSpeedDisplay(lo))}-${fmtInt(toSpeedDisplay(hi))}`;
+      return `${fmtNumber(toSpeedDisplay(lo))}-${fmtNumber(toSpeedDisplay(hi))}`;
     }
   }
   // "80+" style bucket
   const num = parseFloat(bucket);
   if (!isNaN(num)) {
-    return `${fmtInt(toSpeedDisplay(num))}+`;
+    return `${fmtNumber(toSpeedDisplay(num))}+`;
   }
   return bucket;
 }
@@ -73,7 +77,7 @@ function findSweetSpot(chartData: ChartDatum[]): string {
 
 export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -108,10 +112,10 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
     // already expects m/s so it can be passed straight through.
     const optimal = knownNumber(data?.optimalSpeedMps);
     if (optimal != null && optimal > 0) {
-      return `${fmtInt(toSpeedDisplay(optimal))}`;
+      return fmtNumber(toSpeedDisplay(optimal));
     }
     return findSweetSpot(chartData);
-  }, [data, chartData, toSpeedDisplay, fmtInt]);
+  }, [data, chartData, toSpeedDisplay, fmtNumber]);
 
   const peakFreq = useMemo(() => {
     let max = 0;
@@ -128,6 +132,29 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
+  const tick = isWide ? axisTick : axisTickSm;
+  const frequencyLabels = useMemo(
+    () => [0, 25, 50, 75, 100, ...chartData.flatMap(d => d.frequency == null ? [] : [d.frequency])]
+      .map(value => `${fmt(value)}%`),
+    [chartData, fmt],
+  );
+  const percentAxisWidth = useMeasuredAxisWidth({
+    labels: frequencyLabels,
+    fontSize: tick.fontSize,
+    enabled: !isCompact,
+    minWidth: 35,
+    padding: 12,
+    fallbackCharacterRatio: 0.75,
+  });
+  const powerLabels = useMemo(
+    () => [0, ...chartData.flatMap(d => d.efficiency != null && Number.isFinite(d.efficiency) ? [d.efficiency] : [])]
+      .map(value => fmt(value)),
+    [chartData, fmt],
+  );
+  const powerAxisWidth = useMeasuredAxisWidth({
+    labels: powerLabels, fontSize: tick.fontSize, enabled: !isCompact, minWidth: 40, padding: 20,
+  });
+
   const hasData = chartData.some((d) => (d.frequency != null && d.frequency > 0) || d.efficiency != null);
   const optimalSpeed = knownNumber(data?.optimalSpeedMps);
   const sweetSpotLabel = optimalSpeed != null && optimalSpeed > 0
@@ -138,6 +165,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.speedProfile.title', 'Speed profile')}
         loading={isLoading}
         dataState={trust.hasData ? trust : undefined}
         error={trust.fatalError?.message ?? null}
@@ -190,8 +218,6 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
       ]
     : [];
 
-  const tick = isWide ? axisTick : axisTickSm;
-
   return (
     <WidgetShell
       title={t('widget.speedProfile.title', 'Speed profile')}
@@ -243,7 +269,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={35}
+                width={percentAxisWidth}
                 tickFormatter={(v: number) => `${fmt(v)}%`}
               />
               <YAxis
@@ -252,7 +278,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={powerAxisWidth}
                 tickFormatter={(v: number) => fmt(v)}
               />
               <Tooltip

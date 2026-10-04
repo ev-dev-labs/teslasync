@@ -187,7 +187,7 @@ function DriveStatsLegend({ chartData }: { chartData: ChartDataPoint[] }) {
   return (
     <div className="mt-3 space-y-2">
       <Text as="p" variant="caption">{t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}</Text>
-      <Table aria-label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}>
+      <Table variant="embedded" aria-label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}>
         <thead><tr><th scope="col">{t('driveDetail.report.signal', 'Signal')}</th><th scope="col">{meanLabel}</th><th scope="col">{maxLabel}</th><th scope="col">{minLabel}</th></tr></thead>
         <tbody>{items.length > 0 ? items.map((item) => (
           <tr key={item.label}><th scope="row">{item.label}</th><td className="whitespace-nowrap tabular-nums">{item.mean}</td><td className="whitespace-nowrap tabular-nums">{item.max}</td><td className="whitespace-nowrap tabular-nums">{item.min}</td></tr>

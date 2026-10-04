@@ -279,7 +279,7 @@ describe('CommandHistoryPage — happy path', () => {
     }
     expect(within(band).getByText('5')).toBeInTheDocument(); // total
     expect(within(band).getByText('3')).toBeInTheDocument(); // 24h
-    expect(within(band).getByText('60%')).toBeInTheDocument(); // success rate
+    expect(within(band).getByText('60.00%')).toBeInTheDocument(); // success rate
     expect(within(band).getByText('2')).toBeInTheDocument(); // failed
     expect(within(band).getByText('Lock')).toBeInTheDocument(); // most-used, i18n-resolved
   });
@@ -296,8 +296,8 @@ describe('CommandHistoryPage — happy path', () => {
 
     // Status breakdown percentages exercise pctLabel(n, total): 3/5 and 2/5.
     // Regex avoids depending on the middle-dot glyph in "3 · 60%".
-    expect(within(statusPanel()).getByText(/60%/)).toBeInTheDocument();
-    expect(within(statusPanel()).getByText(/40%/)).toBeInTheDocument();
+    expect(within(statusPanel()).getByText(/60\.00%/)).toBeInTheDocument();
+    expect(within(statusPanel()).getByText(/40\.00%/)).toBeInTheDocument();
 
     // Analytics rendered data, not the "no commands in range" placeholder.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
@@ -453,12 +453,12 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     renderPage();
 
     // 30 > PAGE_SIZE (25) → pager shown on page 1.
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 1.25 of 30/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
 
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 26.30 of 30/)).toBeInTheDocument();
   });
 
@@ -466,7 +466,7 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     installRequest({ commands: manyCommands(30) });
     renderPage(['/command-history?page=5']); // only 2 pages exist
 
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 26.30 of 30/)).toBeInTheDocument();
     // The timeline shows the clamped page's rows rather than an empty window.
     expect(within(timelinePanel()).queryByText('No commands have been sent yet')).not.toBeInTheDocument();
@@ -476,7 +476,7 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     installRequest({ commands: manyCommands(30) });
     renderPage(['/command-history?page=-3']);
 
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 1.25 of 30/)).toBeInTheDocument();
   });
 });
@@ -492,9 +492,9 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     installRequest({ commands: raceCommands() });
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
 
     const search = screen.getByRole('textbox', { name: 'Search commands' });
     fireEvent.change(search, { target: { value: 'wake' } });
@@ -516,9 +516,9 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     installRequest({ commands: cmds });
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
 
     // Switch to "failed" (4 items → single page). Page resets; timeline is not blank.
     fireEvent.click(screen.getByRole('button', { name: 'Failed' }));

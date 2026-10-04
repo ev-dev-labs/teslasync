@@ -16,7 +16,7 @@ interface AcDcTableRow {
   label: string;
   color: string;
   energy: number;
-  cost: number;
+  cost: number | null;
   count: number;
   totalDuration: number;
   freeCount: number;
@@ -63,7 +63,7 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
   const dcPct = hasEnergy ? (dcEnergy / totalEnergy) * 100 : 0;
 
   return (
-    <GlassPanel className="p-5">
+    <GlassPanel className="h-full p-5">
       <h3 className="section-title flex items-center gap-2 mb-4">
         <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
         {t('charging.stats.chargingByType', 'Charging stats by type')}
@@ -86,12 +86,12 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
               style={{ gridTemplateColumns: `${acPct}% ${dcPct}%` }}
             >
               {acEnergy > 0 && (
-                <div className="flex items-center justify-center text-2xs font-bold text-[var(--text-primary)] bg-blue-500">
+                <div className="col-start-1 flex items-center justify-center text-2xs font-bold text-[var(--text-primary)] bg-blue-500">
                   AC {fmtPercent(acPct)}
                 </div>
               )}
               {dcEnergy > 0 && (
-                <div className="flex items-center justify-center text-2xs font-bold text-[var(--text-primary)] bg-amber-500">
+                <div className="col-start-2 flex items-center justify-center text-2xs font-bold text-[var(--text-primary)] bg-amber-500">
                   DC {fmtPercent(dcPct)}
                 </div>
               )}
@@ -137,8 +137,8 @@ function AcDcTable({ ac, dc }: { ac?: AcDcBucket; dc?: AcDcBucket }) {
     { key: 'type', header: t('charging.table.type', 'Type'), render: (r) => <span className={cn('font-medium', r.color === AC_COLOR ? 'text-blue-500' : 'text-amber-500')}>{r.label}</span> },
     { key: 'sessions', header: t('charging.table.sessionCount', 'Sessions'), render: (r) => <span className="text-[var(--text-primary)]">{r.count}</span>, align: 'right' },
     { key: 'energy', header: t('charging.table.energy', 'Energy'), render: (r) => <span className="text-[var(--text-primary)]">{formatEnergyDisplay(r.energy)}</span>, align: 'right' },
-    { key: 'cost', header: t('charging.table.cost', 'Cost'), render: (r) => <Currency value={r.cost} className="text-amber-300" />, align: 'right' },
-    { key: 'perKwh', header: t('charging.table.costPerKwh', '$/kWh'), render: (r) => r.energy > 0 ? <Currency value={r.cost / r.energy} className="text-[var(--text-secondary)]" /> : <span className="text-[var(--text-secondary)]">—</span>, align: 'right' },
+    { key: 'cost', header: t('charging.table.cost', 'Cost'), render: (r) => r.cost != null ? <Currency value={r.cost} className="text-amber-300" /> : <span className="text-[var(--text-secondary)]">—</span>, align: 'right' },
+    { key: 'perKwh', header: t('charging.table.costPerKwh', '$/kWh'), render: (r) => r.energy > 0 && r.cost != null ? <Currency value={r.cost / r.energy} className="text-[var(--text-secondary)]" /> : <span className="text-[var(--text-secondary)]">—</span>, align: 'right' },
     { key: 'avgEnergy', header: t('charging.table.avgEnergy', 'Avg energy'), render: (r) => <span className="text-[var(--text-secondary)]">{fmtWithUnit(r.count > 0 ? r.energy / r.count : 0, 'kWh')}</span>, align: 'right' },
     { key: 'avgTime', header: t('charging.table.avgTime', 'Avg time'), render: (r) => <span className="text-[var(--text-secondary)]">{formatDuration(r.count > 0 ? r.totalDuration / r.count : 0)}</span>, align: 'right' },
     { key: 'free', header: t('charging.table.free', 'Free'), render: (r) => <span className="text-emerald-300">{r.freeCount > 0 ? `${r.freeCount} (${fmtWithUnit(r.freeEnergy, 'kWh')})` : '—'}</span>, align: 'right' },
@@ -147,6 +147,7 @@ function AcDcTable({ ac, dc }: { ac?: AcDcBucket; dc?: AcDcBucket }) {
   return (
     <DataTable<AcDcTableRow>
       tableId="charging:ac-dc-stats"
+      caption={t('charging.stats.chargingByType', 'Charging stats by type')}
       columns={columns}
       mobileColumns={['type', 'energy', 'cost']}
       data={data}

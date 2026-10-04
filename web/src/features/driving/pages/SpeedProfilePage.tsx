@@ -59,7 +59,7 @@ export { getEfficiency };
 /* ------------------------------------------------------------------ */
 
 export default function SpeedProfilePage() {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('speedProfile.title', 'Speed Profile'));
 
@@ -226,7 +226,7 @@ export default function SpeedProfilePage() {
           />
           <MetricCard
             label={t('speedProfile.samples', 'Samples')}
-            value={data ? fmtNumber(totalReadings) : '—'}
+            value={data ? fmtInt(totalReadings) : '—'}
             subtitle={t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', {
               count: drives.length,
             })}
@@ -379,7 +379,7 @@ export default function SpeedProfilePage() {
                       <div className="flex items-center justify-between gap-2">
                         <Text as="dt" variant="caption">{t('speedProfile.readings', 'Readings')}</Text>
                         <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                          {fmtNumber(bucket.readings)}
+                          {fmtInt(bucket.readings)}
                         </Text>
                       </div>
                       {effData ? (

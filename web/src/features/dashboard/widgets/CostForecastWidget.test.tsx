@@ -130,8 +130,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 // the axis/tooltip doubles invoke the widget's real formatters so the currency
 // wiring is exercised.
 vi.mock('@/components/charts', async () => {
+  const { useMeasuredAxisWidth } = await import('@/components/charts/useMeasuredAxisWidth');
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
+  useMeasuredAxisWidth,
   ...chartTestDoubles,
   chartGrid: null,
   chartMargin: {},
@@ -286,11 +288,11 @@ describe('CostForecastWidget', () => {
     }
 
     // Real formatter output: next month cost (0 decimals) + avg $/kWh (2 dp).
-    expect(screen.getByText('$130')).toBeInTheDocument();
+    expect(screen.getByText('$130.00')).toBeInTheDocument();
     expect(screen.getByText('$0.18')).toBeInTheDocument();
 
     // Trend up (130 ≥ 120) → signed delta + the amber TrendingUp header glyph.
-    expect(screen.getByText('↑ $10')).toBeInTheDocument();
+    expect(screen.getByText('↑ $10.00')).toBeInTheDocument();
     expect(container.querySelector('.lucide-trending-up.text-amber-400')).toBeInTheDocument();
     expect(container.querySelector('.lucide-trending-down.text-emerald-400')).toBeNull();
 
@@ -345,7 +347,7 @@ describe('CostForecastWidget', () => {
     const { container } = renderWidget();
 
     // nextCost 110 < lastCost 120 → "↓ $10" + emerald TrendingDown glyph.
-    expect(screen.getByText('↓ $10')).toBeInTheDocument();
+    expect(screen.getByText('↓ $10.00')).toBeInTheDocument();
     expect(container.querySelector('.lucide-trending-down.text-emerald-400')).toBeInTheDocument();
     expect(container.querySelector('.lucide-trending-up.text-amber-400')).toBeNull();
   });
@@ -354,7 +356,7 @@ describe('CostForecastWidget', () => {
     renderWidget();
 
     // Y-axis tickFormatter(100) → "$" + fmt(100, 0) = "$100".
-    expect(screen.getByTestId('y-axis')).toHaveAttribute('data-tick', '$100');
+    expect(screen.getByTestId('y-axis')).toHaveAttribute('data-tick', '$100.00');
 
     // Tooltip formatter(130) → [formatCurrency(130), 'Cost'].
     const fmt = screen.getByTestId('tooltip').getAttribute('data-fmt') ?? '';
@@ -388,7 +390,7 @@ describe('CostForecastWidget', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('Next month')).toBeInTheDocument();
-    expect(screen.getByText('$130')).toBeInTheDocument();
+    expect(screen.getByText('$130.00')).toBeInTheDocument();
     expect(screen.getByText('↑')).toBeInTheDocument();
 
     const heading = screen.getByRole('heading', { name: 'Cost forecast', level: 3 });
@@ -420,8 +422,8 @@ describe('CostForecastWidget', () => {
     expect(screen.getByRole('heading', { name: 'Cost forecast', level: 3 })).toBeVisible();
     expect(screen.getByText('No forecast data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('$130')).not.toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(screen.queryByText('$130.00')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: /^Refresh$/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -501,7 +503,7 @@ describe('CostForecastWidget', () => {
   it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }, { cols: 4, rows: 4 }])('retains each renderer on cached refresh failure at %j', (size) => {
     forecastMock.mockReturnValue(makeQuery({ data: makeData(), isError: true, error: new Error('refresh failed') }));
     renderWidget(size);
-    expect(screen.getByText('$130')).toBeInTheDocument();
+    expect(screen.getByText('$130.00')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -512,13 +514,13 @@ describe('CostForecastWidget', () => {
     expect(screen.getAllByText('—')).toHaveLength(2);
     expect(screen.getByText('$0.18')).toBeInTheDocument();
     expect(chartRows()).toHaveLength(3);
-    expect(screen.queryByText('↑ $120')).not.toBeInTheDocument();
+    expect(screen.queryByText('↑ $120.00')).not.toBeInTheDocument();
   });
 
   it('does not infer a trend or rate from missing history', () => {
     forecastMock.mockReturnValue(makeQuery({ data: makeData({ historical: [] }) }));
     renderWidget();
-    expect(screen.getByText('$130')).toBeInTheDocument();
+    expect(screen.getByText('$130.00')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
     expect(chartRows().every((row) => row.period === 'forecast')).toBe(true);
   });
@@ -529,9 +531,8 @@ describe('CostForecastWidget', () => {
       forecast: [{ ...FORE[0], cost: 0 }],
     }) }));
     renderWidget();
-    expect(screen.getByText('$0')).toBeInTheDocument();
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
-    expect(screen.getByText('→ $0')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.00')).toHaveLength(2);
+    expect(screen.getByText('→ $0.00')).toBeInTheDocument();
     expect(chartRows().map((row) => row.cost)).toEqual([0, 0]);
   });
 
@@ -560,7 +561,7 @@ describe('CostForecastWidget', () => {
     unitsMock.mockReturnValue({ unitPrefs: { energy: 'Wh' } });
     renderWidget();
     expect(screen.getByText('Avg $/Wh')).toBeInTheDocument();
-    expect(screen.getByText('$0.00018')).toBeInTheDocument();
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
   });
 
   it('honors configured vehicle scope', () => {

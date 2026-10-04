@@ -96,8 +96,8 @@ describe('AccessOverviewPanel', () => {
     expect(screen.getByText('Accepted')).toBeInTheDocument();
 
     // `${count} · ${fmtPercent(pct, 0)}` sublabels: 3/4 = 75%, 1/4 = 25%.
-    expect(screen.getByText(`3 ${MIDDOT} 75%`)).toBeInTheDocument();
-    expect(screen.getByText(`1 ${MIDDOT} 25%`)).toBeInTheDocument();
+    expect(screen.getByText(`3 ${MIDDOT} 75.00%`)).toBeInTheDocument();
+    expect(screen.getByText(`1 ${MIDDOT} 25.00%`)).toBeInTheDocument();
   });
 
   it('renders each driver-role as a chip with its resolved label and count', () => {
@@ -211,7 +211,7 @@ describe('AccessOverviewPanel', () => {
 
     expect(screen.getByText('No drivers yet')).toBeInTheDocument();
     expect(screen.getByText('Expired')).toBeInTheDocument();
-    expect(screen.getByText(`5 ${MIDDOT} 100%`)).toBeInTheDocument();
+    expect(screen.getByText(`5 ${MIDDOT} 100.00%`)).toBeInTheDocument();
   });
 
   it('is null-safe against undefined breakdown arrays', () => {
@@ -239,8 +239,8 @@ describe('AccessOverviewPanel', () => {
     });
 
     // `count ?? 0` → "0"; without the guard this would render "null · 0%".
-    expect(screen.getByText(`0 ${MIDDOT} 0%`)).toBeInTheDocument();
-    expect(screen.queryByText(`null ${MIDDOT} 0%`)).toBeNull();
+    expect(screen.getByText(`0 ${MIDDOT} 0.00%`)).toBeInTheDocument();
+    expect(screen.queryByText(`null ${MIDDOT} 0.00%`)).toBeNull();
   });
 
   it('falls back to an em-dash label for a blank status via titleCase', () => {
@@ -250,6 +250,6 @@ describe('AccessOverviewPanel', () => {
     });
 
     expect(screen.getByText(EM_DASH)).toBeInTheDocument();
-    expect(screen.getByText(`1 ${MIDDOT} 100%`)).toBeInTheDocument();
+    expect(screen.getByText(`1 ${MIDDOT} 100.00%`)).toBeInTheDocument();
   });
 });

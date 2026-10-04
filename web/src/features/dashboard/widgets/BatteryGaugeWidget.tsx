@@ -36,6 +36,7 @@ export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
+      title={t('widget.battery', 'Battery')}
       loading={isLoading}
       dataState={stateData != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}

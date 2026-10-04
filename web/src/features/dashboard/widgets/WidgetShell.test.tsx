@@ -477,7 +477,7 @@ describe('WidgetShell — content padding', () => {
     expect(wrapper.className).toContain('px-4');
   });
 
-  it('drops padding and clips overflow when noPadding is set', () => {
+  it('drops padding, stretches unpadded content through flex layout and clips overflow', () => {
     render(
       <WidgetShell title="Battery" noPadding>
         <Child />
@@ -486,6 +486,7 @@ describe('WidgetShell — content padding', () => {
 
     const wrapper = screen.getByTestId('child').parentElement as HTMLElement;
     expect(wrapper.className).toContain('overflow-hidden');
+    expect(wrapper).toHaveClass('flex', 'flex-col');
     expect(wrapper.className).not.toContain('overflow-auto');
   });
 });

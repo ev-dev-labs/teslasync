@@ -42,6 +42,7 @@ export function SilentCounterPanel({ driveId }: { driveId: string | undefined })
             </Text>
           ) : (
             <DataTable
+              variant="embedded"
               tableId="drive-detail:silent-intervals" name="drive-silent-intervals"
               data={intervals.map((interval, index) => ({ ...interval, index }))}
               keyExtractor={(interval) => `${interval.started_at}-${interval.index}`}

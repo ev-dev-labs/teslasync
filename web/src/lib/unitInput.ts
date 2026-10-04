@@ -33,7 +33,7 @@
  *
  * `parseForUnit` understands the locale's decimal AND group separators
  * (e.g. en-US "1,234.5" → 1234.5; de-DE "1.234,5" → 1234.5). Pass
- * `{ strict: true }` to bypass and use plain `Number()` parsing — the
+ * `{ strict: true }` to use ASCII decimal parsing without separators — the
  * Blocked-Path escape hatch for adopters that hit locale edge cases.
  *
  * # Suffix tolerance
@@ -45,6 +45,7 @@
 
 import type { AppSettings } from '@/api/types'
 import { resolveLocale } from './locale'
+import { parseLocaleNumber } from './localeNumber'
 import {
   convertDistanceFromSI, convertDistanceToSI,
   convertSpeedFromSI, convertSpeedToSI,
@@ -78,7 +79,7 @@ export type UnitInputSettings = Pick<AppSettings,
 
 export interface ParseOptions {
   /**
-   * When true, parse with plain `Number()` only (no locale-aware
+   * When true, parse ASCII decimal notation only (no locale-aware
    * separator handling). Use for adopters that experience ambiguity
    * around locales whose decimal separator collides with the
    * thousands separator of the input data (the Blocked-Path escape).
@@ -157,9 +158,7 @@ export function parseForUnit(
 
   if (!raw) return null
 
-  const n = options.strict
-    ? Number(raw)
-    : parseLocaleNumber(raw, resolveLocale(settings.locale))
+  const n = parseLocaleNumber(raw, resolveLocale(settings.locale), options)
 
   if (!Number.isFinite(n)) return null
 
@@ -290,37 +289,6 @@ export function unitSymbol(unit: UnitKind, settings: UnitInputSettings): string 
     case 'number':
       return ''
   }
-}
-
-/**
- * Parse `text` as a number using the locale's decimal & group separators.
- * Falls back to plain `Number()` when the locale cannot be inspected.
- *
- * Examples:
- *   parseLocaleNumber('1,234.56', 'en-US') → 1234.56
- *   parseLocaleNumber('1.234,56', 'de-DE') → 1234.56
- *   parseLocaleNumber('-3.14',    'en-US') → -3.14
- */
-function parseLocaleNumber(text: string, locale: string): number {
-  if (!text) return NaN
-  const formatter = new Intl.NumberFormat(locale)
-  const parts = formatter.formatToParts(12345.6)
-  const groupSep = parts.find(p => p.type === 'group')?.value ?? ''
-  const decimalSep = parts.find(p => p.type === 'decimal')?.value ?? '.'
-
-  let normalized = text.replace(/[\u061c\u200e\u200f]/g, '')
-  for (let digit = 0; digit <= 9; digit++) {
-    normalized = normalized.split(formatter.format(digit)).join(String(digit))
-  }
-  if (groupSep && groupSep !== decimalSep) {
-    normalized = normalized.split(groupSep).join('')
-  }
-  if (decimalSep !== '.') {
-    normalized = normalized.split(decimalSep).join('.')
-  }
-  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(normalized)
-    ? Number(normalized)
-    : NaN
 }
 
 /** Display list delimiters stay unambiguous even when the locale uses decimal commas. */

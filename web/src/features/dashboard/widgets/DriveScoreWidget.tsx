@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { LinearGauge } from '@/components/charts';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
@@ -9,7 +10,7 @@ import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetGaugeHero, WidgetStatGrid, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
+import { WidgetStatGrid, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -102,6 +103,7 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
+      title={t('widget.driveScoreGauge.title', 'Drive score')}
       loading={isLoading}
       dataState={analytics != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
@@ -112,7 +114,9 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
     >
       {hasScore ? (
         <div className="flex min-w-0 flex-col gap-3">
-          <WidgetGaugeHero gauge={gauge} compact={isCompact} />
+          <div className="flex flex-col items-center justify-center gap-2">
+            <LinearGauge {...gauge} kind="measurement" size={isCompact ? 70 : 100} />
+          </div>
         </div>
       ) : (
         // no-action: the score is generated automatically after a qualifying drive.

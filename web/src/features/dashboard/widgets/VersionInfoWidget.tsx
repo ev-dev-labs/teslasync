@@ -10,8 +10,12 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates, knownNumber } from '@/api/dataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—';
   if (bytes < 1024) return `${fmtInt(bytes)} B`;
   if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${fmtNumber(bytes / (1024 * 1024))} MB`;
@@ -56,10 +60,12 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
   const osInfo = (versionData as { os?: string }).os ?? '—';
   const archInfo = (versionData as { arch?: string }).arch ?? '—';
 
-  const signalsPerSec = (captureData as { signals_per_sec?: number }).signals_per_sec ?? 0;
-  const messagesToday = (captureData as { messages_today?: number }).messages_today ?? 0;
-  const bytesProcessed = (captureData as { bytes_processed?: number }).bytes_processed ?? 0;
-  const avgLatency = (captureData as { avg_processing_latency_ms?: number }).avg_processing_latency_ms ?? 0;
+  // CaptureStats reports documents and enablement, not throughput or latency.
+  // Keep these established sections visible without inventing measurements.
+  const signalsPerSec = knownNumber((captureData as { signals_per_sec?: number }).signals_per_sec);
+  const messagesToday = knownNumber((captureData as { messages_today?: number }).messages_today);
+  const bytesProcessed = knownNumber((captureData as { bytes_processed?: number }).bytes_processed);
+  const avgLatency = knownNumber((captureData as { avg_processing_latency_ms?: number }).avg_processing_latency_ms);
 
   const truncatedSha = gitSha?.slice(0, 7) ?? '—';
 
@@ -90,11 +96,11 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
     const items: StatGridItem[] = [
       {
         label: t('widget.versionInfo.signalsPerSec', 'Signals/sec'),
-        value: fmtNumber(signalsPerSec),
+        value: signalsPerSec == null ? '—' : fmtNumber(signalsPerSec),
       },
       {
         label: t('widget.versionInfo.messagesToday', 'Messages today'),
-        value: fmtInt(messagesToday),
+        value: messagesToday == null ? '—' : fmtInt(messagesToday),
       },
     ];
 
@@ -102,11 +108,11 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
       items.push(
         {
           label: t('widget.versionInfo.bytesProcessed', 'Bytes processed'),
-          value: formatBytes(bytesProcessed),
+          value: bytesProcessed == null ? '—' : formatBytes(bytesProcessed),
         },
         {
           label: t('widget.versionInfo.avgLatency', 'Avg latency'),
-          value: `${fmtNumber(avgLatency)} ms`,
+          value: avgLatency == null ? '—' : `${fmtNumber(avgLatency)} ms`,
         },
       );
     }
@@ -114,27 +120,35 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
     return items;
   }, [t, signalsPerSec, messagesToday, bytesProcessed, avgLatency, isWide, fmtNumber, fmtInt, displayPrecision, displayLocale]);
 
-  const isLoading = version.isLoading;
-  const hasError = version.error ? String(version.error) : null;
+  const versionState = useDataState(version);
+  const captureState = useDataState(capture);
+  const retry = () => { void version.refetch(); void capture.refetch(); };
+  const dataState = {
+    ...(versionState.hasData && !isCompact
+      ? combineDataStates([versionState, captureState])
+      : versionState),
+    data: version.data,
+    hasData: versionState.hasData,
+    retry,
+  };
   const hasData = version.data != null;
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.versionInfo.title', 'Version info')}
-      icon={<Info className="h-3.5 w-3.5 text-neon-green" />}
-      loading={isLoading}
-      error={hasError}
-      updatedAt={version.dataUpdatedAt}
-      isFetching={version.isFetching}
-      isStale={version.isStale}
-      isError={version.isError}
-      onRefresh={() => version.refetch()}
+      title={t('widget.versionInfo.title', 'Version info')}
+      icon={<Info className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
+      dataState={dataState}
+      updatedAt={dataState.updatedAt ?? 0}
+      isFetching={dataState.isRefreshing}
+      isStale={version.isStale || (!isCompact && capture.isStale)}
+      isError={version.isError || (!isCompact && capture.isError)}
+      onRefresh={retry}
     >
       {hasData ? (
         isCompact ? (
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-            <span className="text-sm font-bold text-[var(--text-primary)] truncate">{chartVersion}</span>
+            <span className={dashboardTokens.secondaryMetric}>{chartVersion}</span>
             <Badge variant="neutral" className="text-2xs">
               {truncatedSha}
             </Badge>
@@ -145,7 +159,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
             <KVList items={kvItems} />
 
             {isWide && (
-              <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
                 <span>{t('widget.versionInfo.os', 'OS')}: {osInfo}</span>
                 <span>•</span>
                 <span>{t('widget.versionInfo.arch', 'Arch')}: {archInfo}</span>

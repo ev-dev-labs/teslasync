@@ -264,7 +264,7 @@ describe('VehicleGauges — metric bars', () => {
 
     const battery = screen.getByTestId('bar-Battery level')
     expect(battery).toHaveAttribute('data-value', '82')
-    expect(battery).toHaveAttribute('data-sublabel', '82%')
+    expect(battery).toHaveAttribute('data-sublabel', '82.00%')
 
     const range = screen.getByTestId('bar-Estimated range')
     expect(range).toHaveAttribute('data-value', '400')

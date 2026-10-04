@@ -320,7 +320,7 @@ describe('GlancePage — populated overview', () => {
     renderPage();
     const kpi = kpiRegion();
 
-    expect(cardValue(kpi, 'Battery')).toBe('72%');
+    expect(cardValue(kpi, 'Battery')).toBe('72.00%');
     expect(cardValue(kpi, 'Range')).toBe('dist(402336)');
     expect(cardValue(kpi, 'Interior')).toBe('temp(21)');
     expect(cardValue(kpi, 'Exterior')).toBe('temp(15)');
@@ -331,9 +331,9 @@ describe('GlancePage — populated overview', () => {
   it('passes raw SI values to the unit formatters at the display edge', () => {
     renderPage();
 
-    expect(units.formatDistance).toHaveBeenCalledWith(402336, { precision: 0 });
-    expect(units.formatDistance).toHaveBeenCalledWith(123456, { precision: 0 });
-    expect(units.formatSpeed).toHaveBeenCalledWith(20, { precision: 0 });
+    expect(units.formatDistance).toHaveBeenCalledWith(402336);
+    expect(units.formatDistance).toHaveBeenCalledWith(123456);
+    expect(units.formatSpeed).toHaveBeenCalledWith(20);
     expect(units.formatTemperature).toHaveBeenCalledWith(21);
     expect(units.formatTemperature).toHaveBeenCalledWith(15);
   });
@@ -357,7 +357,7 @@ describe('GlancePage — populated overview', () => {
     expect(within(live).getByText('Charger power')).toBeInTheDocument();
     expect(within(live).getByText(/kW/)).toBeInTheDocument();
     expect(within(live).getByText('dist(30000)/h')).toBeInTheDocument(); // charge rate
-    expect(within(live).getByText('1.5 h')).toBeInTheDocument(); // time to full
+    expect(within(live).getByText('1.50 h')).toBeInTheDocument(); // time to full
     expect(rowValue(live, 'Climate')).toBe('On');
     expect(rowValue(live, 'Interior')).toBe('temp(21)');
   });
@@ -370,7 +370,7 @@ describe('GlancePage — populated overview', () => {
     expect(rowValue(live, 'Sentry mode')).toBe('On');
     expect(rowValue(live, 'Place')).toBe('Home'); // home flag wins
     expect(within(live).getByText('Office')).toBeInTheDocument(); // destination
-    expect(within(live).getByText('15 min')).toBeInTheDocument(); // ETA
+    expect(within(live).getByText('15.00 min')).toBeInTheDocument(); // ETA
     expect(within(live).getByText(/2024\.20\.1/)).toBeInTheDocument(); // software
   });
 
@@ -395,7 +395,7 @@ describe('GlancePage — per-panel state handling', () => {
     expect(screen.getByRole('heading', { name: 'Charging & climate' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Security & location' })).toBeInTheDocument();
     // …but no KPI values yet, and loading is not "empty".
-    expect(within(kpiRegion()).queryByText('72%')).toBeNull();
+    expect(within(kpiRegion()).queryByText('72.00%')).toBeNull();
     expect(screen.queryByText('No live data for this vehicle yet')).toBeNull();
   });
 
@@ -532,7 +532,7 @@ describe('GlancePage — null safety + idle branches', () => {
     expect(rowValue(live, 'Place')).toBe('—');
     // No destination → no destination/ETA rows.
     expect(within(live).queryByText('Office')).toBeNull();
-    expect(within(live).queryByText('15 min')).toBeNull();
+    expect(within(live).queryByText('15.00 min')).toBeNull();
   });
 
   it('renders the not-charging / unlocked / climate-off branches', () => {

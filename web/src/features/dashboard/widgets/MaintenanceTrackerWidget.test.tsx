@@ -225,8 +225,7 @@ describe('MaintenanceTrackerWidget — compact layout', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('months')).toBeInTheDocument();
     expect(screen.getByText('Brake Fluid')).toBeInTheDocument();
-    // No title in compact mode → no header label.
-    expect(screen.queryByText('Maintenance')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Maintenance', level: 3 })).toBeInTheDocument();
   });
 
   it('renders an explicit empty state (never a blank panel) when there is no data', () => {
@@ -307,7 +306,7 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     // The record's itemId 'tires' resolves to the maintenance item name.
     expect(screen.getByText('Tire Rotation')).toBeInTheDocument();
     // Subtitle carries the (converted) odometer + notes.
-    expect(container).toHaveTextContent('15,000 km · Rotated');
+    expect(container).toHaveTextContent('15,000.00 km · Rotated');
   });
 
   it('shows a "no records yet" note when there are items but no history', () => {
@@ -345,7 +344,7 @@ describe('MaintenanceTrackerWidget — distance conversion (regression)', () => 
     );
     const { container } = renderWidget(STANDARD);
 
-    expect(container).toHaveTextContent('40,000 km');
+    expect(container).toHaveTextContent('40,000.00 km');
     expect(container).not.toHaveTextContent('25 km');
   });
 
@@ -363,7 +362,7 @@ describe('MaintenanceTrackerWidget — distance conversion (regression)', () => 
     const { container } = renderWidget(STANDARD);
 
     // Both the interval and the odometer restate to "1,000 mi", not "1 mi".
-    expect(container).toHaveTextContent('1,000 mi');
+    expect(container).toHaveTextContent('1,000.00 mi');
     expect(container).not.toHaveTextContent('1 mi');
   });
 });
@@ -451,7 +450,7 @@ describe('MaintenanceTrackerWidget — null-safety & hardening', () => {
 
     // The history section still renders; the null odometer degrades to "0 km".
     expect(screen.getByText('Recent service')).toBeInTheDocument();
-    expect(container).not.toHaveTextContent('0 km');
+    expect(container).not.toHaveTextContent('0.00 km');
   });
 });
 

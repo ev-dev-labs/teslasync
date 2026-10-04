@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    formatDistance: (meters: number | null) => meters == null ? '-' : `${meters / 1000} km`,
+    formatDistance: (meters: number | null) => meters == null ? '-' : `${(meters / 1000).toFixed(2)} km`,
   }),
 }));
 
@@ -53,8 +53,8 @@ describe('SupervisedDrivingPanel', () => {
     );
 
     expect(screen.getByText('High confidence')).toBeInTheDocument();
-    expect(screen.getByText('7.2 km')).toBeInTheDocument();
-    expect(screen.getByText('72.0%')).toBeInTheDocument();
+    expect(screen.getByText('7.20 km')).toBeInTheDocument();
+    expect(screen.getByText('72.00%')).toBeInTheDocument();
     expect(screen.getByText(/do not identify exact FSD-active road segments/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /After firmware 2026.20.3/ })).toHaveAttribute(
       'href',

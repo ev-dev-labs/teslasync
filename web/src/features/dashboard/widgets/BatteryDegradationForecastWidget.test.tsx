@@ -157,6 +157,11 @@ beforeEach(() => {
   mockDegradation.mockReturnValue(qr({ data: makeData() }));
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Battery forecast', level: 3 })).toBeVisible();
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -230,7 +235,7 @@ describe('BatteryDegradationForecastWidget — shell states', () => {
   it('retains the prediction, outlook, risks and recommendations on a cached refresh failure', () => {
     mockDegradation.mockReturnValue(qr({ data: makeData(), error: new Error('transient'), isError: true }));
     renderWidget(STANDARD);
-    expect(screen.getByText('92.0%')).toBeInTheDocument();
+    expect(screen.getByText('92.00%')).toBeInTheDocument();
     expect(screen.getByText('High Temperature')).toBeInTheDocument();
     expect(screen.getByText('Charge to 80% for daily use')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -302,7 +307,7 @@ describe('BatteryDegradationForecastWidget — populated standard layout', () =>
     expect(screen.getByText('Projected 80% capacity')).toBeInTheDocument();
     expect(screen.getByText(expectedDate)).toBeInTheDocument();
     expect(screen.getByText('Current health')).toBeInTheDocument();
-    expect(screen.getByText('92.0%')).toBeInTheDocument();
+    expect(screen.getByText('92.00%')).toBeInTheDocument();
     // rate 0.08 → "Normal" tier and a "0.08%/mo" delta.
     expect(screen.getByText('Normal')).toBeInTheDocument();
     expect(container.textContent).toContain('0.08%/');
@@ -316,8 +321,8 @@ describe('BatteryDegradationForecastWidget — populated standard layout', () =>
     expect(screen.getByText('Frequent heat exposure')).toBeInTheDocument();
     expect(screen.getByText('Fast Charging')).toBeInTheDocument();
     expect(screen.getByText('High DC usage')).toBeInTheDocument();
-    expect(screen.getByText('8')).toBeInTheDocument();
-    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText('8.00')).toBeInTheDocument();
+    expect(screen.getByText('5.00')).toBeInTheDocument();
   });
 
   it('renders each recommendation as a tip card', () => {
@@ -345,13 +350,12 @@ describe('BatteryDegradationForecastWidget — populated standard layout', () =>
 });
 
 describe('BatteryDegradationForecastWidget — compact layout', () => {
-  it('shows the health% and tier badge without a title', () => {
+  it('shows the heading, health% and tier badge in compact mode', () => {
     renderWidget(COMPACT);
 
-    expect(screen.getByText('92.0%')).toBeInTheDocument();
+    expect(screen.getByText('92.00%')).toBeInTheDocument();
     expect(screen.getByText('Normal')).toBeInTheDocument();
-    // Compact tiles suppress the shell title and the standard-only hero.
-    expect(screen.queryByText('Battery forecast')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Battery forecast', level: 3 })).toBeVisible();
     expect(screen.queryByText('Projected 80% capacity')).toBeNull();
   });
 
@@ -478,8 +482,8 @@ describe('BatteryDegradationForecastWidget — horizon outlook', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('1 / 3 / 5-year outlook')).toBeTruthy();
-    expect(screen.getByText('90.5%')).toBeTruthy();
-    expect(screen.getByText('81.7%')).toBeTruthy();
+    expect(screen.getByText('90.50%')).toBeTruthy();
+    expect(screen.getByText('81.70%')).toBeTruthy();
   });
 
   it('keeps the outlook section visible with an empty placeholder when absent', () => {

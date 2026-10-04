@@ -27,7 +27,7 @@ export function rangeBufferPercent(
 export function rangeBufferShare(
   value: number | null | undefined,
   locale: string,
-  precision = 1,
+  precision = getGlobalPrecision(),
 ): string {
   return value == null
     ? '—'

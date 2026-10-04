@@ -6,6 +6,8 @@
  * exact options object. That lets the tests assert on the generated marker HTML
  * — including the injection-safety guarantees — without touching the DOM.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('leaflet', () => {
@@ -107,7 +109,8 @@ describe('vehicleIcon', () => {
     const { html } = optionsOf(vehicleIcon());
     expect(html).toContain(`background:${DEFAULT_VEHICLE_COLOR}`);
     expect(html).toContain(`box-shadow:0 0 10px ${DEFAULT_VEHICLE_COLOR}`);
-    expect(html).toContain('@keyframes vehicle-pulse');
+    expect(html).not.toContain('<style');
+    expect(readFileSync(join('src', 'index.css'), 'utf8')).toContain('@keyframes vehicle-pulse');
     expect(html).toContain('animation:vehicle-pulse 2s ease-in-out infinite');
   });
 

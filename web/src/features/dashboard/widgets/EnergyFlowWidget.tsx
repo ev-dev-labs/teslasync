@@ -6,6 +6,7 @@ import { DataProvenanceBadge } from '@/components/data-display';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
@@ -14,6 +15,7 @@ import type { WidgetProps } from './types';
 const REFRESH_INTERVAL = 5_000;
 
 export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? config?.vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -55,7 +57,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
         id: 'battery',
         label: t('widget.battery', 'Battery'),
         value: batteryLevel ?? 0,
-        formattedValue: batteryLevel == null ? '—' : `${batteryLevel}%`,
+        formattedValue: batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`,
         icon: <BatteryCharging className="h-2.5 w-2.5 text-emerald-400" />,
         position: 'left',
       },
@@ -85,7 +87,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
     }
 
     return result;
-  }, [batteryLevel, power, absPower, isConsuming, isRegen, isCharging, chargerPower, formatPower, t]);
+  }, [batteryLevel, power, absPower, isConsuming, isRegen, isCharging, chargerPower, formatPower, t, fmtNumber]);
 
   const arrows = useMemo<FlowArrow[]>(() => {
     const result: FlowArrow[] = [

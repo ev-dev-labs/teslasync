@@ -137,6 +137,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
                 </Text>
               )}
               <DataTable
+                variant="embedded"
                 tableId="drive-detail:road-candidates" name="drive-road-candidates"
                 data={candidates.map((candidate, index) => ({ ...candidate, index }))}
                 keyExtractor={(candidate) => `${candidate.ts}-${candidate.index}`}

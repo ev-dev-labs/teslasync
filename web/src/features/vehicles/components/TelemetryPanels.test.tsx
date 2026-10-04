@@ -312,7 +312,7 @@ describe('TelemetryGrid — tiles', () => {
     for (const label of ['Battery', 'Speed', 'Inside', 'Odometer', 'Charger', 'Sentry']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
-    expect(screen.getByText('75%')).toBeInTheDocument()
+    expect(screen.getByText('75.00%')).toBeInTheDocument()
     // Battery sub delegates the rated range to formatDistance.
     expect(fmt.formatDistance).toHaveBeenCalledWith(300)
     expect(screen.getByText(/300 km\s+range/)).toBeInTheDocument()
@@ -322,17 +322,17 @@ describe('TelemetryGrid — tiles', () => {
 describe('TelemetryGrid — battery colour thresholds', () => {
   it('paints a high charge emerald', () => {
     render(<TelemetryGrid state={makeState({ battery_level: 80 })} />)
-    expect(screen.getByText('80%')).toHaveClass('text-emerald-300')
+    expect(screen.getByText('80.00%')).toHaveClass('text-emerald-300')
   })
 
   it('paints a mid charge amber', () => {
     render(<TelemetryGrid state={makeState({ battery_level: 35 })} />)
-    expect(screen.getByText('35%')).toHaveClass('text-amber-300')
+    expect(screen.getByText('35.00%')).toHaveClass('text-amber-300')
   })
 
   it('paints a low charge rose', () => {
     render(<TelemetryGrid state={makeState({ battery_level: 10 })} />)
-    expect(screen.getByText('10%')).toHaveClass('text-rose-300')
+    expect(screen.getByText('10.00%')).toHaveClass('text-rose-300')
   })
 })
 
@@ -364,7 +364,7 @@ describe('TelemetryGrid — temperature + odometer delegation', () => {
 
   it('formats the odometer with the precision-0 option', () => {
     render(<TelemetryGrid state={makeState({ odometer: 12345 })} />)
-    expect(fmt.formatDistance).toHaveBeenCalledWith(12345, { precision: 0 })
+    expect(fmt.formatDistance).toHaveBeenCalledWith(12345)
     expect(screen.getByText('12345 km')).toBeInTheDocument()
   })
 })
@@ -377,10 +377,10 @@ describe('TelemetryGrid — charger tile', () => {
       />,
     )
 
-    const value = screen.getByText('11 kW')
+    const value = screen.getByText('11.00 kW')
     expect(value).toBeInTheDocument()
     expect(value).toHaveClass('text-emerald-300')
-    expect(screen.getByText('Full in 2.0h')).toBeInTheDocument()
+    expect(screen.getByText('Full in 2.00h')).toBeInTheDocument()
   })
 
   it('shows "Not Charging" and no time-to-full when idle', () => {
@@ -520,7 +520,7 @@ describe('LiveTelemetryPanels — tire + charging + media', () => {
     expect(panel.getByText('Home Base')).toBeInTheDocument()
     // 5000 m → convertDistanceFromSI(5000,'km') === 5 → "5.00 km".
     expect(panel.getByText('5.00 km')).toBeInTheDocument()
-    expect(panel.getByText('12 min')).toBeInTheDocument()
+    expect(panel.getByText('12.00 min')).toBeInTheDocument()
   })
 })
 

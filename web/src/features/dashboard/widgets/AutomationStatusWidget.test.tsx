@@ -33,7 +33,8 @@
  * network is touched. `Date.now` is pinned so relative-time output is stable.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within, act } from '@testing-library/react';
+import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -68,7 +69,7 @@ import type { Automation } from '@/api/types';
 
 /** Only the fields the widget reads off the query result. */
 interface AutomationsQuery {
-  data: Automation[];
+  data: Automation[] | undefined;
   isLoading: boolean;
   error: unknown;
   isFetching: boolean;
@@ -160,17 +161,46 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe.each([1, 2, 3])('AutomationStatusWidget — identifying heading at cols=%i', (cols) => {
+  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+    'keeps exactly one visible shell heading when %s',
+    (state) => {
+      const populated = state === 'populated' || state === 'retained failure';
+      const failed = state === 'initial failure' || state === 'retained failure';
+      const { container } = renderWidget({ cols, rows: 2 }, makeQuery({
+        data: populated ? [makeAutomation({ name: 'Retained automation' })] : state === 'empty' ? [] : undefined,
+        isLoading: state === 'loading',
+        isError: failed,
+        error: failed ? new Error('offline') : null,
+      }));
+      const headings = screen.getAllByRole('heading', { name: 'Automation status', level: 3 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toBeVisible();
+      if (populated) {
+        expect(screen.getByText('Active')).toBeInTheDocument();
+        if (cols === 1) expect(screen.getByText('1/1')).toBeInTheDocument();
+        else expect(screen.getByText('Retained automation')).toBeInTheDocument();
+        if (cols === 3) expect(screen.getByRole('switch', { name: 'Toggle Retained automation' })).toBeInTheDocument();
+      }
+      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'empty') expect(screen.getByText('No automations configured')).toBeInTheDocument();
+      if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+      if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    },
+  );
+});
+
 describe('AutomationStatusWidget — query states', () => {
   it('renders a skeleton (and no content) while loading', () => {
-    const { container } = renderWidget(FULL, makeQuery({ isLoading: true }));
+    const { container } = renderWidget(FULL, makeQuery({ isLoading: true, data: undefined }));
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    // The content, title and empty state are all suppressed during load.
+    // The title remains; content and empty state are suppressed during load.
     expect(screen.queryByText('Automation status')).toBeInTheDocument();
     expect(screen.queryByText('No automations configured')).toBeNull();
   });
 
   it('surfaces a query error instead of the automation list', () => {
-    renderWidget(FULL, makeQuery({ error: new Error('boom'), isError: true }));
+    renderWidget(FULL, makeQuery({ error: new Error('boom'), isError: true, data: undefined }));
     // jsdom reports navigator.onLine === true, so QueryError lands on the
     // generic network branch (role="alert").
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -202,8 +232,8 @@ describe('AutomationStatusWidget — compact view', () => {
     expect(screen.getByText('2/3')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText('1 Failing')).toBeInTheDocument();
-    // A cols<=1 tile suppresses the header title entirely.
-    expect(screen.queryByText('Automation status')).toBeNull();
+    // A cols<=1 tile still has an accessible identifying header.
+    expect(screen.getByRole('heading', { name: 'Automation status', level: 3 })).toBeVisible();
   });
 
   it('omits the failing chip when nothing is failing', () => {
@@ -236,11 +266,41 @@ describe('AutomationStatusWidget — full view', () => {
     );
     expect(screen.getByText('Automation status')).toBeInTheDocument();
     // 2 enabled → "2 Active"; 1 enabled+failing → "1 Failing" summary.
-    expect(screen.getByText('2 Active')).toBeInTheDocument();
-    expect(screen.getByText('1 Failing')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('Preheat')).toBeInTheDocument();
     expect(screen.getByText('Charge cap')).toBeInTheDocument();
     expect(screen.getByText('Sentry sync')).toBeInTheDocument();
+  });
+
+  describe('AutomationStatusWidget — retained automation evidence', () => {
+    it('reacts to locale changes for counts without recasing automation identities', () => {
+      const locale = getGlobalLocale();
+      try {
+        const automations = Array.from({ length: 1000 }, (_, index) => makeAutomation({ id: index + 1, name: `CaseSensitive-${index}` }));
+        renderWidget(COMPACT, makeQuery({ data: automations }));
+        act(() => setGlobalLocale('de-DE'));
+        expect(screen.getByText('1.000/1.000')).toBeInTheDocument();
+      } finally {
+        act(() => setGlobalLocale(locale));
+      }
+    });
+
+    it('keeps statuses and wide toggles on a failed refresh with real recovery', () => {
+      const refetch = vi.fn();
+      renderWidget(WIDE, makeQuery({
+        data: [makeAutomation({ name: 'Retained automation', enabled: true })],
+        isError: true,
+        error: new Error('refresh failed'),
+        refetch,
+      }));
+      expect(screen.getByRole('switch', { name: 'Toggle Retained automation' })).toBeInTheDocument();
+      const warning = screen.getByTestId('stale-refresh-warning');
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText("Can't reach server")).toBeNull();
+    });
   });
 
   it('renders the correct status badge for every automation state', () => {

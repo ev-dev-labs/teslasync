@@ -71,7 +71,7 @@ export function ThermalLoadPanel({
               <InlineMetric
                 icon={<Zap className="h-4 w-4 text-purple-300" aria-hidden="true" />}
                 label={t('drivetrain.peakPower', 'Peak Power')}
-                value={peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—'}
+                value={peakPower > 0 ? `${fmtNumber(peakPower)} kW` : '—'}
               />
               <InlineMetric
                 icon={<TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
@@ -86,7 +86,7 @@ export function ThermalLoadPanel({
               <InlineMetric
                 icon={<Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />}
                 label={t('drivetrain.regenRatio', 'Regen Ratio')}
-                value={stats ? `${fmtNumber(stats.regenRatio * 100)}%` : '—'}
+                value={stats?.regenRatio != null ? `${fmtNumber(stats.regenRatio * 100)}%` : '—'}
               />
             </div>
           </>

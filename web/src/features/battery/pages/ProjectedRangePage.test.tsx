@@ -477,12 +477,12 @@ describe('ProjectedRangePage · dashboard render', () => {
     // Efficiency matrix: bucket labels + populated cells (samples in parens).
     expect(screen.getByText('Suburban')).toBeInTheDocument();
     expect(screen.getByText('Freezing')).toBeInTheDocument();
-    expect(screen.getByText('190')).toBeInTheDocument();
-    expect(screen.getByText('210')).toBeInTheDocument();
+    expect(screen.getByText('190.00')).toBeInTheDocument();
+    expect(screen.getByText('210.00')).toBeInTheDocument();
 
     // Factors: signed impact badges + descriptions.
-    expect(screen.getByText('-8.5%')).toBeInTheDocument();
-    expect(screen.getByText('+4.2%')).toBeInTheDocument();
+    expect(screen.getByText('-8.50%')).toBeInTheDocument();
+    expect(screen.getByText('+4.20%')).toBeInTheDocument();
     expect(screen.getByText('Cold weather reduces range')).toBeInTheDocument();
 
     // Static tips always render.
@@ -516,7 +516,7 @@ describe('ProjectedRangePage · what-if calculator', () => {
     // Default: speed 80 (suburban) + temp 20 (mild) → heuristic 177.5 Wh/km,
     // 75 000 Wh × 72% ÷ 177.5 ≈ 304 km.
     expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('304 km')).toBeInTheDocument();
+    expect(screen.getByText('304.20 km')).toBeInTheDocument();
 
     // Drag the temperature slider down to −10 °C (freezing): the heater penalty
     // pushes efficiency to 222.5 Wh/km and range down to ~243 km.
@@ -524,9 +524,9 @@ describe('ProjectedRangePage · what-if calculator', () => {
     fireEvent.change(tempSlider, { target: { value: '-10' } });
 
     expect(screen.getByText('222.50 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('243 km')).toBeInTheDocument();
+    expect(screen.getByText('242.70 km')).toBeInTheDocument();
     expect(screen.queryByText('177.50 Wh/km')).not.toBeInTheDocument();
-    expect(screen.queryByText('304 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('304.20 km')).not.toBeInTheDocument();
   });
 });
 
@@ -541,8 +541,8 @@ describe('ProjectedRangePage · mile units', () => {
     // … as do the matrix cells (whole-number, unit in the title): fixture
     // highway/mild 190 Wh/km → 306, city/cold 210 Wh/km → 338.
     const matrix = screen.getByRole('region', { name: 'Personal Efficiency Matrix (Wh/mi)' });
-    expect(within(matrix).getByText('306')).toBeInTheDocument();
-    expect(within(matrix).getByText('338')).toBeInTheDocument();
+    expect(within(matrix).getByText('305.78')).toBeInTheDocument();
+    expect(within(matrix).getByText('337.96')).toBeInTheDocument();
 
     // … the what-if readout (177.5 Wh/km → Wh/mi) …
     expect(screen.getByText('285.66 Wh/mi')).toBeInTheDocument();

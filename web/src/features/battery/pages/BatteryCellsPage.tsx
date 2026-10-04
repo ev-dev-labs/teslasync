@@ -177,7 +177,7 @@ function SummaryStat({ label, value, valueClassName }: {
 /* ── Page ──────────────────────────────────────────────────────── */
 
 export default function BatteryCellsPage() {
-  const { fmtNumber, fmtScientificNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { fmtNumber, fmtInt, fmtScientificNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('battery.cells.title', 'Battery cells'));
 
@@ -389,7 +389,7 @@ export default function BatteryCellsPage() {
             <>
               <MetricCard
                 label={t('battery.cells.kpi.totalCells', 'Total cells')}
-                value={fmtNumber(data?.total_cells ?? 0)}
+                value={fmtInt(data?.total_cells ?? 0)}
                 icon={<Grid3x3 className="h-4 w-4" />}
                 color="cyan"
               />

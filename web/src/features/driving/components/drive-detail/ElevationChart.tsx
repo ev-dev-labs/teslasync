@@ -39,7 +39,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
 
   return (
     <FadeIn className="space-y-3">
-      <Table aria-label={t('driveDetail.elevSummary', 'Elevation summary')}>
+      <Table variant="embedded" aria-label={t('driveDetail.elevSummary', 'Elevation summary')}>
         <tbody>
           <tr><th scope="row">{t('driveDetail.gain', 'Gain')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevGain)} m` : '—'}</td></tr>
           <tr><th scope="row">{t('driveDetail.loss', 'Loss')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevLoss)} m` : '—'}</td></tr>

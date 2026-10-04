@@ -36,7 +36,7 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
     setInvalidDestination(false)
   }, [safePage, safePageSize, safeTotal])
 
-  // At most five slots keeps every numbered target at least 44px at 320px.
+  // Narrow containers keep the current page inline; the form preserves direct jumps.
   const pageSlots: (number | 'start-gap' | 'end-gap')[] = totalPages <= 5
     ? Array.from({ length: totalPages }, (_, index) => index + 1)
     : safePage <= 3
@@ -45,11 +45,12 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
         ? [1, 'start-gap', totalPages - 2, totalPages - 1, totalPages]
         : [1, 'start-gap', safePage, 'end-gap', totalPages]
   const buttonClass = 'h-11 min-w-11 px-2 sm:h-9 sm:min-w-9'
+  const edgeButtonClass = `${buttonClass} hidden @[15rem]/pagination:inline-flex`
 
   return (
     <nav aria-label={t('a11y.pagination', 'Pagination')}
-      className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3">
-      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+      className="@container/pagination flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:justify-start">
         <Text variant="caption" className="tabular-nums" aria-live="polite" aria-atomic="true">
           {t('pagination.showing', 'Showing {{start}}–{{end}} of {{total}}', {
             start: fmtInt(start), end: fmtInt(end), total: fmtInt(safeTotal),
@@ -68,10 +69,10 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
           </div>
         )}
       </div>
-      <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-4 gap-y-2">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-x-4 sm:gap-y-2">
         <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-1 sm:flex sm:w-auto">
           <div className="flex gap-1">
-            <Button type="button" variant="ghost" size="sm" className={buttonClass}
+            <Button type="button" variant="ghost" size="sm" className={edgeButtonClass}
               disabled={safePage === 1} onClick={() => onPageChange(1)} aria-label={t('pagination.first', 'First page')}>
               <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -80,9 +81,10 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
-          <div className="col-span-3 col-start-1 row-start-2 flex flex-wrap items-center justify-center gap-1 sm:order-none">
+          <div className="flex min-w-0 items-center justify-center gap-1">
             {pageSlots.map(slot => typeof slot === 'number' ? (
-              <Button key={slot} type="button" variant={slot === safePage ? 'primary' : 'ghost'} size="sm" className={buttonClass}
+              <Button key={slot} type="button" variant={slot === safePage ? 'primary' : 'ghost'} size="sm"
+                className={slot === safePage ? buttonClass : `${buttonClass} hidden @[27rem]/pagination:inline-flex`}
                 onClick={() => { if (slot !== safePage) onPageChange(slot) }}
                 aria-current={slot === safePage ? 'page' : undefined}
                 aria-label={slot === safePage
@@ -90,20 +92,20 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
                   : t('pagination.page', 'Page {{page}}', { page: fmtInt(slot) })}>
                 {fmtInt(slot)}
               </Button>
-            ) : <Text key={slot} variant="caption" className="flex min-w-6 justify-center" aria-hidden="true">…</Text>)}
+            ) : <Text key={slot} variant="caption" className="hidden min-w-6 justify-center @[27rem]/pagination:flex" aria-hidden="true">…</Text>)}
           </div>
           <div className="col-start-3 row-start-1 flex gap-1">
             <Button type="button" variant="ghost" size="sm" className={buttonClass}
               disabled={safePage === totalPages} onClick={() => onPageChange(safePage + 1)} aria-label={t('pagination.next', 'Next page')}>
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <Button type="button" variant="ghost" size="sm" className={buttonClass}
+            <Button type="button" variant="ghost" size="sm" className={edgeButtonClass}
               disabled={safePage === totalPages} onClick={() => onPageChange(totalPages)} aria-label={t('pagination.last', 'Last page')}>
               <ChevronsRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>
-        <form className="flex max-w-full flex-wrap items-center gap-2" noValidate onSubmit={event => {
+        <form className="flex max-w-full flex-wrap items-center justify-between gap-2 sm:justify-end" noValidate onSubmit={event => {
           event.preventDefault()
           const target = Number(destination)
           if (!/^\d+$/.test(destination.trim()) || !Number.isSafeInteger(target) || target < 1 || target > totalPages) {
@@ -115,13 +117,15 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
           if (target !== safePage) onPageChange(target)
         }}>
           <Text variant="caption">{t('pagination.goToPage', 'Go to page')}</Text>
-          <div className="w-16">
-            <Input id={inputId} size="sm" className="min-h-11 sm:min-h-9" type="text" inputMode="numeric" autoComplete="off"
-              aria-label={t('pagination.goToPage', 'Go to page')}
-              aria-invalid={invalidDestination || undefined} aria-describedby={invalidDestination ? `${inputId}-invalid` : undefined}
-              value={destination} onChange={event => { setDestination(event.target.value); setInvalidDestination(false) }} />
+          <div className="flex items-center gap-2">
+            <div className="w-16">
+              <Input id={inputId} size="sm" className="min-h-11 sm:min-h-9" type="text" inputMode="numeric" autoComplete="off"
+                aria-label={t('pagination.goToPage', 'Go to page')}
+                aria-invalid={invalidDestination || undefined} aria-describedby={invalidDestination ? `${inputId}-invalid` : undefined}
+                value={destination} onChange={event => { setDestination(event.target.value); setInvalidDestination(false) }} />
+            </div>
+            <Button type="submit" variant="secondary" size="sm" className={buttonClass}>{t('pagination.go', 'Go')}</Button>
           </div>
-          <Button type="submit" variant="secondary" size="sm" className={buttonClass}>{t('pagination.go', 'Go')}</Button>
           {invalidDestination && (
             <Text id={`${inputId}-invalid`} variant="error" role="alert" className="basis-full">
               {t('pagination.invalidPage', 'Enter a page from 1 to {{total}}.', { total: fmtInt(totalPages) })}

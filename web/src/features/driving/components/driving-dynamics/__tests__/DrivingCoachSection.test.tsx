@@ -151,7 +151,7 @@ describe('DrivingCoachSection — empty / undefined data', () => {
     renderCoach(undefined)
 
     // Section + panel scaffolding always renders (never a blank panel).
-    expect(screen.getByText('Driving Coach')).toBeInTheDocument()
+    expect(screen.getByText('Vehicle coaching · last 30 days')).toBeInTheDocument()
     expect(screen.getByText('Style Breakdown')).toBeInTheDocument()
 
     // Every data-backed panel falls back to its own empty state.
@@ -161,21 +161,20 @@ describe('DrivingCoachSection — empty / undefined data', () => {
     expect(screen.getByText('Drive data will appear after your first trip.')).toBeInTheDocument()
 
     // Empty states expose role="status" for assistive tech — four panels.
-    expect(screen.getAllByRole('status')).toHaveLength(4)
+    expect(screen.getAllByRole('status')).toHaveLength(6)
 
     // Gauge + caption render zeros rather than NaN/undefined.
-    expect(screen.getByText('Driving Score')).toBeInTheDocument()
+    expect(screen.getByText('No vehicle-wide score available.')).toBeInTheDocument()
     expect(screen.getByText('0 drives analyzed')).toBeInTheDocument()
   })
 
   it('still renders the driving-pattern rows (at 0%) when there is no data', () => {
     renderCoach(undefined)
     // Patterns are always visible — they degrade to 0%, never disappear.
-    expect(screen.getByText('Hard Acceleration')).toBeInTheDocument()
-    expect(screen.getByText('Highway Driving')).toBeInTheDocument()
-    expect(screen.getByText('Cold Starts')).toBeInTheDocument()
+    expect(screen.getByText('Driving Patterns')).toBeInTheDocument()
+    expect(screen.getByText('No driving-pattern evidence available.')).toBeInTheDocument()
     // fmtNumber at the default precision renders "0.00%".
-    expect(screen.getAllByText('0.00%').length).toBeGreaterThanOrEqual(5)
+    expect(screen.queryByText('0.00%')).toBeNull()
   })
 })
 
@@ -238,6 +237,17 @@ describe('DrivingCoachSection — full data', () => {
 })
 
 describe('DrivingCoachSection — weekly-trend threshold', () => {
+  it('omits only the redundant scores table for a ride-first caller', () => {
+    mockCoachData = makeCoachData()
+    renderSection(<DrivingCoachSection vehicleId="1" showPerDriveScores={false} />)
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.queryByText('Per-Drive Scores')).toBeNull()
+    expect(screen.getByText('Style Breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Weekly Score Trend')).toBeInTheDocument()
+    expect(screen.getByText('Driving Patterns')).toBeInTheDocument()
+    expect(screen.getByText('Recommendations')).toBeInTheDocument()
+    expect(screen.getByText('Avg Efficiency')).toBeInTheDocument()
+  })
   it('shows the "need ≥2 weeks" empty state with a single week of data', () => {
     const data = makeCoachData({ weekly_trend: [WEEKLY_TREND[0]] })
     renderCoach(data)
@@ -265,8 +275,8 @@ describe('DrivingCoachSection — null-safety regressions', () => {
       renderCoach(data),
     ).not.toThrow()
     // Pattern rows still render, degraded to 0%.
-    expect(screen.getByText('Hard Acceleration')).toBeInTheDocument()
-    expect(screen.getAllByText('0.00%').length).toBeGreaterThanOrEqual(5)
+    expect(screen.getByText('No driving-pattern evidence available.')).toBeInTheDocument()
+    expect(screen.queryByText('0.00%')).toBeNull()
   })
 
   it('does not crash when style_breakdown is missing but drives were analyzed', () => {
@@ -281,8 +291,8 @@ describe('DrivingCoachSection — null-safety regressions', () => {
     ).not.toThrow()
     // The panel opened (not the empty state) and counts fell back to 0.
     expect(screen.getByText('Style Breakdown')).toBeInTheDocument()
-    expect(screen.queryByText('Drive more to see your style breakdown.')).toBeNull()
+    expect(screen.getByText('Drive more to see your style breakdown.')).toBeInTheDocument()
     const stylePanel = screen.getByText('Style Breakdown').closest('div') as HTMLElement
-    expect(within(stylePanel).getAllByText('0').length).toBeGreaterThanOrEqual(3)
+    expect(within(stylePanel).queryByText('0')).toBeNull()
   })
 })

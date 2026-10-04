@@ -122,7 +122,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.forecast.title', 'Battery forecast')}
+      title={t('widget.forecast.title', 'Battery forecast')}
       icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={data != null || isLoading || isError || error ? trust : undefined}

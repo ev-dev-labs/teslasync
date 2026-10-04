@@ -208,6 +208,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   }, [warrantyData, expiryDate, daysRemaining, effectiveDays, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, locale, fmtInt, fmtNumber]);
 
   const shellProps = {
+    title: t('widget.warranty.title', 'Warranty status'),
     loading: isLoading,
     dataState: trust,
     loadingContent: <div className="flex flex-col gap-3"><Skeleton className="h-16" /><Skeleton className="h-24" /></div>,
@@ -247,7 +248,6 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   // ── Standard layout (2×2): progress bars + coverage badges ──
   return (
     <WidgetShell
-      title={t('widget.warranty.title', 'Warranty status')}
       icon={<ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >

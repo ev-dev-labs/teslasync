@@ -51,17 +51,17 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   }, [state]);
 
   const range = useMemo(
-    () => (state?.ideal_range != null ? Math.round(convertDistanceFromSI(state.ideal_range, distanceUnit)) : null),
+    () => (state?.ideal_range != null ? convertDistanceFromSI(state.ideal_range, distanceUnit) : null),
     [state, distanceUnit],
   );
 
   const insideTemp = useMemo(
-    () => (state?.inside_temp != null ? Math.round(convertTempFromSI(state.inside_temp, tempUnit)) : null),
+    () => (state?.inside_temp != null ? convertTempFromSI(state.inside_temp, tempUnit) : null),
     [state, tempUnit],
   );
 
   const outsideTemp = useMemo(
-    () => (state?.outside_temp != null ? Math.round(convertTempFromSI(state.outside_temp, tempUnit)) : null),
+    () => (state?.outside_temp != null ? convertTempFromSI(state.outside_temp, tempUnit) : null),
     [state, tempUnit],
   );
 
@@ -156,10 +156,11 @@ function CompactView({
   batteryColor: string;
   status: string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <StatusBadge status={status} size="sm" />
-      <WidgetBigNumber value={batteryLevel != null ? `${batteryLevel}%` : null} valueColor={batteryColor} />
+      <WidgetBigNumber value={batteryLevel != null ? `${fmtNumber(batteryLevel)}%` : null} valueColor={batteryColor} />
       <Text variant="bodySm" className="break-words">{name}</Text>
     </div>
   );
@@ -193,7 +194,7 @@ function FullView({
   isCharging, chargerPower,
   isWide, isTall, t,
 }: FullViewProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {/* Header: name + status badge */}
@@ -209,13 +210,13 @@ function FullView({
 
       {/* Metrics row — collapses to 2 cols on very narrow widget widths */}
       <WidgetStatGrid cols={isWide ? 4 : 3} stats={[
-        { icon: <Battery className="size-4" />, label: t('widget.battery', 'Battery'), value: batteryLevel != null ? `${batteryLevel}%` : '—', valueColor: batteryColor },
-        { icon: <Gauge className="size-4" />, label: t('widget.range', 'Range'), value: range != null ? `${fmtInt(range)} ${distanceUnit}` : '—' },
-        { icon: <Thermometer className="size-4" />, label: t('widget.cabin', 'Cabin'), value: insideTemp != null ? `${insideTemp}${tempUnit}` : '—' },
+        { icon: <Battery className="size-4" />, label: t('widget.battery', 'Battery'), value: batteryLevel != null ? `${fmtNumber(batteryLevel)}%` : '—', valueColor: batteryColor },
+        { icon: <Gauge className="size-4" />, label: t('widget.range', 'Range'), value: range != null ? `${fmtNumber(range)} ${distanceUnit}` : '—' },
+        { icon: <Thermometer className="size-4" />, label: t('widget.cabin', 'Cabin'), value: insideTemp != null ? `${fmtNumber(insideTemp)}${tempUnit}` : '—' },
         ...(isWide || isTall ? [{
           icon: <Thermometer className="size-4" />,
           label: t('widget.outside', 'Outside'),
-          value: outsideTemp != null ? `${outsideTemp}${tempUnit}` : '—',
+          value: outsideTemp != null ? `${fmtNumber(outsideTemp)}${tempUnit}` : '—',
         }] : []),
       ]} />
 

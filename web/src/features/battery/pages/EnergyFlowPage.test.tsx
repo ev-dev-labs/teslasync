@@ -368,7 +368,7 @@ describe('EnergyFlowPage — shell & KPI band', () => {
     expect(within(kpi).getByText('55.50 kWh')).toBeInTheDocument();
     expect(within(kpi).getByText('123.00 km')).toBeInTheDocument();
     expect(within(kpi).getByText('160')).toBeInTheDocument(); // efficiency (Wh/km)
-    expect(within(kpi).getByText('12.3')).toBeInTheDocument(); // CO2
+    expect(within(kpi).getByText('12.30')).toBeInTheDocument(); // CO2
     expect(within(kpi).getByText('7')).toBeInTheDocument(); // period days
   });
 
@@ -411,8 +411,8 @@ describe('EnergyFlowPage — live energy flow', () => {
     // "Charging" renders twice: the static flow-connector label AND the live
     // charge-state badge (proves the badge branch fired, not just the label).
     expect(screen.getAllByText('Charging').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('82')).toBeInTheDocument(); // SOC gauge value
-    expect(screen.getByText('62.5 kWh')).toBeInTheDocument(); // battery energy_remaining
+    expect(screen.getByText('82.00')).toBeInTheDocument(); // SOC gauge value
+    expect(screen.getByText('62.50 kWh')).toBeInTheDocument(); // battery energy_remaining
     expect(screen.getByText('Grid')).toBeInTheDocument();
   });
 
@@ -424,14 +424,14 @@ describe('EnergyFlowPage — live energy flow', () => {
     expect(screen.getByText('HVAC')).toBeInTheDocument();
     expect(screen.getByText('Accessories')).toBeInTheDocument();
     // DC leg = 11 kW (also the aggregate connector); AC leg = 0 kW.
-    expect(screen.getAllByText('11.0 kW').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
+    expect(screen.getAllByText('11.00 kW').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('0.00 kW')).toBeInTheDocument();
   });
 
   it('shows a skeleton (not the gauge) while the flow query is loading', () => {
     mockFlow.mockReturnValue(qr({ isLoading: true, isFetching: true }));
     const { container } = renderPage();
-    expect(screen.queryByText('62.5 kWh')).not.toBeInTheDocument();
+    expect(screen.queryByText('62.50 kWh')).not.toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });

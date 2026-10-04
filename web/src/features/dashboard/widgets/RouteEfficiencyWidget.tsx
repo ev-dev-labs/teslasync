@@ -103,7 +103,7 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell title={t('widget.routeEfficiency.title', 'Route efficiency')} {...shellProps}>
         <div className={LIST_LAYOUT_CLASS}>
           {routes.length > 0 ? (
             <WidgetRankedList

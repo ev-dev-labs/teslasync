@@ -35,21 +35,25 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   const securityTrust = useDataState({ ...securityQuery, data: security ?? (securityLoading || securityQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const chargingTrust = useDataState({ ...chargingQuery, data: charging ?? (chargingQuery.isLoading || chargingQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const vehiclesTrust = useDataState({ ...vehiclesQuery, data: vehicles ?? (vehiclesLoading || vehiclesQuery.isError ? undefined : []) });
-  const combined = combineDataStates(vehicle ? [stateTrust, securityTrust, chargingTrust] : [vehiclesTrust]);
   const hasTelemetry = stateData != null || security != null || charging != null;
+  // Vehicle metadata must not mask an initial failure of every telemetry source.
+  const combined = combineDataStates(vehicle
+    ? hasTelemetry ? [stateTrust, securityTrust, chargingTrust, vehiclesTrust] : [stateTrust, securityTrust, chargingTrust]
+    : [vehiclesTrust]);
+  const handleRefresh = useCallback(() => {
+    void refetch();
+    void securityQuery.refetch?.();
+    void chargingQuery.refetch?.();
+    void vehiclesQuery.refetch?.();
+  }, [refetch, securityQuery, chargingQuery, vehiclesQuery]);
+
   const dataState = {
     ...combined,
     status: !hasTelemetry && (vehiclesLoading || stateLoading || securityLoading) ? 'initial' : combined.status,
     data: vehicle ? [stateData, security, charging] : vehicles,
     hasData: hasTelemetry,
-    retry: () => { void refetch(); void securityQuery.refetch?.(); void chargingQuery.refetch?.(); void vehiclesQuery.refetch?.(); },
+    retry: handleRefresh,
   } satisfies Parameters<typeof WidgetShell>[0]['dataState'];
-
-  const handleRefresh = useCallback(() => {
-    refetch();
-    void securityQuery.refetch?.();
-    void chargingQuery.refetch?.();
-  }, [refetch, securityQuery, chargingQuery]);
 
   const twinState = useMemo(
     () => buildTwinState(security, state, charging),

@@ -335,13 +335,13 @@ const unitReturn = (distance: 'km' | 'mi' = 'km') => ({
     duration: 'h',
     power: 'kW',
   },
-  formatEnergy: (wh: number | null | undefined) => `${(Number(wh ?? 0) / 1000).toFixed(1)} kWh`,
+  formatEnergy: (wh: number | null | undefined) => `${(Number(wh ?? 0) / 1000).toFixed(2)} kWh`,
   formatDistance: (v: number) => String(v),
   formatSpeed: (v: number) => String(v),
   formatTemperature: (v: number) => String(v),
   formatPressure: (v: number) => String(v),
   formatDuration: (v: number) => String(v),
-  formatPower: (w: number | null | undefined) => `${(Number(w ?? 0) / 1000).toFixed(1)} kW`,
+  formatPower: (w: number | null | undefined) => `${(Number(w ?? 0) / 1000).toFixed(2)} kW`,
 });
 
 function renderPage() {
@@ -453,9 +453,9 @@ describe('ChargingDetailPage — populated DC session', () => {
     const kpi = kpiRegion();
 
     expect(cardValue(kpi, 'Energy')).toBe('50.00 kWh');
-    expect(cardValue(kpi, 'Duration')).toBe('60 min');
+    expect(cardValue(kpi, 'Duration')).toBe('60.00 min');
     expect(cardValue(kpi, 'Peak Power')).toBe('150.00 kW');
-    expect(cardValue(kpi, 'SoC Range')).toBe('20–80%');
+    expect(cardValue(kpi, 'SoC Range')).toBe('20.00–80.00%');
     expect(cardValue(kpi, 'Total Cost')).toBe('$12.50');
     // 12.5 / (50000 Wh / 1000) = $0.25 per kWh.
     expect(cardValue(kpi, 'Per kWh')).toBe('$0.25/kWh');
@@ -487,7 +487,7 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(cardValue(kpi, 'Per kWh')).toBe('$0.49/kWh');
     expect(within(kpi).getByText('Vehicle measured 42.62 kWh')).toBeInTheDocument();
     // Charge-summary restates vehicle energy, not the Supercharger bill.
-    expect(screen.getByText('42.6 kWh')).toBeInTheDocument();
+    expect(within(screen.getByText('Battery Progress').parentElement!).getByText('42.62 kWh')).toBeInTheDocument();
   });
 
   it('renders the five live gauges with SI-converted values and the DC 250 kW ceiling', () => {
@@ -509,7 +509,7 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(screen.getByText('20.00%')).toBeInTheDocument();
     expect(screen.getByText('80.00%')).toBeInTheDocument();
     // Energy Added restated via the injected energy formatter.
-    expect(screen.getByText('50.0 kWh')).toBeInTheDocument();
+    expect(within(screen.getByText('Battery Progress').parentElement!).getByText('50.00 kWh')).toBeInTheDocument();
     // Charge-summary inline metrics.
     expect(screen.getByText('100.00 kW')).toBeInTheDocument(); // Avg Power
     expect(screen.getByText('Complete')).toBeInTheDocument(); // Status
@@ -520,26 +520,26 @@ describe('ChargingDetailPage — populated DC session', () => {
     renderPage();
 
     expect(kvValue('Charging State')).toBe('Charging');
-    expect(kvValue('Charger Voltage')).toBe('240 V');
-    expect(kvValue('Active Charge Current')).toBe('24.5 A');
-    expect(kvValue('Pilot Current')).toBe('32.0 A');
-    expect(kvValue('Charger Power')).toBe('11.0 kW');
-    expect(kvValue('Energy Added')).toBe('12.0 kWh');
+    expect(kvValue('Charger Voltage')).toBe('240.00 V');
+    expect(kvValue('Active Charge Current')).toBe('24.50 A');
+    expect(kvValue('Pilot Current')).toBe('32.00 A');
+    expect(kvValue('Charger Power')).toBe('11.00 kW');
+    expect(kvValue('Energy Added')).toBe('12.00 kWh');
     expect(kvValue('Phases')).toBe('3');
     // battery_range_mi is SI meters despite the suffix → 320 km.
-    expect(kvValue('Battery Range')).toBe('320 km');
+    expect(kvValue('Battery Range')).toBe('320.00 km');
   });
 
   it('shows the range TOTAL for "Range Added" and the per-hour RATE for "Charge Rate" (regression)', () => {
     renderPage();
 
     // Charge Rate reads range_added_meters_per_hour (30000 m/h → 30.0 km/h).
-    expect(kvValue('Charge Rate')).toBe('30.0 km/h');
+    expect(kvValue('Charge Rate')).toBe('30.00 km/h');
     // Range Added reads the SI TOTAL range_added_meters (45000 m → 45.0 km),
     // converted ONCE — not the per-hour field with a spurious /1000 that
     // would have collapsed this to "0.0 km".
-    expect(kvValue('Range Added')).toBe('45.0 km');
-    expect(kvValue('Range Added')).not.toBe('0.0 km');
+    expect(kvValue('Range Added')).toBe('45.00 km');
+    expect(kvValue('Range Added')).not.toBe('0.00 km');
   });
 
   it('renders session info and both timestamp slots', () => {
@@ -711,7 +711,7 @@ describe('ChargingDetailPage — ongoing session', () => {
     renderPage();
 
     // No ended_at → duration is 0 and the Ended slot is the em-dash.
-    expect(cardValue(kpiRegion(), 'Duration')).toBe('0 min');
+    expect(cardValue(kpiRegion(), 'Duration')).toBe('0.00 min');
     const endedValue = screen.getByText('Ended').closest('p')?.nextElementSibling?.textContent ?? '';
     expect(endedValue).toBe('—');
     // Absent vehicle → "ID <vehicle_id>" fallback.

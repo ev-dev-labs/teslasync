@@ -148,7 +148,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.vehicleSpecs', 'Vehicle specs')}
+      title={t('widget.vehicleSpecs', 'Vehicle specs')}
       icon={isCompact ? undefined : <FileText className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       dataState={dataState}

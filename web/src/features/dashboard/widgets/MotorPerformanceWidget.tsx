@@ -39,7 +39,7 @@ export function torqueColor(nm: number): string {
 }
 
 export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
@@ -84,7 +84,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell title={t('widget.motorPerformance.title', 'Motor performance')} {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
             <>
               <span className={dashboardTokens.metricLabel}>
@@ -95,7 +95,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
                 {t('widget.motorPerformance.torque', 'Torque')}
               </span>
               <span className={dashboardTokens.secondaryMetric}>
-                {torque == null ? '—' : fmtInt(torque)} {torque != null && t('widget.motorPerformance.nm', 'Nm')}
+                {torque == null ? '—' : fmtNumber(torque)} {torque != null && t('widget.motorPerformance.nm', 'Nm')}
               </span>
             </>
           {!data && <p className={dashboardTokens.metricLabel}>{t('widget.motorPerformance.noData', 'No motor data')}</p>}

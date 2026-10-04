@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, Cell, Legend, useThemeChartPalette, type ChartDataRow } from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, Cell, Legend, useThemeChartPalette, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCostForecast } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -88,6 +88,15 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
   const energyRate = ratePerKwh == null ? null : ratePerKwh / convertEnergyFromSI(1000, unitPrefs.energy);
 
   const isCompact = size.cols <= 1;
+  const axisLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.cost)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => `${currencySymbol}${fmt(value)}`),
+    [chartData, currencySymbol, fmt],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: size.cols >= 3 ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
   const dataState = useDataState({
     data: data ?? (isLoading || isError || error ? undefined : null),
     error, isError, isLoading, isFetching, dataUpdatedAt, refetch: handleRefresh,
@@ -153,7 +162,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
     },
     {
       label: t('widget.costForecast.avgEnergyRate', 'Avg {{currency}}/{{unit}}', { currency: currencySymbol, unit: unitPrefs.energy }),
-      value: energyRate == null ? null : formatCurrency(energyRate, unitPrefs.energy === 'Wh' ? 5 : 2),
+      value: energyRate == null ? null : formatCurrency(energyRate),
     },
     {
       label: t('widget.costForecast.trend', 'Trend'),
@@ -211,14 +220,14 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
             emptyMessage={t('widget.costForecast.noData', 'No forecast data')}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                 {chartGrid}
                 <XAxis dataKey="month" tick={tick} tickLine={false} axisLine={false} />
                 <YAxis
                   tick={tick}
                   tickLine={false}
                   axisLine={false}
-                  width={40}
+                  width={axisWidth}
                   tickFormatter={(v: number) => `${currencySymbol}${fmt(v)}`}
                 />
                 <Tooltip

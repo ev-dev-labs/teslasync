@@ -251,6 +251,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
                   </PanelTitle>
                 </div>
                 <DataTable<KeyedSignal>
+                  variant="embedded"
                   tableId="drive:why-ended-signals"
                   name="why-ended-signals"
                   columns={signalColumns}

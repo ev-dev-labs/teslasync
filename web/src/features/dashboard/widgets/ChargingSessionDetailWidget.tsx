@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
-import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, areaGradient, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, areaGradient, ChartLegend, EmbeddedChart, useMeasuredAxisWidth, measureAxisLabelWidth, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
@@ -14,14 +14,13 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { classifyChargingSource, type ChargerKind } from '@/lib/chargerKind';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
   power: number | null;
   soc: number | null;
 }
-
-type ChargerKind = 'supercharger' | 'dcFast' | 'acHome';
 
 interface ChargerClass {
   kind: ChargerKind;
@@ -35,11 +34,12 @@ interface ChargerClass {
  * render boundary via `t()`.
  */
 function classifyCharger(chargerType: string | null): ChargerClass {
-  if (!chargerType) return { kind: 'acHome', variant: 'neutral' };
-  const ct = chargerType.toLowerCase();
-  if (ct.includes('supercharger') || ct.includes('tesla')) return { kind: 'supercharger', variant: 'warning' };
-  if (ct !== '<invalid>' && ct !== '') return { kind: 'dcFast', variant: 'warning' };
-  return { kind: 'acHome', variant: 'neutral' };
+  const kind = classifyChargingSource(chargerType);
+  return { kind, variant: kind === 'supercharger' || kind === 'dcFast' ? 'warning' : 'neutral' };
+}
+
+export function chargingAxisWidth(labels: string[], measure: (label: string) => number): number {
+  return measureAxisLabelWidth(labels, measure, 36, 12);
 }
 
 export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetProps) {
@@ -142,8 +142,10 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         return t('widget.chargingSessionDetail.chargerSupercharger', 'Supercharger');
       case 'dcFast':
         return t('widget.chargingSessionDetail.chargerDcFast', 'DC fast');
-      default:
+      case 'acHome':
         return t('widget.chargingSessionDetail.chargerAcHome', 'AC / home');
+      default:
+        return t('common.unknown', 'Unknown');
     }
   }, [charger, t]);
 
@@ -172,6 +174,34 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   }, [detail, durationStr, peakPower, chargerLabel, t, unitPrefs.energy, unitPrefs.power, fmtNumber]);
 
   const tick = isWide ? axisTick : axisTickSm;
+  const axisLabels = useMemo(() => {
+    const powers = chartData.flatMap(point => point.power == null ? [] : [point.power]);
+    // Include the next magnitude boundary that automatic nice ticks can reach.
+    const bounds = powers.map(value => {
+      const magnitude = 10 ** Math.floor(Math.log10(Math.abs(value) || 1));
+      return Math.sign(value) * Math.ceil(Math.abs(value) / magnitude) * magnitude;
+    });
+    return {
+      power: [0, ...powers, ...bounds].map(value => fmt(value)),
+      soc: [0, 25, 50, 75, 100].map(value => `${fmt(value)}%`),
+    };
+  }, [chartData, fmt]);
+  const powerAxisWidth = useMeasuredAxisWidth({
+    labels: axisLabels.power,
+    fontSize: tick.fontSize,
+    enabled: !isCompact,
+    minWidth: 36,
+    padding: 12,
+    fallbackCharacterRatio: 0.75,
+  });
+  const socAxisWidth = useMeasuredAxisWidth({
+    labels: axisLabels.soc,
+    fontSize: tick.fontSize,
+    enabled: !isCompact,
+    minWidth: 36,
+    padding: 12,
+    fallbackCharacterRatio: 0.75,
+  });
 
   const chart = useMemo(() => {
     return (
@@ -198,7 +228,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
           data={chartData}
-          margin={{ top: 4, right: 4, bottom: 0, left: -10 }}
+          margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
           {...chartAnimation}
         >
           {areaGradient('charge-power-grad', '#22c55e')}
@@ -217,7 +247,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             tick={tick}
             tickLine={false}
             axisLine={false}
-            width={36}
+            width={powerAxisWidth}
             domain={['auto', 'auto']}
             tickFormatter={(v: number) => fmt(v)}
           />
@@ -228,7 +258,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             tick={tick}
             tickLine={false}
             axisLine={false}
-            width={36}
+            width={socAxisWidth}
             domain={[0, 100]}
             tickFormatter={(v: number) => `${fmt(v)}%`}
           />
@@ -264,12 +294,13 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         )}
       </EmbeddedChart>
     );
-  }, [chartData, tick, t, unitPrefs.power, fmt]);
+  }, [chartData, tick, t, unitPrefs.power, fmt, powerAxisWidth, socAxisWidth]);
 
   // ── Compact layout: large kWh number + charger badge ──
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.chargingSessionDetail.title', 'Charge session detail')}
         loading={isLoading}
         dataState={dataState}
         error={blockingError}

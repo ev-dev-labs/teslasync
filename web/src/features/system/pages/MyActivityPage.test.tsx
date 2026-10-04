@@ -230,7 +230,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
     // vehicle dominates the category split (3 of 6 = 50%), humanised from the
     // raw entity_type; the null-entity sentinel renders "System / other".
     expect(screen.getByText('Vehicle')).toBeInTheDocument();
-    expect(screen.getByText(/50%/)).toBeInTheDocument();
+    expect(screen.getByText(/50\.00%/)).toBeInTheDocument();
     expect(screen.getByText('System / other')).toBeInTheDocument();
   });
 

@@ -42,9 +42,10 @@ const BASE: MockSettings = {
 }
 
 let mockSettings: MockSettings = { ...BASE }
+let settingsUnavailable = false
 
 vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({ settings: mockSettings }),
+  useSettings: () => ({ settings: mockSettings, settingsUnavailable }),
 }))
 
 import { useFormatting, type UseFormattingResult } from '../useFormatting'
@@ -56,6 +57,7 @@ const HUNDRED_KM_M = 100_000
 
 beforeEach(() => {
   mockSettings = { ...BASE }
+  settingsUnavailable = false
   // fmtNumber reads a module-global locale/precision; pin them so number
   // grouping + separators are deterministic regardless of test ordering.
   setGlobalLocale('en-US')
@@ -63,6 +65,20 @@ beforeEach(() => {
 })
 
 describe('useFormatting — derived scalars', () => {
+  it('does not price a drive using bootstrap defaults when settings are unavailable', () => {
+    settingsUnavailable = true
+    const { result, rerender } = renderHook(() => useFormatting())
+    expect(result.current.costPerKwh).toBeNull()
+    expect(result.current.formatEnergyCost(10)).toBe('—')
+    expect(result.current.costPerDistanceUnit(10, HUNDRED_KM_M)).toBeNull()
+    expect(result.current.estimateGasCost(HUNDRED_MILES_M)).toBeNull()
+
+    settingsUnavailable = false
+    mockSettings = { ...BASE, base_cost_per_kwh: 0.15, decimal_precision: 1 }
+    rerender()
+    expect(result.current.formatEnergyCost(10)).toBe('$1.5')
+  })
+
   it('exposes the configured electricity rate and currency symbol', () => {
     const { result } = renderHook(() => useFormatting())
     expect(result.current.costPerKwh).toBe(0.2)
@@ -74,6 +90,14 @@ describe('useFormatting — derived scalars', () => {
     expect(typeof typed.formatCurrency).toBe('function')
     expect(typeof typed.costPerDistanceUnit).toBe('function')
     expect(typeof typed.estimateGasCost).toBe('function')
+  })
+
+  it.each([NaN, Infinity, -Infinity])('keeps a non-finite configured rate %s unknown', (rate) => {
+    mockSettings = { ...BASE, base_cost_per_kwh: rate }
+    const { result } = renderHook(() => useFormatting())
+    expect(result.current.costPerKwh).toBeNull()
+    expect(result.current.formatEnergyCost(10)).toBe('—')
+    expect(result.current.costPerDistanceUnit(10, HUNDRED_KM_M)).toBeNull()
   })
 
   it('defaults costPerKwh to 0.12 when base_cost_per_kwh is absent', () => {
@@ -112,7 +136,7 @@ describe('useFormatting — formatEnergyCost', () => {
     const { result } = renderHook(() => useFormatting())
     const out = result.current.formatEnergyCost(Number.NaN)
     expect(out).not.toContain('NaN')
-    expect(out.startsWith('$')).toBe(true)
+    expect(out).toBe('—')
   })
 })
 

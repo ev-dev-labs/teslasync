@@ -180,7 +180,7 @@ describe('MediaNavigationPanel', () => {
     // 5 000 m ÷ 1000 = 5.00 km — proves the value is treated as metres, not a raw scalar.
     expect(screen.getByText('5.00 km')).toBeInTheDocument();
     expect(screen.queryByText(/5,000/)).not.toBeInTheDocument();
-    expect(screen.getByText('15 min')).toBeInTheDocument();
+    expect(screen.getByText('15.00 min')).toBeInTheDocument();
   });
 
   it('honours the imperial display preference (metres → miles)', () => {

@@ -67,6 +67,8 @@ vi.mock('@/api/hooks/useEnergy', () => ({
 }));
 
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
+import { act } from '@testing-library/react';
 import { useVampireDrainStats, useVampireDrainEvents, useVampireDrainWatch } from '@/api/hooks/useEnergy';
 import VampireDrainWidget, { drainColor, formatDuration } from './VampireDrainWidget';
 
@@ -161,6 +163,11 @@ beforeEach(() => {
   mockWatch.mockReturnValue(makeQuery({ data: null }));
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ size: { cols, rows: 4 } });
+  expect(screen.getByRole('heading', { name: 'Vampire drain', level: 3 })).toBeVisible();
+});
+
 describe('drainColor (utility)', () => {
   it('maps the drain rate to the green / amber / red severity ramp', () => {
     expect(drainColor(0)).toBe('#10b981'); // green
@@ -175,10 +182,10 @@ describe('drainColor (utility)', () => {
     expect(drainColor(3)).toBe('#ef4444');
   });
 
-  it('coalesces non-finite / negative input to "safe" green, never red', () => {
+  it('keeps non-finite input unknown rather than healthy', () => {
     // Regression guard: NaN used to fall through to the critical red colour.
-    expect(drainColor(NaN)).toBe('#10b981');
-    expect(drainColor(Infinity)).toBe('#10b981');
+    expect(drainColor(NaN)).toBe('var(--text-muted)');
+    expect(drainColor(Infinity)).toBe('var(--text-muted)');
     expect(drainColor(-5)).toBe('#10b981');
     expect(drainColor(NaN)).not.toBe('#ef4444');
   });
@@ -186,42 +193,50 @@ describe('drainColor (utility)', () => {
 
 describe('formatDuration (utility)', () => {
   it('renders sub-hour spans as whole minutes and longer spans as hours', () => {
-    expect(formatDuration(0.5, echo)).toBe('30m');
-    expect(formatDuration(0, echo)).toBe('0m');
-    expect(formatDuration(1, echo)).toBe('1.0h'); // boundary: 1 is NOT < 1
-    expect(formatDuration(2.5, echo)).toBe('2.5h');
+    expect(formatDuration(0.5, echo)).toBe('30.00m');
+    expect(formatDuration(0, echo)).toBe('0.00m');
+    expect(formatDuration(1, echo)).toBe('1.00h'); // boundary: 1 is NOT < 1
+    expect(formatDuration(2.5, echo)).toBe('2.50h');
   });
 
-  it('coalesces non-finite and negative durations to "0m"', () => {
+  it('keeps non-finite and negative durations unknown', () => {
     // Regression guard: NaN used to render "0.0h" and negatives rendered "-30m".
-    expect(formatDuration(NaN, echo)).toBe('0m');
-    expect(formatDuration(Infinity, echo)).toBe('0m');
-    expect(formatDuration(-3, echo)).toBe('0m');
-    expect(formatDuration(NaN, echo)).not.toBe('0.0h');
+    expect(formatDuration(NaN, echo)).toBe('—');
+    expect(formatDuration(Infinity, echo)).toBe('—');
+    expect(formatDuration(-3, echo)).toBe('—');
+    expect(formatDuration(NaN, echo)).not.toBe('0.00h');
   });
 });
 
 describe('VampireDrainWidget — standard layout (2 col)', () => {
+  it('keeps a missing event count unknown while retaining the observed hours and feed', () => {
+    mockStats.mockReturnValue(makeQuery({ data: makeStats({ event_count: null as unknown as number }) }));
+    renderWidget();
+    expect(screen.getByText('— events · 48.00h total')).toBeInTheDocument();
+    expect(screen.getByText(`8.00% ${DOT} 40.00h`)).toBeInTheDocument();
+    expect(screen.queryByText('0 events · 48.00h total')).not.toBeInTheDocument();
+  });
+
   it('renders the headline stat card and one row per recent drain event', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Headline stat card: label + value + event/hours sublabel.
     expect(screen.getByText('Avg drain')).toBeInTheDocument();
-    expect(screen.getByText('2.4%/day')).toBeInTheDocument();
-    expect(screen.getByText('12 events · 48h total')).toBeInTheDocument();
+    expect(screen.getByText('2.40%/day')).toBeInTheDocument();
+    expect(screen.getByText('12 events · 48.00h total')).toBeInTheDocument();
 
     // Event feed: measured loss + duration and normalized %/day.
-    expect(screen.getByText(`8.0% ${DOT} 40.0h`)).toBeInTheDocument();
-    expect(screen.getByText('4.8%/day')).toBeInTheDocument();
-    expect(screen.getByText(`1.0% ${DOT} 40.0h`)).toBeInTheDocument();
-    expect(screen.getByText('0.6%/day')).toBeInTheDocument();
+    expect(screen.getByText(`8.00% ${DOT} 40.00h`)).toBeInTheDocument();
+    expect(screen.getByText('4.80%/day')).toBeInTheDocument();
+    expect(screen.getByText(`1.00% ${DOT} 40.00h`)).toBeInTheDocument();
+    expect(screen.getByText('0.60%/day')).toBeInTheDocument();
   });
 
   it('does not invent a Sentry attribution absent from the endpoint', () => {
     mockEvents.mockReturnValue(makeQuery({ data: [lowEvent()] }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByText(`1.0% ${DOT} 40.0h`)).toBeInTheDocument();
+    expect(screen.getByText(`1.00% ${DOT} 40.00h`)).toBeInTheDocument();
     expect(screen.queryByText(/Sentry/)).not.toBeInTheDocument();
   });
 
@@ -245,14 +260,14 @@ describe('VampireDrainWidget — standard layout (2 col)', () => {
 });
 
 describe('VampireDrainWidget — compact layout (1 col)', () => {
-  it('renders a single big %/day stat, no card and no title', () => {
+  it('renders its heading and single big %/day stat without a card', () => {
     renderWidget({ size: { cols: 1, rows: 1 } });
 
-    expect(screen.getByText('2.4%')).toBeInTheDocument();
+    expect(screen.getByText('2.40%')).toBeInTheDocument();
     expect(screen.getByText('/day')).toBeInTheDocument();
-    // No stat card / title chrome in the 1x1 slot.
+    // The compact slot retains its heading without adding the standard stat card.
     expect(screen.queryByText('Avg drain')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Vampire drain' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vampire drain', level: 3 })).toBeVisible();
   });
 
   it('does not fabricate a zero average when only events are available', () => {
@@ -262,7 +277,7 @@ describe('VampireDrainWidget — compact layout (1 col)', () => {
 
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('Average unavailable')).toBeInTheDocument();
-    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
   });
 });
 
@@ -274,7 +289,7 @@ describe('VampireDrainWidget — wide layout (>=3 col)', () => {
     expect(screen.getByText('Daily drain rate (last 30)')).toBeInTheDocument();
     // Two samples → a real sparkline (role=img) is drawn.
     expect(container.querySelector('svg[role="img"]')).not.toBeNull();
-    expect(screen.getByText(`8.0% ${DOT} 40.0h`)).toBeInTheDocument();
+    expect(screen.getByText(`8.00% ${DOT} 40.00h`)).toBeInTheDocument();
   });
 
   it('omits the sparkline when there are fewer than two events to plot', () => {
@@ -287,7 +302,7 @@ describe('VampireDrainWidget — wide layout (>=3 col)', () => {
 });
 
 describe('VampireDrainWidget — loading / empty / error', () => {
-  it('shows a skeleton while loading (no title, no empty state)', () => {
+  it('keeps the heading with a loading skeleton and no empty state', () => {
     mockStats.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     mockEvents.mockReturnValue(makeQuery({ data: undefined }));
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
@@ -322,21 +337,74 @@ describe('VampireDrainWidget — loading / empty / error', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('No vampire drain data')).toBeInTheDocument();
-    expect(screen.queryByText('0.0%/day')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00%/day')).not.toBeInTheDocument();
   });
 
-  it('degrades to the empty state (never a crash) when the derived-history endpoints error', () => {
+  it('surfaces fatal initial history errors with recovery', () => {
     mockStats.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('404') }));
     mockEvents.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('404') }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByText('No vampire drain data')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     // The refresh control stays available so the user can retry.
     expect(screen.getByRole('button', { name: /^Refresh data/ })).toBeInTheDocument();
   });
 });
 
 describe('VampireDrainWidget — refresh + vehicle resolution', () => {
+  it.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('disables invalid vehicle %s', (vehicleId) => {
+    renderWidget({ vehicleId });
+    expect(mockStats).toHaveBeenLastCalledWith(null);
+    expect(mockEvents).toHaveBeenLastCalledWith(null, 30);
+    expect(mockWatch).toHaveBeenLastCalledWith(null);
+  });
+
+  it('reacts to precision and locale changes in headline, feed and duration', () => {
+    renderWidget();
+    expect(screen.getByText('2.40%/day')).toBeInTheDocument();
+    try {
+      act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
+      expect(screen.getByText('2,400%/day')).toBeInTheDocument();
+      expect(screen.getByText(`8,000% ${DOT} 40,000h`)).toBeInTheDocument();
+      expect(screen.getByText('4,800%/day')).toBeInTheDocument();
+    } finally {
+      act(() => { setGlobalPrecision(2); setGlobalLocale('en-US'); });
+    }
+  });
+
+  it.each(['stats', 'events', 'watch'])('retains measurements and retries every source after %s failure', (source) => {
+    const statsRetry = vi.fn();
+    const eventsRetry = vi.fn();
+    const watchRetry = vi.fn();
+    mockStats.mockReturnValue(makeQuery({ data: makeStats(), refetch: statsRetry,
+      ...(source === 'stats' ? { isError: true, error: new Error('stats') } : {}) }));
+    mockEvents.mockReturnValue(makeQuery({ data: [criticalEvent()], refetch: eventsRetry,
+      ...(source === 'events' ? { isError: true, error: new Error('events') } : {}) }));
+    mockWatch.mockReturnValue(makeQuery({ data: source === 'watch' ? undefined : null, refetch: watchRetry,
+      ...(source === 'watch' ? { isError: true, error: new Error('watch') } : {}) }));
+    renderWidget();
+    expect(screen.getByText('2.40%/day')).toBeInTheDocument();
+    expect(screen.getByText(`8.00% ${DOT} 40.00h`)).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(statsRetry).toHaveBeenCalledOnce();
+    expect(eventsRetry).toHaveBeenCalledOnce();
+    expect(watchRetry).toHaveBeenCalledOnce();
+  });
+
+  it('retries failed vehicle discovery and leaves disabled queries idle', () => {
+    const refetch = vi.fn();
+    mockVehicles.mockReturnValue(makeQuery({ isError: true, error: new Error('vehicles'), refetch }));
+    mockStats.mockReturnValue(makeQuery({ isPending: true }));
+    mockEvents.mockReturnValue(makeQuery({ isPending: true }));
+    renderWidget();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry/ }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockStats).toHaveBeenCalledWith(null);
+  });
+
   it('refetches BOTH energy queries when the refresh control is activated', () => {
     const statsRefetch = vi.fn();
     const eventsRefetch = vi.fn();

@@ -119,10 +119,10 @@ export function groupSessions(
 }
 
 export default function TeslaChargingSessionsPage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber, fmtInt, precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
-  const { settings, locale } = useSettings();
+  const { settings } = useSettings();
   const { formatCurrency } = useFormatting();
   const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_sessions.title', 'Fleet charging sessions'));
@@ -490,12 +490,12 @@ export default function TeslaChargingSessionsPage() {
       key: 'cost',
       align: 'right',
       filterValue: (row) => row.total_cost == null ? null : `${row.currency_code ?? userCurrency}:${row.total_cost}`,
-      filterValueLabel: (_, row) => row.total_cost != null ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true }) : '—',
+      filterValueLabel: (_, row) => row.total_cost != null ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true }) : '—',
       header: t('tesla_sessions.col.cost_decimal', 'Cost'),
       render: (row) => (
         <Text size="sm" weight="medium" className="text-emerald-300">
           {row.total_cost != null
-            ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true })
+            ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true })
             : '—'}
         </Text>
       ),
@@ -509,7 +509,7 @@ export default function TeslaChargingSessionsPage() {
       render: (row) => (
         <Text size="sm" color="secondary">
           {row.per_kwh_rate != null
-            ? formatCurrencyValue(row.per_kwh_rate, row.currency_code ?? userCurrency, locale, 3, { useGrouping: true })
+            ? formatCurrencyValue(row.per_kwh_rate, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true })
             : '—'}
         </Text>
       ),
@@ -525,7 +525,7 @@ export default function TeslaChargingSessionsPage() {
         </Text>
       ),
     },
-  ], [t, userCurrency, locale, fmtNumber]);
+  ], [t, userCurrency, locale, precision, fmtNumber]);
 
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');

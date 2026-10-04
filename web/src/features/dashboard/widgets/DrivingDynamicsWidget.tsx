@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ChartTooltip, EmbeddedChart, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
-import { Badge } from '@/components/ui';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ChartTooltip, EmbeddedChart, axisTick, axisTickSm, chartGrid, useThemeChartPalette, useMeasuredAxisWidth } from '@/components/charts';
+import { Badge, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -119,11 +119,17 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
       count: knownNumber(count),
     }));
   }, [distData, fmtNumber]);
+  const countAxisLabels = useMemo(() => [0, ...histogramData.map(point => point.count)
+    .filter((value): value is number => value != null && Number.isFinite(value))].map(String), [histogramData]);
+  const countAxisWidth = useMeasuredAxisWidth({
+    labels: countAxisLabels, fontSize: axisTick.fontSize, minWidth: 60, padding: 24, enabled: isWide,
+  });
 
   // Compact layout: large number + badge
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.drivingDynamics.title', 'Driving dynamics')}
         loading={isLoading}
         dataState={trust.hasData ? trust : undefined}
         error={blockingError}
@@ -218,36 +224,38 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
           {/* Wide: acceleration distribution histogram */}
           {isWide && (
             histogramData.length > 0 ? (
-            <EmbeddedChart
-              title={t('widget.drivingDynamics.distribution', 'G-force distribution')}
-              ariaLabel={t(
-                'widget.drivingDynamics.distributionAria',
-                'Distribution of observed acceleration magnitudes',
-              )}
-              data={histogramData}
-              dataColumns={[
-                { key: 'range', label: t('widget.drivingDynamics.gForce', 'G-force') },
-                { key: 'count', label: t('widget.drivingDynamics.samples', 'Samples') },
-              ]}
-              height={160}
-              mobileHeight={144}
-            >
-              <p className="text-2xs text-[var(--text-muted)] mb-1">
+            <div className="min-w-0">
+              <Caption className="mb-1 block text-2xs">
                 {t('widget.drivingDynamics.distribution', 'G-force distribution')}
-              </p>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={histogramData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
-                  {chartGrid}
-                  <XAxis dataKey="range" tick={axisTickSm} />
-                  <YAxis tick={axisTick} allowDecimals={false} />
-                  <Tooltip
-                    content={<ChartTooltip />}
-                    labelFormatter={(v) => `${v}g`}
-                  />
-                  <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </EmbeddedChart>
+              </Caption>
+              <EmbeddedChart
+                title={t('widget.drivingDynamics.distribution', 'G-force distribution')}
+                ariaLabel={t(
+                  'widget.drivingDynamics.distributionAria',
+                  'Distribution of observed acceleration magnitudes',
+                )}
+                data={histogramData}
+                dataColumns={[
+                  { key: 'range', label: t('widget.drivingDynamics.gForce', 'G-force') },
+                  { key: 'count', label: t('widget.drivingDynamics.samples', 'Samples') },
+                ]}
+                height={160}
+                mobileHeight={144}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={histogramData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                    {chartGrid}
+                    <XAxis dataKey="range" tick={axisTickSm} />
+                    <YAxis tick={axisTick} width={countAxisWidth} allowDecimals={false} />
+                    <Tooltip
+                      content={<ChartTooltip />}
+                      labelFormatter={(v) => `${v}g`}
+                    />
+                    <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </EmbeddedChart>
+            </div>
             ) : (
               <EmptyState
                 /* no-action: distribution populates from observed acceleration samples. */

@@ -164,7 +164,7 @@ describe('DataPipelineSection', () => {
     expect(await screen.findByText('Compression statistics')).toBeInTheDocument()
     expect(screen.getByText('Compression ratio')).toBeInTheDocument()
     expect(screen.getByText('42.50%')).toBeInTheDocument()
-    expect(screen.getByText('15.0 MB')).toBeInTheDocument()
+    expect(screen.getByText('15.00 MB')).toBeInTheDocument()
     expect(screen.getByText('1,000,000')).toBeInTheDocument()
     expect(screen.getByText('700,000')).toBeInTheDocument()
     expect(screen.getByText('Savings')).toBeInTheDocument() // gauge label

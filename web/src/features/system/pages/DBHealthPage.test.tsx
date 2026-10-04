@@ -211,12 +211,12 @@ describe('DBHealthPage — populated view', () => {
     ).toBeInTheDocument();
 
     // KPI band — real aggregates.
-    expect(metricValue('Total DB size')).toBe('360.0 MB');
+    expect(metricValue('Total DB size')).toBe('360.00 MB');
     expect(metricValue('Tables')).toBe('3');
     expect(metricValue('Total rows')).toBe('905,100'); // 100 + 5,000 + 900,000
     expect(metricValue('Large tables')).toBe('1'); // only zebra_events > 100 MB
     expect(metricValue('Migration')).toBe('185');
-    expect(metricValue('Pool usage')).toBe('20%'); // 5 / 25
+    expect(metricValue('Pool usage')).toBe('20.00%'); // 5 / 25
   });
 
   it('renders the chart region and the migration-status panel', () => {
@@ -248,11 +248,11 @@ describe('DBHealthPage — populated view', () => {
     expect(within(grid).getByText('alpha_drives')).toBeInTheDocument();
     expect(within(grid).getByText('mid_charging')).toBeInTheDocument();
     // Byte formatting in the Size column (300 MB row).
-    expect(within(grid).getByText('300.0 MB')).toBeInTheDocument();
+    expect(within(grid).getByText('300.00 MB')).toBeInTheDocument();
 
     // Connection-pool panel: labelled stats + the usage progressbar.
     expect(screen.getByText('Max open')).toBeInTheDocument();
-    expect(screen.getByText('120ms')).toBeInTheDocument();
+    expect(screen.getByText('120.00ms')).toBeInTheDocument();
     const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '20');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
@@ -379,7 +379,7 @@ describe('DBHealthPage — empty states', () => {
     expect(metricValue('Tables')).toBe('0');
     expect(metricValue('Total rows')).toBe('0');
     expect(metricValue('Large tables')).toBe('0');
-    expect(metricValue('Total DB size')).toBe('0 B');
+    expect(metricValue('Total DB size')).toBe('0.00 B');
   });
 
   it('shows the migration + pool "unavailable" placeholders when their data is missing', () => {
@@ -420,8 +420,8 @@ describe('DBHealthPage — hardening', () => {
     const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     const fill = bar.querySelector('div');
-    expect(fill).toHaveStyle({ width: '0%' });
-    expect(metricValue('Pool usage')).toBe('0%');
+    expect(fill).toHaveStyle({ width: '0.00%' });
+    expect(metricValue('Pool usage')).toBe('0.00%');
   });
 
   it('flips the usage bar to the danger color once the pool is ≥80% busy', () => {
@@ -434,7 +434,7 @@ describe('DBHealthPage — hardening', () => {
     const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '88');
     expect(bar.querySelector('div')?.className).toContain('bg-rose-400');
-    expect(metricValue('Pool usage')).toBe('88%');
+    expect(metricValue('Pool usage')).toBe('88.00%');
   });
 
   it('honors the backend numeric `version` field over currentVersion, plus dirty + pending', () => {
@@ -480,8 +480,8 @@ describe('DBHealthPage — hardening', () => {
 
     expect(metricValue('Total DB size')).toBe('2.00 GB');
     const grid = tablesGrid();
-    expect(within(grid).getByText('512 B')).toBeInTheDocument();
-    expect(within(grid).getByText('2.0 KB')).toBeInTheDocument();
+    expect(within(grid).getByText('512.00 B')).toBeInTheDocument();
+    expect(within(grid).getByText('2.00 KB')).toBeInTheDocument();
     // A 0-byte table renders the "—" placeholder in the Size column.
     const zeroRow = within(grid).getByText('zero_table').closest('tr')!;
     expect(within(zeroRow).getAllByText('—').length).toBeGreaterThanOrEqual(1);

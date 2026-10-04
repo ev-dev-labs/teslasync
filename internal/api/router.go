@@ -917,7 +917,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// at the AlertHandler call site, which has its own narrow contract.
 	alertLiveSignalStore := liveSignalStore
 	alertHandler := apialerts.NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
-	alertMessageHandler := apialertmsg.NewAlertMessageHandler()
+	alertMessageHandler := apialertmsg.NewAlertMessageHandler(aiSettingsRepo)
 	commandHandler := apicommand.NewCommandHandler(db, teslaClient)
 	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := apienergy.NewEnergyHandler(energySvc)

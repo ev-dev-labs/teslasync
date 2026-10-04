@@ -136,6 +136,11 @@ beforeEach(() => {
   useVehicleStateMock.mockReturnValue(makeResult());
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
+});
+
 // ── Pure helper: batteryColor ────────────────────────────────────────────────
 
 describe('batteryColor', () => {
@@ -209,7 +214,7 @@ describe('BatteryGaugeWidget — states', () => {
     useVehicleStateMock.mockReturnValue(makeResult({ data: { state: makeState({ battery_level: 0 }), live: true } }));
     renderWidget();
     expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
   });
 
   it('renders a loading skeleton while the state query is pending', () => {
@@ -217,7 +222,8 @@ describe('BatteryGaugeWidget — states', () => {
     const { container } = renderWidget();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No battery data')).toBeNull();
-    expect(screen.queryByText('Battery')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
+    expect(screen.queryByRole('meter')).toBeNull();
   });
 
   it('shows the empty state when no vehicle snapshot has landed', () => {
@@ -225,8 +231,9 @@ describe('BatteryGaugeWidget — states', () => {
     useVehicleStateMock.mockReturnValue(makeResult({ data: { state: undefined, live: false }, refetch }));
     renderWidget();
     expect(screen.getByText('No battery data')).toBeInTheDocument();
-    expect(screen.queryByText('Battery')).toBeNull();
-    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
+    expect(screen.queryByRole('meter')).toBeNull();
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -251,8 +258,9 @@ describe('BatteryGaugeWidget — populated', () => {
       makeResult({ data: { state: makeState({ battery_level: 72 }), live: true } }),
     );
     renderWidget();
-    expect(screen.getByText('72')).toBeInTheDocument();
-    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
+    expect(screen.getAllByText('Battery')).toHaveLength(2);
     expect(screen.getByText('%')).toBeInTheDocument();
   });
 
@@ -270,7 +278,7 @@ describe('BatteryGaugeWidget — populated', () => {
     );
     const { container } = renderWidget();
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.queryByText('0.00')).toBeNull();
     expect(screen.queryByText('NaN')).toBeNull();
     expect(hasGaugeColor(container, '#ef4444')).toBe(false);
     expect(screen.queryByRole('meter')).toBeNull();
@@ -314,7 +322,7 @@ describe('BatteryGaugeWidget — compact', () => {
       makeResult({ data: { state: makeState({ battery_level: 88, is_charging: true }), live: true } }),
     );
     renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('88')).toBeInTheDocument();
+    expect(screen.getByText('88.00')).toBeInTheDocument();
     expect(screen.getByText('Charging')).toBeInTheDocument();
   });
 });

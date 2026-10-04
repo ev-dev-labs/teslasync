@@ -279,16 +279,18 @@ describe('RecentDrivesWidget populated list', () => {
     renderWidget(1);
     expect(await screen.findByText('—')).toBeInTheDocument();
     expect(screen.getByText(/— min/)).toBeInTheDocument();
-    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
   });
 
   it('preserves cached rows after a failed background refresh', async () => {
     routeDrives([makeDrive({ id: 99 })]);
     renderWidget(1);
-    expect(await screen.findByText('5.0 km')).toBeInTheDocument();
+    expect(await screen.findByText('5.00 km')).toBeInTheDocument();
     mockRequest.mockRejectedValue(new Error('background outage'));
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-    await waitFor(() => expect(screen.getByRole('link', { name: /5.0 km/ })).toHaveAttribute('href', '/drives/99'));
+    await waitFor(() => expect(screen.getByRole('link', {
+      name: '5.00 km 30.00 min · 80.00% → 60.00% · May 1 2024-05-01T10:00:00Z',
+    })).toHaveAttribute('href', '/drives/99'));
     await waitFor(() => expect(document.querySelector('[data-data-state="stale"]')).not.toBeNull());
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
@@ -311,10 +313,10 @@ describe('RecentDrivesWidget populated list', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Distance: 5000 m → 5.0 km (default unit), rendered with its unit.
-    expect(screen.getByText('5.0 km')).toBeInTheDocument();
+    expect(screen.getByText('5.00 km')).toBeInTheDocument();
 
     // Duration (1800 s → 30 min) + SOC transition on one line.
-    expect(screen.getByText(/30 min · 80% → 60%/)).toBeInTheDocument();
+    expect(screen.getByText('30.00 min · 80.00% → 60.00% · May 1')).toBeInTheDocument();
 
     // Date cell is produced by the formatter, fed the drive's start_ts.
     expect(screen.getByText(/May 1/)).toBeInTheDocument();
@@ -354,9 +356,9 @@ describe('RecentDrivesWidget populated list', () => {
     routeDrives([makeDrive({ distance_m: 1609.344 })]); // exactly 1 mile
     renderWidget(1);
 
-    expect(await screen.findByText('1.0 mi')).toBeInTheDocument();
+    expect(await screen.findByText('1.00 mi')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.queryByText('1.0 km')).toBeNull();
+    expect(screen.queryByText('1.00 km')).toBeNull();
   });
 
   it('is null-safe: 0 distance / 0 duration / null SOC render placeholders, not NaN', async () => {
@@ -370,9 +372,9 @@ describe('RecentDrivesWidget populated list', () => {
     ]);
     renderWidget(1);
 
-    expect(await screen.findByText('0.0 km')).toBeInTheDocument();
+    expect(await screen.findByText('0.00 km')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText(/0 min · \?% → \?%/)).toBeInTheDocument();
+    expect(screen.getByText('0.00 min · ?% → ?% · May 1')).toBeInTheDocument();
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });
 });

@@ -194,6 +194,11 @@ beforeEach(() => {
   useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery());
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Battery analytics', level: 3 })).toBeVisible();
+});
+
 afterEach(() => {
   cleanup();
 });
@@ -230,11 +235,11 @@ describe('BatteryHealthAnalyticsWidget — standard layout', () => {
 
     // … and their formatted values.
     expect(screen.getByText('512')).toBeInTheDocument();
-    expect(screen.getByText('71')).toBeInTheDocument();
-    expect(screen.getByText('43')).toBeInTheDocument();
-    expect(screen.getByText('18')).toBeInTheDocument();
-    expect(screen.getByText('88')).toBeInTheDocument();
-    expect(screen.getByText('76')).toBeInTheDocument();
+    expect(screen.getByText('71.00')).toBeInTheDocument();
+    expect(screen.getByText('43.00')).toBeInTheDocument();
+    expect(screen.getByText('18.00')).toBeInTheDocument();
+    expect(screen.getByText('88.00')).toBeInTheDocument();
+    expect(screen.getByText('76.00')).toBeInTheDocument();
 
     // A healthy SoH paints the gauge arc green.
     expect(gaugeArc(container, GREEN)).toBe(true);
@@ -301,8 +306,7 @@ describe('BatteryHealthAnalyticsWidget — compact layout', () => {
     // Gauge (with its unit) is present …
     expect(screen.getByText('health')).toBeInTheDocument();
     expect(gaugeArc(container, GREEN)).toBe(true);
-    // … but the titled header and the stat grid are dropped in compact mode.
-    expect(screen.queryByText('Battery analytics')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Battery analytics', level: 3 })).toBeVisible();
     expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
     expect(screen.queryByText('Habits')).not.toBeInTheDocument();
   });
@@ -317,7 +321,7 @@ describe('BatteryHealthAnalyticsWidget — compact layout', () => {
 });
 
 describe('BatteryHealthAnalyticsWidget — query states', () => {
-  it('renders a skeleton while loading and no title, gauge, or empty message', () => {
+  it('keeps the heading while loading without a gauge or empty message', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({ isLoading: true, data: undefined }),
     );

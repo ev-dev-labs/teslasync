@@ -98,10 +98,10 @@ export function buildTopLocations(entries: TeslaChargingHistoryEntry[]): Locatio
 const KPI_GRID = 'grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6';
 
 export default function TeslaChargingHistoryPage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber, fmtInt, precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
-  const { settings, locale } = useSettings();
+  const { settings } = useSettings();
   const { formatCurrency } = useFormatting();
   const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_charging.title', 'Tesla charging history'));
@@ -224,12 +224,12 @@ export default function TeslaChargingHistoryPage() {
       key: 'cost',
       align: 'right',
       filterValue: (row) => row.total_due == null ? null : `${row.currency_code ?? userCurrency}:${row.total_due}`,
-      filterValueLabel: (_, row) => row.total_due != null ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true }) : '—',
+      filterValueLabel: (_, row) => row.total_due != null ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true }) : '—',
       header: t('tesla_charging.col.cost_decimal', 'Cost'),
       render: (row) => (
         <Text size="sm" weight="medium" className="text-emerald-300">
           {row.total_due != null
-            ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true })
+            ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true })
             : '—'}
         </Text>
       ),
@@ -271,7 +271,7 @@ export default function TeslaChargingHistoryPage() {
         </Text>
       ),
     },
-  ], [formatEnergy, t, userCurrency, locale, fmtNumber]);
+  ], [formatEnergy, t, userCurrency, locale, precision, fmtNumber]);
 
   const [sortKey, setSortKey] = useUrlEnum<'date' | 'energy' | 'cost'>(
     'sort',

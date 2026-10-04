@@ -15,7 +15,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
  * transitions, check-ins, and replans.
  */
 export function ReportPanel({ session }: { session: JourneySession }) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
 
@@ -73,7 +73,7 @@ export function ReportPanel({ session }: { session: JourneySession }) {
                 {t('journey.report.fixes', 'Fixes')}
               </Text>
               <Text as="dd" variant="label" className="tabular-nums">
-                {fmtNumber(report.fixes)}
+                {fmtInt(report.fixes)}
               </Text>
             </div>
             <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2">
@@ -82,8 +82,8 @@ export function ReportPanel({ session }: { session: JourneySession }) {
               </Text>
               <Text as="dd" variant="label" className="tabular-nums">
                 {t('journey.report.replanCount', '{{replans}} of {{plans}} plans', {
-                  replans: fmtNumber(report.replans),
-                  plans: fmtNumber(report.plans),
+                  replans: fmtInt(report.replans),
+                  plans: fmtInt(report.plans),
                 })}
               </Text>
             </div>
@@ -107,8 +107,8 @@ export function ReportPanel({ session }: { session: JourneySession }) {
               <Text as="dd" variant="label" className="tabular-nums">
                 {report.checklist != null
                   ? t('journey.report.readyCount', '{{ready}} of {{total}}', {
-                      ready: fmtNumber(report.checklist.ready),
-                      total: fmtNumber(report.checklist.total),
+                      ready: fmtInt(report.checklist.ready),
+                      total: fmtInt(report.checklist.total),
                     })
                   : '—'}
               </Text>

@@ -1,24 +1,21 @@
-// virtualize-audit:skip paginated FSD observatory journal is a short client-paged card list, not a DataTable
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, BookOpen, History, Route } from 'lucide-react';
 
 import { EmptyState } from '@/components/feedback';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
-import { Badge, GlassPanel, Pagination, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { safeArray } from '@/lib/safeArray';
 
 import type {
-  FsdAttributionConfidence,
   FsdInsights,
-  FsdObservatoryEvent,
 } from '@/types/fsd';
 
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
-import { useClientPagination } from './useClientPagination';
+import { FsdObservatoryJournalTable } from './FsdObservatoryJournalTable';
+import { FsdCommuteStoriesTable } from './FsdCommuteStoriesTable';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FsdObservatoryPanelProps {
@@ -28,30 +25,18 @@ interface FsdObservatoryPanelProps {
 
 const KPI_COLUMNS = { default: 1, sm: 2, xl: 4 } as const;
 
-const confidenceVariant: Record<
-  FsdAttributionConfidence,
-  'success' | 'info' | 'warning' | 'neutral'
-> = {
-  high: 'success',
-  estimated: 'info',
-  ambiguous: 'warning',
-  unknown: 'neutral',
-};
-
 /**
  * Reset-safe journal of reported FSD kilometres. Unknown and ambiguous
  * distance stay first-class. This is not an engagement map.
  */
 export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const observatory = insights?.drive_analytics?.observatory;
   const totals = observatory?.totals;
-  const timeline = observatory?.timeline ?? [];
-  const stories = observatory?.commute_stories ?? [];
-  const timelinePage = useClientPagination(timeline);
-  const storiesPage = useClientPagination(stories);
+  const timeline = safeArray(observatory?.timeline);
+  const stories = safeArray(observatory?.commute_stories);
   const honesty = observatory?.honesty
     ?? t(
       'fsd.observatory.honesty',
@@ -140,25 +125,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               </Text>
             ) : null}
             {timeline.length > 0 ? (
-              <>
-                <ol className="space-y-2" data-testid="fsd-observatory-timeline">
-                  {timelinePage.slice.map((event) => (
-                    <ObservatoryEventRow
-                      key={eventKey(event)}
-                      event={event}
-                      formatDistance={formatDistance}
-                    />
-                  ))}
-                </ol>
-                <Pagination
-                  page={timelinePage.page}
-                  pageSize={timelinePage.pageSize}
-                  total={timelinePage.total}
-                  onPageChange={timelinePage.onPageChange}
-                  onPageSizeChange={timelinePage.onPageSizeChange}
-                  pageSizeOptions={timelinePage.pageSizeOptions}
-                />
-              </>
+              <FsdObservatoryJournalTable events={timeline} />
             ) : (
               <EmptyState /* no-action: informational empty — no CTA */
                 icon={<History className="h-8 w-8" aria-hidden="true" />}
@@ -183,69 +150,10 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
             </Text>
             {stories.length > 0 ? (
               <>
-              <ul className="space-y-3" data-testid="fsd-observatory-commute">
-                {storiesPage.slice.map((story) => (
-                  <li
-                    key={story.route_key}
-                    className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
-                  >
-                    <Text as="div" weight="semibold">
-                      {story.route_label}
-                    </Text>
-                    <Text as="div" size="xs" color="muted" className="mb-2">
-                      {t('fsd.observatory.driveCount', '{{count}} drives', {
-                        count: story.drive_count,
-                      })}
-                    </Text>
-                    <ol className="space-y-2">
-                      {story.chapters.map((chapter, index) => (
-                        <li key={`${story.route_key}-${index}`} className="text-sm">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="info" size="sm">
-                              {chapter.firmware_version
-                                ?? t('fsd.observatory.unknownFirmware', 'Unknown firmware')}
-                            </Badge>
-                            <span className="tabular-nums">
-                              {chapter.fsd_distance_m == null
-                                ? t('fsd.notMeasured', 'Not measured')
-                                : formatDistance(chapter.fsd_distance_m)}
-                            </span>
-                            {chapter.fsd_share_pct != null ? (
-                              <Text as="span" color="muted">
-                                {t('fsd.kpi.sharePct', '{{value}}%', {
-                                  value: fmtNumber(chapter.fsd_share_pct),
-                                })}
-                              </Text>
-                            ) : null}
-                            {chapter.unknown_count > 0 ? (
-                              <Badge variant="neutral" size="sm">
-                                {t('fsd.observatory.unknownDrives', '{{count}} unknown', {
-                                  count: chapter.unknown_count,
-                                })}
-                              </Badge>
-                            ) : null}
-                            {chapter.ambiguous_count > 0 ? (
-                              <Badge variant="warning" size="sm">
-                                {t('fsd.observatory.ambiguousDrives', '{{count}} ambiguous', {
-                                  count: chapter.ambiguous_count,
-                                })}
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  </li>
-                ))}
-              </ul>
-                <Pagination
-                  page={storiesPage.page}
-                  pageSize={storiesPage.pageSize}
-                  total={storiesPage.total}
-                  onPageChange={storiesPage.onPageChange}
-                  onPageSizeChange={storiesPage.onPageSizeChange}
-                  pageSizeOptions={storiesPage.pageSizeOptions}
-                />
+                <Text as="p" variant="caption" className="mb-3">
+                  {t('fsd.observatory.chaptersHint', 'One row per route and firmware chapter. Route drives is the route total; chapter drives is the count for that firmware chapter.')}
+                </Text>
+                <FsdCommuteStoriesTable stories={stories} />
               </>
             ) : (
               <Text as="p" variant="caption">
@@ -259,89 +167,5 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
         </FsdSectionBody>
       </GlassPanel>
     </section>
-  );
-}
-
-function eventKey(event: FsdObservatoryEvent): string {
-  return [
-    event.kind,
-    event.at,
-    event.drive_id ?? '',
-    event.field ?? '',
-  ].join(':');
-}
-
-function ObservatoryEventRow({
-  event,
-  formatDistance,
-}: {
-  event: FsdObservatoryEvent;
-  formatDistance: (meters: number | null, options?: { precision?: number }) => string;
-}) {
-  const { t } = useTranslation();
-  if (event.kind === 'reset') {
-    return (
-      <li
-        data-testid="fsd-observatory-reset"
-        className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm"
-      >
-        <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
-        <Text as="span" weight="medium">{formatDateTime(event.at)}</Text>
-        <Badge variant="warning" size="sm">
-          {t('fsd.observatory.resetBadge', 'Counter reset')}
-        </Badge>
-        <Text as="span" color="muted">
-          {t(
-            'fsd.observatory.resetHint',
-            'Break in the stitch — not travelled FSD{{field}}.',
-            { field: event.field ? ` (${event.field})` : '' },
-          )}
-        </Text>
-      </li>
-    );
-  }
-
-  const confidence = event.confidence ?? 'unknown';
-  const fsdLabel = event.fsd_distance_m == null
-    ? t('fsd.notMeasured', 'Not measured')
-    : `${confidence === 'high' ? '' : '~'}${formatDistance(event.fsd_distance_m)}`;
-
-  return (
-    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-sm">
-      {event.drive_id != null ? (
-        <Link
-          to={`/drives/${event.drive_id}`}
-          className="font-medium text-cyan-300 hover:text-cyan-200"
-        >
-          {formatDateTime(event.at)}
-        </Link>
-      ) : (
-        <Text as="span" weight="medium">{formatDateTime(event.at)}</Text>
-      )}
-      <Text as="span" color="muted">
-        {event.route_label
-          ?? t('fsd.observatory.unlabelledRoute', 'Unlabelled route')}
-      </Text>
-      <span className="tabular-nums" data-testid="fsd-observatory-drive-fsd">
-        {fsdLabel}
-      </span>
-      <Badge variant={confidenceVariant[confidence]} size="sm">
-        {confidence === 'high'
-          ? t('fsd.drive.confidence.high', 'High')
-          : confidence === 'estimated'
-            ? t('fsd.drive.confidence.estimated', 'Estimated')
-            : confidence === 'ambiguous'
-              ? t('fsd.drive.confidence.ambiguous', 'Ambiguous')
-              : t('fsd.drive.confidence.unknown', 'Unknown')}
-      </Badge>
-      {event.approximate ? (
-        <Text as="span" size="xs" color="muted">
-          {t('fsd.observatory.approximate', 'Approximate counter increase')}
-        </Text>
-      ) : null}
-      {event.firmware_version ? (
-        <Text as="span" size="xs" color="muted">{event.firmware_version}</Text>
-      ) : null}
-    </li>
   );
 }

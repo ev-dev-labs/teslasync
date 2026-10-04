@@ -2165,7 +2165,9 @@
     "health": {
       "degraded": "Degraded",
       "excellent": "Excellent",
-      "good": "Good"
+      "good": "Good",
+      "missingMeasurement": "Capacity measurements are not available yet; battery health cannot be assessed.",
+      "unavailable": "Not measured"
     },
     "insight": {
       "concernDesc": "Battery health dropped to {{soh}}/100 — consider service check.",
@@ -2246,6 +2248,7 @@
       "avoid100": "Avoid charging to 100% regularly — keep the limit at 80–90%.",
       "avoidDeep": "Try to avoid deep discharges below 20%.",
       "great": "Your battery health looks great — keep up the good habits!",
+      "needMeasurements": "Keep monitoring as capacity measurements arrive; battery health cannot be assessed yet.",
       "reduceFast": "Reduce fast charging frequency to slow degradation."
     },
     "title": "Battery health",

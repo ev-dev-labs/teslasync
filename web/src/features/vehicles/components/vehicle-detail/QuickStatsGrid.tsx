@@ -5,7 +5,7 @@ import {
 
 import { MetricCard } from '@/components/data-display'
 import { useUnits } from '@/hooks/useUnits'
-import { isFiniteNumber } from '@/lib/numberFormat'
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat'
 import type { NeonColor } from '@/lib/tokens'
 import type { VehicleState, VehicleStatus } from '@/api/types'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -31,7 +31,7 @@ export function batteryColor(level: number | null | undefined): NeonColor {
 
 /** SoC percentage for display; missing / non-finite levels render an em-dash. */
 export function formatBatteryLevel(level: number | null | undefined): string {
-  return isFiniteNumber(level) ? `${level}%` : '—'
+  return isFiniteNumber(level) ? `${fmtNumber(level)}%` : '—'
 }
 
 export function QuickStatsGrid({ state, status }: QuickStatsGridProps) {
@@ -43,7 +43,7 @@ export function QuickStatsGrid({ state, status }: QuickStatsGridProps) {
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-8">
       <MetricCard
         label={t('common.battery', 'Battery')}
-        value={formatBatteryLevel(state.battery_level)}
+        value={isFiniteNumber(state.battery_level) ? `${fmtNumber(state.battery_level)}%` : '—'}
         icon={<Battery className="h-4 w-4" aria-hidden="true" />}
         color={batteryColor(state.battery_level)}
       />

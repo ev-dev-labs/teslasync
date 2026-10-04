@@ -116,7 +116,7 @@ export function SupervisedDrivingPanel({
           </div>
         </div>
 
-        <Table aria-label={t('driveDetail.fsd.title', 'Supervised driving')}>
+        <Table variant="embedded" aria-label={t('driveDetail.fsd.title', 'Supervised driving')}>
           <tbody><tr>
             <th scope="row">
               <Route className="h-3.5 w-3.5" aria-hidden="true" />

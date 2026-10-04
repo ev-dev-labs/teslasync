@@ -243,9 +243,9 @@ describe('VehicleHeroCardWidget — full view', () => {
 
     // Battery / range / cabin, SI-converted for the km + °C preference.
     expect(screen.getByText('Battery')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
-    expect(screen.getByText('300 km')).toBeInTheDocument();
-    expect(screen.getByText('22°C')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByText('300.00 km')).toBeInTheDocument();
+    expect(screen.getByText('22.00°C')).toBeInTheDocument();
   });
 
   it('drops the trim from the subtitle when it is absent', () => {
@@ -272,8 +272,8 @@ describe('VehicleHeroCardWidget — full view', () => {
       state: makeStateQuery({ data: { state: makeState({ ideal_range: RANGE_100MI_M }) } }),
     });
 
-    expect(screen.getByText('100 mi')).toBeInTheDocument();
-    expect(screen.queryByText('100 km')).toBeNull();
+    expect(screen.getByText('100.00 mi')).toBeInTheDocument();
+    expect(screen.queryByText('100.00 km')).toBeNull();
   });
 
   it('converts the SI-Celsius cabin temp to °F when that is the preference', () => {
@@ -283,8 +283,8 @@ describe('VehicleHeroCardWidget — full view', () => {
     });
 
     // 22 °C → 71.6 °F → rounds to 72, tagged with the Fahrenheit unit only.
-    expect(screen.getByText('72°F')).toBeInTheDocument();
-    expect(screen.queryByText('22°C')).toBeNull();
+    expect(screen.getByText('71.60°F')).toBeInTheDocument();
+    expect(screen.queryByText('22.00°C')).toBeNull();
   });
 
   it('shows a real finite-zero range as "0 <unit>" rather than an em-dash', () => {
@@ -292,7 +292,7 @@ describe('VehicleHeroCardWidget — full view', () => {
       state: makeStateQuery({ data: { state: makeState({ ideal_range: 0, battery_level: 10 }) } }),
     });
 
-    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
   });
 
   it('renders an em-dash placeholder for every metric when the state is absent (null-safety)', () => {
@@ -321,7 +321,7 @@ describe('VehicleHeroCardWidget — battery colour classifier', () => {
       state: makeStateQuery({ data: { state: makeState({ battery_level: level }) } }),
     });
 
-    expect(screen.getByText(`${level}%`).closest('[data-print-card]')?.className).toContain(cls);
+    expect(screen.getByText(`${level}.00%`).closest('[data-print-card]')?.className).toContain(cls);
   });
 });
 
@@ -334,7 +334,7 @@ describe('VehicleHeroCardWidget — charging banner', () => {
     });
 
     expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('11.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
     // The decorative bolt glyph must not be announced by screen readers.
     expect(screen.getByText('⚡').getAttribute('aria-hidden')).toBe('true');
   });
@@ -367,8 +367,8 @@ describe('VehicleHeroCardWidget — size variants', () => {
     });
 
     expect(screen.getByText('Outside')).toBeInTheDocument();
-    expect(screen.getByText('10°C')).toBeInTheDocument();
-    expect(screen.getByText('22°C')).toBeInTheDocument();
+    expect(screen.getByText('10.00°C')).toBeInTheDocument();
+    expect(screen.getByText('22.00°C')).toBeInTheDocument();
   });
 
   it('omits the Outside metric on a plain (non-wide, non-tall) full tile', () => {
@@ -387,7 +387,7 @@ describe('VehicleHeroCardWidget — size variants', () => {
     expect(screen.getByText('Range')).toBeInTheDocument();
     expect(screen.getByText('Outside')).toBeInTheDocument();
     expect(screen.queryByText('Ideal')).toBeNull();
-    expect(screen.getAllByText('300 km')).toHaveLength(1);
+    expect(screen.getAllByText('300.00 km')).toHaveLength(1);
   });
 });
 
@@ -401,7 +401,7 @@ describe('VehicleHeroCardWidget — compact view', () => {
     });
 
     expect(screen.getByText('online')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('Compact Car')).toBeInTheDocument();
     // A 1×1 tile suppresses the header title entirely.
     expect(screen.queryByText('Vehicle')).toBeNull();
@@ -427,7 +427,7 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
       }),
     });
     expect(screen.getByText('My Tesla')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -455,7 +455,7 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
     renderWidget(FULL, {
       state: makeStateQuery({ isLoading: true, isFetching: true, data: { state: makeState({ battery_level: 80 }) } }),
     });
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).toBeNull();
   });
 

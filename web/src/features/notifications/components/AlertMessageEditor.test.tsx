@@ -90,12 +90,14 @@ const presets: AlertMessagePreset[] = [
 ]
 
 const previewMutate = vi.fn()
+const formatting = vi.hoisted(() => ({ key: 'en-US:2' }))
 
 vi.mock('@/components/ai/AIAlertMessageTemplateSuggestion', () => ({
   AIAlertMessageTemplateSuggestion: () => null,
 }))
 
 vi.mock('@/api/hooks/useAlertMessageHelpers', () => ({
+  useAlertMessageFormattingKey: () => formatting.key,
   useAlertMessagePlaceholders: () => ({
     data: placeholders,
     isLoading: false,
@@ -152,6 +154,28 @@ function renderEditor(overrides: Partial<React.ComponentProps<typeof AlertMessag
 describe('AlertMessageEditor', () => {
   beforeEach(() => {
     previewMutate.mockClear()
+    formatting.key = 'en-US:2'
+  })
+
+  it('refreshes backend previews when preferences change and ignores older responses', async () => {
+    const props = {
+      msgTemplate: '{{Value}}',
+      includeTitle: true,
+      draft: { kind: 'signal' as const, signal_name: 'Soc', op: '<' as const },
+      onTemplateChange: vi.fn(),
+      onIncludeTitleChange: vi.fn(),
+    }
+    const view = render(<AlertMessageEditor {...props} />)
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
+    const oldCallbacks = previewMutate.mock.calls[0][1]
+    formatting.key = 'de-DE:4'
+    view.rerender(<AlertMessageEditor {...props} />)
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
+    expect(previewMutate).toHaveBeenCalledTimes(2)
+    act(() => previewMutate.mock.calls[1][1].onSuccess({ title: 'Battery', body: '18,2345%' }))
+    act(() => oldCallbacks.onSuccess({ title: 'Battery', body: '18.23%' }))
+    expect(screen.getByText('18,2345%')).toBeInTheDocument()
+    expect(screen.queryByText('18.23%')).toBeNull()
   })
 
   it('reflects includeTitle and notifies parent on toggle', () => {
@@ -160,6 +184,33 @@ describe('AlertMessageEditor', () => {
     expect(checkbox.checked).toBe(true)
     fireEvent.click(checkbox)
     expect(onIncludeTitleChange).toHaveBeenCalledWith(false)
+  })
+
+  it('refreshes timestamp previews after time-format and timezone changes', async () => {
+    const props = {
+      msgTemplate: '{{NowDisplay}}',
+      includeTitle: false,
+      draft: { kind: 'signal' as const, signal_name: 'Soc', op: '<' as const },
+      onTemplateChange: vi.fn(),
+      onIncludeTitleChange: vi.fn(),
+    }
+    formatting.key = 'en-US:relative:utc'
+    const view = render(<AlertMessageEditor {...props} />)
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
+    act(() => previewMutate.mock.calls[0][1].onSuccess({ title: 'Battery', body: 'just now' }))
+    expect(screen.getByText('just now')).toBeInTheDocument()
+    formatting.key = 'en-US:absolute:utc'
+    view.rerender(<AlertMessageEditor {...props} />)
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
+    act(() => previewMutate.mock.calls[1][1].onSuccess({ title: 'Battery', body: 'Nov 1, 2026, 09:30 AM' }))
+    expect(screen.getByText('Nov 1, 2026, 09:30 AM')).toBeInTheDocument()
+    formatting.key = 'en-US:absolute:user:America/Los_Angeles'
+    view.rerender(<AlertMessageEditor {...props} />)
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
+    act(() => previewMutate.mock.calls[2][1].onSuccess({ title: 'Battery', body: 'Nov 1, 2026, 01:30 AM' }))
+    expect(screen.getByText('Nov 1, 2026, 01:30 AM')).toBeInTheDocument()
+    expect(previewMutate).toHaveBeenCalledTimes(3)
+    expect(previewMutate.mock.calls[2][0].msg_template).toBe('{{NowDisplay}}')
   })
 
   it('opens autocomplete after typing {{ and inserts the chosen placeholder', async () => {
