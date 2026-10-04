@@ -66,7 +66,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Mark stale issues and PRs
-        uses: actions/stale@v10
+        uses: actions/stale@v11
         with:
           stale-issue-message: >-
             This issue has been automatically marked as stale because it has not had
