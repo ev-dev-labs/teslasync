@@ -24,7 +24,7 @@ import { SortControl, type SortDirection } from '@/components/forms/SortControl'
 import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
   SavedViewMenu,
-  KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
+  DateGroupedList, type DateGroupedListGroup,
   BulkActionsToolbar, DataProvenanceBadge, OperationalBrief, type BulkAction,
   EntityPreviewDrawer, type OperationalAttention,
 } from '@/components/data-display';
@@ -57,6 +57,7 @@ import { CHARGING_VALUE_COLUMNS, chargingColumnValue, parseChargingValueSelectio
 import { ChargingInsights } from '../components/charging-list/ChargingInsights';
 import { ChargingSearchControl } from '../components/charging-list/ChargingSearchControl';
 import { ChargeQueuePlanner } from '../components/ChargeQueuePlanner';
+import { ChargingOverviewStats } from '../components/stat-modernization';
 import {
   computeChargingPeriodStats, priorPeriod, detectChargingAnomalies,
   detectNotableSessions, dailyChargingTrend, getChargerCategory,
@@ -884,104 +885,24 @@ export default function ChargingListPage() {
         <div className="grid min-w-0 grid-cols-1 gap-4">
         <FadeIn>
           <section aria-label={t('charging.section.overview', 'Overview')}>
-          {currentStats.count > 0 ? (
-            <KpiOverviewCard
-              id="charging-overview"
-              testId="charging-overview"
-              compact
-              gridClassName="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6"
-              header={{
-                title: t('charging.overview', 'Overview'),
-                currentLabel: periodLabel,
-                comparisonLabel: priorLabel,
-              }}
-              kpis={
-                <>
-                  <MetricCard
-                    compact
-                    label={t('charging.totalSessions', 'Sessions')}
-                    value={fmtCompact(currentStats.count)}
-                    color="cyan"
-                    delta={priorHasData ? {
-                      metric: 'trip_count',
-                      previous: priorStats!.count,
-                      current: currentStats.count,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    compact
-                    label={t('charging.totalEnergy', 'Energy (kWh)')}
-                    value={fmtCompact(currentStats.totalEnergyWh / 1000, 10000)}
-                    color="green"
-                    delta={priorHasData ? {
-                      metric: 'energy_consumed',
-                      previous: priorStats!.totalEnergyWh / 1000,
-                      current: currentStats.totalEnergyWh / 1000,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    compact
-                    label={t('charging.totalCost', 'Cost')}
-                    value={hasRecordedCosts ? formatCurrency(currentStats.totalCost) : '—'}
-                    color="red"
-                    delta={priorHasData ? {
-                      metric: 'cost',
-                      previous: priorStats!.totalCost,
-                      current: currentStats.totalCost,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    compact
-                    label={t('charging.avgRate', 'Avg rate (kW)')}
-                    value={currentStats.avgRateKw != null ? fmtNumber(currentStats.avgRateKw) : '—'}
-                    color="purple"
-                    delta={priorHasData && currentStats.avgRateKw != null && priorStats!.avgRateKw != null ? {
-                      metric: { direction: 'neutral' },
-                      previous: priorStats!.avgRateKw,
-                      current: currentStats.avgRateKw,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    compact
-                    label={t('charging.avgDuration', 'Avg duration')}
-                    value={currentStats.avgDurationMin != null ? formatDurationMinutes(currentStats.avgDurationMin) : '—'}
-                    color="blue"
-                    delta={priorHasData && currentStats.avgDurationMin != null && priorStats!.avgDurationMin != null ? {
-                      metric: { direction: 'neutral' },
-                      previous: priorStats!.avgDurationMin,
-                      current: currentStats.avgDurationMin,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    compact
-                    label={t('charging.avgPower', 'Avg power (kW)')}
-                    value={currentStats.avgPowerW != null ? fmtNumber(currentStats.avgPowerW / 1000) : '—'}
-                    color="amber"
-                    delta={priorHasData && currentStats.avgPowerW != null && priorStats!.avgPowerW != null ? {
-                      metric: { direction: 'neutral' },
-                      previous: priorStats!.avgPowerW / 1000,
-                      current: currentStats.avgPowerW / 1000,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                </>
-              }
-              secondary={secondaryLine}
-              footer={anomalyFooter}
-            />
-          ) : (
-            <GlassPanel className="p-6">
-              <EmptyState
-                /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                message={t('charging.noStatsRange', 'No charging sessions in this range')}
-              />
-            </GlassPanel>
-          )}
+          <ChargingOverviewStats
+            stats={currentStats}
+            priorStats={priorStats}
+            priorHasData={priorHasData}
+            hasRecordedCosts={hasRecordedCosts}
+            period={{
+              kind: 'analysis', label: periodLabel, start: startInstant,
+              endExclusive: endInstantExclusive, timezone: tz, completeness: 'unknown',
+              provenance: t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 }),
+            }}
+            priorLabel={priorLabel}
+            loading={isLoading}
+            retained={chargingState.status === 'stale' || chargingState.isRefreshing}
+            error={chargingState.fatalError}
+            onRetry={refetch}
+            secondary={secondaryLine}
+            footer={anomalyFooter}
+          />
           </section>
         </FadeIn>
 

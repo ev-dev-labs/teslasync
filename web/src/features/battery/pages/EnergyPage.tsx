@@ -2,15 +2,18 @@ import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
-  Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity, Gauge,
+  Zap, Leaf, Fuel, Sun, Moon, Activity, Gauge,
   DollarSign, Route, BatteryCharging, CalendarDays, TrendingUp,
   CircleAlert, Thermometer, MapPinned,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout/layout-reference';
+import {
+  BatteryPanelGrid, BatterySpecialistSummary, CostComparisonCard, LifetimeStat,
+} from '../components/modernization';
 import {
   GlassPanel, DataTable, Badge, PanelTitle, Text, Caption,
-  MetricLabel, HelperText, type Column,
+  HelperText, type Column,
 } from '@/components/ui';
 import {
   ThresholdBar, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
@@ -20,22 +23,20 @@ import {
   AREA_DEFAULTS,
   ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { FadeIn } from '@/components/motion';
 import {
   AlertBanner,
   Skeleton,
   QueryError,
   EmptyState,
   ChartBlockSkeleton,
-  StatGridSkeleton,
-  PageHeaderSkeleton,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import {
   Currency,
   DataFreshnessAuto,
   DataProvenanceBadge,
   SavedViewMenu,
-  MetricCard,
   MetricTile,
   OperationalBrief,
   type OperationalAttention,
@@ -57,8 +58,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { formatDateShort, formatDayKey, ymdInTz } from '@/lib/dateFormat';
 
 import { CHARGER_COLORS } from '@/lib/colors';
-import { chartTokens, neonColorMap, type NeonColor } from '@/lib/tokens';
-import { cn } from '@/lib/cn';
+import { chartTokens, type NeonColor } from '@/lib/tokens';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
@@ -91,97 +91,6 @@ function inclusiveDayCount(start: string, end: string, fallback = 30): number {
   return Math.max(1, Math.floor((endMs - startMs) / 86_400_000) + 1);
 }
 
-function CostComparisonCard({
-  label, evCost, gasCost, icon,
-}: {
-  label: string; evCost: number | null; gasCost: number | null; icon: ReactNode;
-}) {
-  const { fmtPercent } = useNumberFormatting();
-  const { t } = useTranslation();
-  const savings = evCost != null && gasCost != null ? gasCost - evCost : null;
-  const savingsPct =
-    savings != null && gasCost != null && gasCost > 0
-      ? (Math.abs(savings) / gasCost) * 100
-      : null;
-  const isSaving = savings != null && savings >= 0;
-  const green = neonColorMap.green;
-  return (
-    <GlassPanel className="p-4 sm:p-5">
-      <div className="mb-3 flex items-center gap-3">
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1', green.bg, green.ring)}>
-          <span className={green.text} aria-hidden="true">{icon}</span>
-        </div>
-        <Text variant="subhead">{label}</Text>
-      </div>
-      <div className="mb-3 flex items-center gap-4">
-        <div className="min-w-0">
-          <MetricLabel>{t('energy.cost.evCost', 'EV cost')}</MetricLabel>
-          <Text as="p" size="lg" weight="bold" className="mt-0.5 text-cyan-300">
-            {evCost != null ? <Currency value={evCost} /> : '—'}
-          </Text>
-        </div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-        <div className="min-w-0">
-          <MetricLabel>{t('energy.cost.gasEquivalent', 'Gas equivalent')}</MetricLabel>
-          <Text as="p" size="lg" weight="bold" color="secondary" className="mt-0.5">
-            {gasCost != null ? <Currency value={gasCost} /> : '—'}
-          </Text>
-        </div>
-      </div>
-      {savings != null && savingsPct != null ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Text size="sm" weight="bold" className={isSaving ? 'text-emerald-300' : 'text-amber-300'}>
-            {isSaving
-              ? t('energy.cost.saving', 'Saving')
-              : t('energy.cost.higherBy', 'Higher by')}{' '}
-            <Currency value={Math.abs(savings)} />
-          </Text>
-          <Text
-            as="span"
-            size="2xs"
-            weight="semibold"
-            className={cn(
-              'rounded-full px-2 py-0.5 ring-1',
-              isSaving ? [green.bg, green.text, green.ring] : 'bg-amber-500/10 text-amber-300 ring-amber-500/20',
-            )}
-          >
-            {fmtPercent(savingsPct)}{' '}
-            {isSaving ? t('energy.cost.less', 'less') : t('energy.cost.more', 'more')}
-          </Text>
-        </div>
-      ) : (
-        <HelperText>
-          {t(
-            'energy.cost.incomplete',
-            'Complete charging-cost coverage is required before savings are modeled.',
-          )}
-        </HelperText>
-      )}
-    </GlassPanel>
-  );
-}
-
-/* ── Local: Lifetime metric box ─────────────────────────────────── */
-
-function LifetimeStat({
-  label, value, unit, desc, accent,
-}: {
-  label: string; value: string; unit?: string; desc: string; accent?: string;
-}) {
-  return (
-    <div className="rounded-lg bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
-      <MetricLabel>{label}</MetricLabel>
-      <p className="mt-1 flex items-baseline gap-1">
-        <Text size="2xl" weight="bold" className={cn('tabular-nums tracking-tight', accent ?? 'text-[var(--text-primary)]')}>
-          {value}
-        </Text>
-        {unit && <Caption>{unit}</Caption>}
-      </p>
-      <HelperText className="mt-1">{desc}</HelperText>
-    </div>
-  );
-}
-
 /* ── Page ────────────────────────────────────────────────────────── */
 
 /**
@@ -200,41 +109,6 @@ function EnergyChartSync({
   const sync = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
   return <>{children({ sync, syncedX })}</>;
-}
-
-/* ── Loading skeleton ────────────────────────────────────────────── */
-
-/**
- * Mirrors the EnergyPage bento while data loads:
- * page header → operational brief → 6-card KPI band → driver investigation →
- * hero-gauge + lifetime bento → 2 cost cards → 4 charts → sessions table.
- */
-function EnergyPageSkeleton() {
-  return (
-    <div className="space-y-6" data-testid="energy-page-skeleton">
-      <PageHeaderSkeleton />
-      <Skeleton className="h-72 rounded-xl" />
-      <StatGridSkeleton cards={6} className="sm:grid-cols-3 lg:grid-cols-6" />
-      <Skeleton className="h-60 rounded-xl" />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-        <Skeleton className="h-56 rounded-xl xl:col-span-2" />
-        <Skeleton className="h-56 rounded-xl" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartBlockSkeleton height={280} />
-        <ChartBlockSkeleton height={280} />
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartBlockSkeleton height={280} />
-        <ChartBlockSkeleton height={280} />
-      </div>
-      <ChartBlockSkeleton height={320} />
-    </div>
-  );
 }
 
 export default function EnergyPage() {
@@ -284,20 +158,23 @@ export default function EnergyPage() {
     { start: startDate },
   );
   const {
-    data: stats, isLoading, error: statsError, refetch,
+    data: stats, isLoading, refetch,
   } = statsQuery;
   const statsDataState = useDataState(statsQuery, { provenance: 'inferred' });
 
   const sessionsQuery = useChargingSessionsPaginated(vehicleId, {
     limit: 100, start: startDate, end: endDate,
   });
+  const sessionsDataState = useDataState(sessionsQuery, { provenance: 'historical' });
   const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
 
   const liveChargingQuery = useChargingTelemetryLatest(vehicleId ?? 0);
+  const liveChargingDataState = useDataState(liveChargingQuery, { provenance: 'live' });
   const liveCharging = liveChargingQuery.data;
   const idleDrainQuery = useVampireDrainStats(
     vehicleId != null ? String(vehicleId) : null,
   );
+  const idleDrainDataState = useDataState(idleDrainQuery, { provenance: 'inferred' });
 
   /* ── Derived metrics ──────────────────────────────────────────── */
   const sessionCapReached = sessions.length >= 100;
@@ -757,7 +634,7 @@ export default function EnergyPage() {
     {
       key: 'totalDistance',
       label: t('energy.metric.totalDistance', 'Total distance'),
-      value: statsQuery.isError
+      value: !statsDataState.hasData
         ? '—'
         : `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`,
       icon: <Route className="h-4 w-4" />, color: 'blue',
@@ -765,7 +642,7 @@ export default function EnergyPage() {
     {
       key: 'sessions',
       label: t('energy.metric.sessions', 'Sessions'),
-      value: sessionsQuery.isLoading || sessionsQuery.isError
+      value: !sessionsDataState.hasData
         ? '—'
         : `${sessionCapReached ? '≥ ' : ''}${sessions.length}`,
       icon: <BatteryCharging className="h-4 w-4" />, color: 'purple',
@@ -834,7 +711,9 @@ export default function EnergyPage() {
     })),
   ];
   const narrative: OperationalNarrative = {
-    whatChanged: t(
+    whatChanged: !statsDataState.hasData
+      ? t('operations.energy.noDataDescription', 'Complete a drive or charging session to establish efficiency and cost baselines.')
+      : t(
       'operations.energy.narrative.whatChanged',
       '{{energy}} of measured drive energy across {{days}} daily records, with {{cost}} in recorded charging cost.',
       {
@@ -930,14 +809,10 @@ export default function EnergyPage() {
     ],
   };
 
-  /* ── Loading short-circuit ────────────────────────────────────── */
-  if (isLoading) {
-    return <EnergyPageSkeleton />;
-  }
-
   /* ── Render ───────────────────────────────────────────────────── */
   return (
-    <PageContainer
+    <PageLayout
+      busy={isLoading}
       title={t('energy.pageTitle', 'Energy intelligence')}
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
       overflowActions={
@@ -948,7 +823,11 @@ export default function EnergyPage() {
         />
       }
     >
-      {statsError && <QueryError error={statsError} onRetry={refetch} />}
+      {statsDataState.fatalError && <QueryError error={statsDataState.fatalError} onRetry={refetch} />}
+      <StaleRefreshWarning state={statsDataState} />
+      <StaleRefreshWarning state={sessionsDataState} />
+      <StaleRefreshWarning state={liveChargingDataState} />
+      <StaleRefreshWarning state={idleDrainDataState} />
       {secondarySourceFailures.length > 0 && (
         <AlertBanner
           data-testid="energy-partial-data"
@@ -973,7 +852,7 @@ export default function EnergyPage() {
           'The selected window combines measured drive consumption, charging cost coverage, idle drain, and projected usage.',
         )}
         statusLabel={
-          hasNoEnergyData
+          !statsDataState.hasData || hasNoEnergyData
             ? t('operations.status.awaitingData', 'Awaiting data')
             : energyStatusTone === 'success'
               ? t('operations.status.onTrack', 'On track')
@@ -1079,15 +958,18 @@ export default function EnergyPage() {
       />
 
       {/* ── KPI band ────────────────────────────────────────────── */}
-      <section aria-label={t('energy.kpis', 'Key energy metrics')}>
-        <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
-          {kpis.map((m) => (
-            <StaggerItem key={m.key}>
-              <MetricCard label={m.label} value={m.value} icon={m.icon} color={m.color} />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      </section>
+      <BatterySpecialistSummary
+        testId="energy-summary"
+        title={t('energy.kpis', 'Key energy metrics')}
+        metrics={kpis}
+        period={{
+          kind: 'unknown',
+          label: t('operations.scope.days', '{{count}} days', { count: periodDays }),
+          reason: t('operations.energy.provenance', 'Drive consumption comes from SI daily aggregates; costs from returned charging sessions; idle drain from 90-day FSM and signal history. Charging loss remains unsupported.'),
+        }}
+        loading={isLoading && !sessionsDataState.hasData}
+        retained={statsDataState.status === 'stale' || sessionsDataState.status === 'stale'}
+      />
 
       <FadeIn delay={0.04}>
         <GlassPanel className="p-4 sm:p-5">
@@ -1101,7 +983,7 @@ export default function EnergyPage() {
               'Daily intensity identifies when efficiency changed; temperature, speed, and route workspaces provide the evidence needed to investigate why.',
             )}
           </Text>
-          {peakEfficiencyDay != null && bestEfficiencyDay != null ? (
+          {isLoading ? <ChartBlockSkeleton height={200} /> : peakEfficiencyDay != null && bestEfficiencyDay != null ? (
             <>
               <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <MetricTile
@@ -1175,16 +1057,17 @@ export default function EnergyPage() {
 
       {/* ── Hero bento: gauges (primary) + lifetime (context) ───── */}
       <FadeIn delay={0.05}>
-        <section
-          aria-label={t('energy.overview', 'Energy overview')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+        <BatteryPanelGrid
+          label={t('energy.overview', 'Energy overview')}
+          ids={['energy-overview', 'energy-lifetime']}
+          sizes={['half', 'third']}
         >
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+          <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('energy.hero.title', 'Efficiency & cost overview')}
             </PanelTitle>
-            {hasNoEnergyData ? (
+            {isLoading ? <ChartBlockSkeleton height={200} /> : hasNoEnergyData ? (
               <EmptyState /* no-action: surfaces when no energy data exists yet — user must drive/charge to populate */
                 icon={<Zap className="h-10 w-10" />}
                 message={t('energy.empty.hero', 'No energy data yet — connect your vehicle and complete a drive or charging session to see efficiency, cost, and CO₂ savings.')}
@@ -1192,12 +1075,12 @@ export default function EnergyPage() {
             ) : (
               <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-4 sm:gap-6">
                 <MetricTile
-                  value={toEnergyDisplay(scopedDriveEnergyWh)}
+                  value={statsDataState.hasData ? toEnergyDisplay(scopedDriveEnergyWh) : null}
                   label={t('energy.gauge.energyUsed', 'Energy used')}
                   unit={energyUnit}
                   accentClass="text-cyan-300"
                 />
-                <ThresholdBar
+                {statsDataState.hasData && totalDistance > 0 ? <ThresholdBar
                   value={toEfficiencyDisplay(avgEfficiency)}
                   min={0}
                   max={toEfficiencyDisplay(EFFICIENCY_MAX_WH_PER_M)}
@@ -1206,9 +1089,9 @@ export default function EnergyPage() {
                   unit={efficiencyUnit}
                   decimals={displayPrecision}
                   className="col-span-2 sm:col-span-1"
-                />
+                /> : <Text variant="bodySm">{t('energy.gauge.efficiency', 'Efficiency')}: —</Text>}
                 <MetricTile
-                  value={co2Saved}
+                  value={statsDataState.hasData ? co2Saved : null}
                   label={t('energy.gauge.co2Saved', 'CO₂ saved')}
                   unit="kg"
                   accentClass="text-purple-300"
@@ -1228,6 +1111,8 @@ export default function EnergyPage() {
               <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('energy.lifetime.title', 'Lifetime metrics')}
             </PanelTitle>
+            {liveChargingQuery.isLoading && !liveChargingDataState.hasData && <Skeleton className="mb-3 h-16 rounded-xl" />}
+            {liveChargingDataState.fatalError && <QueryError error={liveChargingDataState.fatalError} onRetry={() => { void liveChargingQuery.refetch(); }} />}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <LifetimeStat
                 label={t('energy.lifetime.energyUsed', 'Lifetime energy used')}
@@ -1239,24 +1124,24 @@ export default function EnergyPage() {
               <LifetimeStat
                 label={t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
                 value={
-                  sessionsQuery.isLoading || sessionsQuery.isError
+                  !sessionsDataState.hasData
                     ? '—'
                     : `${sessionCapReached ? '≥ ' : ''}${fmtNumber(toEnergyDisplay(totalChargingEnergyWh))}`
                 }
-                unit={sessionsQuery.isError ? undefined : energyUnit}
+                unit={!sessionsDataState.hasData ? undefined : energyUnit}
                 desc={t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
                 accent="text-emerald-300"
               />
             </div>
           </GlassPanel>
-        </section>
+        </BatteryPanelGrid>
       </FadeIn>
 
       {/* ── Cost vs Gas Savings ─────────────────────────────────── */}
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('energy.savings', 'Cost savings versus gas')}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        <BatteryPanelGrid
+          label={t('energy.savings', 'Cost savings versus gas')}
+          ids={['energy-cost-period', 'energy-cost-annual']}
         >
           <CostComparisonCard
             label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
@@ -1270,7 +1155,7 @@ export default function EnergyPage() {
             gasCost={gasEquivalent != null ? (gasEquivalent / periodDays) * 365 : null}
             icon={<Leaf className="h-4 w-4" />}
           />
-        </section>
+        </BatteryPanelGrid>
       </FadeIn>
 
       {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ────
@@ -1280,9 +1165,9 @@ export default function EnergyPage() {
           at the last hovered date. */}
       <FadeIn delay={0.15}>
         <ChartTimeRangeProvider syncId="energy.daily">
-          <section
-            aria-label={t('energy.dailyCharts', 'Daily energy trends')}
-            className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+          <BatteryPanelGrid
+            label={t('energy.dailyCharts', 'Daily energy trends')}
+            ids={['energy-cost-daily', 'energy-efficiency-trend']}
           >
             {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
             <ChartContainer
@@ -1295,7 +1180,7 @@ export default function EnergyPage() {
             >
               {({ annotations: chartAnnotations }) => (
                 <div className="h-56 sm:h-64">
-                  {dailyConsumptionCostData.length > 0 ? (
+                  {isLoading ? <ChartBlockSkeleton height={240} /> : dailyConsumptionCostData.length > 0 ? (
                     <EnergyChartSync>
                       {({ sync, syncedX }) => (
                         <ResponsiveContainer width="100%" height="100%">
@@ -1396,7 +1281,7 @@ export default function EnergyPage() {
               chartKey="energy-efficiency-trend"
             >
               <div className="h-56 sm:h-64">
-                {dailyEfficiencyData.length > 0 ? (
+                {isLoading ? <ChartBlockSkeleton height={240} /> : dailyEfficiencyData.length > 0 ? (
                   <EnergyChartSync>
                     {({ sync, syncedX }) => (
                       <ResponsiveContainer width="100%" height="100%">
@@ -1458,15 +1343,15 @@ export default function EnergyPage() {
                 )}
               </div>
             </ChartContainer>
-          </section>
+          </BatteryPanelGrid>
         </ChartTimeRangeProvider>
       </FadeIn>
 
       {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
       <FadeIn delay={0.2}>
-        <section
-          aria-label={t('energy.patternCharts', 'Charging patterns')}
-          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+        <BatteryPanelGrid
+          label={t('energy.patternCharts', 'Charging patterns')}
+          ids={['energy-charging-time-of-day', 'energy-charger-breakdown']}
         >
           {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
           <ChartContainer
@@ -1478,7 +1363,7 @@ export default function EnergyPage() {
           >
             {sessionsQuery.isLoading ? (
               <Skeleton className="h-60 rounded-xl" />
-            ) : sessionsQuery.isError ? (
+            ) : sessionsDataState.fatalError ? (
               <QueryError
                 error={sessionsQuery.error}
                 onRetry={() => void sessionsQuery.refetch()}
@@ -1551,7 +1436,7 @@ export default function EnergyPage() {
           >
             {sessionsQuery.isLoading ? (
               <Skeleton className="h-60 rounded-xl" />
-            ) : sessionsQuery.isError ? (
+            ) : sessionsDataState.fatalError ? (
               <QueryError
                 error={sessionsQuery.error}
                 onRetry={() => void sessionsQuery.refetch()}
@@ -1622,7 +1507,7 @@ export default function EnergyPage() {
               />
             )}
           </ChartContainer>
-        </section>
+        </BatteryPanelGrid>
       </FadeIn>
 
       {/* ── Recent Charging Sessions ─────────────────────────── */}
@@ -1634,7 +1519,7 @@ export default function EnergyPage() {
           </PanelTitle>
           {sessionsQuery.isLoading ? (
             <Skeleton className="h-64 rounded-xl" />
-          ) : sessionsQuery.isError ? (
+          ) : sessionsDataState.fatalError ? (
             <QueryError
               error={sessionsQuery.error}
               onRetry={() => { void sessionsQuery.refetch(); }}
@@ -1657,6 +1542,6 @@ export default function EnergyPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

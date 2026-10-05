@@ -14,21 +14,25 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { PAGINATION } from '@/lib/constants';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
-  CostSummaryCards,
   MonthlyCostChart,
   CostPerKwhChart,
+  MonthlyCostTable,
+} from '../components/cost-analysis';
+import {
+  CostSummaryCards,
   ChargerTypeBreakdown,
   SavingsCalculator,
-  MonthlyCostTable,
   TimeOfUseAnalysis,
   CostForecastSection,
   LifetimeSummary,
   EnvironmentalImpact,
   BillVarianceCard,
-} from '../components/cost-analysis';
+  useReturnedSessionPeriod,
+} from '../components/stat-modernization';
 
 export default function CostAnalysisPage() {
   const { t } = useTranslation();
@@ -53,6 +57,7 @@ export default function CostAnalysisPage() {
     persistKey: 'cost-analysis.range',
     defaultPresetId: '1y',
   });
+  const returnedSessionPeriod = useReturnedSessionPeriod(startDate, endDate, PAGINATION.MAX_LIMIT);
 
   // ── Gas calculator inputs ────────────────────────────────────────────
   const [gasPrice, setGasPrice] = useState(DEFAULT_GAS_PRICE);
@@ -61,7 +66,7 @@ export default function CostAnalysisPage() {
 
   // ── Data ─────────────────────────────────────────────────────────────
   const sessionsQuery = useChargingSessionsPaginated(vehicleId, {
-    limit: 5000,
+    limit: PAGINATION.MAX_LIMIT,
     start: startDate,
     end: endDate,
   });
@@ -102,6 +107,7 @@ export default function CostAnalysisPage() {
       <FadeIn>
         <section data-tour="cost-analysis" aria-label={t('costAnalysis.kpis', 'Cost summary metrics')}>
           <CostSummaryCards
+            period={returnedSessionPeriod}
             coreStats={coreStats}
             gasPrice={gasPrice}
             distanceUnit={distanceUnit}
@@ -146,6 +152,7 @@ export default function CostAnalysisPage() {
       {/* 3 — Charger-type economics */}
       <FadeIn delay={0.1}>
         <ChargerTypeBreakdown
+          period={returnedSessionPeriod}
           data={chargerTypeData}
           totalCost={coreStats?.totalCost ?? 1}
           isLoading={sessionsLoading}
@@ -157,6 +164,7 @@ export default function CostAnalysisPage() {
       {/* 4 — Gas vs EV savings calculator */}
       <FadeIn delay={0.1}>
         <SavingsCalculator
+          period={returnedSessionPeriod}
           gasComparison={gasComparison}
           gasPrice={gasPrice}
           mpg={mpg}
@@ -184,6 +192,7 @@ export default function CostAnalysisPage() {
       {/* 6 — Time-of-use analysis */}
       <FadeIn delay={0.1}>
         <TimeOfUseAnalysis
+          period={returnedSessionPeriod}
           hourlyData={hourlyData}
           touInsights={touInsights}
           isLoading={sessionsLoading}
@@ -212,6 +221,7 @@ export default function CostAnalysisPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-2"
         >
           <LifetimeSummary
+            period={returnedSessionPeriod}
             lifetimeMetrics={lifetimeMetrics}
             coreStats={coreStats}
             isLoading={sessionsLoading}
@@ -219,6 +229,7 @@ export default function CostAnalysisPage() {
             onRetry={retrySessions}
           />
           <EnvironmentalImpact
+            period={returnedSessionPeriod}
             coreStats={coreStats}
             isLoading={sessionsLoading}
             error={sessionsError}

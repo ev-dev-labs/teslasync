@@ -9,8 +9,8 @@ export interface MobileField {
   value: string;
 }
 /** Display values only. Canonical SI rows remain owned by the caller. */
-export interface MobileRow {
-  key: string;
+export interface MobileRow<K extends string | number = string> {
+  key: K;
   title: string;
   primary: string;
   tag?: string;

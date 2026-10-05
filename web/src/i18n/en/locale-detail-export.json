@@ -27,7 +27,8 @@
       "recentEmpty": "No recent exports",
       "statusLine": "{{status}} · started {{relative}}",
       "completedLine": "{{size}} · {{relative}}",
-      "download": "Download"
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export"
     },
     "types": {
       "account": "Account export",

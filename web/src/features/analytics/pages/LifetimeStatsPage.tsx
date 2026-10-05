@@ -1,19 +1,19 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Car, Zap, DollarSign, Leaf, Globe, Moon,
+  Car, DollarSign, Leaf, Globe, Moon,
   Clock, Award, Flame, TreePine, Home,
   Trophy, Gauge, BatteryCharging,
 } from 'lucide-react';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid } from '@/components/layout';
+import { PageLayout, Section, CardGrid } from '@/components/layout/layout-reference';
 import {
-  GlassPanel, HelpTooltip, SectionTitle, Text, Caption, HelperText,
-  type HelpTooltipProps,
+  GlassPanel, SectionTitle, Text, Caption,
 } from '@/components/ui';
 import {
-  StatCard, AnimatedNumber, ProgressRing, MetricBar, Currency, DataFreshnessAuto,
+  AnimatedNumber, ProgressRing, DataFreshnessAuto,
 } from '@/components/data-display';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -23,11 +23,14 @@ import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 import { cn } from '@/lib/cn';
 
+import {
+  SectionCard, HeroChip, FunFactCard, SavingsBar, EnvStat, RecordCard,
+  MiniStat, LifetimeKeyStats, lifetimeSectionState,
+} from '../components/lifetime-modernization';
 import { AchievementBadge } from '../components/AchievementBadge';
 import { AILifetimeStatsQA } from '@/components/ai/AILifetimeStatsQA';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
@@ -39,11 +42,7 @@ const METERS_PER_KM = 1000;
 const SAVINGS_PER_COFFEE = 5;
 
 /* Semantic chart/accent colors (toned, color-blind friendly). */
-const EV_COLOR = '#10b981';
-const GAS_COLOR = '#f43f5e';
 const CO2_COLOR = '#22c55e';
-
-type SectionState = 'loading' | 'error' | 'empty' | 'ready';
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 
@@ -53,7 +52,6 @@ export default function LifetimeStatsPage() {
   const { formatDate: fmtDate } = useDateFormat();
   usePageTitle(t('lifetime.title', 'Lifetime stats'));
   const { unitPrefs } = useUnits();
-  const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
   // backend `total_distance_km` and `longest_drive_record.value` are SI km;
@@ -72,8 +70,12 @@ export default function LifetimeStatsPage() {
   // Per-section state resolver — one query feeds the page, but every panel
   // renders its own loading / error / empty independently (never gate the
   // whole page behind a single `{data && …}`).
-  const sectionState = (empty: boolean): SectionState =>
-    isLoading ? 'loading' : isError ? 'error' : empty ? 'empty' : 'ready';
+  const hasData = stats != null;
+  const fatalError = isError && !hasData;
+  const initialLoading = isLoading && !hasData;
+  const sectionState = (empty: boolean) => lifetimeSectionState({
+    hasData, isLoading, isError, empty,
+  });
 
   const heroDistance = stats ? fromKm(stats.total_distance_km) : 0;
 
@@ -123,7 +125,7 @@ export default function LifetimeStatsPage() {
   }, [targetAchievementId, achievements.length, navigate, location.pathname, reduceMotion]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('lifetime.title', 'Lifetime stats')}
       subtitle={t('lifetime.subtitle', 'Your all-time driving achievements and milestones')}
       metadataActions={
@@ -137,16 +139,17 @@ export default function LifetimeStatsPage() {
       <FadeIn>
         <section aria-label={t('lifetime.title', 'Lifetime stats')}>
           <GlassPanel className="p-6 sm:p-8">
-            {isError ? (
+            {hasData && isError && <QueryError error={error} onRetry={retry} />}
+            {fatalError ? (
               <QueryError error={error} onRetry={retry} />
-            ) : isLoading ? (
+            ) : initialLoading ? (
               <Skeleton height={96} />
             ) : (
               <div className="flex flex-col items-center gap-6 text-center xl:flex-row xl:justify-between xl:text-left">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center justify-center gap-3 xl:justify-start">
                     <Car className="h-8 w-8 shrink-0 text-cyan-300" aria-hidden="true" />
-                    <span className="flex items-baseline gap-2">
+                    <span className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 xl:justify-start">
                       <Text
                         as="span"
                         size="3xl"
@@ -190,50 +193,15 @@ export default function LifetimeStatsPage() {
 
       {/* ── KPI band — core lifetime metrics ─────────────────────── */}
       <FadeIn delay={0.05}>
-        <section
-          aria-label={t('lifetime.keyStats', 'Key stats')}
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-        >
-          {isError ? (
-            <div className="col-span-2 lg:col-span-4">
-              <GlassPanel className="p-4 sm:p-5">
-                <QueryError error={error} onRetry={retry} />
-              </GlassPanel>
-            </div>
-          ) : (
-            <>
-              <StatCard
-                loading={isLoading}
-                label={t('lifetime.totalDrives', 'Total drives')}
-                value={fmtInt(stats?.total_drives ?? 0)}
-                icon={<Car className="h-4 w-4" aria-hidden="true" />}
-                sublabel={`${fmtNumber(stats?.total_driving_hours ?? 0)} ${t('lifetime.hours', 'hrs')}`}
-              />
-              <StatCard
-                loading={isLoading}
-                label={t('lifetime.totalDistance', 'Total distance')}
-                value={fmtNumber(heroDistance)}
-                unit={distanceUnit}
-                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-              />
-              <StatCard
-                loading={isLoading}
-                label={t('lifetime.totalEnergy', 'Total energy')}
-                value={fmtNumber(stats?.total_energy_kwh ?? 0)}
-                unit="kWh"
-                icon={<Zap className="h-4 w-4" aria-hidden="true" />}
-                sublabel={`${fmtInt(stats?.total_charge_sessions ?? 0)} ${t('lifetime.sessions', 'sessions')}`}
-              />
-              <StatCard
-                loading={isLoading}
-                label={t('lifetime.totalSavings', 'Total savings')}
-                value={formatCurrency(stats?.total_savings ?? 0)}
-                icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
-                sublabel={t('lifetime.vsGas', 'vs gasoline')}
-              />
-            </>
-          )}
-        </section>
+        <Section id="lifetime-key-stats" title={t('lifetime.keyStats', 'Key stats')}>
+          <LifetimeKeyStats
+            stats={stats}
+            loading={isLoading}
+            fatalError={fatalError}
+            error={error}
+            onRetry={retry}
+          />
+        </Section>
       </FadeIn>
 
       {/* ── AI Q&A (opt-in; absent when AI is off) ───────────────── */}
@@ -245,9 +213,9 @@ export default function LifetimeStatsPage() {
 
       {/* ── Bento A — Fun Facts (hero) + Savings comparison ──────── */}
       <FadeIn delay={0.15}>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+        <CardGrid label={t('lifetime.funFacts', 'Fun facts')} items={[
+          { id: 'lifetime-fun-facts', size: 'half', content: (
           <SectionCard
-            className="xl:col-span-2"
             title={t('lifetime.funFacts', 'Fun facts')}
             icon={<Flame className="h-5 w-5 text-amber-300" aria-hidden="true" />}
             state={sectionState(!stats)}
@@ -256,7 +224,7 @@ export default function LifetimeStatsPage() {
             emptyMessage={t('lifetime.noData', 'No driving data yet')}
             skeletonHeight={140}
           >
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 @[320px]:grid-cols-2 @[640px]:grid-cols-4 @[640px]:gap-4">
               <FunFactCard
                 icon={<Globe className="h-6 w-6 shrink-0 text-indigo-300" aria-hidden="true" />}
                 value={fmtNumber((stats?.earth_circumferences ?? 0) * 100)}
@@ -283,7 +251,8 @@ export default function LifetimeStatsPage() {
               />
             </div>
           </SectionCard>
-
+          ) },
+          { id: 'lifetime-savings-comparison', size: 'half', content: (
           <SectionCard
             title={t('lifetime.savingsComparison', 'Savings vs gasoline')}
             icon={<DollarSign className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
@@ -300,12 +269,14 @@ export default function LifetimeStatsPage() {
               co2Kg={stats?.co2_offset_kg ?? 0}
             />
           </SectionCard>
-        </div>
+          ) },
+        ]} />
       </FadeIn>
 
       {/* ── Bento B — Environmental / Records / Activity ─────────── */}
       <FadeIn delay={0.2}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3 xl:gap-5">
+        <CardGrid label={t('lifetime.activitySummary', 'Activity summary')} items={[
+          { id: 'lifetime-environmental-impact', size: 'third', content: (
           <SectionCard
             title={t('lifetime.environmentalImpact', 'Environmental impact')}
             icon={<Leaf className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
@@ -340,7 +311,8 @@ export default function LifetimeStatsPage() {
               />
             </Grid>
           </SectionCard>
-
+          ) },
+          { id: 'lifetime-personal-records', size: 'third', content: (
           <SectionCard
             title={t('lifetime.personalRecords', 'Personal records')}
             icon={<Award className="h-5 w-5 text-amber-300" aria-hidden="true" />}
@@ -371,7 +343,8 @@ export default function LifetimeStatsPage() {
               />
             </Grid>
           </SectionCard>
-
+          ) },
+          { id: 'lifetime-activity-summary', size: 'third', content: (
           <SectionCard
             title={t('lifetime.activitySummary', 'Activity summary')}
             icon={<Clock className="h-5 w-5 text-sky-300" aria-hidden="true" />}
@@ -381,7 +354,7 @@ export default function LifetimeStatsPage() {
             emptyMessage={t('lifetime.noData', 'No driving data yet')}
             skeletonHeight={200}
           >
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 @[320px]:grid-cols-2 @[640px]:grid-cols-4">
               <MiniStat
                 label={t('lifetime.mostActiveDay', 'Most active day')}
                 value={stats?.most_active_day_of_week || '—'}
@@ -407,7 +380,8 @@ export default function LifetimeStatsPage() {
               />
             </div>
           </SectionCard>
-        </div>
+          ) },
+        ]} />
       </FadeIn>
 
       {/* ── Achievement Gallery — full-width detail band ─────────── */}
@@ -422,9 +396,10 @@ export default function LifetimeStatsPage() {
               {unlockedCount}/{achievements.length} {t('lifetime.unlocked', 'unlocked')}
             </Caption>
           </div>
-          {isLoading ? (
+          {hasData && isError && <QueryError error={error} onRetry={retry} />}
+          {initialLoading ? (
             <Skeleton height={200} />
-          ) : isError ? (
+          ) : fatalError ? (
             <QueryError error={error} onRetry={retry} />
           ) : achievements.length === 0 ? (
             <EmptyState /* no-action: transient empty state — surfaces when the vehicle has no unlocked or in-progress achievements yet */
@@ -441,13 +416,11 @@ export default function LifetimeStatsPage() {
                         if (node) badgeRefs.current.set(a.id, node);
                         else badgeRefs.current.delete(a.id);
                       }}
-                      className={
-                        isPulsing
-                          ? (reduceMotion
-                              ? 'rounded-xl ring-2 ring-yellow-400/80'
-                              : 'rounded-xl ring-2 ring-yellow-400/80 animate-pulse')
-                          : 'rounded-xl'
-                      }
+                      className={cn(
+                        'rounded-xl',
+                        isPulsing && 'ring-2 ring-yellow-400/80',
+                        isPulsing && !reduceMotion && 'animate-pulse',
+                      )}
                       data-achievement-id={a.id}
                     >
                       <AchievementBadge achievement={a} size="md" />
@@ -459,164 +432,6 @@ export default function LifetimeStatsPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
-  );
-}
-
-/* ── Sub-components (page-local, single-export rule preserved) ─────── */
-
-/** Consistent panel shell with a titled header and self-owned
- *  loading / error / empty states so each section is independent. */
-function SectionCard({
-  title, icon, state, error, onRetry, emptyMessage,
-  skeletonHeight = 132, className, headerExtra, children,
-}: {
-  title: string;
-  icon: ReactNode;
-  state: SectionState;
-  error?: unknown;
-  onRetry?: () => void;
-  emptyMessage: string;
-  skeletonHeight?: number;
-  className?: string;
-  headerExtra?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <SectionTitle className="flex items-center gap-2">
-          {icon}
-          {title}
-        </SectionTitle>
-        {headerExtra}
-      </div>
-      {state === 'loading' ? (
-        <Skeleton height={skeletonHeight} />
-      ) : state === 'error' ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : state === 'empty' ? (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          message={emptyMessage}
-        />
-      ) : (
-        children
-      )}
-    </GlassPanel>
-  );
-}
-
-/** Rounded pill used in the hero for at-a-glance context facts. */
-function HeroChip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-cyan-300">
-      {icon}
-      <Text as="span" size="xs" color="secondary">{children}</Text>
-    </span>
-  );
-}
-
-function FunFactCard({ icon, value, unit, label }: {
-  icon: ReactNode; value: string; unit: string; label: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-lg border border-white/[0.05] bg-white/[0.03] p-3">
-      {icon}
-      <div className="min-w-0">
-        <p className="flex items-baseline gap-1">
-          <Text as="span" size="xl" weight="bold" color="primary" className="tabular-nums">{value}</Text>
-          {unit && <Caption>{unit}</Caption>}
-        </p>
-        <HelperText className="truncate">{label}</HelperText>
-      </div>
-    </div>
-  );
-}
-
-function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
-  evCost: number; gasCost: number; savings: number; co2Kg: number;
-}) {
-  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
-  const { t } = useTranslation();
-  const { formatCurrency } = useFormatting();
-  const maxCost = Math.max(evCost, gasCost, 1);
-
-  return (
-    <div className="space-y-4">
-      <MetricBar
-        label={t('lifetime.electricCost', 'Electric cost')}
-        value={evCost}
-        max={maxCost}
-        color={EV_COLOR}
-        sublabel={formatCurrency(evCost)}
-      />
-      <MetricBar
-        label={t('lifetime.gasCost', 'Gasoline equivalent')}
-        value={gasCost}
-        max={maxCost}
-        color={GAS_COLOR}
-        sublabel={formatCurrency(gasCost)}
-      />
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
-        <Text as="span" size="lg" weight="semibold" className="text-emerald-300">
-          {t('lifetime.youSaved', 'You saved')}{' '}
-          <Currency value={savings} precision={displayPrecision} className="text-emerald-300" />
-        </Text>
-        <Caption>
-          {fmtNumber(co2Kg)} kg CO₂ {t('lifetime.avoided', 'avoided')}
-        </Caption>
-      </div>
-    </div>
-  );
-}
-
-function EnvStat({ visual, value, label }: {
-  visual: ReactNode; value: ReactNode; label: string;
-}) {
-  return (
-    <div className="flex items-center gap-4">
-      <span className="shrink-0">{visual}</span>
-      <div className="min-w-0">
-        <Text as="p" size="2xl" weight="bold" color="primary" className="tabular-nums">{value}</Text>
-        <HelperText>{label}</HelperText>
-      </div>
-    </div>
-  );
-}
-
-function RecordCard({ title, value, date, icon }: {
-  title: string; value: string; date: string | null | undefined; icon: ReactNode;
-}) {
-  const { formatDate: fmtDate } = useDateFormat();
-  return (
-    <div className="flex items-center gap-4 rounded-lg border border-white/[0.05] bg-white/[0.03] p-4">
-      {icon}
-      <div className="min-w-0">
-        <Caption>{title}</Caption>
-        <Text as="p" size="lg" weight="bold" color="primary" className="truncate">{value}</Text>
-        {date && <HelperText>{fmtDate(date)}</HelperText>}
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ label, value, help }: {
-  label: string; value: string; help?: HelpTooltipProps;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="rounded-lg border border-white/[0.05] bg-white/[0.03] p-3 text-center">
-      <span className="mb-1 inline-flex items-center gap-1">
-        <Caption>{label}</Caption>
-        {help && (
-          <HelpTooltip
-            size="xs"
-            {...help}
-            ariaLabel={help.ariaLabel ?? t('lifetime.moreInfoAbout', 'More info about {{label}}', { label })}
-          />
-        )}
-      </span>
-      <Text as="p" size="lg" weight="semibold" color="primary">{value}</Text>
-    </div>
+    </PageLayout>
   );
 }

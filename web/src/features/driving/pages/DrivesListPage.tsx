@@ -2,38 +2,30 @@ import { useMemo, useState, useCallback, useEffect, useRef, useDeferredValue } f
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  Route, Gauge, TrendingUp, Clock, Sparkles,
+  Route, Gauge, TrendingUp, Clock,
   ArrowUpDown, ArrowDown, Activity,
   Trash2, AlertTriangle,
   BatteryCharging, Bell, Car, GitCompareArrows, MapPin, Wrench,
 } from 'lucide-react';
-import { CopyLinkButton, PageContainer, PageHeaderSticky } from '@/components/layout';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge, PanelTitle, SectionTitle, Text } from '@/components/ui';
-import { Button } from '@/components/ui/Button';
-import { Pagination } from '@/components/ui/Pagination';
-import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
+import { CopyLinkButton, PageHeaderSticky } from '@/components/layout';
+import { PageLayout } from '@/components/layout/layout-reference';
+import { GlassPanel, Badge, SectionTitle, Text, Button, Pagination } from '@/components/ui';
 import {
-  BulkActionsToolbar, type BulkAction,
+  SavedViewMenu, BulkActionsToolbar, type BulkAction,
   KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
   DataProvenanceBadge, EntityPreviewDrawer, endpointLabel,
   type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { InlineCallout } from '@/components/feedback/InlineCallout';
-import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
+import { type MetricSwitcherMetric } from '@/components/charts';
+import { Skeleton, EmptyState, InlineCallout, DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { PillFilterBar, TableToolbar, type TableControls, type PillItem } from '@/components/forms';
-import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
+import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { parseSearchQuery, matchesTokens, compareNumeric } from '@/lib/searchQuery';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { apiUrl } from '@/api/client';
@@ -70,6 +62,7 @@ import { DRIVE_GRID_SORT_KEYS, DrivesEvidenceTable, type DriveGridFilters, type 
 import { driveAverageSpeed, driveBattery } from '../components/driveGridMetrics';
 import { DRIVE_VALUE_COLUMNS, compactDriveValueSelection, driveColumnValue, driveValueKey, parseDriveValueSelections, type DriveValueColumn } from '../components/driveGridValues';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { DrivesAnalysisSection } from '../components/layout-modernization';
 
 
 /* ------------------------------------------------------------------ */
@@ -1143,7 +1136,7 @@ export default function DrivesListPage() {
   const previewTo = localDayKey(previewDrive?.endTs ?? previewDrive?.startTs, tz) ?? previewFrom;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('drives.title', 'Drive History')}
       subtitle={t(
         'drives.subtitle',
@@ -1167,7 +1160,7 @@ export default function DrivesListPage() {
       }
     >
       <PullToRefresh onRefresh={handlePullToRefresh}>
-        <div className="space-y-3 sm:space-y-4">
+        <div className="min-w-0 space-y-6">
         {/* Sticky bar that appears once the overview scrolls out */}
         <PageHeaderSticky
           targetId="drives-overview"
@@ -1527,71 +1520,23 @@ export default function DrivesListPage() {
           )}
         </FadeIn>
 
-        {/* Trends + highlights — full-width bento: a hero metric-switcher
-            chart beside a period-highlights panel. Both fill wider screens
-            with more columns (xl → 3 cols, 3xl → 4). Each section owns its
-            loading / empty state independently. */}
+        {/* Container-sized placement only. The original chart continues to
+            own its metric switcher, accessible data, export and fullscreen. */}
         <FadeIn delay={0.1}>
-          <section
-            aria-label={t('drives.analysis', 'Trends and highlights')}
-            className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5 3xl:grid-cols-4"
-          >
-            <div className="xl:col-span-2 3xl:col-span-3">
-              {isDrivesLoading ? (
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelTitle className="mb-3 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                    {t('drives.overTime', 'Drives over time')}
-                  </PanelTitle>
-                  <Skeleton className="h-56 sm:h-64" />
-                </GlassPanel>
-              ) : (
-                <MetricSwitcherChart
-                  title={t('drives.overTime', 'Drives over time')}
-                  ariaLabel={t('drives.overTime.aria', 'Drives over time chart with metric switcher')}
-                  series={trendSeries}
-                  metrics={trendMetricsConfig}
-                  activeMetric={trendMetric}
-                  onMetricChange={(k) => setTrendMetric(k as TrendMetric)}
-                  formatXTick={formatChartXTick}
-                  emptyMessage={t('drives.overTime.empty', 'No data for this metric in the selected range')}
-                  testId="drives-trend-chart"
-                />
-              )}
-            </div>
-
-            <GlassPanel className="space-y-4 p-4 sm:p-5 xl:col-span-1">
-              <PanelTitle className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('drives.highlights', 'Highlights')}
-              </PanelTitle>
-              {isDrivesLoading ? (
-                <Skeleton className="h-40" />
-              ) : currentStats.count === 0 ? (
-                <EmptyState
-                  /* no-action: transient empty state — no drives in the selected range to summarise */
-                  message={t('drives.noHighlights', 'No highlights in this range')}
-                />
-              ) : (
-                <div className="space-y-4">
-                  <dl className="space-y-3">
-                    {highlightRows.map((row) => (
-                      <div key={row.key} className="flex items-center justify-between gap-3">
-                        <Text as="dt" size="sm" color="secondary" className="flex min-w-0 items-center gap-2">
-                          {row.icon}
-                          <span className="truncate">{row.label}</span>
-                        </Text>
-                        <Text as="dd" size="sm" weight="semibold" color="primary" className="shrink-0 tabular-nums">
-                          {row.value}
-                        </Text>
-                      </div>
-                    ))}
-                  </dl>
-                  {anomalyFooter}
-                </div>
-              )}
-            </GlassPanel>
-          </section>
+          <DrivesAnalysisSection
+            isLoading={isDrivesLoading}
+            count={currentStats.count}
+            series={trendSeries}
+            metrics={trendMetricsConfig}
+            activeMetric={trendMetric}
+            onMetricChange={(key) => {
+              const metric = TREND_METRICS.find(candidate => candidate === key);
+              if (metric) setTrendMetric(metric);
+            }}
+            formatXTick={formatChartXTick}
+            highlightRows={highlightRows}
+            anomalyFooter={anomalyFooter}
+          />
         </FadeIn>
 
         {!desktopEvidence && <FadeIn>
@@ -2002,6 +1947,6 @@ export default function DrivesListPage() {
         />
         </div>
       </PullToRefresh>
-    </PageContainer>
+    </PageLayout>
   );
 }

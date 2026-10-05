@@ -36,7 +36,7 @@ export function defaultMobileRoles(
   return roles;
 }
 /** Configuration validation is explicit: don't silently discard excess/duplicate metadata. */
-export function rowMappingIssues(row: MobileRow): string[] {
+export function rowMappingIssues(row: MobileRow<string | number>): string[] {
   const issues: string[] = [];
   if (row.meta.length > 3) issues.push('too-many-meta-fields');
   const keys = row.meta.map(field => field.key);

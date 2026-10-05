@@ -525,6 +525,7 @@
       },
       "reason": {
         "count": "Expected a non-negative safe integer count",
+        "duration": "Expected a non-negative duration for this display",
         "missing": "No measurement supplied",
         "nonfinite": "Expected a finite numeric measurement",
         "overflow": "Display conversion exceeded the finite numeric range",

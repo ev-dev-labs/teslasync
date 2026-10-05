@@ -6592,6 +6592,7 @@
       "date": "Date"
     },
     "stats": {
+      "costMissing": "No recorded session costs in the selected returned sessions.",
       "chargingByType": "Charging stats by type",
       "energySplitLabel": "Energy split (AC vs DC)",
       "detailedStatistics": "Detailed statistics",
@@ -6771,6 +6772,7 @@
     "selectVehicle": "Select vehicle",
     "detail": {
       "title": "Charge session",
+      "sessionRequired": "Session details appear when the charge session is available.",
       "energyAdded": "Energy added",
       "endSoc": "End SoC",
       "peakPower": "Peak power",
@@ -6942,6 +6944,10 @@
   "compare": {
     "title": "Period comparison",
     "subtitle": "Compare key metrics across two time periods",
+    "sources": {
+      "awaitingPair": "Comparison requires both periods. Available period values remain visible below.",
+      "paused": "This period is waiting for a connection. No values are available yet."
+    },
     "vehicle": "Vehicle",
     "periodA": "Period A",
     "periodB": "Period B",
@@ -7002,6 +7008,21 @@
     "noChange": "No change",
     "changed": "changed",
     "unchanged": "unchanged"
+  },
+  "firmwareImpact": {
+    "modernization": {
+      "testedHelp": "Each install splits returned drives into before and after windows clipped at neighboring installs. Welch’s t-test compares consumption samples without assuming equal variance. This observational comparison does not isolate a firmware effect.",
+      "significant": "Significant comparisons",
+      "period": "Returned history · install-centered windows",
+      "historyLimit": "Comparisons use only the histories returned by the existing endpoints, not guaranteed complete vehicle history. Each nominal window spans 30 days before or after an install and is clipped at neighboring installs.",
+      "waiting": "Waiting for both drive history and software updates.",
+      "chartHint": "Bars below zero show lower observed consumption after an install, not proof that the update caused the change.",
+      "summary": "Comparison overview",
+      "deltas": "Observed consumption differences",
+      "evidence": "Per-version evidence",
+      "subtitle": "Observational before-and-after comparisons of software installs using Welch’s t-test on recorded consumption",
+      "attribution": "These comparisons are observational, not controlled experiments. Weather, routes, speed, driving habits and other changes can affect consumption. Statistical significance and effect size do not prove that firmware caused a difference."
+    }
   },
   "live": {
     "connected": "Live",
@@ -10327,10 +10348,15 @@
     }
   },
   "lifetime": {
+    "achievementBadge": "Achievement",
     "unlocked": "✓ Unlocked",
     "title": "Lifetime stats",
     "allVehicles": "All vehicles",
     "subtitle": "Your all-time driving achievements and milestones",
+    "source": {
+      "allTime": "All time",
+      "aggregate": "Server lifetime aggregates"
+    },
     "aiQA": {
       "title": "Ask about your lifetime stats",
       "description": "Ask Helix a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
@@ -10989,6 +11015,10 @@
     },
     "weeklyDigest": {
       "alertsSection": "Alerts",
+      "modernization": {
+        "periodProvenance": "Selected week; based on available history records.",
+        "comparisonPeriod": "Compared with previous week"
+      },
       "alertsBySeverity": "Alerts by severity",
       "alertDistribution": "Alert distribution",
       "batteryHealth": "Battery health",
@@ -11163,6 +11193,14 @@
   },
   "comparison": {
     "selectVehicle": "Select a vehicle",
+    "highlightContext": {
+      "provenance": "Battery readings are snapshots; efficiency, charging cost and CO₂ saved are lifetime statistics.",
+      "period": "Snapshot and lifetime comparison"
+    },
+    "trendContext": {
+      "scope": "Monthly charts use the server’s default window starting 24 months ago, rounded to the start of that month. Distances are in km; lifetime statistics are not limited to this window."
+    },
+    "noVehicles": "Add vehicles to start a fleet comparison.",
     "battery": "Battery",
     "range": "Range",
     "temp": "Temperature",
@@ -11216,6 +11254,38 @@
   "mileage": {
     "title": "Mileage",
     "subtitle": "Daily and monthly distance tracking",
+    "summary": {
+      "unavailable": "Mileage summary has not been supplied.",
+      "recordedDistance": "Distance from the lifetime rollup of recorded drives, not the vehicle odometer. Recording completeness is unknown.",
+      "recordedDrives": "Drive count from the lifetime rollup of recorded drives. Recording completeness is unknown.",
+      "dailyMethod": "Recorded distance in the last 30 days divided by 30, including days without drives.",
+      "projectionMethod": "The last-30-day daily average multiplied by 365. This is a projection, not measured annual distance.",
+      "sevenDayMethod": "Recorded drive distance in the server’s fixed trailing 7-day window.",
+      "yearMethod": "Recorded drive distance in the server’s fixed trailing 365-day window.",
+      "periods": "Recorded lifetime · trailing 30-day average · annual projection · trailing 7 / 365 days",
+      "completeness": "These are separate server-defined periods, not a shared analysis range. Recording completeness is not reported."
+    },
+    "source": {
+      "retained": "Refresh failed. Showing the last successful mileage data.",
+      "paused": "Refresh is paused. Showing the last successful mileage data.",
+      "refreshing": "Refreshing mileage data. Previously loaded content remains available.",
+      "odometerPeriod": "Daily source: trailing 90 days. Absolute end-of-day odometer readings; days without a reading are omitted. Recording completeness is unknown."
+    },
+    "windows": {
+      "method": "Fixed trailing 7 / 30 / 365-day distances, scaled against recorded lifetime distance. First and last drive dates describe recorded activity, not guaranteed vehicle lifetime coverage."
+    },
+    "daily": {
+      "period": "Recorded daily drive distance from the trailing 90-day source. Dates use the existing date formatter. Recording completeness is unknown."
+    },
+    "monthly": {
+      "period": "UTC calendar-month buckets from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.",
+      "method": "The same UTC monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows."
+    },
+    "analysis": {
+      "title": "Recorded mileage",
+      "scope": "Vehicle scope comes from the workspace header. Mileage sources use their own fixed periods; they do not accept workspace date bounds.",
+      "cards": "Mileage metrics, charts and monthly detail"
+    },
     "totalDistance": "Total distance",
     "totalDrives": "Total drives",
     "dailyAvg": "Daily avg",
@@ -11252,6 +11322,9 @@
   "statistics": {
     "title": "Statistics",
     "subtitle": "Lifetime vehicle statistics and records",
+    "periodSummary": "Totals and averages",
+    "healthAndState": "Battery health and vehicle states",
+    "mileageAndFleet": "Mileage and fleet comparison",
     "selectVehicle": "Select vehicle",
     "averages": "Averages",
     "noData": "No statistics yet",
@@ -11427,6 +11500,32 @@
   },
   "timeline": {
     "title": "Timeline",
+    "summary": {
+      "period": "{{start}} – {{end}} (exclusive) · {{timezone}}",
+      "provenance": "Vehicle FSM summary for the requested window; continuous observation coverage is unknown",
+      "transitionDescription": "Sum of transition counts returned by the state summary for this window",
+      "drivingDescription": "Time in the driving state, rounded to whole minutes",
+      "chargingDescription": "Time in the charging state, rounded to whole minutes",
+      "idleSleepDescription": "Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes",
+      "missing": "No state summary is available for this window"
+    },
+    "source": {
+      "selectVehicle": "Select a vehicle to view its state history",
+      "paused": "{{section}} is paused while the connection is unavailable",
+      "unknown": "{{section}} is unavailable because the response did not contain the expected records",
+      "failed": "Unable to load {{section}}",
+      "loading": "Loading {{section}}",
+      "retained": "Showing retained {{section}} after a refresh failed",
+      "pausedRetained": "Refresh is paused; retained {{section}} remains available"
+    },
+    "daily": {
+      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary"
+    },
+    "trigger": "Trigger",
+    "refresh": "Refresh timeline",
+    "noStateData": "No state distribution available yet",
+    "timeByState": "Time by state",
+    "kpis": "Summary metrics",
     "time": "Time",
     "fromState": "From state",
     "toState": "To state",
@@ -11463,6 +11562,14 @@
   "tco": {
     "title": "Lifetime operating cost",
     "subtitle": "Evidence-backed recorded charging versus modeled gasoline operating cost",
+    "modernization": {
+      "evidence": {
+        "title": "Operating-cost evidence"
+      },
+      "ledger": {
+        "refreshFailed": "The fixed-cost ledger refresh failed; the most recently loaded entries remain visible."
+      }
+    },
     "states": {
       "noVehicle": "Select a vehicle to load its lifetime operating-cost evidence.",
       "loadingLabel": "Loading operating-cost evidence",
@@ -13369,6 +13476,11 @@
       "seatHeaters": "Seat heaters",
       "seatCooling": "Seat cooling",
       "ventilation": "Ventilation",
+      "rearCenter": "Rear center",
+      "autoClimateLeft": "Auto climate (left)",
+      "autoClimateRight": "Auto climate (right)",
+      "adjusting": "Adjusting",
+      "farFromTarget": "Far from target",
       "climateEfficiency": "Climate efficiency",
       "avgFanSpeed": "Avg fan speed",
       "levelRange": "Level 0–10",
@@ -13385,6 +13497,11 @@
     "home": "Home / AC"
   },
   "costAnalysis": {
+    "statScope": {
+      "returnedSessions": "Only returned charging sessions are summarized. The requested {{limit}}-row limit does not prove completeness; these are not complete-window or lifetime totals.",
+      "billing": "Reconciliation is independent of the selected date range; its reporting window is not supplied by this view.",
+      "forecast": "Forecast is independent of the selected date range; history and projection windows belong to the returned forecast, not a proven lifetime total."
+    },
     "aiNarrative": {
       "title": "Narrate the charging-cost forecast",
       "badge": "Helix",
@@ -13803,7 +13920,8 @@
       "recentEmpty": "No recent exports",
       "statusLine": "{{status}} · started {{relative}}",
       "completedLine": "{{size}} · {{relative}}",
-      "download": "Download"
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export"
     },
     "types": {
       "account": "Account export",
@@ -15990,6 +16108,55 @@
   },
   "drivetrain": {
     "temperatures": "Temperature details",
+    "modernization": {
+      "charts": "Motor, temperature and power history charts",
+      "detailsAndAdvice": "Temperature, power and health recommendations",
+      "powerMethodology": "Peak-labelled power uses average drive power from up to 30 returned drives. Per-drive regen power is not supplied; gaps are unknown, not zero.",
+      "healthMethodology": "Health temperatures are backend battery-module proxies, not direct motor measurements.",
+      "snapshot": "Latest health response",
+      "driveSubset": "Recent drives within the selected range",
+      "noAssessment": "No temperature evidence for an active health assessment",
+      "unknown": "Unknown",
+      "healthDetails": "Health and drive details",
+      "scorePolicy": "Status-to-score policy: good 95%, warning 60%, critical 25%. This is a rating, not a measured percentage.",
+      "snapshotNotLive": "A health response is a snapshot; it does not establish an active telemetry connection.",
+      "allReturnedStats": "Vehicle drive statistics",
+      "statsScope": "Unbounded vehicle statistics; independent of the chart date filter.",
+      "unavailablePowerSignal": "Direct power signal (not supplied)",
+      "axle": "Axle speed (RPM)",
+      "historyRecords": "History record details",
+      "motorRecords": "Motor history records",
+      "driveRecords": "Included drive records",
+      "recordScope": "These details contain every field of the plotted records, including unknown signals. Motor history retains source order; drives retain chronological order and the existing 30-record cap.",
+      "isolationHigh": "500 kΩ or above",
+      "isolationMiddle": "100–499 kΩ",
+      "isolationLow": "Below 100 kΩ",
+      "field": "Field",
+      "reading": "Reading",
+      "liveNotConnected": "Live telemetry connection not established",
+      "liveDetails": "Live motor record details",
+      "isolationPolicy": "HV isolation bands are 500 kΩ and 100 kΩ. Non-positive readings use the existing unknown policy.",
+      "proxyFront": "The health endpoint projects the minimum battery-module temperature into the front motor temperature field.",
+      "proxyRear": "The health endpoint projects the maximum battery-module temperature into the rear motor temperature field.",
+      "proxyInverter": "The health endpoint adds a 7°C temperature difference to the maximum battery-module reading as an inverter proxy.",
+      "proxyBattery": "The health endpoint averages the available minimum and maximum module readings, or uses the single available reading.",
+      "methodologyTitle": "Health methodology and source limits",
+      "backendPolicy": "The backend reports warning above {{warm}} and critical above {{critical}}, based on its maximum module/inverter proxy. These thresholds differ from the per-component gauge ratios.",
+      "gaugePolicy": "Component gauges compare Celsius readings with their original ceilings: {{motor}} for front/rear motor, {{inverter}} for inverter and {{battery}} for battery. Warning begins at 65% and critical at 85% of the ceiling.",
+      "statorAliases": "Existing Stator, Rear-Left and Rear-Right series map to front motor, rear motor and inverter temperature respectively. These aliases do not identify additional motors.",
+      "historyScope": "Motor history uses the existing 200-snapshot request in source order. The date range filters returned drives, not motor history or vehicle drive statistics.",
+      "averageCoverage": "Average power requires a power reading for every included drive. An incomplete set remains unknown rather than treating missing readings as zero.",
+      "unknownPolicy": "Without temperature evidence, no active health assessment is presented. A returned status is still recorded as source data.",
+      "generalAdvice": "No active assessment is available. General care recommendations remain available below.",
+      "thermalPanels": "Thermal gauges and load indicators",
+      "gaugeScale": "Gauge scale: {{minimum}} to {{maximum}}",
+      "band": {
+        "unknown": "unknown",
+        "good": "good",
+        "warning": "warning",
+        "critical": "critical"
+      }
+    },
     "frontMotorTemp": "Front motor temp",
     "rearMotorTemp": "Rear motor temp",
     "inverterTemp": "Inverter temp",
@@ -16598,6 +16765,14 @@
     }
   },
   "drives": {
+    "analysis": "Trends and highlights",
+    "overTime": {
+      "title": "Drives over time",
+      "aria": "Drives over time chart with metric switcher",
+      "empty": "No data for this metric in the selected range"
+    },
+    "highlights": "Highlights",
+    "noHighlights": "No highlights in this range",
     "exportScope": "Exports include every drive in the selected vehicle and date range, without list filters or selection.",
     "score": "score",
     "date": "Drive",
@@ -16798,6 +16973,11 @@
   },
   "regen": {
     "title": "Regenerative braking",
+    "modernization": {
+      "contextGrid": "Recovery context",
+      "ratioUnavailable": "Recovery share is unavailable; no zero value is inferred.",
+      "denominatorUnavailable": "The aggregate drive-energy denominator is unavailable."
+    },
     "subtitle": "Descriptive energy-recovery evidence for the selected date window",
     "regenRatio": "Regen ratio",
     "recoveredInfo": "The complete aggregate reports {{recovered}} recovered from {{driveEnergy}} of drive energy.",
@@ -20027,7 +20207,28 @@
     "preview": {
       "eyebrow": "Service evidence",
       "title": "Service record",
+      "recordId": "Record ID",
       "completed": "Completed"
+    },
+    "cost": {
+      "methodology": "Annual estimate uses the span between valid service dates, with a minimum of 0.1 years; fewer than two valid dates use total cost. Average cost uses every returned record."
+    },
+    "details": {
+      "createdAt": "Created",
+      "id": "Item ID",
+      "sourceStatus": "Source status",
+      "lastDate": "Last service date",
+      "dueDistance": "Due odometer",
+      "lastDistance": "Last service odometer",
+      "distanceInterval": "Distance interval",
+      "monthInterval": "Month interval",
+      "title": "Service interval and metadata"
+    },
+    "sources": {
+      "refreshBlocked": "Refresh is paused. Retained data remains available."
+    },
+    "summary": {
+      "provenance": "Counts use all returned maintenance items, before category filtering."
     },
     "col": {
       "date": "Date",
@@ -20378,6 +20579,28 @@
   },
   "guard": {
     "title": "Guard mode",
+    "modernization": {
+      "eventsCoverage": "Counts cover the returned security event history, not a theft detection assessment.",
+      "panels": "Guard location, controls, settings, status, and event history",
+      "notSaved": "No saved guard policy yet",
+      "policyOnly": "Saved policy only; not confirmation of active monitoring or successful arming.",
+      "armingEffect": "Enabling saves policy and requests door locking, then Sentry on. Disabling saves policy only; it does not unlock doors or turn Sentry off.",
+      "panicEffects": "This requests Sentry mode on, then horn honking, then light flashing. It does not lock doors, send notifications, or create a guard event. Commands can fail or complete only partially.",
+      "sourceUnknown": "Source unavailable; no security conclusion can be drawn.",
+      "saveFailure": "Policy may have been saved even if arming failed. Review the refreshed policy and live lock/Sentry status before trying again.",
+      "stepUp": "Saving or enabling policy and activating panic may require step-up authentication.",
+      "eventTrigger": "Triggered denotes the latest unacknowledged non-test event, not confirmed theft or an active monitoring engine.",
+      "sensitivityPolicy": "Saved movement threshold policy; automatic detection is not established.",
+      "unsavedDraft": "Unsaved draft",
+      "overviewSources": "Saved policy, current verified vehicle fields, and returned security event history have independent sources.",
+      "selectVehicle": "Select a vehicle in the workspace header to load guard data.",
+      "engineLimitation": "Automatic guard monitoring, theft detection, and auto-panic are not established by the current service. These settings persist policy; verify vehicle security using current lock and Sentry readings.",
+      "geofencePolicy": "Saved home-area policy; leaving this area is not proof of an active automatic alert service.",
+      "autoPanicPolicy": "Saved auto-panic preference; no automatic execution worker is established.",
+      "policyUpdated": "Policy updated {{time}}",
+      "policyUnknown": "Saved policy unavailable",
+      "lastObserved": "Vehicle source last observed"
+    },
     "noGeofence": "— No home geofence —",
     "subtitle": "Anti-theft monitoring and emergency response",
     "alertTriggered": "Guard alert triggered!",
@@ -20605,6 +20828,19 @@
   },
   "safety": {
     "openFsdInsights": "Open FSD insights",
+    "settings": {
+      "unknown": "Unknown",
+      "reportedSnapshot": "Reported configuration snapshot",
+      "coverageExplanation": "Enabled feature share is a configuration count, not a driving safety rating or verification that assistance is active.",
+      "enabledShare": "Enabled feature share",
+      "shareDescription": "Enabled settings divided by nine tracked settings. Unavailable when any setting is unknown.",
+      "configurationCoverage": "Configuration coverage",
+      "incomplete": "Feature share unavailable: some settings are unknown.",
+      "unknownCount": "{{count}} unknown settings",
+      "signalExplanation": "Last reported security and occupant state; separate from configuration settings. No live verification command is sent.",
+      "readOnly": "Reported vehicle settings only. This page does not edit or save settings, and configured assistance does not establish current intervention or availability.",
+      "historyExplanation": "Recorded configuration snapshots, not intervention events. Gaps represent unknown states; the full history table follows below."
+    },
     "openFsdInsightsHint": "Daily trend & data confidence",
     "liveSignals": "Live safety signals",
     "selectVehicleCta": "Go to vehicles",
@@ -20676,6 +20912,12 @@
   },
   "softwareUpdates": {
     "title": "Software updates",
+    "source": {
+      "unavailable": "Update history is not available. Select a vehicle to load its history.",
+      "failed": "Update history could not be refreshed. Retry to recover.",
+      "period": "Loaded update history",
+      "scope": "Summary and charts describe this page of up to 50 updates in the selected range, not the complete fleet history."
+    },
     "resetRangeCta": "View all time",
     "aiNarration": {
       "title": "Summarize my software update history",
@@ -20687,6 +20929,12 @@
     "subtitle": "Track firmware versions and update history",
     "kpi": {
       "label": "Software update summary",
+      "versionHelp": "Version from the first returned update; not an independently observed installed firmware snapshot.",
+      "totalHelp": "Number of updates on the loaded page.",
+      "installedHelp": "Loaded updates whose status is installed.",
+      "pendingHelp": "All loaded updates minus installed updates; includes every other status.",
+      "lastHelp": "Latest nonempty installation date among loaded installed updates.",
+      "cadenceHelp": "Span in days divided by the number of intervals between valid installation dates on this page.",
       "currentVersion": "Current version",
       "totalUpdates": "Total updates",
       "installed": "Installed",
@@ -20726,6 +20974,16 @@
   "tirePressure": {
     "title": "Tire pressure",
     "subtitle": "Monitor tire pressure readings and history",
+    "methodology": {
+      "average": "Arithmetic mean of the corners with a pressure reading. Missing corners are excluded.",
+      "minimum": "Lowest reported corner pressure. Missing corners are excluded.",
+      "warningCount": "Reported corners outside the inclusive 250–350 kPa normal band. This is not a count of vehicle TPMS flags.",
+      "lastUpdated": "Newest history row in the selected window; not the observation time of the latest readings."
+    },
+    "reportedCorners": "{{count}} of 4 corners reported",
+    "reportedPressure": "Reported pressure: {{value}} {{unit}}",
+    "retainedRefresh": "Could not refresh {{source}}. Retained readings remain available.",
+    "pausedRefresh": "Refresh of {{source}} is paused. Retained readings remain available.",
     "aiTrendReasoning": {
       "title": "Narrate the 30-day tire-pressure trend",
       "badge": "Helix",
@@ -21999,6 +22257,9 @@
     "statusOffline": "Offline"
   },
   "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    },
     "title": "Report a bug / send feedback",
     "openShort": "Report bug",
     "openAria": "Open feedback / bug report form",
@@ -29334,6 +29595,24 @@
     }
   },
   "media": {
+    "modernization": {
+      "unknownStatus": "Unknown status",
+      "retained": "Refresh failed; previously loaded data remains visible for the affected source.",
+      "noSnapshot": "No media snapshot available",
+      "progressUnknown": "Playback progress is unavailable without a reported elapsed time and positive duration.",
+      "reportedMaximum": "Reported maximum",
+      "fallbackScale": "No positive maximum reported; gauge uses the existing fallback scale of 11.",
+      "unavailable": "This source is unavailable",
+      "loading": "Loading this source",
+      "unknownReading": "No reading reported",
+      "uniqueTracksHelp": "Distinct non-empty track titles in the returned history inside the selected dates.",
+      "topSourceHelp": "Most frequent reported playback source in the returned history; missing source names are excluded.",
+      "averageVolumeHelp": "Arithmetic mean of finite audio volume readings in the returned history, rounded as before. Missing readings are excluded.",
+      "volumeStepHelp": "Audio volume increment from the latest media snapshot, not a historical average.",
+      "latestSnapshot": "Latest media snapshot",
+      "returnedHistory": "Returned history: {{start}} – {{end}}",
+      "historyCoverage": "Listening totals describe returned snapshots within the selected dates, not complete listening time. Volume step uses the latest snapshot."
+    },
     "sourceAria": "Pie chart of media source distribution",
     "volumeAria": "Media volume over time area chart"
   },
@@ -30691,6 +30970,7 @@
       },
       "reason": {
         "count": "Expected a non-negative safe integer count",
+        "duration": "Expected a non-negative duration for this display",
         "missing": "No measurement supplied",
         "nonfinite": "Expected a finite numeric measurement",
         "overflow": "Display conversion exceeded the finite numeric range",

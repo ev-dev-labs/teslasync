@@ -142,6 +142,7 @@ describe('Modal — size presets', () => {
     ['md', 'sm:max-w-lg'],
     ['lg', 'sm:max-w-2xl'],
     ['full', 'sm:max-w-[min(96vw,1100px)]'],
+    ['fullscreen', 'max-w-none'],
   ];
 
   it.each(cases)('size="%s" applies the %s width class', (size, cls) => {
@@ -160,6 +161,22 @@ describe('Modal — size presets', () => {
       </Modal>,
     );
     expect(getDialog().className).toContain('sm:max-w-lg');
+  });
+
+  it('keeps fullscreen content in a viewport-height portal without the ordinary dialog cap', () => {
+    const { container } = render(
+      <Modal open onClose={vi.fn()} ariaLabel="Fullscreen widget" size="fullscreen">
+        <button data-autofocus>Exit fullscreen</button>
+        <div>Measured content</div>
+      </Modal>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Fullscreen widget' });
+    expect(container).not.toContainElement(dialog);
+    expect(document.body).toContainElement(dialog);
+    expect(dialog).toHaveClass('h-[100dvh]', 'max-h-[100dvh]', 'max-w-none');
+    expect(dialog).not.toHaveClass('sm:max-h-[90vh]');
+    expect(dialog.querySelector('[data-modal-scroll-body]')).toHaveClass('flex', 'min-h-0', 'overflow-hidden');
+    expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toHaveFocus();
   });
 });
 

@@ -15,17 +15,18 @@
   }
   .tile:nth-child(2n), .tile:last-child { border-inline-end: 0; }
   .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .value { font-size: 20px; overflow-wrap: anywhere; }
-  .longValue { font-size: 20px; }
-  .extremeValue { font-size: 18px; }
+  /* Keep the existing default sizes while respecting the application's root text scale. */
+  .value { font-size: 1.25rem; overflow-wrap: anywhere; }
+  .longValue { font-size: 1.25rem; }
+  .extremeValue { font-size: 1.125rem; }
   @container (min-width: 640px) {
     .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .tile:last-child:nth-child(odd) { grid-column: auto; }
     .tile:nth-child(2n) { border-inline-end: 1px solid var(--border-default); }
     .tile:nth-child(3n), .tile:last-child { border-inline-end: 0; }
-    .value { font-size: 24px; }
-    .longValue { font-size: 20px; }
-    .extremeValue { font-size: 18px; }
+    .value { font-size: 1.5rem; }
+    .longValue { font-size: 1.25rem; }
+    .extremeValue { font-size: 1.125rem; }
   }
   @container (min-width: 1024px) {
     .tiles[data-columns="1"] { grid-template-columns: minmax(0, 1fr); }

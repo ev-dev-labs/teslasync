@@ -5,6 +5,11 @@ import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
 import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, GripVertical } from 'lucide-react'
 import { Pagination, type PaginationProps } from './Pagination'
+import { Button } from './Button'
+import { Select } from './Select'
+import { MobileDataTableAdapter } from './MobileDataTableAdapter'
+import type { MobileDataTablePresentation } from './MobileDataTableAdapter.types'
+import { isMobileGridWidth } from './mobile-grid-reference/helpers'
 import { Checkbox } from './Checkbox'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
 import { DataTableColumnMenu } from './DataTableColumnMenu'
@@ -177,6 +182,8 @@ export interface PaginationConfig {
 }
 
 interface DataTableProps<T> {
+  /** Opt-in below 640px of allocated container width; the same table pipeline owns both surfaces. */
+  mobilePresentation?: MobileDataTablePresentation<T>
   /** Remove the outer frame when the enclosing panel already owns the surface. */
   variant?: 'standalone' | 'embedded'
   columns: Column<T>[]
@@ -438,6 +445,7 @@ function alignClass(align?: 'left' | 'center' | 'right'): string {
  *  All advanced props are optional — passing only `columns` + `data` gives the
  *  same lightweight behavior as the base table. */
 export function DataTable<T>({
+  mobilePresentation,
   variant = 'standalone',
   columns,
   data,
@@ -488,6 +496,26 @@ export function DataTable<T>({
   showSelectionSummary = true,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
+  const frameRef = useRef<HTMLDivElement>(null)
+  const [mobileActive, setMobileActive] = useState(false)
+  const mobileEnabled = mobilePresentation != null
+  useEffect(() => {
+    if (!mobileEnabled || !frameRef.current || typeof ResizeObserver === 'undefined') {
+      setMobileActive(false)
+      return
+    }
+    const frame = frameRef.current
+    const update = (width: number) => {
+      if (width > 0) setMobileActive(isMobileGridWidth(width))
+    }
+    update(frame.getBoundingClientRect().width)
+    const observer = new ResizeObserver(entries => {
+      const entry = entries.find(value => value.target === frame)
+      if (entry) update(entry.contentRect.width)
+    })
+    observer.observe(frame)
+    return () => observer.disconnect()
+  }, [mobileEnabled])
   const [localSearch, setLocalSearch] = useState('')
   const deferredLocalSearch = useDeferredValue(localSearch)
   const localSearchEnabled = searchable && !paginationControls && !controls?.search
@@ -616,6 +644,9 @@ export function DataTable<T>({
 
   // Reset to page 1 when data length changes (e.g. filters applied).
   useEffect(() => { setPage(1) }, [data.length, valueSelections, enableValueFilters, deferredLocalSearch])
+  useEffect(() => {
+    if (mobileActive) setPage(1)
+  }, [mobileActive, data, sortKey, sortDir])
 
   // ── Column layout (order + hidden, persisted by tableId) ───────────────
   // The legacy `visibleKeys` state is unified with a
@@ -932,7 +963,7 @@ export function DataTable<T>({
   // Only enabled when explicitly opted in AND there's no `expandable` slot
   // (variable row heights are out of scope). When the user passes both, we
   // gracefully fall back to non-virtualized rendering with a dev warning.
-  const virtualizationActive = virtualized && !expandable && data.length > 0
+  const virtualizationActive = virtualized && !mobileActive && !expandable && data.length > 0
   // Density-aware default row-height estimate. When `density='auto'`,
   // read the live body data attr at mount; otherwise pick the matching
   // fixed height. The virtualizer adapts to actual rendered sizes so
@@ -1000,6 +1031,8 @@ export function DataTable<T>({
   // render path so selection / expansion / styling stay perfectly in sync.
   const renderDataRow = (row: T): ReactNode[] => {
     const rowKey = keyExtractor(row)
+    // React stringifies keys; native identity and body/expansion namespaces must stay distinct.
+    const reconciliationKey = `${typeof rowKey}:${rowKey}`
     const selected = isSelectable && selectionSet.has(rowKey)
     const expanded = expandable && expansionSet.has(rowKey)
     const trClass = cn(
@@ -1028,7 +1061,7 @@ export function DataTable<T>({
         : t('table.selection.selectRow', 'Select row')
     const rows: ReactNode[] = [
       <tr
-        key={rowKey}
+        key={`row:${reconciliationKey}`}
         className={trClass}
         data-selected={selected ? 'true' : undefined}
         data-expanded={expanded ? 'true' : undefined}
@@ -1122,7 +1155,7 @@ export function DataTable<T>({
     ]
     if (expanded && renderExpanded) {
       rows.push(
-        <tr key={`${rowKey}-expanded`} data-expanded-content="true">
+        <tr key={`expanded:${reconciliationKey}`} data-expanded-content="true">
           <td colSpan={totalCols} className={tableTokens.expandedCell}>
             {renderExpanded(row)}
           </td>
@@ -1252,17 +1285,52 @@ export function DataTable<T>({
     showColumnMenu ||
     hasSelectionSummary
 
+  const renderColumnFilter = (col: Column<T>) => (col.filter || valueOptions.has(col.key)) ? (
+    <DataTableHeaderFilter label={col.header}
+      active={col.filterActive || (enableValueFilters && valueSelections[col.key] != null)}
+      onClear={valueOptions.has(col.key) ? () => {
+        setValueSelections(previous => {
+          const next = { ...previous }
+          delete next[col.key]
+          return next
+        })
+        col.onFilterClear?.()
+      } : col.onFilterClear}>
+      {valueOptions.has(col.key) ? (
+        <DataTableValueFilter
+          options={valueOptions.get(col.key) ?? []}
+          selected={selectedTableValueKeys(valueSelections[col.key],
+            (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))}
+          onChange={values => {
+            setPage(1)
+            setValueSelections(previous => {
+              const next = { ...previous }
+              if (values == null) delete next[col.key]
+              else next[col.key] = compactTableValueSelection(values,
+                (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))
+              return next
+            })
+          }}
+          condition={col.filter}
+          conditionActive={col.filterActive}
+        />
+      ) : col.filter}
+    </DataTableHeaderFilter>
+  ) : null
+
   return (
     <>
-    <div className={cn(
+    <div ref={frameRef} className={cn(
       variant === 'embedded' ? 'min-w-0 max-w-full' : tableTokens.frame,
       'space-y-0 overflow-visible p-0',
+      mobilePresentation && 'mgr-host',
     )}
       data-grid-frame="" data-grid-variant={variant}>
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
         <TableToolbar
-          className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3')}
+          className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3',
+            mobileActive && '[&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11')}
           search={searchControls}
           density={densityControls}
           exports={exportControls}
@@ -1299,7 +1367,62 @@ export function DataTable<T>({
           })}
         </Text>
       )}
-      <div ref={scrollContainerRef} className={cn(wrapperClass,
+      {mobileActive && mobilePresentation ? (
+        <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}:mobile`}>
+          <MobileDataTableAdapter
+            rows={paginationEnabled ? filteredData.slice(0, page * pageSize) : filteredData}
+            columns={visibleColumns} allColumns={columns} keyExtractor={keyExtractor}
+            presentation={mobilePresentation} label={accessibleTableName} rowLabel={rowLabel}
+            selectedKeys={selectionSet} selectable={isSelectable && Boolean(onSelectionChange)}
+            multiSelect={selectable === 'multi'}
+            allSelected={allSelected} someSelected={someSelected}
+            onToggleAll={toggleAll} onToggle={toggleRow}
+            emptyMessage={emptyMessage}
+            expandedContent={expandable ? renderExpanded : undefined}
+            expandedKeys={expansionSet}
+            onToggleExpanded={expandable && onExpandedChange ? toggleExpand : undefined}
+            rowActions={rowContextMenu ? row => rowContextMenu(row).map(action => (
+              <Button key={action.id} size="sm" variant={action.destructive ? 'danger' : 'secondary'}
+                disabled={action.disabled} icon={action.icon} onClick={action.onClick}>
+                {action.label}
+              </Button>
+            )) : undefined}
+            onLoadMore={paginationEnabled && page * pageSize < filteredData.length
+              ? () => setPage(previous => previous + 1) : undefined}
+            nextCount={Math.min(pageSize, Math.max(0, filteredData.length - page * pageSize))}
+            onClear={searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? () => {
+              searchControls?.onChange('')
+              setValueSelections({})
+              columns.forEach(column => column.onFilterClear?.())
+              mobilePresentation.onClear?.()
+            } : undefined}
+            count={<Text size="sm" color="muted" role="status">
+              {paginationEnabled && t('developerReference.mobileGrid.footer.showing', 'Showing {{count}} of {{total}}', {
+                count: Math.min(page * pageSize, filteredData.length), total: filteredData.length,
+              })}
+              {' · '}{t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
+                filtered: filteredData.length, loaded: data.length,
+              })}
+            </Text>}
+            controls={<>
+              {visibleColumns.map(col => <div key={col.key} className="flex items-center gap-1">
+                {col.sortable && onSort && <Button size="sm" variant="secondary" className="min-h-11"
+                  aria-label={col.header} onClick={() => onSort(col.key)}>
+                  {col.header}{sortKey === col.key && (sortDir === 'asc'
+                    ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                    : <ChevronDown className="h-3 w-3" aria-hidden="true" />)}
+                </Button>}
+                {renderColumnFilter(col)}
+              </div>)}
+              {paginationEnabled && <Select
+                aria-label={t('pagination.pageSize', 'Rows per page')}
+                value={String(pageSize)}
+                options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
+                onChange={event => handlePageSizeChange(Number(event.target.value))} />}
+            </>}
+          />
+        </SectionErrorBoundary>
+      ) : <div ref={scrollContainerRef} className={cn(wrapperClass,
         !showToolbar && !footerControls ? 'rounded-xl'
           : !showToolbar ? 'rounded-t-xl' : !footerControls ? 'rounded-b-xl' : undefined,
       )} style={wrapperStyle} data-grid-viewport="">
@@ -1439,38 +1562,7 @@ export function DataTable<T>({
                           {col.header}
                         </span>
                       )}
-                    {(col.filter || valueOptions.has(col.key)) && (
-                      <DataTableHeaderFilter label={col.header}
-                        active={col.filterActive || (enableValueFilters && valueSelections[col.key] != null)}
-                        onClear={valueOptions.has(col.key) ? () => {
-                          setValueSelections(previous => {
-                            const next = { ...previous }
-                            delete next[col.key]
-                            return next
-                          })
-                          col.onFilterClear?.()
-                        } : col.onFilterClear}>
-                        {valueOptions.has(col.key) ? (
-                          <DataTableValueFilter
-                            options={valueOptions.get(col.key) ?? []}
-                            selected={selectedTableValueKeys(valueSelections[col.key],
-                              (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))}
-                            onChange={values => {
-                              setPage(1)
-                              setValueSelections(previous => {
-                                const next = { ...previous }
-                                if (values == null) delete next[col.key]
-                                else next[col.key] = compactTableValueSelection(values,
-                                  (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))
-                                return next
-                              })
-                            }}
-                            condition={col.filter}
-                            conditionActive={col.filterActive}
-                          />
-                        ) : col.filter}
-                      </DataTableHeaderFilter>
-                    )}
+                    {renderColumnFilter(col)}
                     </div>
                     {resizable && tableId && (
                       <DataTableResizer
@@ -1520,8 +1612,8 @@ export function DataTable<T>({
             </SectionErrorBoundary>
           </tbody>
         </table>
-      </div>
-      {footerControls && (
+      </div>}
+      {footerControls && (!mobileActive || paginationControls) && (
         <div className="shrink-0 rounded-b-xl border-t border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-3"
           data-grid-footer="">
           <Pagination {...footerControls} />

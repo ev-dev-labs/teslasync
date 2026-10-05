@@ -18,6 +18,11 @@
     "chartFigure": "Chart: {{title}}",
     "helpFor": "Help for {{field}}"
   },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
   "alerts": {
     "tabFlash": "(!) Alert — ",
     "toast": {
@@ -332,9 +337,15 @@
       "message": "Some sources did not respond. Available results remain visible and are not treated as complete.",
       "title": "Partial data"
     },
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
     "stale": {
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible.",
       "title": "Data may be stale"
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
     },
     "unavailable": {
       "message": "A required service is unavailable. This section will recover when the dependency returns.",
@@ -364,7 +375,34 @@
     "spacious": "Spacious",
     "groupLabel": "List density"
   },
+  "developerReference": {
+    "mobileGrid": {
+      "actions": {
+        "clear": "Clear",
+        "retry": "Retry"
+      },
+      "desktop": {
+        "details": "Open reference details and actions"
+      },
+      "footer": {
+        "loadMore": "Load {{count}} more",
+        "showing": "Showing {{count}} of {{total}}"
+      },
+      "gaps": {
+        "mapping": "Invalid mobile mapping: provide at most three unique metadata fields and unique detail fields."
+      },
+      "selection": {
+        "enter": "Select",
+        "row": "Select {{title}}"
+      },
+      "states": {
+        "loading": "Loading reference rows",
+        "noMatch": "Nothing matches “{{query}}”"
+      }
+    }
+  },
   "draft": {
+    "discardDraft": "Discard draft",
     "recovery": {
       "close": "Close",
       "discard": "Discard",
@@ -380,6 +418,19 @@
       "resume": "Resume",
       "review": "Review",
       "savedAt": "Saved {{when}}"
+    },
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
     }
   },
   "editableText": {
@@ -394,6 +445,12 @@
     "rename": {
       "geofence": "Rename geofence {{name}}",
       "alertRule": "Rename alert rule {{name}}"
+    }
+  },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
     }
   },
   "error": {
@@ -433,6 +490,49 @@
       "chartTitle": "This chart failed to load",
       "tableTitle": "This table failed to render",
       "widgetTitle": "Widget failed to load"
+    }
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
     }
   },
   "filter": {
@@ -535,6 +635,10 @@
     "failed": "The install dialog could not open. In Chrome, open the menu and choose install app.",
     "dismiss": "Dismiss install prompt"
   },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "unlocked": "✓ Unlocked"
+  },
   "lightbox": {
     "counter": "{{current}} / {{total}}",
     "close": "Close image viewer",
@@ -557,6 +661,12 @@
     "selectedWithCount": "Selected ({{count}})",
     "visible": "Visible",
     "visibleWithCount": "Visible ({{count}})"
+  },
+  "live": {
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    }
   },
   "mask": {
     "reveal": "Reveal value",
@@ -1113,6 +1223,10 @@
       "description": "Current data with live actions available.",
       "label": "Live",
       "shortLabel": "Live"
+    },
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
     }
   },
   "pagination": {
@@ -1251,6 +1365,9 @@
       "startEnd": "Jump to start / end",
       "title": "Trip replay shortcuts"
     }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
   },
   "routes": {
     "aPIKeys": "API keys",
@@ -1568,7 +1685,15 @@
   },
   "shortcuts": {
     "close": "Close modal / cancel",
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
     "goto": "Go to {{label}}",
+    "gotoPrompt": "Go to…",
     "groups": {
       "actions": "Actions",
       "commands": "Commands",
@@ -1577,7 +1702,9 @@
     },
     "openPalette": "Open command palette",
     "openPaletteAlt": "Open command palette",
-    "openShortcuts": "Show keyboard shortcuts"
+    "openShortcuts": "Show keyboard shortcuts",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
   },
   "slider": {
     "thumbMin": "{{label}} minimum",
@@ -1809,6 +1936,8 @@
   },
   "toast": {},
   "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
     "launcher": {
       "close": "Close",
       "completed": "Completed",
@@ -1822,6 +1951,9 @@
       "subtitle": "Guided walkthroughs for every major feature.",
       "title": "Take a tour"
     },
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour",
     "tours": {
       "alerts": {
         "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
@@ -1908,12 +2040,6 @@
     "statusOnline": "Online",
     "statusIdle": "Idle",
     "statusOffline": "Offline"
-  },
-  "emptyState": {
-    "threshold": {
-      "defaultItem": "items",
-      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
-    }
   },
   "filters": {
     "reset": "Reset filters",

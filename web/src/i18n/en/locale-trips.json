@@ -225,11 +225,6 @@
       "cost": "Cost"
     }
   },
-  "achievements": {
-    "dismiss": "Dismiss achievement notification",
-    "toastEyebrow": "Achievement unlocked",
-    "view": "View"
-  },
   "activity": {
     "action": {
       "alert": "Alert change",
@@ -369,14 +364,6 @@
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
   },
-  "dataState": {
-    "refreshBlocked": {
-      "message": "The device is offline, so this section is showing the last values it received."
-    },
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
-    }
-  },
   "date": {
     "preset": {
       "all": "All time",
@@ -411,61 +398,8 @@
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"
   },
-  "draft": {
-    "discardDraft": "Discard draft",
-    "restored": "Draft restored from {{when}}.",
-    "restoredItem": "{{noun}} draft restored from {{when}}.",
-    "unknownTime": "a moment ago",
-    "useDraft": "Use draft"
-  },
-  "editConflict": {
-    "banner": {
-      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "switchHint": "Or switch to your other tab to keep editing there.",
-      "takeOver": "Take over editing",
-      "title": "Another browser tab is editing this"
-    }
-  },
   "entityContext": {
     "title": "Related context"
-  },
-  "export": {
-    "jobDrawer": {
-      "activeCount": "{{count}} export running",
-      "activeCount_other": "{{count}} exports running",
-      "activeEmpty": "No active exports",
-      "activeHeading": "In progress",
-      "activePill": "{{count}} active",
-      "close": "Dismiss",
-      "completedLine": "{{size}} · {{relative}}",
-      "download": "Download",
-      "expand": "Show export jobs ({{count}} active)",
-      "label": "Export job progress",
-      "loading": "Loading export jobs…",
-      "minimize": "Minimize",
-      "recentEmpty": "No recent exports",
-      "recentHeading": "Recent",
-      "recentLabel": "Exports",
-      "statusLine": "{{status}} · started {{relative}}",
-      "title": "Export jobs"
-    },
-    "status": {
-      "expired": "Expired",
-      "failed": "Failed",
-      "processing": "Processing",
-      "queued": "Queued",
-      "ready": "Ready"
-    },
-    "types": {
-      "account": "Account export",
-      "analytics": "Analytics",
-      "backup": "Backup",
-      "charging": "Charging",
-      "drives": "Drives",
-      "importCharging": "Import charging",
-      "importDrives": "Import drives"
-    }
   },
   "freshness": {
     "noData": "No recent data",
@@ -516,17 +450,10 @@
       "started": "Impersonation started"
     }
   },
-  "lifetime": {
-    "unlocked": "✓ Unlocked"
-  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
-    "staleBanner": {
-      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
-      "title": "Live data unavailable"
-    },
     "unknown": "Unknown"
   },
   "maps": {
@@ -558,12 +485,6 @@
         "vehiclesUnknownBadge": "Unknown",
         "vehiclesUnknownLabel": "Vehicle #{{id}}"
       }
-    }
-  },
-  "operationalMode": {
-    "writeBlocked": "Return to live mode before making operational changes.",
-    "writeNotice": {
-      "title": "Operational changes are read-only"
     }
   },
   "operations": {
@@ -668,9 +589,6 @@
     },
     "title": "Trip replay"
   },
-  "requiresAuth": {
-    "title": "{{feature}} requires authentication mode"
-  },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
     "announceCleared": "Saved view cleared",
@@ -694,18 +612,6 @@
     "title": "Saved views",
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
-  },
-  "shortcuts": {
-    "empty": "No shortcuts match your search.",
-    "filter": {
-      "all": "All",
-      "global": "Global",
-      "label": "Filter shortcuts",
-      "page": "This page"
-    },
-    "gotoPrompt": "Go to…",
-    "search": "Search shortcuts…",
-    "title": "Keyboard shortcuts"
   },
   "sourceLayer": {
     "age": "age",
@@ -957,12 +863,5 @@
         }
       }
     }
-  },
-  "tour": {
-    "close": "Close tour",
-    "finish": "Get started!",
-    "next": "Next",
-    "prev": "Back",
-    "skip": "Skip tour"
   }
 }

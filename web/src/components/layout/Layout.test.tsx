@@ -1036,6 +1036,84 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it('contains keyboard focus and hides the background while keeping the backdrop usable', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const lastLink = await within(aside).findByRole('link', { name: 'Current page' })
+    const firstLink = aside.querySelector<HTMLAnchorElement>('a[href="/"]')
+    expect(firstLink).not.toBeNull()
+
+    lastLink.focus()
+    fireEvent.keyDown(lastLink, { key: 'Tab' })
+    expect(firstLink).toHaveFocus()
+    fireEvent.keyDown(firstLink!, { key: 'Tab', shiftKey: true })
+    expect(lastLink).toHaveFocus()
+    expect(main.closest('[inert]')).not.toBeNull()
+    expect(screen.queryByRole('main')).toBeNull()
+
+    const backdrop = aside.previousElementSibling
+    expect(backdrop).not.toBeNull()
+    expect(backdrop).not.toHaveAttribute('inert')
+    fireEvent.click(backdrop!)
+    await waitFor(() => expect(main.closest('[inert]')).toBeNull())
+    expect(screen.getByRole('main')).toBe(main)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
+  })
+
+  it('releases the mobile overlay guard when the desktop breakpoint becomes active', async () => {
+    const desktopMedia = window.matchMedia('(min-width: 1280px)')
+    vi.mocked(window.matchMedia).mockReturnValue(desktopMedia)
+    const listen = vi.spyOn(desktopMedia, 'addEventListener')
+    const unlisten = vi.spyOn(desktopMedia, 'removeEventListener')
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    await waitFor(() => expect(main.closest('[inert]')).not.toBeNull())
+    const listener = listen.mock.calls.find(([type]) => type === 'change')?.[1]
+    expect(typeof listener).toBe('function')
+
+    Object.defineProperty(desktopMedia, 'matches', { value: true, configurable: true })
+    act(() => {
+      if (typeof listener === 'function') listener(new Event('change'))
+    })
+
+    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+    expect(main.closest('[inert]')).toBeNull()
+    expect(screen.getByRole('main')).toBe(main)
+    expect(unlisten).toHaveBeenCalledWith('change', listener)
+  })
+
+  it('provides a 44px mobile drawer close target', async () => {
+    renderLayout('/')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(await screen.findByRole('button', { name: 'Close sidebar' })).toHaveClass('h-11', 'w-11')
+  })
+
+  it('does not restore the drawer trigger over a newly focused portaled modal', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
+    const action = document.createElement('button')
+    action.textContent = 'Dialog action'
+    dialog.append(action)
+    document.body.append(dialog)
+    try {
+      action.focus()
+      fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+      await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+      expect(action).toHaveFocus()
+    } finally {
+      dialog.remove()
+    }
+  })
+
   it('opens and closes the sidebar drawer from the mobile header controls', async () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })

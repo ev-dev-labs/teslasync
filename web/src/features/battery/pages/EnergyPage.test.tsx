@@ -16,8 +16,8 @@
  *   2. Gas-savings regression: `gasEquivalent` derives from SI meters converted
  *      to miles for the configured MPG model (200 km → $19.88), NOT raw meters
  *      × 0.12 (which produced a ~$24,000 "equivalent" after the SI cutover).
- *   3. Loading — the dedicated skeleton replaces the page while stats are
- *      in flight, never a half-populated dashboard.
+ *   3. Loading — named source sections remain while drive stats are in flight;
+ *      independent charging rows and BMS lifetime values remain visible.
  *   4. Error — a failed stats query surfaces a retryable <QueryError> banner
  *      while the independent sessions table still renders (graceful degrade),
  *      and Retry re-fires the stats request.
@@ -35,7 +35,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -408,16 +408,37 @@ describe('EnergyPage', () => {
     expect(screen.queryByText('Electric operation remains cost-favorable')).not.toBeInTheDocument()
   })
 
-  it('shows the loading skeleton while energy stats are in flight', async () => {
+  it('keeps the named source outline and independent charging/BMS content while energy stats are in flight', async () => {
     install({ statsPending: true })
-    renderPage()
+    const { container } = renderPage()
 
-    // Once the fleet loads and the vehicle is auto-selected, the stats query is
-    // enabled and the page short-circuits to its dedicated skeleton.
-    expect(await screen.findByTestId('energy-page-skeleton')).toBeInTheDocument()
-    // The real dashboard chrome is withheld during loading.
-    expect(screen.queryByRole('heading', { level: 1, name: 'Energy intelligence' })).toBeNull()
-    expect(screen.queryByText('Recent charging sessions')).toBeNull()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Energy intelligence' })).toBeVisible()
+    for (const name of [
+      'Key energy metrics', 'Energy overview', 'Cost savings versus gas',
+      'Daily energy trends', 'Charging patterns',
+    ]) expect(screen.getByRole('region', { name })).toBeInTheDocument()
+    for (const name of [
+      'Efficiency driver investigation', 'Efficiency & cost overview', 'Lifetime metrics',
+      'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
+      'Charger type breakdown', 'Recent charging sessions',
+    ]) expect(screen.getByRole('heading', { name })).toBeInTheDocument()
+
+    // Keep the visibility guarantee: asynchronous independent requests and
+    // the real FadeIn entrances must settle while the drive request stays pending.
+    const overview = screen.getByRole('region', { name: 'Energy overview' })
+    await waitFor(() => {
+      expect(within(overview).getByText('54,321.00')).toBeVisible()
+      expect(screen.getByText('CCS')).toBeVisible()
+      expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeVisible()
+    }, { timeout: 2_000 })
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
+    expect(energyCallCount()).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: 'Saved views' })).toBeVisible()
+    // Workspace selection belongs to the shell's VehiclePicker, whose
+    // combobox is named "Select vehicle". Table pagination is not a duplicate.
+    expect(within(container).queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument()
+    expect(container.querySelector('[data-role="vehicle-picker-control"]')).not.toBeInTheDocument()
+    expect(within(container).getByRole('combobox', { name: 'Rows per page' })).toBeVisible()
   })
 
   it('surfaces a retryable error banner and still degrades gracefully when stats fail', async () => {

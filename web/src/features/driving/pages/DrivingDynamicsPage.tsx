@@ -1,8 +1,8 @@
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout';
-import { QueryError, Skeleton } from '@/components/feedback';
+import { PageLayout, CardGrid } from '@/components/layout/layout-reference';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Badge, SectionTitle, Text } from '@/components/ui';
 
 import { FadeIn } from '@/components/motion';
@@ -14,27 +14,32 @@ import { useSignalQueryInvalidation } from '@/hooks/useSignalQueryInvalidation';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useDataState } from '@/hooks/useDataState';
 import { useUrlString } from '@/hooks/useUrlState';
 import { INTERVALS } from '@/lib/constants';
 import { useTimezone } from '@/lib/timezone';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import {
-  LiveMotorStatus,
-  GForcePanel,
-  PedalUsage,
-  SpeedGearPanel,
   AutopilotSection,
-  MotorHistoryCharts,
   MotorEfficiencyInsights,
-  SummaryStats,
   DrivingCoachSection,
   DriveAnalyticsSection,
-  DrivingTips,
   GrokDynamicsBriefing,
+} from '../components/driving-dynamics';
+import {
+  DynamicsPlacement,
+  LiveSourceWarnings,
   DynamicsTripToolbar,
   RideOverview,
   PowertrainSummary,
-} from '../components/driving-dynamics';
+  SummaryStats,
+  MotorHistoryCharts,
+  DrivingTips,
+  GForcePanel,
+  LiveMotorStatus,
+  PedalUsage,
+  SpeedGearPanel,
+} from '../components/driving-dynamics-modernization';
 import {
   isOpenDrive,
   mergeOpenDrives,
@@ -146,6 +151,8 @@ export default function DrivingDynamicsPage() {
     limit: 5,
     refetchInterval: INTERVALS.STANDARD,
   });
+  const rangeDrivesState = useDataState(rangeDrivesQuery, { provenance: 'historical' });
+  const latestDrivesState = useDataState(latestDrivesQuery, { provenance: 'historical' });
 
   const filteredDrives = useMemo(() => {
     // The server owns timezone-aware, instant-bounded range filtering.
@@ -177,7 +184,7 @@ export default function DrivingDynamicsPage() {
   /* ================================================================ */
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('dynamics.title', 'Driving Dynamics')}
       subtitle={t('dynamics.review.subtitle', 'Understand one ride: energy outcome, powertrain evidence, and the signals behind it.')}
       query={rangeDrivesQuery}
@@ -192,20 +199,38 @@ export default function DrivingDynamicsPage() {
             selectedDriveId={selectedDriveId}
             onSelectDrive={(id) => setDriveParam(id)}
           />
-          {rangeDrivesQuery.isLoading ? (
+          {rangeDrivesQuery.isLoading && !rangeDrivesState.hasData ? (
             <Skeleton className="h-12" />
-          ) : rangeDrivesQuery.isError ? (
-            <QueryError error={rangeDrivesQuery.error} onRetry={() => void rangeDrivesQuery.refetch()} />
+          ) : rangeDrivesState.fatalError ? (
+            <QueryError error={rangeDrivesState.fatalError} onRetry={() => void rangeDrivesQuery.refetch()} />
           ) : null}
-          {latestDrivesQuery.isError ? (
-            <QueryError error={latestDrivesQuery.error} onRetry={() => void latestDrivesQuery.refetch()} />
+          {latestDrivesState.fatalError ? (
+            <QueryError error={latestDrivesState.fatalError} onRetry={() => void latestDrivesQuery.refetch()} />
           ) : null}
-          <FadeIn>
-            <RideOverview drive={selectedDrive} />
-          </FadeIn>
-          <FadeIn delay={0.05}>
-            <PowertrainSummary vehicleId={vehicleId} historyQuery={historyQuery} />
-          </FadeIn>
+          <StaleRefreshWarning state={rangeDrivesState} label={t('dynamics.review.rangeAnalytics', 'Date-range trip context')} />
+          <StaleRefreshWarning state={latestDrivesState} label={t('dynamics.trip.liveDrive', 'Current drive')} />
+          <CardGrid label={t('dynamics.section.trip', 'Trip review')} items={[
+            {
+              id: 'dynamics-ride-overview', size: 'full',
+              content: (
+                <DynamicsPlacement>
+                  <FadeIn>
+                    <RideOverview drive={selectedDrive} />
+                  </FadeIn>
+                </DynamicsPlacement>
+              ),
+            },
+            {
+              id: 'dynamics-powertrain-summary', size: 'full',
+              content: (
+                <DynamicsPlacement>
+                  <FadeIn delay={0.05}>
+                    <PowertrainSummary vehicleId={vehicleId} historyQuery={historyQuery} />
+                  </FadeIn>
+                </DynamicsPlacement>
+              ),
+            },
+          ]} />
         </section>
 
         {/* Selected ride: sample-level measurements, then detailed traces. */}
@@ -220,8 +245,6 @@ export default function DrivingDynamicsPage() {
           </div>
           <SummaryStats
             vehicleId={vehicleId}
-            toTemperatureDisplay={toTemperatureDisplay}
-            tempUnit={tempUnit}
             historyQuery={historyQuery}
           />
           <MotorEfficiencyInsights
@@ -232,8 +255,6 @@ export default function DrivingDynamicsPage() {
           />
           <MotorHistoryCharts
             vehicleId={vehicleId}
-            toSpeedDisplay={toSpeedDisplay}
-            speedUnit={speedUnit}
             historyQuery={historyQuery}
           />
           <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} />
@@ -254,28 +275,50 @@ export default function DrivingDynamicsPage() {
               {t('dynamics.review.liveDescription', 'Latest reported motor, pedal, G-force, gear, and cruise state for this vehicle. These readings may be parked or older than now and do not describe the selected ride.')}
             </Text>
           </div>
+          <LiveSourceWarnings vehicleId={vehicleId} />
           <FadeIn delay={0.05}>
-            <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
-              <LiveMotorStatus
-                vehicleId={vehicleId}
-                toTemperatureDisplay={toTemperatureDisplay}
-                tempUnit={tempUnit}
-              />
-              <PedalUsage vehicleId={vehicleId} />
-            </div>
+            <CardGrid label={t('dynamics.review.live', 'Vehicle now')} items={[
+              {
+                id: 'dynamics-live-motor', size: 'half',
+                content: (
+                  <DynamicsPlacement>
+                    <LiveMotorStatus
+                      vehicleId={vehicleId}
+                      toTemperatureDisplay={toTemperatureDisplay}
+                      tempUnit={tempUnit}
+                    />
+                  </DynamicsPlacement>
+                ),
+              },
+              {
+                id: 'dynamics-pedals', size: 'half',
+                content: <DynamicsPlacement><PedalUsage vehicleId={vehicleId} /></DynamicsPlacement>,
+              },
+            ]} />
           </FadeIn>
           <GrokDynamicsBriefing vehicleId={vehicleId} />
           <FadeIn delay={0.1}>
-            <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 3xl:grid-cols-3 xl:gap-5">
-              <SpeedGearPanel
-                vehicleId={vehicleId}
-                filteredDrives={filteredDrives}
-                toSpeedDisplay={toSpeedDisplay}
-                speedUnit={speedUnit}
-              />
-              <GForcePanel vehicleId={vehicleId} />
-              <AutopilotSection vehicleId={vehicleId} />
-            </div>
+            <CardGrid label={t('dynamics.review.live', 'Vehicle now')} items={[
+              {
+                id: 'dynamics-speed-gear', size: 'third',
+                content: (
+                  <DynamicsPlacement>
+                    <SpeedGearPanel
+                      vehicleId={vehicleId}
+                      filteredDrives={filteredDrives}
+                    />
+                  </DynamicsPlacement>
+                ),
+              },
+              {
+                id: 'dynamics-g-force', size: 'third',
+                content: <GForcePanel vehicleId={vehicleId} />,
+              },
+              {
+                id: 'dynamics-autopilot', size: 'third',
+                content: <DynamicsPlacement><AutopilotSection vehicleId={vehicleId} /></DynamicsPlacement>,
+              },
+            ]} />
           </FadeIn>
         </section>
 
@@ -305,6 +348,6 @@ export default function DrivingDynamicsPage() {
           </div>
         </section>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

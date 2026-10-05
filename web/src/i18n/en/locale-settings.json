@@ -578,7 +578,6 @@
   },
   "achievements": {
     "celebrationSettings": "Celebration",
-    "dismiss": "Dismiss achievement notification",
     "playSound": "Play sound on unlock",
     "playSoundHelp": "Play a short chime alongside the celebration toast. Off by default.",
     "pushOnUnlock": "Send push notifications for achievements",
@@ -586,9 +585,7 @@
     "showOnDashboard": "Show recently unlocked on dashboard",
     "showOnDashboardHelp": "Surface your latest unlocks in the dashboard's recently-unlocked widget.",
     "showToasts": "Show celebration toasts",
-    "showToastsHelp": "Pop a celebratory toast with confetti when you unlock an achievement.",
-    "toastEyebrow": "Achievement unlocked",
-    "view": "View"
+    "showToastsHelp": "Pop a celebratory toast with confetti when you unlock an achievement."
   },
   "activity": {
     "action": {
@@ -827,14 +824,6 @@
       "reset": "Consent reset — banner will reappear"
     }
   },
-  "dataState": {
-    "refreshBlocked": {
-      "message": "The device is offline, so this section is showing the last values it received."
-    },
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
-    }
-  },
   "date": {
     "preset": {
       "all": "All time",
@@ -870,23 +859,11 @@
     "title": "{{current}} vs {{previous}}"
   },
   "draft": {
-    "discardDraft": "Discard draft",
     "noun": {
       "settings": "Settings"
-    },
-    "restored": "Draft restored from {{when}}.",
-    "restoredItem": "{{noun}} draft restored from {{when}}.",
-    "unknownTime": "a moment ago",
-    "useDraft": "Use draft"
+    }
   },
   "editConflict": {
-    "banner": {
-      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "switchHint": "Or switch to your other tab to keep editing there.",
-      "takeOver": "Take over editing",
-      "title": "Another browser tab is editing this"
-    },
     "resource": {
       "settings": "Your settings"
     }
@@ -895,43 +872,8 @@
     "title": "Related context"
   },
   "export": {
-    "jobDrawer": {
-      "activeCount": "{{count}} export running",
-      "activeCount_other": "{{count}} exports running",
-      "activeEmpty": "No active exports",
-      "activeHeading": "In progress",
-      "activePill": "{{count}} active",
-      "close": "Dismiss",
-      "completedLine": "{{size}} · {{relative}}",
-      "download": "Download",
-      "expand": "Show export jobs ({{count}} active)",
-      "label": "Export job progress",
-      "loading": "Loading export jobs…",
-      "minimize": "Minimize",
-      "recentEmpty": "No recent exports",
-      "recentHeading": "Recent",
-      "recentLabel": "Exports",
-      "statusLine": "{{status}} · started {{relative}}",
-      "title": "Export jobs"
-    },
-    "status": {
-      "expired": "Expired",
-      "failed": "Failed",
-      "processing": "Processing",
-      "queued": "Queued",
-      "ready": "Ready"
-    },
     "subtitle": "Export drives, charging, analytics, or full backup as CSV/JSON",
-    "title": "Export dashboard",
-    "types": {
-      "account": "Account export",
-      "analytics": "Analytics",
-      "backup": "Backup",
-      "charging": "Charging",
-      "drives": "Drives",
-      "importCharging": "Import charging",
-      "importDrives": "Import drives"
-    }
+    "title": "Export dashboard"
   },
   "featureConfig": {
     "details": "Details",
@@ -1001,17 +943,10 @@
       "started": "Impersonation started"
     }
   },
-  "lifetime": {
-    "unlocked": "✓ Unlocked"
-  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
-    "staleBanner": {
-      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
-      "title": "Live data unavailable"
-    },
     "unknown": "Unknown"
   },
   "notifications": {
@@ -1027,12 +962,6 @@
         "vehiclesUnknownBadge": "Unknown",
         "vehiclesUnknownLabel": "Vehicle #{{id}}"
       }
-    }
-  },
-  "operationalMode": {
-    "writeBlocked": "Return to live mode before making operational changes.",
-    "writeNotice": {
-      "title": "Operational changes are read-only"
     }
   },
   "operations": {
@@ -1154,9 +1083,6 @@
     "regionCode": "Region code",
     "subtitle": "Tesla account region and Fleet API endpoint",
     "title": "Region & API"
-  },
-  "requiresAuth": {
-    "title": "{{feature}} requires authentication mode"
   },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
@@ -1462,18 +1388,6 @@
       "sectionSubtitle": "A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+shift+T).",
       "sectionTitle": "Harmonic scale"
     }
-  },
-  "shortcuts": {
-    "empty": "No shortcuts match your search.",
-    "filter": {
-      "all": "All",
-      "global": "Global",
-      "label": "Filter shortcuts",
-      "page": "This page"
-    },
-    "gotoPrompt": "Go to…",
-    "search": "Search shortcuts…",
-    "title": "Keyboard shortcuts"
   },
   "sourceLayer": {
     "age": "age",
@@ -1790,13 +1704,8 @@
     }
   },
   "tour": {
-    "close": "Close tour",
     "description": "Re-run the guided walkthrough of TeslaSync features",
-    "finish": "Get started!",
-    "next": "Next",
-    "prev": "Back",
     "restart": "Restart tour",
-    "skip": "Skip tour",
     "title": "Onboarding tour"
   },
   "workspaceContext": {

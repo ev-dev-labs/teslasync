@@ -13,6 +13,7 @@ import {
   DataTable,
   PanelTitle,
   Text,
+  Code,
   type Column,
 } from '@/components/ui';
 import {
@@ -957,6 +958,43 @@ export default function TeslaChargingSessionsPage() {
               <TableSkeleton rows={7} cols={5} />
             ) : sessions.length > 0 ? (
               <DataTable
+                mobilePresentation={{
+                  variant: 'cards',
+                  roles: { location: 'title', cost: 'primary', date: 'meta', energy: 'meta', duration: 'meta', type: 'badge' },
+                  displayValue: (row, key) => {
+                    switch (key) {
+                      case 'location': return row.site_location_name || '—';
+                      case 'date': return formatDateTime(row.charge_start_datetime);
+                      case 'energy': return row.total_energy_added_wh == null ? null
+                        : fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'));
+                      case 'duration': return formatDurationSeconds(row.charge_duration_s);
+                      case 'cost': return row.total_cost == null ? null
+                        : formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true });
+                      case 'type': return row.charger_type;
+                      case 'vin': return row.vin ? `…${row.vin.slice(-6)}` : null;
+                      case 'peakPower': return row.peak_power_kw == null ? null : fmtNumber(row.peak_power_kw);
+                      case 'rate': return row.per_kwh_rate == null ? null
+                        : formatCurrencyValue(row.per_kwh_rate, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true });
+                      default: return null;
+                    }
+                  },
+                  state: error ? {
+                    kind: 'error',
+                    message: t('operations.status.unavailable', 'Data unavailable'),
+                    retained: sessions.length > 0,
+                    retrying: sessionsQuery.isFetching,
+                  } : { kind: 'ready' },
+                  onRetry: () => { void sessionsQuery.refetch(); },
+                  // Native field names are diagnostic data, not translated display headings.
+                  // VIN retains the table's existing privacy mask, including in raw metadata.
+                  allDetails: row => Object.entries(row).map(([key, value]) => ({
+                    key,
+                    label: key,
+                    value: <Code className="whitespace-pre-wrap break-all">{
+                      JSON.stringify(key === 'vin' && typeof value === 'string' ? `…${value.slice(-6)}` : value)
+                    }</Code>,
+                  })),
+                }}
                 enableValueFilters
                 columns={columns}
                 data={sortedSessions}

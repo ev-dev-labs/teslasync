@@ -1,8 +1,8 @@
-import { useContext, useId, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Heading, Text, Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { CardPlacementContext } from './CardPlacementContext';
+import { useCardPlacement } from './CardPlacementContext';
 import type { CardSize } from './layoutPolicy';
 
 export interface LayoutCardProps {
@@ -14,15 +14,9 @@ export interface LayoutCardProps {
   size?: CardSize;
 }
 
-const spanClasses: Record<number, string> = {
-  1: 'col-span-1', 2: 'col-span-2', 3: 'col-span-3', 4: 'col-span-4',
-  5: 'col-span-5', 6: 'col-span-6', 7: 'col-span-7', 8: 'col-span-8',
-  9: 'col-span-9', 10: 'col-span-10', 11: 'col-span-11', 12: 'col-span-12',
-};
-
 export function LayoutCard({ title, description, actions, children, footer, size = 'full' }: LayoutCardProps) {
   const { t } = useTranslation();
-  const placement = useContext(CardPlacementContext);
+  const placement = useCardPlacement();
   const id = useId();
   return (
     <Card
@@ -34,7 +28,7 @@ export function LayoutCard({ title, description, actions, children, footer, size
       className={cn(
         'flex h-full min-w-0 flex-col gap-3 rounded-xl p-3 @container',
         placement && placement.width >= 640 && 'p-4',
-        spanClasses[placement?.span ?? 1],
+        placement?.className ?? 'col-span-1',
       )}
     >
       <header className="flex min-w-0 flex-wrap items-start justify-between gap-2">

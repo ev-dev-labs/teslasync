@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
+import { registerShellPortal } from '../layout/shellFocusTrap';
 
 export type PopoverAlign = 'start' | 'end' | 'center';
 export type PopoverSide = 'bottom' | 'top';
@@ -67,6 +68,11 @@ export function Popover({
   const [pos, setPos] = useState<{ top: number; left: number; resolvedSide: PopoverSide } | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!open) return;
+    return registerShellPortal(contentRef.current, anchorRef.current, onClose);
+  }, [open, anchorRef, onClose]);
 
   useLayoutEffect(() => {
     if (!open || typeof window === 'undefined') return;

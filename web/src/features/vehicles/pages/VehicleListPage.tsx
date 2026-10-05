@@ -8,11 +8,13 @@ import {
   BatteryCharging, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
-import { PageContainer, PrefetchLink } from '@/components/layout';
+import { PrefetchLink } from '@/components/layout';
+import { PageLayout, Section } from '@/components/layout/layout-reference';
+import { VehiclePanelGrid } from '../components/modernization';
 import { VirtualizedVehicleGrid } from '@/components/vehicles';
 import {
   GlassPanel, Badge, Button, ConfirmDialog, PinButton,
-  SectionTitle, PanelTitle, Text, Popover, MaskedValue,
+  PanelTitle, Text, Popover, MaskedValue,
 } from '@/components/ui';
 import {
   AnimatedNumber,
@@ -181,29 +183,34 @@ function previewTrustSummary(
 /**
  * Mirrors the redesigned bento layout while the fleet list loads: KPI band →
  * overview bento (hero battery + status) → responsive vehicle-card grid.
- * Rendered inside a real `<PageContainer>` so the title bar appears instantly
+ * Rendered inside the shared PageLayout so the title bar appears instantly
  * and layout shift stays at zero when the real content arrives.
  */
 function VehicleListSkeleton() {
   const { t } = useTranslation();
   return (
-    <PageContainer
+    <PageLayout
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
     >
       <div className="space-y-6" data-testid="vehicle-list-skeleton">
         <StatGridSkeleton cards={4} />
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
-          <Skeleton className="h-64 rounded-xl xl:col-span-2" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-52 rounded-xl" />
-          ))}
-        </div>
+        <VehiclePanelGrid
+          label={t('vehicles.overview', 'Fleet overview')}
+          items={[
+            { id: 'battery-loading', size: 'half', content: <Skeleton className="h-64 rounded-xl" /> },
+            { id: 'status-loading', size: 'half', content: <Skeleton className="h-64 rounded-xl" /> },
+          ]}
+        />
+        <VehiclePanelGrid
+          label={t('vehicles.allVehicles', 'All vehicles')}
+          items={Array.from({ length: 6 }, (_, i) => ({
+            id: `vehicle-loading-${i}`, size: 'quarter',
+            content: <Skeleton className="h-52 rounded-xl" />,
+          }))}
+        />
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }
 
@@ -214,7 +221,7 @@ function StatChip({ icon, label, value }: { icon: ReactNode; label: string; valu
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md bg-white/[0.03] px-2 py-1',
+        'inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1',
         typography.size.xs,
         typography.color.secondary,
       )}
@@ -251,39 +258,39 @@ function FleetKpis({
   const { unitPrefs } = useUnits();
   const unknownLabel = t('common.unknownValue', '—');
   return (
-    <section
-      aria-label={t('vehicles.summary', 'Fleet summary')}
-      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-    >
-      <MetricCard
+    <VehiclePanelGrid
+      label={t('vehicles.summary', 'Fleet summary')}
+      items={[
+        { id: 'fleet-total', size: 'quarter', content: <MetricCard
         label={t('vehicles.totalVehicles', 'Total vehicles')}
         value={totalVehicles}
         icon={<Car className="h-5 w-5" />}
         color="cyan"
-      />
-      <MetricCard
+      /> },
+        { id: 'fleet-average-battery', size: 'quarter', content: <MetricCard
         label={t('vehicles.avgBattery', 'Avg battery')}
         value={avgBattery == null ? unknownLabel : `${fmtNumber(avgBattery)}%`}
         icon={<Battery className="h-5 w-5" />}
         color="green"
-      />
-      <MetricCard
+      /> },
+        { id: 'fleet-total-range', size: 'quarter', content: <MetricCard
         label={`${t('vehicles.totalRange', 'Total range')} (${unitPrefs.distance})`}
         value={totalRange == null
           ? unknownLabel
           : fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance))}
         icon={<Gauge className="h-5 w-5" />}
         color="purple"
-      />
-      <MetricCard
+      /> },
+        { id: 'fleet-charging-coverage', size: 'quarter', content: <MetricCard
         label={t('vehicles.chargingLiveState', 'Charging / live state')}
         value={chargingCoverageCount === 0
           ? unknownLabel
           : `${chargingCount} / ${chargingCoverageCount}`}
         icon={<Zap className="h-5 w-5" />}
         color="green"
-      />
-    </section>
+      /> },
+      ]}
+    />
   );
 }
 
@@ -620,26 +627,20 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
   return (
     <GlassPanel
       hover
-      glow="cyan"
       padding="none"
       data-tour="vehicles-card"
       className="group flex h-full flex-col overflow-hidden"
     >
-      <div
-        className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400 opacity-40 transition-opacity group-hover:opacity-80"
-        aria-hidden="true"
-      />
-
       <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
         {/* Header — name, status, pin */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <PrefetchLink
                 to={`/vehicles/${vehicle.id}`}
                 className={cn(
                   typography.role.panelTitle,
-                  'truncate rounded outline-none transition-colors hover:text-cyan-300 focus-visible:text-cyan-300 focus-visible:ring-1 focus-visible:ring-cyan-400/40',
+                  'block min-h-11 max-w-full min-w-0 break-words rounded py-2 transition-colors hover:text-[var(--theme-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
                 )}
               >
                 {vehicle.display_name || maskFor(vehicle.vin ?? '', 'vin')}
@@ -653,7 +654,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
                 </Badge>
               ) : null}
             </div>
-            <Text variant="caption" as="p" className="mt-1 truncate">
+            <Text variant="caption" as="p" className="mt-1 break-words">
               {modelLine || t('vehicles.unknownModel', 'Unknown model')}
               {' · '}
               <MaskedValue
@@ -691,7 +692,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
           >
             <div
               className="h-full rounded-full transition-all duration-slow"
-              style={{ width: `${level ?? 0}%`, background: `linear-gradient(90deg, ${color}99, ${color})` }}
+              style={{ width: `${level ?? 0}%`, backgroundColor: color }}
             />
           </div>
         </div>
@@ -744,7 +745,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
             to={`/vehicles/${vehicle.id}`}
             aria-label={t('vehicles.openDetail', 'Open {{name}} details', { name })}
             className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-cyan-300 outline-none transition-colors hover:text-cyan-200 focus-visible:ring-1 focus-visible:ring-cyan-400/40',
+              'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-[var(--theme-primary)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
               typography.size.sm,
               typography.weight.medium,
             )}
@@ -1349,7 +1350,7 @@ export default function VehicleListPage() {
   // on screen and is surfaced by <StaleRefreshWarning> below instead.
   if (vehiclesState.status === 'initialFailure') {
     return (
-      <PageContainer
+      <PageLayout
         title={t('nav.vehicles', 'Fleet')}
         subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       >
@@ -1360,13 +1361,13 @@ export default function VehicleListPage() {
             resourceName={t('nav.vehicles', 'Fleet')}
           />
         </GlassPanel>
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   /* ── Render ── */
   return (
-    <PageContainer
+    <PageLayout
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       query={[vehiclesQuery, fleetFreshnessQuery, workOrdersQuery]}
@@ -1437,8 +1438,9 @@ export default function VehicleListPage() {
         label={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
       />
 
-      {vehicleList.length === 0 ? (
-        <EmptyState
+      {vehicleList.length === 0 && (
+        <GlassPanel padding="md">
+          <EmptyState
           icon={<Car className="h-10 w-10" />}
           title={t('vehicles.emptyTitle', 'No vehicles yet')}
           message={t(
@@ -1446,9 +1448,12 @@ export default function VehicleListPage() {
             'Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.',
           )}
           action={{ label: t('vehicles.syncButton', 'Sync from Tesla'), onClick: handleSync }}
-        />
-      ) : (
-        <>
+          />
+        </GlassPanel>
+      )}
+      <VehiclePanelGrid
+        label={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
+        items={[{ id: 'fleet-operational-posture', size: 'full', content: vehicleList.length > 0 ? (
           <OperationalBrief
             testId="fleet-operational-brief"
             eyebrow={t('operations.vehicles.eyebrow', 'Fleet posture')}
@@ -1619,10 +1624,23 @@ export default function VehicleListPage() {
               'Based on the registered fleet, the latest independently resolved live state for each vehicle, and fleet operations work orders.',
             )}
           />
+        ) : (
+          <GlassPanel padding="md">
+            <EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
+              section: t('operations.vehicles.eyebrow', 'Fleet posture'),
+            })} />
+          </GlassPanel>
+        ) }]}
+      />
 
           {/* 1 — KPI band */}
           <FadeIn delay={0.05}>
-            {fleetStatePending ? (
+            <Section id="fleet-summary" title={t('vehicles.summary', 'Fleet summary')}>
+            {vehicleList.length === 0 ? (
+              <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
+                section: t('vehicles.summary', 'Fleet summary'),
+              })} /></GlassPanel>
+            ) : fleetStatePending ? (
               <StatGridSkeleton cards={4} />
             ) : (
               <FleetKpis
@@ -1633,15 +1651,16 @@ export default function VehicleListPage() {
                 chargingCoverageCount={fleet.chargingCoverageCount}
               />
             )}
+            </Section>
           </FadeIn>
 
-          {/* 2 — Overview bento: hero battery (2/3) + status breakdown (1/3) */}
-          <section aria-labelledby="fleet-overview-heading">
-            <SectionTitle id="fleet-overview-heading" className="mb-3">
-              {t('vehicles.overview', 'Fleet overview')}
-            </SectionTitle>
-            <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
-              <FadeIn delay={0.1} className="h-full xl:col-span-2">
+          {/* 2 — Existing surface-owning panels, composed by the shared grid. */}
+          <Section id="fleet-overview" title={t('vehicles.overview', 'Fleet overview')}>
+            {vehicleList.length > 0 ? (
+            <VehiclePanelGrid
+              label={t('vehicles.overview', 'Fleet overview')}
+              items={[
+                { id: 'fleet-battery', size: 'half', content: <FadeIn delay={0.1} className="h-full">
                 <FleetBatteryPanel
                   entries={fleet.batteryEntries}
                   avgBattery={fleet.avgBattery}
@@ -1653,8 +1672,8 @@ export default function VehicleListPage() {
                   ))}
                   onRetry={() => statesQuery.refetch()}
                 />
-              </FadeIn>
-              <FadeIn delay={0.15} className="h-full">
+              </FadeIn> },
+                { id: 'fleet-status', size: 'half', content: <FadeIn delay={0.15} className="h-full">
                 <FleetStatusPanel
                   counts={statusCounts}
                   total={vehicleList.length}
@@ -1663,16 +1682,19 @@ export default function VehicleListPage() {
                   summary={fleetSummary}
                   onRetry={() => statesQuery.refetch()}
                 />
-              </FadeIn>
-            </div>
-          </section>
+              </FadeIn> },
+              ]}
+            />
+            ) : (
+              <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
+                section: t('vehicles.overview', 'Fleet overview'),
+              })} /></GlassPanel>
+            )}
+          </Section>
 
           {/* 3 — All vehicles: responsive full-width card grid */}
-          <section aria-labelledby="all-vehicles-heading" data-tour="vehicles-list">
-            <SectionTitle id="all-vehicles-heading" className="mb-3 flex items-center gap-2">
-              <Car className="h-4 w-4 text-purple-300" aria-hidden="true" />
-              {t('vehicles.allVehicles', 'All vehicles')}
-            </SectionTitle>
+          <Section id="all-vehicles" title={t('vehicles.allVehicles', 'All vehicles')}>
+            <div data-tour="vehicles-list" className="min-w-0">
             {sortedVehicleList.length > FLEET_VIRTUALIZATION_THRESHOLD ? (
               <VirtualizedVehicleGrid
                 vehicles={sortedVehicleList}
@@ -1681,17 +1703,23 @@ export default function VehicleListPage() {
                 onVisibleVehiclesChange={warmVisibleVehicles}
               />
             ) : (
-              <StaggerContainer className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
-                {sortedVehicleList.map((vehicle) => (
-                  <StaggerItem key={vehicle.id} className="h-full">
-                    {renderVehicleCard(vehicle)}
-                  </StaggerItem>
-                ))}
+              <StaggerContainer>
+                <VehiclePanelGrid
+                  label={t('vehicles.virtualizedFleetLabel', 'Vehicle fleet')}
+                  items={sortedVehicleList.map((vehicle) => ({
+                    id: `vehicle-${vehicle.id}`, size: 'quarter',
+                    content: <StaggerItem className="h-full">{renderVehicleCard(vehicle)}</StaggerItem>,
+                  }))}
+                />
               </StaggerContainer>
             )}
-          </section>
-        </>
-      )}
+            {sortedVehicleList.length === 0 && (
+              <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
+                section: t('vehicles.allVehicles', 'All vehicles'),
+              })} /></GlassPanel>
+            )}
+            </div>
+          </Section>
 
       {/* Delete confirmation */}
       <ConfirmDialog
@@ -1872,6 +1900,6 @@ export default function VehicleListPage() {
             : []
         }
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Checkbox, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
@@ -6,14 +7,17 @@ import { rowMappingIssues, safeProgress } from './helpers';
 import type { MobileRow, MobileVariant } from './types';
 
 interface Props {
-  row: MobileRow;
+  row: MobileRow<string | number>;
   variant: MobileVariant;
   selecting: boolean;
   selected: boolean;
   onActivate: () => void;
   onToggle: () => void;
+  actions?: ReactNode;
+  onSelectionEvent?: (event: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent) => void;
+  selectionLabel?: string;
 }
-export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle }: Props) {
+export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, actions, onSelectionEvent, selectionLabel }: Props) {
   const { t } = useTranslation();
   const activate = selecting ? onToggle : onActivate;
   const keyValue = variant === 'keyValue';
@@ -27,8 +31,9 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
       {selecting && (
         <Checkbox
           checked={selected}
-          onChange={onToggle}
-          aria-label={t('developerReference.mobileGrid.selection.row', 'Select {{title}}', { title: row.title })}
+          onChange={onSelectionEvent ? () => {} : onToggle}
+          onClick={onSelectionEvent ? event => { event.stopPropagation(); onSelectionEvent(event); } : undefined}
+          aria-label={selectionLabel ?? t('developerReference.mobileGrid.selection.row', 'Select {{title}}', { title: row.title })}
           className="mgr-checkbox min-h-11 min-w-11 justify-center"
         />
       )}
@@ -42,11 +47,12 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
         data-row-key={row.key}
         className={cn('mgr-row min-w-0 flex-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',
           keyValue ? 'mgr-kv' : 'mgr-card')}
-        onClick={activate}
+        onClick={event => selecting && onSelectionEvent ? onSelectionEvent(event) : activate()}
         onKeyDown={event => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            activate();
+            if (selecting && onSelectionEvent) onSelectionEvent(event);
+            else activate();
           }
         }}
       >
@@ -55,6 +61,7 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
             <Text data-card-label="" title={row.title} className="mgr-title block truncate">{row.title}</Text>
             {keyValue && row.rawLabel && <Text mono className="block truncate text-[11px] text-[var(--text-muted)]" title={row.rawLabel}>{row.rawLabel}</Text>}
           </div>
+          {actions && <div className="shrink-0 p-2">{actions}</div>}
           {!keyValue && row.tag && <Badge variant="neutral" className="max-w-20 truncate">{row.tag}</Badge>}
           <Text data-card-primary="" title={row.primary} className="mgr-primary max-w-[45%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{row.primary}</Text>
         </div>

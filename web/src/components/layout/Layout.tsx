@@ -35,6 +35,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
 import { BottomTabBar } from './BottomTabBar'
+import { activateShellOverlayGuard, getShellFocusableElements, isShellPortalActive } from './shellFocusTrap'
 import {
   findMostSpecificNavEntry,
   isExclusiveActivePath,
@@ -705,6 +706,7 @@ export default function Layout() {
   const presentation = usePresentationMode()
   const { preferences: productPreferences } = useProductPreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarRef = useRef<HTMLElement>(null)
   const sidebarTriggerRef = useRef<HTMLButtonElement>(null)
   const sidebarCloseRef = useRef<HTMLButtonElement>(null)
   // Command Deck rail collapse. Host-owned (not deck-owned) because the
@@ -759,19 +761,45 @@ export default function Layout() {
     const shouldRestoreFocus = wasSidebarOpen.current && !sidebarOpen
     wasSidebarOpen.current = sidebarOpen
     if (!shouldRestoreFocus) return
-    const frame = requestAnimationFrame(() => sidebarTriggerRef.current?.focus())
+    const frame = requestAnimationFrame(() => {
+      if (document.activeElement?.closest(
+        '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]',
+      )) return
+      const target = window.matchMedia('(min-width: 1280px)').matches
+        ? getShellFocusableElements(sidebarRef.current)[0]
+        : sidebarTriggerRef.current
+      target?.focus()
+    })
     return () => cancelAnimationFrame(frame)
   }, [sidebarOpen])
   useEffect(() => {
     if (!sidebarOpen) return
+    const desktopMedia = window.matchMedia('(min-width: 1280px)')
+    if (presentation.mode !== 'standard' || desktopMedia.matches) {
+      setSidebarOpen(false)
+      return
+    }
+    const releaseGuard = activateShellOverlayGuard({
+      focusContainer: sidebarRef.current,
+      isOwnRoot: (element) => element.hasAttribute('data-sidebar-backdrop'),
+    })
     sidebarCloseRef.current?.focus()
+    const onViewportChange = () => {
+      if (desktopMedia.matches) setSidebarOpen(false)
+    }
     const onEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (isShellPortalActive(sidebarRef.current, document.activeElement)) return
       setSidebarOpen(false)
     }
     document.addEventListener('keydown', onEscape)
-    return () => document.removeEventListener('keydown', onEscape)
-  }, [sidebarOpen])
+    desktopMedia.addEventListener('change', onViewportChange)
+    return () => {
+      desktopMedia.removeEventListener('change', onViewportChange)
+      document.removeEventListener('keydown', onEscape)
+      releaseGuard()
+    }
+  }, [sidebarOpen, presentation.mode])
   const workspaceScope = useMemo(
     () => getWorkspaceRouteScope(location.pathname),
     [location.pathname],
@@ -1266,6 +1294,7 @@ export default function Layout() {
       <AnimatePresence>
         {presentation.mode === 'standard' && sidebarOpen && (
           <motion.div
+            data-sidebar-backdrop
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1282,6 +1311,7 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
+        ref={sidebarRef}
         role="navigation"
         aria-label={t('a11y.primaryNav', 'Primary')}
         data-tour="sidebar"
@@ -1318,7 +1348,7 @@ export default function Layout() {
             aria-label={t('nav.closeSidebar', 'Close sidebar')}
             aria-expanded={sidebarOpen}
             onClick={() => setSidebarOpen(false)}
-            className="h-10 w-10 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+            className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
             <Icons.close className="h-5 w-5" />
           </Button>

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Text, Tooltip } from '@/components/ui';
@@ -14,10 +15,12 @@ export interface StatTileProps {
 
 export function StatTile({ metric, preferences, loading }: StatTileProps) {
   const { t } = useTranslation();
+  const contextId = useId();
+  const specialistComparisonId = useId();
   const definition = glossary[metric.metricId];
-  const label = t(`developerReference.stats.metric.${metric.metricId}.label`, definition.label);
-  const description = t(`developerReference.stats.metric.${metric.metricId}.description`, definition.description);
-  const result = formatMetric(metric.metricId, metric.rawValue, preferences, metric.missingReason);
+  const label = metric.label ?? t(`developerReference.stats.metric.${metric.metricId}.label`, definition.label);
+  const description = metric.description ?? t(`developerReference.stats.metric.${metric.metricId}.description`, definition.description);
+  const result = formatMetric(metric.metricId, metric.rawValue, preferences, metric.missingReason, metric.display);
   const reason = result.reasonKey ? t(result.reasonKey, result.reason ?? '') : result.reason;
   const comparison = metric.comparison;
   const delta = comparison ? formatMetric(comparison.metricId, comparison.rawValue, preferences) : null;
@@ -36,18 +39,22 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
     .filter(Boolean).join('; ');
   const content = <>
     <Tooltip content={description} multiline>
-      <Text as="span" data-stat-label className="block text-[13px] font-medium leading-5 text-[var(--text-secondary)]"
+      <Text as="span" variant="metricLabel" data-stat-label className="block text-[0.8125rem] leading-5 text-[var(--text-secondary)]"
         tabIndex={metric.href ? undefined : 0}>{label}</Text>
     </Tooltip>
     {loading ? <span aria-hidden="true" className="mt-1 block h-7 w-24 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
-      : <span className={cn('mt-1 block font-semibold leading-tight text-[var(--text-primary)]', styles.value,
+      : <Text as="span" variant="metricValue" className={cn('mt-1 block leading-tight', styles.value,
         result.text.length > 18 && styles.longValue, result.text.length > 28 && styles.extremeValue)}>
         <span data-stat-value>{result.value}</span>
         {result.unit && <>{['temperature', 'percent', 'score'].includes(definition.format) ? '' : ' '}
           <span data-stat-unit className="font-normal text-[var(--text-secondary)]">{result.unit}</span></>}
-      </span>}
+      </Text>}
     {loading && <span className="sr-only">{t('developerReference.stats.state.loading', 'Loading measurements')}</span>}
     {!loading && reason && <span className="mt-1 block text-xs text-[var(--text-secondary)]">{reason}</span>}
+    {!loading && metric.context != null && <div id={contextId} data-stat-context
+      className="mt-1 text-xs text-[var(--text-secondary)]">{metric.context}</div>}
+    {!loading && metric.comparisonContent != null && <div id={specialistComparisonId} data-stat-specialist-comparison
+      className="mt-1 text-xs">{metric.comparisonContent}</div>}
     {!loading && delta && <span data-stat-delta data-comparison-state={delta.state}
       className="mt-1 block text-xs font-medium text-[var(--text-secondary)]">
       {comparison?.label}: {deltaText} · <span data-stat-comparison-period>{comparison?.period.label}</span>
@@ -59,6 +66,10 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
   const props = {
     'data-stat': true, 'data-metric': metric.metricId, 'data-state': loading ? 'loading' : result.state,
     'data-missing-reason': reason, 'aria-label': loading ? undefined : accessibleLabel,
+    'aria-describedby': loading ? undefined : [
+      metric.context != null ? contextId : undefined,
+      metric.comparisonContent != null ? specialistComparisonId : undefined,
+    ].filter(Boolean).join(' ') || undefined,
     className: cn(styles.tile, 'min-w-0 p-3 text-left'),
   };
   return metric.href

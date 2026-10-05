@@ -8,7 +8,7 @@ import 'react-resizable/css/styles.css';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Button as UiButton, GlassPanel } from '@/components/ui';
+import { Button as UiButton, GlassPanel, Modal, SectionTitle } from '@/components/ui';
 import { EmptyState, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
 import { kioskPanelStyle } from '../lib/kioskAppearance';
@@ -89,14 +89,14 @@ function FullscreenOverlay({
   const { t } = useTranslation();
 
   return (
-    <div className="fixed inset-0 z-50 bg-[var(--surface-overlay)] backdrop-blur-xl p-6 flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{def.name}</h2>
-        <UiButton variant="ghost" size="sm" onClick={onClose}>
+    <Modal open onClose={onClose} ariaLabel={def.name} size="fullscreen">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 pb-4">
+        <SectionTitle className="min-w-0 break-words">{def.name}</SectionTitle>
+        <UiButton variant="ghost" size="sm" className="min-h-11" data-autofocus onClick={onClose}>
           <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit fullscreen')}
         </UiButton>
       </div>
-      <GlassPanel className="flex-1 overflow-hidden">
+      <GlassPanel className="min-h-0 flex-1 overflow-hidden">
         <Suspense fallback={<Skeleton className="h-full" />}>
           <Component
             vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
@@ -105,7 +105,7 @@ function FullscreenOverlay({
           />
         </Suspense>
       </GlassPanel>
-    </div>
+    </Modal>
   );
 }
 

@@ -1026,62 +1026,6 @@
       "cta": "Manage vehicles"
     }
   },
-  "lifetime": {
-    "unlocked": "✓ Unlocked",
-    "title": "Lifetime stats",
-    "allVehicles": "All vehicles",
-    "subtitle": "Your all-time driving achievements and milestones",
-    "aiQA": {
-      "title": "Ask about your lifetime stats",
-      "description": "Ask Helix a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
-      "badge": "Helix",
-      "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
-      "askButton": "Ask",
-      "inputLabel": "Your question",
-      "noVehicle": "Select a vehicle to ask about its lifetime stats.",
-      "noQuestion": "Type a question to ask Helix about your lifetime stats."
-    },
-    "heroSubtitle": "driven across {{drives}} drives",
-    "earthCompare": "That's {{x}}x around the Earth!",
-    "since": "Tracking since {{date}} ({{days}} days)",
-    "totalDrives": "Total drives",
-    "hours": "hrs",
-    "totalDistance": "Total distance",
-    "totalEnergy": "Total energy",
-    "sessions": "sessions",
-    "totalSavings": "Total savings",
-    "vsGas": "vs gasoline",
-    "funFacts": "Fun facts",
-    "earthProgress": "around the Earth",
-    "moonProgress": "to the Moon",
-    "treesPlanted": "trees equivalent planted",
-    "days": "days",
-    "homesPowered": "of home energy used",
-    "noData": "No driving data yet",
-    "savingsComparison": "Savings vs gasoline",
-    "noSavingsData": "Complete some drives to see savings",
-    "environmentalImpact": "Environmental impact",
-    "co2Offset": "CO₂ offset",
-    "treesEquiv": "trees equivalent",
-    "coffeesEquiv": "cups of coffee saved",
-    "personalRecords": "Personal records",
-    "longestDrive": "Longest drive",
-    "highestSpeed": "Highest speed",
-    "biggestCharge": "Biggest charge",
-    "activitySummary": "Activity summary",
-    "mostActiveDay": "Most active day",
-    "mostActiveHour": "Peak hour",
-    "daysOnRoad": "Days on road",
-    "avgEfficiency": "Avg efficiency",
-    "achievements": "Achievements",
-    "noAchievements": "Start driving to unlock achievements",
-    "electricCost": "Electric cost",
-    "gasCost": "Gasoline equivalent",
-    "youSaved": "You saved",
-    "avoided": "avoided",
-    "keyStats": "Key stats",
-    "moreInfoAbout": "More info about {{label}}"
-  },
   "mileage": {
     "title": "Mileage",
     "subtitle": "Daily and monthly distance tracking",
@@ -1729,11 +1673,6 @@
     "hottestDrive": "Hottest drive",
     "coldestDrive": "Coldest drive"
   },
-  "achievements": {
-    "dismiss": "Dismiss achievement notification",
-    "toastEyebrow": "Achievement unlocked",
-    "view": "View"
-  },
   "activity": {
     "action": {
       "alert": "Alert change",
@@ -1853,14 +1792,6 @@
     "noData": "No data available",
     "noDataDescription": "No chartable observations are available for the current selection yet."
   },
-  "dataState": {
-    "refreshBlocked": {
-      "message": "The device is offline, so this section is showing the last values it received."
-    },
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
-    }
-  },
   "date": {
     "preset": {
       "all": "All time",
@@ -1881,22 +1812,6 @@
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"
   },
-  "draft": {
-    "discardDraft": "Discard draft",
-    "restored": "Draft restored from {{when}}.",
-    "restoredItem": "{{noun}} draft restored from {{when}}.",
-    "unknownTime": "a moment ago",
-    "useDraft": "Use draft"
-  },
-  "editConflict": {
-    "banner": {
-      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "switchHint": "Or switch to your other tab to keep editing there.",
-      "takeOver": "Take over editing",
-      "title": "Another browser tab is editing this"
-    }
-  },
   "entityContext": {
     "alerts": "Alerts",
     "charging": "Charging sessions",
@@ -1909,43 +1824,6 @@
   },
   "error": {
     "loadFailed": "Failed to load data"
-  },
-  "export": {
-    "jobDrawer": {
-      "activeCount": "{{count}} export running",
-      "activeCount_other": "{{count}} exports running",
-      "activeEmpty": "No active exports",
-      "activeHeading": "In progress",
-      "activePill": "{{count}} active",
-      "close": "Dismiss",
-      "completedLine": "{{size}} · {{relative}}",
-      "download": "Download",
-      "expand": "Show export jobs ({{count}} active)",
-      "label": "Export job progress",
-      "loading": "Loading export jobs…",
-      "minimize": "Minimize",
-      "recentEmpty": "No recent exports",
-      "recentHeading": "Recent",
-      "recentLabel": "Exports",
-      "statusLine": "{{status}} · started {{relative}}",
-      "title": "Export jobs"
-    },
-    "status": {
-      "expired": "Expired",
-      "failed": "Failed",
-      "processing": "Processing",
-      "queued": "Queued",
-      "ready": "Ready"
-    },
-    "types": {
-      "account": "Account export",
-      "analytics": "Analytics",
-      "backup": "Backup",
-      "charging": "Charging",
-      "drives": "Drives",
-      "importCharging": "Import charging",
-      "importDrives": "Import drives"
-    }
   },
   "freshness": {
     "noData": "No recent data",
@@ -2003,21 +1881,65 @@
       "started": "Impersonation started"
     }
   },
+  "lifetime": {
+    "achievements": "Achievements",
+    "activitySummary": "Activity summary",
+    "aiQA": {
+      "askButton": "Ask",
+      "badge": "Helix",
+      "description": "Ask Helix a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
+      "inputLabel": "Your question",
+      "noQuestion": "Type a question to ask Helix about your lifetime stats.",
+      "noVehicle": "Select a vehicle to ask about its lifetime stats.",
+      "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
+      "title": "Ask about your lifetime stats"
+    },
+    "avgEfficiency": "Avg efficiency",
+    "avoided": "avoided",
+    "biggestCharge": "Biggest charge",
+    "co2Offset": "CO₂ offset",
+    "coffeesEquiv": "cups of coffee saved",
+    "days": "days",
+    "daysOnRoad": "Days on road",
+    "earthCompare": "That's {{x}}x around the Earth!",
+    "earthProgress": "around the Earth",
+    "electricCost": "Electric cost",
+    "environmentalImpact": "Environmental impact",
+    "funFacts": "Fun facts",
+    "gasCost": "Gasoline equivalent",
+    "heroSubtitle": "driven across {{drives}} drives",
+    "highestSpeed": "Highest speed",
+    "homesPowered": "of home energy used",
+    "hours": "hrs",
+    "keyStats": "Key stats",
+    "longestDrive": "Longest drive",
+    "moonProgress": "to the Moon",
+    "moreInfoAbout": "More info about {{label}}",
+    "mostActiveDay": "Most active day",
+    "mostActiveHour": "Peak hour",
+    "noAchievements": "Start driving to unlock achievements",
+    "noData": "No driving data yet",
+    "noSavingsData": "Complete some drives to see savings",
+    "personalRecords": "Personal records",
+    "savingsComparison": "Savings vs gasoline",
+    "sessions": "sessions",
+    "since": "Tracking since {{date}} ({{days}} days)",
+    "subtitle": "Your all-time driving achievements and milestones",
+    "title": "Lifetime stats",
+    "totalDistance": "Total distance",
+    "totalDrives": "Total drives",
+    "totalEnergy": "Total energy",
+    "totalSavings": "Total savings",
+    "treesEquiv": "trees equivalent",
+    "treesPlanted": "trees equivalent planted",
+    "vsGas": "vs gasoline",
+    "youSaved": "You saved"
+  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
-    "staleBanner": {
-      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
-      "title": "Live data unavailable"
-    },
     "unknown": "Unknown"
-  },
-  "operationalMode": {
-    "writeBlocked": "Return to live mode before making operational changes.",
-    "writeNotice": {
-      "title": "Operational changes are read-only"
-    }
   },
   "operations": {
     "attention": "Attention",
@@ -2063,9 +1985,6 @@
       "title": "Elevation profile"
     }
   },
-  "requiresAuth": {
-    "title": "{{feature}} requires authentication mode"
-  },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
     "announceCleared": "Saved view cleared",
@@ -2089,18 +2008,6 @@
     "title": "Saved views",
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
-  },
-  "shortcuts": {
-    "empty": "No shortcuts match your search.",
-    "filter": {
-      "all": "All",
-      "global": "Global",
-      "label": "Filter shortcuts",
-      "page": "This page"
-    },
-    "gotoPrompt": "Go to…",
-    "search": "Search shortcuts…",
-    "title": "Keyboard shortcuts"
   },
   "sourceLayer": {
     "age": "age",
@@ -2370,12 +2277,5 @@
         "success": "Browser push removed for this device"
       }
     }
-  },
-  "tour": {
-    "close": "Close tour",
-    "finish": "Get started!",
-    "next": "Next",
-    "prev": "Back",
-    "skip": "Skip tour"
   }
 }
