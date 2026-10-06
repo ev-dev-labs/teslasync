@@ -83,7 +83,11 @@ Charge-history charts identify sessions by their actual start timestamps, format
 
 Charge-session charts and session details use the same charger-source classification: AC, DC, or Supercharger. Missing or unrecognized types remain Unknown; a connector name or Tesla branding alone does not establish the charging source. Charts include an Unknown legend entry when needed.
 
+Charging-cost and speed-profile count labels use the loaded catalogue's plural forms, including "1 session" and "1 drive". This changes the label only, not the underlying counts, calculations, or selected periods.
+
 Drive-efficiency charts label the overall-average reference separately from the rolling-average series. The rolling-average legend appears only when computed rolling values exist; a single measured day does not imply a known rolling average.
+
+Live signals and the tire-pressure visual both convert the endpoint's Pascal readings through the same pressure formatter. Changing bar/psi preference or decimal precision changes the display, not the underlying measurements.
 
 ## How layout adapts
 
@@ -96,6 +100,10 @@ Drive-efficiency charts label the overall-average reference separately from the 
 | Print                  | Sidebar and chrome are stripped (see [Printing](/guide/printing)) |
 
 The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height. New widgets fit their content against a fixed reference size, rather than repeatedly stretching to fill an already enlarged panel. Reference-size measurements temporarily disable transitions and settle the restored box before re-enabling them, so reduced-motion preferences do not change the measured content size or briefly recenter content. Oversized saved panels without an explicit resize are fitted back to their content on load (including older 9-row Vehicle Cards); deliberate resizes remain in place.
+
+In view mode, widget headers reserve space for the 44-pixel Expand control so it does not cover Refresh, status, or freshness controls. Expand is also visible when keyboard-focused; fullscreen and edit-mode headers retain their normal spacing.
+
+Expanded widgets use the shared fullscreen dialog above the mobile appbar. Exit fullscreen and Escape close it, keyboard focus stays within it while open, and focus returns to Expand on close.
 
 ## Units, dates, currency
 

@@ -122,6 +122,19 @@ select-all adds matching keys to the existing selection; deselect-all removes
 only matching keys. Explicit Clear selection still clears the complete
 controlled selection. Keys whose records are absent from `data` remain in
 `selectedKeys`, but resolving/exporting those records stays caller-owned.
+The same preservation applies when search or replacing-page data limits the
+current collection: select-all adds only its matching keys, and deselect-all
+removes only those keys. Neither operation clears selections owned by other
+pages. Explicit Clear selection still clears the complete selection.
+
+The opt-in `mobilePresentation` uses that same DataTable pipeline. Its reveal
+limit is independent of desktop pagination; revealing more mobile records must
+not rewrite a caller's controlled page or the desktop page-size preference.
+Returning to desktop restores the existing pagination behavior. Mobile details
+render null or undefined values as unknown (`—`), not a blank or fabricated zero;
+recorded numeric zero remains zero. Masking and caller-owned detail renderers
+retain priority. Import `MobileDataTablePresentation`, `MobileDataTableDetail`
+and `MobileTableRowKey` from `@/components/ui`.
 
 `exportAll` remains caller-owned server export behavior, is not filtered by
 loaded-row choices, and remains available when those choices match zero rows
