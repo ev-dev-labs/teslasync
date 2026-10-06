@@ -5,13 +5,16 @@ import { Badge, Caption, Text } from '@/components/ui';
 import { combineDataStates, deriveDataState } from '@/api/dataState';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import { useFleetTelemetryErrorVINs, useFleetTelemetryErrors } from '@/api/hooks/useTelemetry';
 
 import { severityTokens, typography } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -40,8 +43,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
   } = errorsQuery;
   const sourceStates = [vinsQuery, errorsQuery].map((query) =>
     deriveDataState({ ...query, data: query.data ?? (
-      vinsQuery.isLoading || errorsQuery.isLoading || vinsQuery.isError || errorsQuery.isError
-        || vinsQuery.error || errorsQuery.error ? undefined : null) }));
+      query.isLoading || query.isError || query.error ? undefined : null) }));
   const state = { ...sourceStates[0]!, ...combineDataStates(sourceStates) };
   if (errorVINs == null && errors == null && (vinsQuery.isError || errorsQuery.isError || vinsQuery.error || errorsQuery.error)) {
     state.status = 'initialFailure';
@@ -122,7 +124,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
       title={t('widget.telemetryErrors.title', 'Telemetry errors')}
       icon={<AlertCircle className={`h-3.5 w-3.5 ${severityTokens.critical.fg}`} />}
       loading={loading}
-      dataState={state}
+      dataState={isCompact && sourceStates[0].status === 'initial' ? sourceStates[0] : state}
       error={errorMessage}
       updatedAt={state.updatedAt ?? 0}
       isFetching={vinsFetching || errorsFetching}
@@ -149,7 +151,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
         /* ── Standard layout (2×4) ── */
         <div className="flex flex-col gap-2 h-full">
           {/* Header stats */}
-          <div className="flex items-center justify-between">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <Caption>
               {t('widget.telemetryErrors.activeVINs', '{{count}} VINs with errors', {
                 count: activeVINCount ?? undefined,
@@ -160,13 +162,42 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
               {statusLabel}
             </Badge>
           </div>
-          <WidgetStatGrid cols={2} stats={[
-            { label: t('widget.telemetryErrors.errorVINs', 'Error VINs'), value: activeVINCount == null ? '—' : fmtInt(activeVINCount) },
-            { label: t('widget.telemetryErrors.sample', 'Errors in fetched sample'), value: errors == null ? '—' : fmtInt(errorList.length) },
-          ]} />
+          <DashboardSourceBrief
+            metrics={[
+              { metricId: 'count', rawValue: activeVINCount, label: t('widget.telemetryErrors.errorVINs', 'Error VINs'), description: t('widget.telemetryErrors.vinDescription', 'VINs explicitly marked active; incomplete activity flags leave the count unknown.') },
+              { metricId: 'count', rawValue: errors == null ? null : errorList.length, label: t('widget.telemetryErrors.sample', 'Errors in fetched sample'), description: t('widget.telemetryErrors.sampleDescription', 'Returned error rows, not the total error count for a complete time range.') },
+            ]}
+            state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+            title={t('widget.telemetryErrors.summaryTitle', 'Error source counters')}
+            description={t('widget.telemetryErrors.summaryDescription', 'Active VINs and the fetched error sample remain separate sources; observed and fetched timestamps keep their original distinction.')}
+            scope={t('widget.telemetryErrors.summaryScope', 'Fleet telemetry; returned VIN summary and error sample, exact coverage bounds unknown')}
+            loading={loading && !hasData} testId="telemetry-errors-operational-brief"
+          />
+          {(errorVINs == null || sourceStates[0].refreshError || sourceStates[0].isRefreshBlocked) && (
+            <SourceContent
+              state={sourceBoundaryState(sourceStates[0], errorVINs != null)}
+              label={t('widget.telemetryErrors.errorVINs', 'Error VINs')}
+              emptyMessage={t('widget.telemetryErrors.vinsUnavailable', 'Error VIN summary unavailable')}
+              errorMessage={t('widget.telemetryErrors.vinsUnavailable', 'Error VIN summary unavailable')}
+              error={sourceStates[0].fatalError}
+              retainedMessage={t('widget.telemetryErrors.vinsRetained', 'Previously loaded error VIN summary remains visible while this source recovers.')}
+              errorRecovery={{ onRetry: () => { void refetchVINs(); } }}
+            >
+              {null}
+            </SourceContent>
+          )}
 
           {/* Error feed */}
           <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
+            <SourceContent
+              state={sourceBoundaryState(sourceStates[1], errors != null)}
+              label={t('widget.telemetryErrors.sample', 'Errors in fetched sample')}
+              emptyMessage={t('widget.telemetryErrors.noData', 'No telemetry error data')}
+              errorMessage={t('widget.telemetryErrors.feedUnavailable', 'Telemetry error sample unavailable')}
+              error={sourceStates[1].fatalError}
+              retainedMessage={t('widget.telemetryErrors.feedRetained', 'Previously loaded telemetry error sample remains visible while this source recovers.')}
+              errorRecovery={{ onRetry: () => { void refetchErrors(); } }}
+            >
             {aggregated.length === 0 ? (
               <Text variant="bodySm" className="text-center py-4">
                 {errors == null ? t('widget.telemetryErrors.noData', 'No telemetry error data')
@@ -180,11 +211,11 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                 return (
                   <div
                     key={`${entry.vin}-${entry.error_code}-${idx}`}
-                    className="flex items-center gap-2 rounded-shape-sm bg-[var(--surface-2)] px-2 py-1.5 min-h-11"
+                    className="flex min-w-0 flex-wrap items-start gap-2 rounded-shape-sm bg-[var(--surface-2)] px-2 py-1.5 min-h-11"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <Text variant="bodySm" className="font-mono truncate max-w-[120px]" title={entry.vin}>
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <Text variant="bodySm" mono className="min-w-0 [overflow-wrap:anywhere]" title={entry.vin}>
                           {entry.vin}
                         </Text>
                         {isRecent && (
@@ -193,11 +224,11 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                           </Badge>
                         )}
                       </div>
-                      <Caption className="truncate block" title={entry.error_code}>
+                      <Caption className="block [overflow-wrap:anywhere]" title={entry.error_code}>
                         {entry.error_code}
                       </Caption>
                     </div>
-                    <div className="flex flex-col items-end shrink-0">
+                    <div className="flex max-w-full flex-col items-end [overflow-wrap:anywhere]">
                       <Caption>
                         ×{fmtInt(entry.count)}
                       </Caption>
@@ -208,6 +239,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                 );
               })
             )}
+            </SourceContent>
           </div>
         </div>
       )}

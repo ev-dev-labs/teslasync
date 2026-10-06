@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PieChart as PieIcon, DollarSign, TrendingDown, Fuel } from 'lucide-react';
+import { PieChart as PieIcon } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, useThemeChartPalette,
   EmbeddedChart, ChartTooltip, BarChart, Bar, XAxis, YAxis,
@@ -17,7 +17,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber, knownString } from '@/api/dataState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { WidgetRankedList, WidgetBigNumber, WidgetStatGrid, WidgetDetailCard, type RankedItem } from './shared';
+import { WidgetRankedList, WidgetBigNumber, WidgetDetailCard, type RankedItem } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -195,11 +196,18 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
       onRefresh={handleRefresh}
     >
         <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
-          <WidgetStatGrid cols={3} stats={[
-            { label: t('widget.costBreakdown.totalCost', 'Total cost'), value: formatAmount(totalCost), icon: <DollarSign className="size-3.5" /> },
-            { label: t('widget.costBreakdown.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }), value: formatAmount(costPerDist), icon: <Fuel className="size-3.5" /> },
-            { label: t('widget.costBreakdown.gasSavings', 'Gas savings'), value: formatAmount(totalSavings), icon: <TrendingDown className="size-3.5" /> },
-          ]} />
+          <DashboardSourceBrief
+            metrics={[
+              { metricId: 'currency', rawValue: totalCost, label: t('widget.costBreakdown.totalCost', 'Total cost'), description: t('widget.costBreakdown.totalDescription', 'Reported total charging cost, retaining the configured currency display.'), display: { formatter: raw => ({ value: formatAmount(raw), unit: '' }) } },
+              { metricId: 'rate', rawValue: knownNumber(data?.cost_per_km_ev) == null ? null : Number(data?.cost_per_km_ev) / 1000, label: t('widget.costBreakdown.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }), description: t('widget.costBreakdown.rateDescription', 'Source currency per kilometre normalized to currency per metre; display conversion occurs exactly once.'), display: { formatter: raw => ({ value: formatAmount(Number(raw) * 1000 / convertDistanceFromSI(1000, distanceUnit)), unit: '' }) } },
+              { metricId: 'currency', rawValue: totalSavings, label: t('widget.costBreakdown.gasSavings', 'Gas savings'), description: t('widget.costBreakdown.savingsDescription', 'Reported gasoline comparison is an estimate, not independently measured savings.'), display: { formatter: raw => ({ value: formatAmount(raw), unit: '' }) } },
+            ]}
+            state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+            title={t('widget.costBreakdown.summaryTitle', 'Charging cost sources')}
+            description={t('widget.costBreakdown.summaryDescription', 'Lifetime totals, the existing source tariff and estimated gasoline comparison remain independent of ranked monthly rows.')}
+            scope={t('widget.costBreakdown.summaryScope', 'Vehicle {{vehicleId}}; lifetime source totals and available monthly records, exact coverage bounds unknown', { vehicleId: id ?? '—' })}
+            loading={isLoading && !data} testId="cost-breakdown-operational-brief"
+          />
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-3 @sm:grid-cols-2 @sm:grid-rows-1">
           <EmbeddedChart
             title={t('widget.costBreakdown.title', 'Cost breakdown')}

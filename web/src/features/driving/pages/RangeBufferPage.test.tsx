@@ -261,6 +261,16 @@ beforeEach(() => {
 });
 
 describe('RangeBufferPage', () => {
+  it('retains all arrival evidence and the selected window when its refresh is paused', () => {
+    h.drives = { ...query({ data: readyDrives() }), fetchStatus: 'paused' };
+    renderPage();
+    expectEverySection();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent('offline');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all thirteen shells with exact local-window bounds and a capped request', () => {
     renderPage();
 

@@ -34,6 +34,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
+    pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 } }),
+}))
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}))
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
   return {
@@ -300,7 +307,9 @@ describe('TwoFactorAuthPage — loading', () => {
     // Interactive section shows its loading affordance…
     expect(await screen.findByText('Loading two-factor settings…')).toBeInTheDocument()
     // …the KPI band is in skeleton mode, so no metric cells have rendered yet…
-    expect(screen.queryByText('Protection')).toBeNull()
+    expect(screen.getByText('Protection')).toBeInTheDocument()
+    expect(screen.getByTestId('totp-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('totp-summary').querySelectorAll('[data-operational-value]')).toHaveLength(0)
     // …but the static guidance panels are always mounted.
     expect(screen.getByText('How setup works')).toBeInTheDocument()
     expect(screen.getByText('Compatible apps')).toBeInTheDocument()

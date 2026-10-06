@@ -10,6 +10,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ChartCardProps } from '@/components/layout';
 import { PanelTitle } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display';
 import { deriveDataState } from '@/api/dataState';
 import type { HomeEnergyOrchestration } from '../hooks/useHomeEnergyOrchestration';
 import { DEFAULT_SCENARIO } from '../hooks/useOrchestrationScenario';
@@ -27,7 +28,15 @@ const h = vi.hoisted(() => ({
   refresh: vi.fn(),
   commit: vi.fn(),
   retry: vi.fn(),
+  metricBands: [] as (readonly StatMetric[])[],
 }));
+vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
+  return { ...actual, useOperationalMetrics: (...args: Parameters<typeof actual.useOperationalMetrics>) => {
+    h.metricBands.push(args[0]);
+    return actual.useOperationalMetrics(...args);
+  } };
+});
 vi.mock('../hooks/useHomeEnergyOrchestration', () => ({
   useHomeEnergyOrchestration: () => h.model,
 }));
@@ -79,7 +88,9 @@ function mountPage() {
   </MemoryRouter></QueryClientProvider>);
 }
 function assertSections(container: HTMLElement) {
-  expect(container.querySelectorAll('[data-stat]')).toHaveLength(6);
+  expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(2);
+  expect(screen.getByTestId('home-energy-outcomes').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+  expect(screen.getByTestId('home-energy-forecast-quality').querySelectorAll('[data-operational-metric]')).toHaveLength(2);
   for (const title of [
     'Scenario & assumptions', 'Vehicle assumptions', 'Energy flow schedule',
     'Per-vehicle readiness', 'Powerwall trajectory', 'Tariff & constraint heatmap',
@@ -89,6 +100,7 @@ function assertSections(container: HTMLElement) {
 beforeEach(() => {
   vi.clearAllMocks();
   h.charts = [];
+  h.metricBands = [];
   const input = inputFixture();
   const forecast = {
     seriesW: input.solarForecastW, confidence: 0.75, quality: 'medium' as const,
@@ -117,9 +129,9 @@ describe('whole-home presentation preservation', () => {
     expect(screen.getAllByText(/never an autonomous command/).length).toBeGreaterThan(0);
     expect(screen.getByText(/50% model assumption, not a measurement/)).toBeInTheDocument();
     expect(screen.getAllByText('75% confidence from 123 history sample(s)')).toHaveLength(2);
-    const strip = container.querySelector('[data-stat-strip]');
-    expect(strip).toHaveAttribute('data-period-kind', 'analysis');
-    expect(strip).toHaveTextContent(`${start} — 2026-01-01T06:00:00.000Z (end exclusive)`);
+    const brief = screen.getByTestId('home-energy-outcomes');
+    expect(brief).toHaveTextContent(`${start} — 2026-01-01T06:00:00.000Z (end exclusive)`);
+    expect(brief).toHaveTextContent('30-minute modeled slots · UTC · source coverage not established');
   });
   it('passes every slot and all six energy series to chart tables and CSV without a sample cap', () => {
     mountPage();
@@ -173,6 +185,12 @@ describe('whole-home presentation preservation', () => {
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(h.retry).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Download canonical JSON plan' })).toBeEnabled();
+    const brief = screen.getByTestId('home-energy-outcomes');
+    expect(brief).toHaveTextContent(mode === 'stale' ? 'Retained source inputs'
+      : mode === 'paused' ? 'Source refresh paused' : 'Incomplete source inputs');
+    for (const metric of brief.querySelectorAll('[data-operational-metric]')) {
+      expect(metric).toHaveAttribute('data-value-state', 'value');
+    }
   });
   it.each(['initial-failure', 'initial-paused'] as const)('keeps all sections and honest source recovery for %s', mode => {
     const state = deriveDataState<unknown>({
@@ -184,7 +202,12 @@ describe('whole-home presentation preservation', () => {
     const { container } = mountPage();
     assertSections(container);
     if (mode === 'initial-failure') {
-      expect(container.querySelectorAll('[data-stat-value]')).toHaveLength(0);
+      const values = screen.getByTestId('home-energy-outcomes').querySelectorAll('[data-operational-value]');
+      expect(values).toHaveLength(6);
+      for (const value of values) expect(value).toHaveTextContent('—');
+      for (const metric of screen.getByTestId('home-energy-outcomes').querySelectorAll('[data-operational-metric]')) {
+        expect(metric).toHaveAttribute('data-value-state', 'missing');
+      }
       fireEvent.click(screen.getByRole('button', { name: /retry/i }));
       expect(h.retry).toHaveBeenCalledTimes(1);
     } else {
@@ -220,5 +243,103 @@ describe('whole-home presentation preservation', () => {
       schemaVersion: 1, input: h.model!.input, result: h.model!.result,
       disclaimer: expect.stringContaining('does not send any command'),
     }), 'home-energy-plan-2026-01-01.json');
+  });
+  it('passes genuine numeric SI outcomes through the real bridge, retaining signed net cost and count denominator', () => {
+    h.model!.result.scores.overall = 72.6;
+    h.model!.result.scores.selfConsumption = 81.25;
+    h.model!.result.totals.totalCost = -12.34;
+    h.model!.result.totals.peakGridImportW = 1234;
+    h.model!.result.vehicles[0].unmetWh = 2500;
+    mountPage();
+    const band = h.metricBands.find(metrics => metrics.some(metric => metric.occurrenceId === 'overall'))!;
+    expect(band.map(({ occurrenceId, metricId, rawValue }) => ({ occurrenceId, metricId, rawValue }))).toEqual([
+      { occurrenceId: 'overall', metricId: 'score', rawValue: 72.6 },
+      { occurrenceId: 'projected-cost', metricId: 'currency', rawValue: -12.34 },
+      { occurrenceId: 'self-consumption', metricId: 'percent', rawValue: 81.25 },
+      { occurrenceId: 'peak-grid-import', metricId: 'power', rawValue: 1234 },
+      { occurrenceId: 'vehicles-ready', metricId: 'count', rawValue: h.model!.result.vehicles.filter(v => v.readinessAchieved).length },
+      { occurrenceId: 'unmet-energy', metricId: 'energy', rawValue: 2500 },
+    ]);
+    expect(band.find(metric => metric.occurrenceId === 'vehicles-ready')?.display?.countTotal).toBe(1);
+    const brief = screen.getByTestId('home-energy-outcomes');
+    expect(brief.querySelector('[data-operational-metric="overall"] [data-operational-value]')).toHaveTextContent('73');
+    expect(brief.querySelector('[data-operational-metric="projected-cost"] [data-operational-value]')).toHaveTextContent('-12.34');
+    expect(brief.querySelector('[data-operational-metric="peak-grid-import"] [data-operational-value]')).toHaveTextContent('1.23 kW');
+    expect(brief.querySelector('[data-operational-metric="unmet-energy"] [data-operational-value]')).toHaveTextContent('2.50 kWh');
+  });
+  it('keeps invalid measurements distinct from genuine zero and a successful empty vehicle plan', () => {
+    h.model!.result.scores.overall = Number.NaN;
+    h.model!.result.totals.peakGridImportW = Number.POSITIVE_INFINITY;
+    h.model!.result.totals.totalCost = 0;
+    h.model!.result.vehicles = [];
+    mountPage();
+    const brief = screen.getByTestId('home-energy-outcomes');
+    for (const id of ['overall', 'peak-grid-import']) {
+      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'invalid');
+      expect(brief.querySelector(`[data-operational-metric="${id}"] [data-operational-value]`)).toHaveTextContent('—');
+    }
+    for (const id of ['projected-cost', 'vehicles-ready', 'unmet-energy']) {
+      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'value');
+    }
+    expect(brief.querySelector('[data-operational-metric="vehicles-ready"] [data-operational-value]')).toHaveTextContent('0/0');
+  });
+  it('keeps loading brief shells and all scenario controls without presenting skeletons as values', () => {
+    h.model!.isLoading = true;
+    const { container } = mountPage();
+    assertSections(container);
+    const brief = screen.getByTestId('home-energy-outcomes');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(screen.getByRole('button', { name: 'Recompute from now' })).toBeEnabled();
+  });
+  it('opens the actual outcomes drawer with source assumptions, modeled captions and the exact interval', () => {
+    mountPage();
+    fireEvent.click(within(screen.getByTestId('home-energy-outcomes')).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Planning outcomes details' });
+    expect(drawer).toHaveTextContent('Modeled recommendation score, not source confidence');
+    expect(drawer).toHaveTextContent('Projected net cost using editable tariff assumptions');
+    expect(drawer).toHaveTextContent('never fabricated as delivered');
+    expect(drawer).toHaveTextContent(`${start} — 2026-01-01T06:00:00.000Z (end exclusive)`);
+    expect(drawer).toHaveTextContent('Assumed (user-editable): tariff rates');
+    expect(drawer).toHaveTextContent('never an autonomous command');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  it('retains independent forecast evidence and genuine adapter confidence in the real review drawer', () => {
+    h.model!.loadForecast = { ...h.model!.loadForecast, confidence: 0.5, sourceSampleCount: 12,
+      quality: 'low', latestSampleIso: '2025-12-31T23:00:00Z' };
+    h.model!.sourceStates = [...h.model!.sourceStates, { id: 'history', state: deriveDataState({
+      data: [1], error: new Error('History refresh failed'), dataUpdatedAt: Date.parse(start),
+    }) }];
+    mountPage();
+    const brief = screen.getByTestId('home-energy-forecast-quality');
+    expect(brief).toHaveTextContent('Retained source inputs');
+    expect(brief).toHaveTextContent('75% confidence from 123 history sample(s)');
+    expect(brief).toHaveTextContent('50% confidence from 12 history sample(s)');
+    expect(brief).toHaveTextContent('Latest source history sample: 2025-12-31T23:00:00Z');
+    const band = h.metricBands.find(metrics => metrics.some(metric => metric.occurrenceId === 'solar-confidence'))!;
+    expect(band.map(metric => metric.rawValue)).toEqual([75, 50]);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Assumptions & forecast quality details' });
+    expect(drawer).toHaveTextContent('75% confidence from 123 history sample(s)');
+    expect(drawer).toHaveTextContent('50% confidence from 12 history sample(s)');
+    expect(drawer).toHaveTextContent('Forecast-adapter confidence is derived from available energy history');
+    expect(drawer).toHaveTextContent('not confidence in measured vehicle or battery state');
+  });
+  it('discloses absent forecast history without inventing positive confidence or a source timestamp', () => {
+    for (const forecast of [h.model!.solarForecast, h.model!.loadForecast]) {
+      forecast.confidence = 0;
+      forecast.sourceSampleCount = 0;
+      forecast.latestSampleIso = null;
+      forecast.quality = 'none';
+    }
+    mountPage();
+    const brief = screen.getByTestId('home-energy-forecast-quality');
+    expect(within(brief).getAllByText('0% confidence from 0 history sample(s)')).toHaveLength(2);
+    expect(within(brief).getAllByText('No source history sample timestamp is available.')).toHaveLength(2);
+    for (const metric of brief.querySelectorAll('[data-operational-metric]')) {
+      expect(metric).toHaveAttribute('data-value-state', 'value');
+    }
   });
 });

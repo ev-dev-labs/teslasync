@@ -2,7 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, Lock, Unlock, ArrowUpRight } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
+import { SourceContent } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { VehicleTwin } from '@/components/vehicles';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
@@ -10,9 +11,9 @@ import { buildTwinState } from '@/lib/vehicleState';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetStatusGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
 const REFRESH_INTERVAL = 5_000;
 
@@ -187,9 +188,28 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
               statusLabel: hasWindowData ? t('widget.reported', 'Reported') : t('widget.status.unknown', 'Unknown'),
             },
           ]} />
-          <p className={`${dashboardTokens.metricLabel} flex-shrink-0 text-center`}>
+          <Text as="p" variant="bodySm" className="shrink-0 text-center max-w-full [overflow-wrap:anywhere]">
             {vehicle.display_name || vehicle.vin || t('widget.unknownVehicle', 'Unknown vehicle')}
-          </p>
+          </Text>
+          {[
+            { id: 'state', label: t('widget.digitalTwinSources.state', 'Vehicle state'), trust: stateTrust, hasContent: stateData != null, retry: () => { void refetch(); } },
+            { id: 'security', label: t('widget.digitalTwinSources.security', 'Security state'), trust: securityTrust, hasContent: security != null, retry: () => { void securityQuery.refetch(); } },
+            { id: 'charging', label: t('widget.digitalTwinSources.charging', 'Charging state'), trust: chargingTrust, hasContent: charging != null, retry: () => { void chargingQuery.refetch(); } },
+          ].filter(source => !source.hasContent || source.trust.refreshError || source.trust.isRefreshBlocked).map(source => (
+            <div key={source.id} className="w-full min-w-0">
+              <SourceContent
+                state={sourceBoundaryState(source.trust, source.hasContent)}
+                label={source.label}
+                emptyMessage={t('widget.digitalTwinSources.unavailable', '{{source}} unavailable', { source: source.label })}
+                errorMessage={t('widget.digitalTwinSources.unavailable', '{{source}} unavailable', { source: source.label })}
+                error={source.trust.fatalError}
+                retainedMessage={t('widget.digitalTwinSources.retained', '{{source}}: previously loaded data remains visible while this source recovers.', { source: source.label })}
+                errorRecovery={{ onRetry: source.retry }}
+              >
+                {null}
+              </SourceContent>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="flex min-w-0 flex-col gap-3">

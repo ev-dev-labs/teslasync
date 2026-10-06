@@ -7,7 +7,7 @@
  * Its own responsibilities (what these tests exercise) are:
  *
  *   1. A KPI band derived from the geofences (total / reviewed / pending),
- *      always visible with a 0 placeholder — loading shows skeletons.
+ *      always visible with unknown values for unavailable sources — loading shows skeletons.
  *   2. Section-local loading / error / empty / no-search-match branches for the
  *      Zones panel — no panel is gated away or left blank.
  *   3. Per-place behaviour: review status, edit → modal prefill, delete → confirm → DELETE.
@@ -311,8 +311,8 @@ const zones = () => within(screen.getByRole('region', { name: 'Places and chargi
 
 // Read a KPI card's value by its label text.
 function kpiValue(label: string): string {
-  const card = summary().getByText(label).closest('[data-role="metric-card"]');
-  return card?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = summary().getByText(label).closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 async function openCreateModal() {
@@ -349,6 +349,15 @@ afterEach(() => {
 
 // ── KPI band ─────────────────────────────────────────────────────────────────
 describe('GeofencesPage — KPI band', () => {
+  it('opens the real summary drawer with separate candidate evidence and retains the create action', async () => {
+    renderPage();
+    await waitFor(() => expect(kpiValue('Total geofences')).toBe('3'));
+    fireEvent.click(summary().getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Geofence summary details' });
+    expect(within(drawer).getByText('Returned visited-place candidates; separate from saved geofence totals.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Awaiting review')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add geofence' })).toBeInTheDocument();
+  });
   it('derives all four KPIs from the geofences and always shows the band', async () => {
     renderPage();
     await zones().findByText('Home');
@@ -402,17 +411,22 @@ describe('GeofencesPage — KPI band', () => {
     const { container } = renderPage();
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Total geofences')).toBeNull();
+    expect(summary().getByText('Total geofences')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Geofence summary' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('region', { name: 'Geofence summary' }).querySelector('[data-operational-value]')).toBeNull();
   });
 
-  it('keeps the KPI band visible with zero placeholders when the feed errors', async () => {
+  it('keeps the KPI band visible with unknown geofence counts when the feed errors', async () => {
     store.mode = 'reject';
     store.error = new Error('kaboom');
     renderPage();
 
-    // KPI band never disappears — it degrades to zeros.
-    await waitFor(() => expect(kpiValue('Total geofences')).toBe('0'));
-    expect(kpiValue('Reviewed places')).toBe('0');
+    // A failed source is unknown, not a measured empty directory.
+    await zones().findByRole('button', { name: 'Retry' });
+    expect(kpiValue('Total geofences')).toBe('—');
+    expect(kpiValue('Reviewed places')).toBe('—');
+    expect(kpiValue('Awaiting review')).toBe('—');
+    await waitFor(() => expect(kpiValue('Visited candidates')).toBe('0'));
   });
 });
 

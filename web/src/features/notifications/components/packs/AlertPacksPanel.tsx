@@ -7,7 +7,7 @@ import { EmptyState, ErrorDisplay, Spinner, StaleRefreshWarning } from '@/compon
 import { useDataState } from '@/hooks/useDataState'
 import InstallPackDialog from './InstallPackDialog'
 import InstalledPackCard from './InstalledPackCard'
-import { AIAlertPackBuilder } from '@/components/ai/AIAlertPackBuilder'
+import { AIAlertPackBuilder } from '@/components/ai'
 
 interface Props {
   onEditRule: (id: number) => void

@@ -336,7 +336,7 @@ describe('CycleStressPage', () => {
 
     const kpis = within(screen.getByTestId('cycle-stress-kpis'));
     expect(kpis.getByText('80%+ cycle share')).toBeInTheDocument();
-    expect(kpis.getByText('illustrative exponent 2')).toBeInTheDocument();
+    expect(kpis.getByText('illustrative exponent 2', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
     expect(
       within(screen.getByTestId('cycle-stress-methodology')).getByText(
         /raised to exponent 2/i,
@@ -401,7 +401,7 @@ describe('CycleStressPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows one retry surface when both histories fail', () => {
+  it('offers independently scoped retries when both histories fail', () => {
     h.sessions = query(refetchCharging, {
       isError: true,
       error: new Error('charging failed'),
@@ -414,10 +414,12 @@ describe('CycleStressPage', () => {
     renderPage();
 
     expectEverySection();
-    const retries = screen.getAllByRole('button', { name: /retry/i });
-    expect(retries).toHaveLength(1);
-    fireEvent.click(retries[0]!);
+    const retries = screen.getAllByRole('button', { name: /^Retry / });
+    expect(retries).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Charging history' }));
     expect(refetchCharging).toHaveBeenCalledTimes(1);
+    expect(refetchDrives).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Drive history' }));
     expect(refetchDrives).toHaveBeenCalledTimes(1);
   });
 
@@ -438,9 +440,9 @@ describe('CycleStressPage', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: 'Retry' }),
+      screen.getAllByRole('button', { name: /^Retry / }),
     ).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Charging history' }));
     expect(refetchCharging).toHaveBeenCalledTimes(1);
     expect(refetchDrives).not.toHaveBeenCalled();
   });
@@ -463,8 +465,11 @@ describe('CycleStressPage', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: 'Retry' }),
+      screen.getAllByRole('button', { name: 'Retry Charging history' }),
     ).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Charging history' }));
+    expect(refetchCharging).toHaveBeenCalledTimes(1);
+    expect(refetchDrives).not.toHaveBeenCalled();
   });
 
   it('keeps all shells and exact accounting for empty success', () => {

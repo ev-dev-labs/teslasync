@@ -91,6 +91,10 @@ import {
 } from '@/api/hooks/useIncidents';
 import { ToastProvider } from '@/components/feedback/Toast';
 import IncidentTimelinePage from './IncidentTimelinePage';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 const mockUseIncident = useIncident as unknown as ReturnType<typeof vi.fn>;
 const mockUsePatchIncident =

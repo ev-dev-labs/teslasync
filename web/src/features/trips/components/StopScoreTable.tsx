@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { DataTable, Text } from '@/components/ui';
+import { MetricBar } from '@/components/data-display';
 import type { Column } from '@/components/ui';
 
 import type { ScoredStop } from '@/api/hooks/useJourney';
@@ -44,11 +45,16 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       filterValueLabel: (_, row) => fmtNumber(row.score),
       header: t('journey.scoring.col.score', 'Score'),
       render: (row) => (
-        <div className="flex min-w-[6rem] items-center gap-2">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-            <div
-              className="h-full rounded-full bg-emerald-400/70"
-              style={{ width: `${Math.min(100, Math.max(0, row.score))}%` }}
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <MetricBar
+              value={row.score}
+              max={100}
+              color="var(--color-emerald-400, #34d399)"
+              fill="solid"
+              size="slim"
+              showHeader={false}
+              ariaLabel={t('journey.scoring.scoreFor', 'Score for {{site}}', { site: row.site })}
             />
           </div>
           <Text as="span" variant="caption" className="tabular-nums">

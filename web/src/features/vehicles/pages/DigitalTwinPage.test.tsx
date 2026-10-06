@@ -37,6 +37,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SecurityEvent, ChargingTelemetry } from '@/api/types';
+import * as operationalBridge from '@/hooks/useOperationalMetrics';
+
+const operationalMetricsSpy = vi.spyOn(operationalBridge, 'useOperationalMetrics');
 
 type Veh = { id: number; display_name: string; vin: string; exterior_color: string | null };
 
@@ -118,6 +121,18 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
     setVehicleId: vi.fn(),
   }),
 }));
+
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings: { unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
+        decimal_precision: 1, locale: 'en-US', currency_symbol: '$' },
+      settingsUnavailable: false,
+    }),
+  };
+});
 
 vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
@@ -266,9 +281,9 @@ function expectKv(label: string, value: string) {
 
 /** Assert the canonical metric identified by its unique context shows `value`. */
 function expectKpi(subtitle: string, value: string) {
-  const card = screen.getByText(subtitle).closest('[data-stat]');
-  expect(card).not.toBeNull();
-  expect(within(card as HTMLElement).getByText(value)).toBeInTheDocument();
+  const card = screen.getByText(subtitle).closest('[data-operational-metric]');
+  if (!(card instanceof HTMLElement)) throw new Error(`Missing operational metric ${subtitle}`);
+  expect(within(card).getByText(value)).toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -360,6 +375,7 @@ describe('DigitalTwinPage', () => {
     renderPage();
 
     expect(screen.getAllByText(/Can't reach server/i).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('digital-twin-summary')).getByText('Source request failed')).toBeInTheDocument();
 
     const retry = screen.getAllByRole('button', { name: /^Retry$/i });
     expect(retry.length).toBeGreaterThanOrEqual(3);
@@ -441,22 +457,97 @@ describe('DigitalTwinPage', () => {
       data: makeSecurity({ door_state: 'closed', fd_window: 'Closed' }),
     });
 
-    it('retains all component details and the interactive twin during a security refresh failure', () => {
-      h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
-      renderPage();
-      expectKv('Driver front', 'Open');
-      expectKv('Front passenger', 'Closed');
-      expectKv('Headlights', 'On');
-      expectKv('Driver seat', 'Occupied');
-      expect(screen.getByText('Security & status may be out of date')).toBeInTheDocument();
-      expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
-      expect(h.security.refetch).not.toHaveBeenCalled();
-    });
-
     renderPage();
 
     expect(screen.getAllByText('online').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('retains all component details and the interactive twin during a security refresh failure', () => {
+    h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
+    renderPage();
+    expectKv('Driver front', 'Open');
+    expectKv('Front passenger', 'Closed');
+    expectKv('Headlights', 'On');
+    expectKv('Driver seat', 'Occupied');
+    expect(screen.getByText('Security & status may be out of date')).toBeInTheDocument();
+    expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
+    expect(h.security.refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps raw counts, component denominators and source reasons in the real Review details drawer', () => {
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-metric="twin-doors"]')).toHaveAttribute('data-value-state', 'value');
+    expect(brief.querySelector('[data-operational-metric="twin-windows"]')).toHaveAttribute('data-value-state', 'value');
+    expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'twin-doors', rawValue: 2 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'twin-windows', rawValue: 1 }),
+    ]));
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Physical-state summary details' });
+    expect(within(drawer).getByText('of 6 openings')).toBeInTheDocument();
+    expect(within(drawer).getByText('of 4 windows')).toBeInTheDocument();
+    expect(within(drawer).getByText('6 of 6 states known')).toBeInTheDocument();
+    expect(within(drawer).getByText('4 of 4 states known')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Unreported openings are not assumed closed/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Source snapshots may differ in time/).length).toBeGreaterThan(0);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Live overview' })).toBeInTheDocument();
+    expectKv('Driver front', 'Open');
+  });
+
+  it('keeps reported closed states at zero and false distinct from unreported components', () => {
+    h.state = makeQuery({ data: null });
+    h.charging = makeQuery({ data: null });
+    h.security = makeQuery({ data: makeSecurity({
+      door_state: '{"DriverFront":false}', fd_window: null, fp_window: null,
+      rd_window: null, rp_window: null, locked: false, sentry_mode: false,
+    }) });
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    const doors = brief.querySelector('[data-operational-metric="twin-doors"]');
+    const windows = brief.querySelector('[data-operational-metric="twin-windows"]');
+    expect(doors).toHaveAttribute('data-value-state', 'value');
+    expect(doors).toHaveTextContent('0');
+    expect(doors).toHaveTextContent('1 of 6 states known');
+    expect(windows).toHaveAttribute('data-value-state', 'missing');
+    expect(windows).toHaveTextContent('—');
+    expect(brief.querySelector('[data-operational-metric="twin-lock"]')).toHaveTextContent('Unlocked');
+    expect(brief.querySelector('[data-operational-metric="twin-sentry"]')).toHaveTextContent('Inactive');
+    expect(within(brief).getByText('Mixed source availability')).toBeInTheDocument();
+    expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ occurrenceId: 'twin-doors', rawValue: 0 }),
+      expect.objectContaining({ occurrenceId: 'twin-windows', rawValue: null }),
+    ]));
+  });
+
+  it('marks the brief busy without leaking measured values during initial loading', () => {
+    h.security = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    h.state = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    h.charging = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(within(brief).getByText('Loading source snapshots')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
+  });
+
+  it('keeps the brief and its reviewable counts after a retained refresh failure', () => {
+    h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
+    expectKpi('of 6 openings', '2');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Physical-state summary details' });
+    expect(within(drawer).getByText('Retained source snapshots')).toBeInTheDocument();
+    expect(within(drawer).getByText('of 6 openings')).toBeInTheDocument();
+    expect(within(drawer).getByText(/retained values remain visible after a refresh failure/)).toBeInTheDocument();
   });
 });
 

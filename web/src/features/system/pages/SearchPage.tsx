@@ -10,13 +10,11 @@ import {
   Car,
   Compass,
   Filter,
-  Layers,
   MapPin,
   MapPinned,
   RefreshCw,
   Route,
   Search as SearchIcon,
-  Star,
   Workflow,
 } from 'lucide-react'
 
@@ -30,10 +28,11 @@ import {
   SectionTitle,
   Text,
 } from '@/components/ui'
-import { MetricCard, TimeStamp } from '@/components/data-display'
+import { TimeStamp } from '@/components/data-display'
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
-import { AINLSearch } from '@/components/ai/AINLSearch'
+import { AINLSearch } from '@/components/ai'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
@@ -233,57 +232,26 @@ export default function SearchPage() {
       {/* KPI summary band — derived from the active result set, full-width */}
       {isActiveSearch && (
         <FadeIn delay={0.1}>
-          <section
-            aria-label={t('search.kpis', 'Search summary')}
-            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-          >
-            {initialLoading ? (
-              [0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} height={92} className="w-full rounded-xl" />
-              ))
-            ) : (
-              <>
-                <MetricCard
-                  label={t('search.kpi.totalResults', 'Total results')}
-                  value={hits.length}
-                  icon={<SearchIcon className="h-5 w-5" />}
-                  color="cyan"
-                  subtitle={t('search.kpi.forQuery', 'for “{{query}}”', { query: trimmed })}
-                />
-                <MetricCard
-                  label={t('search.kpi.categories', 'Categories')}
-                  value={groupedHits.length}
-                  icon={<Layers className="h-5 w-5" />}
-                  color="blue"
-                  subtitle={t('search.kpi.ofTypes', 'of {{n}} searchable', {
-                    n: ALL_TYPES.length,
-                  })}
-                />
-                <MetricCard
-                  label={t('search.kpi.topMatch', 'Top match')}
-                  value={topGroup ? searchSectionLabel(topGroup.type, t) : '—'}
-                  icon={<Star className="h-5 w-5" />}
-                  color="green"
-                  subtitle={
-                    topGroup
-                      ? t('search.kpi.topCount', '{{n}} results', { n: topGroup.hits.length })
-                      : t('search.kpi.noMatches', 'No matches')
-                  }
-                />
-                <MetricCard
-                  label={t('search.kpi.activeFilters', 'Active filters')}
-                  value={typesFilter.length}
-                  icon={<Filter className="h-5 w-5" />}
-                  color="amber"
-                  subtitle={
-                    typesFilter.length > 0
-                      ? t('search.kpi.filtered', 'of {{n}} types', { n: ALL_TYPES.length })
-                      : t('search.kpi.allTypes', 'All types shown')
-                  }
-                />
-              </>
-            )}
-          </section>
+          <SystemSummaryBrief
+            title={t('search.kpis', 'Search summary')}
+            description={t('search.brief.description', 'Result counts and category coverage for the current query and selected type filters.')}
+            scope={t('search.kpi.forQuery', 'for “{{query}}”', { query: trimmed })}
+            available={state.hasData} loading={initialLoading} retained={state.hasData && searchQuery.isError}
+            metrics={[
+              { metricId: 'count', occurrenceId: 'results', rawValue: state.hasData ? hits.length : null, label: t('search.kpi.totalResults', 'Total results'),
+                context: t('search.brief.scope', 'Returned search hits, not an unbounded server total.') },
+              { metricId: 'count', occurrenceId: 'categories', rawValue: state.hasData ? groupedHits.length : null, label: t('search.kpi.categories', 'Categories'),
+                context: t('search.kpi.ofTypes', 'of {{n}} searchable', { n: ALL_TYPES.length }) },
+              { metricId: 'count', occurrenceId: 'filters', rawValue: typesFilter.length, label: t('search.kpi.activeFilters', 'Active filters'),
+                context: typesFilter.length > 0 ? t('search.kpi.filtered', 'of {{n}} types', { n: ALL_TYPES.length }) : t('search.kpi.allTypes', 'All types shown') },
+            ]}
+            textMetrics={[{
+              key: 'top-match', label: t('search.kpi.topMatch', 'Top match'),
+              value: topGroup ? searchSectionLabel(topGroup.type, t) : '—',
+              valueState: topGroup ? 'value' : 'missing',
+              detail: topGroup ? t('search.kpi.topCount', '{{n}} results', { n: topGroup.hits.length }) : t('search.kpi.noMatches', 'No matches'),
+            }]}
+          />
         </FadeIn>
       )}
 

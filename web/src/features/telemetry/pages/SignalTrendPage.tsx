@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, Activity, Ruler, Waypoints } from 'lucide-react';
+import { TrendingUp, Activity, Waypoints } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -99,16 +100,39 @@ export default function SignalTrendPage() {
     return [...historical, ...forecast].sort((a, b) => a.ms - b.ms);
   }, [historyQuery.data, summary.slopePerHour, summary.interceptAtStart, summary.forecast]);
 
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalTrend.title', 'Signal trend')} />;
-  }
-
   const historyHasData = historyQuery.data !== undefined;
   const isLoading = chosen && !historyHasData && historyQuery.isLoading;
   const isError = chosen && historyState.fatalError != null;
   const error = historyState.fatalError;
   const hasData = chosen && summary.samples > 0;
   const mk = summary.mannKendall;
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'rate', occurrenceId: 'drift-rate', rawValue: hasData ? summary.slopePerDay : null,
+      label: t('signalTrend.slope', 'Drift rate'),
+      display: { formatter: (raw) => ({ value: `${fmtScientificNumber(raw, 4)}/day`, unit: '' }) },
+      description: t('help.signalTrend.slope', 'Theil-Sen slope: the median of every pairwise slope between samples. A handful of outliers cannot swing this the way they can an ordinary least-squares fit.'),
+      context: t('signalTrend.slopePerHour', '{{v}}/hour', { v: hasData ? fmtScientificNumber(summary.slopePerHour, 5) : '—' }) },
+    { metricId: 'status', occurrenceId: 'significance', rawValue: !hasData ? null
+        : mk?.significant ? t('signalTrend.real', 'Real') : t('signalTrend.noise', 'Not significant'),
+      label: t('signalTrend.significance', 'Significance'),
+      description: t('help.signalTrend.significance', 'Tie-aware Mann-Kendall tests whether the observed ordering of values is more consistent with a monotonic trend than chance — ties (repeated readings) are corrected for rather than treated as informationless.'),
+      context: t('signalTrend.tau', 'tau {{tau}} · p {{p}}', {
+        tau: hasData ? fmtScientificNumber(mk?.tau, 3) : '—', p: hasData ? fmtScientificNumber(mk?.pValue, 4) : '—',
+      }) },
+    { metricId: 'number', occurrenceId: 'spread', rawValue: hasData ? summary.residualSpread : null,
+      label: t('signalTrend.spread', 'Residual spread'),
+      display: { formatter: (raw) => ({ value: fmtScientificNumber(raw, 3), unit: '' }) },
+      description: t('signalTrend.spreadHint', 'robust MAD around the fitted line') },
+    { metricId: 'count', occurrenceId: 'samples', rawValue: chosen && historyHasData ? summary.samples : null,
+      label: t('signalTrend.samples', 'Samples'),
+      description: t('signalTrend.span', '{{h}}h span · {{ev}}', {
+        h: fmtNumber(summary.spanHours ?? 0), ev: summary.evidenceLimited ? t('signalTrend.limited', 'evidence-limited') : t('signalTrend.sufficient', 'sufficient evidence'),
+      }) },
+  ];
+
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('signalTrend.title', 'Signal trend')} />;
+  }
 
   return (
     <PageLayout
@@ -156,57 +180,15 @@ export default function SignalTrendPage() {
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('signalTrend.kpis', 'Trend metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={error} onRetry={() => historyQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={96} className="rounded-xl" />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('signalTrend.slope', 'Drift rate')}
-                value={hasData ? `${fmtScientificNumber(summary.slopePerDay, 4)}/day` : '—'}
-                subtitle={t('signalTrend.slopePerHour', '{{v}}/hour', { v: hasData ? fmtScientificNumber(summary.slopePerHour, 5) : '—' })}
-                icon={<TrendingUp className="h-5 w-5" />}
-                color="cyan"
-                help={{
-                  i18nKey: 'help.signalTrend.slope',
-                  defaultValue: 'Theil-Sen slope: the median of every pairwise slope between samples. A handful of outliers cannot swing this the way they can an ordinary least-squares fit.',
-                }}
-              />
-              <MetricCard
-                label={t('signalTrend.significance', 'Significance')}
-                value={!hasData ? '—' : mk?.significant ? t('signalTrend.real', 'Real') : t('signalTrend.noise', 'Not significant')}
-                subtitle={t('signalTrend.tau', 'tau {{tau}} · p {{p}}', { tau: hasData ? fmtScientificNumber(mk?.tau, 3) : '—', p: hasData ? fmtScientificNumber(mk?.pValue, 4) : '—' })}
-                icon={<Activity className="h-5 w-5" />}
-                color={hasData && mk?.significant ? 'green' : 'amber'}
-                help={{
-                  i18nKey: 'help.signalTrend.significance',
-                  defaultValue: 'Tie-aware Mann-Kendall tests whether the observed ordering of values is more consistent with a monotonic trend than chance — ties (repeated readings) are corrected for rather than treated as informationless.',
-                }}
-              />
-              <MetricCard
-                label={t('signalTrend.spread', 'Residual spread')}
-                value={hasData ? fmtScientificNumber(summary.residualSpread, 3) : '—'}
-                subtitle={t('signalTrend.spreadHint', 'robust MAD around the fitted line')}
-                icon={<Ruler className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalTrend.samples', 'Samples')}
-                value={summary.samples}
-                subtitle={t('signalTrend.span', '{{h}}h span · {{ev}}', { h: fmtNumber(summary.spanHours ?? 0), ev: summary.evidenceLimited ? t('signalTrend.limited', 'evidence-limited') : t('signalTrend.sufficient', 'sufficient evidence') })}
-                icon={<Waypoints className="h-5 w-5" />}
-                color={summary.evidenceLimited ? 'amber' : 'blue'}
-              />
-            </>
-          )}
-        </section>
+        <TelemetrySummaryBrief title={t('signalTrend.kpis', 'Trend metrics')}
+          metrics={metrics} testId="signal-trend-summary" loading={isLoading}
+          unavailable={isError} unknown={!hasData} sourceStatus={historyState.status}
+          retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
+          scope={t('telemetryBrief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HOURS, signal: signalName || '—' })}
+          sourceBounds={signalName ? [{ signal: signalName, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
+          provenance={t('telemetryBrief.historyProvenance', 'Selected signal history; numeric samples only')}
+          description={t('telemetryBrief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+        {isError && <QueryError error={error} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
       {/* 3 — Baseline, actual, and evidence-limited forecast band */}

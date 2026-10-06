@@ -1,7 +1,7 @@
 import { useMemo, type ComponentProps } from 'react';
-import { BatteryCharging, Car, CircleCheck, CircleSlash2, Database } from 'lucide-react';
+import { Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { MetricCard } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { AlertBanner } from '@/components/feedback';
 import {
   DataTable, GlassPanel, PanelTitle, Text, type Column,
@@ -160,7 +160,7 @@ export function CycleStressAccounting({ result, state, locale }: Props) {
   }), [chargingUnavailable, driveUnavailable, locale, displayPrecision, displayLocale]);
 
   return (
-    <section data-testid="cycle-stress-accounting">
+    <section aria-label={t('cycleStress.accounting.title', 'Source-row accounting')} data-testid="cycle-stress-accounting">
       <GlassPanel className="min-w-0 p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -171,44 +171,31 @@ export function CycleStressAccounting({ result, state, locale }: Props) {
             'Every returned drive and charging row enters exactly one primary category before any SoC sequence is reconstructed.')}
         </Text>
         <CycleStressSectionBody result={result} state={state} requirement="none">
-          <div className="mb-4 grid grid-cols-1 gap-3 @[640px]:grid-cols-2 @[1280px]:grid-cols-4">
-            <MetricCard
-              label={t('cycleStress.accounting.returned', 'Known rows returned')}
-              value={cycleStressNumber(returned, locale)}
-              subtitle={t('cycleStress.accounting.sourceSplit',
-                'available data: {{drives}} drives + {{charging}} charging', {
-                  drives: drive.returnedRows,
-                  charging: charging.returnedRows,
-                })}
-              icon={<Database className="h-5 w-5" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('cycleStress.accounting.accepted', 'Accepted intervals')}
-              value={cycleStressNumber(included, locale)}
-              subtitle={t('cycleStress.accounting.afterValidation', 'after validation and overlap rejection')}
-              icon={<CircleCheck className="h-5 w-5" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('cycleStress.accounting.excluded', 'Excluded rows')}
-              value={cycleStressNumber(excluded, locale)}
-              subtitle={t('cycleStress.accounting.primaryReasons', 'classified by one primary reason')}
-              icon={<CircleSlash2 className="h-5 w-5" />}
-              color="amber"
-            />
-            <MetricCard
-              label={t('cycleStress.accounting.sourceTypes', 'Source types represented')}
-              value={cycleStressNumber(
-                (drive.includedRows > 0 ? 1 : 0)
-                  + (charging.includedRows > 0 ? 1 : 0),
-                locale,
-              )}
-              subtitle={t('cycleStress.accounting.driveCharge', 'drive and charging histories')}
-              icon={included > 0 ? <Car className="h-5 w-5" /> : <BatteryCharging className="h-5 w-5" />}
-              color="blue"
-            />
-          </div>
+          <BatteryEvidenceBrief
+            title={t('cycleStress.modernization.accountingSummary', 'Drive and charging row summary')}
+            retained={Boolean(state.refreshError)}
+            period={{ kind: 'unknown', label: t('cycleStress.modernization.period', 'Returned vehicle histories · bounded evidence'),
+              reason: t('cycleStress.modernization.provenance', 'Reconstructed from up to 1,000 drives and 1,000 charging sessions. Source spans may differ; this is not a selected-date-window or full-history total.') }}
+            metrics={[
+              { metricId: 'count', occurrenceId: 'rows-returned', rawValue: returned,
+                label: t('cycleStress.accounting.returned', 'Known rows returned'),
+                display: { formatter: raw => ({ value: cycleStressNumber(raw, locale), unit: '' }) },
+                context: t('cycleStress.accounting.sourceSplit', 'available data: {{drives}} drives + {{charging}} charging',
+                  { drives: drive.returnedRows, charging: charging.returnedRows }) },
+              { metricId: 'count', occurrenceId: 'accepted-intervals', rawValue: included,
+                label: t('cycleStress.accounting.accepted', 'Accepted intervals'),
+                display: { formatter: raw => ({ value: cycleStressNumber(raw, locale), unit: '' }) },
+                context: t('cycleStress.accounting.afterValidation', 'after validation and overlap rejection') },
+              { metricId: 'count', occurrenceId: 'excluded-rows', rawValue: excluded,
+                label: t('cycleStress.accounting.excluded', 'Excluded rows'),
+                display: { formatter: raw => ({ value: cycleStressNumber(raw, locale), unit: '' }) },
+                context: t('cycleStress.accounting.primaryReasons', 'classified by one primary reason') },
+              { metricId: 'count', occurrenceId: 'source-types', rawValue: (drive.includedRows > 0 ? 1 : 0) + (charging.includedRows > 0 ? 1 : 0),
+                label: t('cycleStress.accounting.sourceTypes', 'Source types represented'),
+                display: { formatter: raw => ({ value: cycleStressNumber(raw, locale), unit: '' }) },
+                context: t('cycleStress.accounting.driveCharge', 'drive and charging histories') },
+            ]}
+          />
           <DataTable variant="embedded"
             tableId="battery:cycle-stress-accounting"
             columns={columns}

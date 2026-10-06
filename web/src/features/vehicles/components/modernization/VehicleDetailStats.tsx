@@ -7,7 +7,7 @@ import type { VehicleState, VehicleStatus } from '@/api/types';
 import { QuickStatsGrid } from '../vehicle-detail';
 import { VehicleSourcePanel } from './VehicleSourcePanel';
 
-/** Retain all eight existing MetricCards and their specialist formatters. */
+/** Eight raw live measurements retain their own source snapshot. */
 export function VehicleDetailStats({ state, status, stateQuery }: {
   state: VehicleState | undefined;
   status: VehicleStatus;
@@ -18,12 +18,12 @@ export function VehicleDetailStats({ state, status, stateQuery }: {
     <FadeIn delay={0.08}>
       <Section id="vehicle-quick-stats" title={t('vehicles.detail.quickStats', 'Quick stats')}>
         <SectionErrorBoundary name="vehicle-detail:quick-stats" fallbackTitle={t('vehicles.detail.section.quickStatsFailed', 'Quick stats failed to load')}>
-          <VehicleSourcePanel query={stateQuery} available={state != null} renderEmpty={false}
+          <VehicleSourcePanel query={stateQuery} available={state != null}
             resourceName={t('vehicles.detail.liveStateResource', 'Live vehicle state')}
             label={t('vehicles.detail.quickStats', 'Quick stats')}
             emptyMessage={t('vehicles.noLiveData', 'No live data')}
             errorMessage={t('vehicles.detail.section.quickStatsFailed', 'Quick stats failed to load')}>
-            {state ? <QuickStatsGrid state={state} status={status} /> : null}
+            <QuickStatsGrid state={state} status={status} sourceQuery={stateQuery} />
           </VehicleSourcePanel>
         </SectionErrorBoundary>
       </Section>

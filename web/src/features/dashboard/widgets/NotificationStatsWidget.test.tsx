@@ -287,7 +287,7 @@ describe('NotificationStatsWidget — standard layout', () => {
     // Values: total sent (also echoed as its "up" trend), delivery rate,
     // failed, active channels.
     expect(screen.getAllByText('120')).toHaveLength(2);
-    expect(screen.getByText('98.33')).toBeInTheDocument();
+    expect(screen.getByText('98.33%')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
 
@@ -368,12 +368,28 @@ describe('NotificationStatsWidget — standard layout', () => {
     });
   });
 
-  it('shows the title + empty state (not the grid) when stats are absent', () => {
+  it('shows the title, recovery and unknown source measurements when stats are absent', () => {
     mockUseLogs.mockReturnValue(qr({ data: [makeLog()] }));
     renderWidget(STANDARD);
     expect(screen.getByText('Notification stats')).toBeInTheDocument();
     expect(screen.getByText('No notification data')).toBeInTheDocument();
-    expect(screen.queryByText('Active channels')).toBeNull();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+  });
+
+  it('reviews retained notification counters without replacing independent log history', () => {
+    mockUseStats.mockReturnValue(qr({ data: STATS, isError: true, error: new Error('refresh failed') }));
+    mockUseLogs.mockReturnValue(qr({ data: [makeLog({ title: 'Independent history' })] }));
+    renderWidget(WIDE);
+    expect(screen.getByText('Independent history')).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-stats-operational-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('98.33%')).toBeInTheDocument();
+    expect(within(drawer).getByText('Healthy')).toBeInTheDocument();
+    expect(within(drawer).getByText('Needs attention')).toBeInTheDocument();
+    expect(within(drawer).getByText(/separate latest log rows/)).toBeInTheDocument();
   });
 
   it('does NOT render the recent-log table below the standard breakpoint', () => {

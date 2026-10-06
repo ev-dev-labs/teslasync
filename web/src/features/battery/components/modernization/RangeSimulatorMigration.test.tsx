@@ -60,7 +60,8 @@ vi.mock('@/hooks/useUnits', () => ({
     formatEnergy: (value: number) => `${(value / 1000).toFixed(1)} kWh`,
   }),
 }));
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 

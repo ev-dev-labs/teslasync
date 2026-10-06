@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { navRouteIcons } from '@/lib/navRouteIcons';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { Caption, Text } from '@/components/ui';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -23,8 +23,8 @@ export default function QuickNavWidget(_props: WidgetProps) {
             <Link key={item.to} to={item.to} className="group flex min-w-0 items-center gap-3 rounded-lg p-2 min-h-11 transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
               <Icon aria-hidden="true" className="size-5 shrink-0 text-[var(--theme-primary)]" />
               <div className="min-w-0 flex-1">
-                <p className={dashboardTokens.title}>{item.label}</p>
-                <p className={dashboardTokens.metricLabel}>{item.description}</p>
+                <Text as="p" variant="bodySm" className="break-words">{item.label}</Text>
+                <Caption className="block break-words">{item.description}</Caption>
               </div>
               <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-[var(--text-muted)]" />
             </Link>

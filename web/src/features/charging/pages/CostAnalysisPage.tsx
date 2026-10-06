@@ -6,7 +6,7 @@ import { StaleRefreshWarning } from '@/components/feedback';
 
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
-import { AICostForecastNarration } from '@/components/ai/AICostForecastNarration';
+import { AICostForecastNarration } from '@/components/ai';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { useUnits } from '@/hooks/useUnits';

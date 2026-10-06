@@ -38,9 +38,10 @@ import {
   MoneyInput,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   formatCurrencyMinor,
   formatPct,
@@ -331,19 +332,26 @@ export default function InsuranceTelematicsPage() {
             'Exposure-normalised risk over the selected window.',
           )}
           empty={!data}
+          preserveSummary
           emptyMessage={t(
             'ownership.insurance.summary.empty',
             'Select a vehicle to build an underwriting profile.',
           )}
           actions={data ? <VerdictBadge value={data.risk_grade} /> : undefined}
         >
-          <StatGrid
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.insurance.brief.title', 'Modelled underwriting indices')}
+            description={t('ownership.insurance.summary.subtitle', 'Exposure-normalised risk over the selected window.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={riskQuery} enabled={vehicleId != null}
+            window={data?.window}
+            metrics={[
               {
-                key: 'score',
+                occurrenceId: 'score', metricId: 'score',
                 label: t('ownership.insurance.stat.score', 'Risk score'),
-                value: fmtNumber(data?.risk_score ?? 0),
-                hint: t('ownership.insurance.stat.scoreHint', '0 = best, 100 = worst'),
+                rawValue: data?.risk_score,
+                display: specialistDisplay(fmtNumber),
+                context: t('ownership.insurance.stat.scoreHint', '0 = best, 100 = worst'),
                 tone:
                   (data?.risk_score ?? 0) >= 60
                     ? 'critical'
@@ -352,22 +360,25 @@ export default function InsuranceTelematicsPage() {
                       : 'positive',
               },
               {
-                key: 'frequency',
+                occurrenceId: 'frequency', metricId: 'ratio',
                 label: t('ownership.insurance.stat.frequency', 'Frequency index'),
-                value: fmtNumber(data?.frequency_index ?? 0),
-                hint: t('ownership.insurance.stat.frequencyHint', 'Expected claim count driver'),
+                rawValue: data?.frequency_index,
+                display: specialistDisplay(fmtNumber),
+                context: t('ownership.insurance.stat.frequencyHint', 'Expected claim count driver'),
               },
               {
-                key: 'severity',
+                occurrenceId: 'severity', metricId: 'ratio',
                 label: t('ownership.insurance.stat.severity', 'Severity index'),
-                value: fmtNumber(data?.severity_index ?? 0),
-                hint: t('ownership.insurance.stat.severityHint', 'Expected claim size driver'),
+                rawValue: data?.severity_index,
+                display: specialistDisplay(fmtNumber),
+                context: t('ownership.insurance.stat.severityHint', 'Expected claim size driver'),
               },
               {
-                key: 'losscost',
+                occurrenceId: 'losscost', metricId: 'ratio',
                 label: t('ownership.insurance.stat.lossCost', 'Loss cost index'),
-                value: fmtNumber(data?.loss_cost_index ?? 0),
-                hint: t(
+                rawValue: data?.loss_cost_index,
+                display: specialistDisplay(fmtNumber),
+                context: t(
                   'ownership.insurance.stat.lossCostHint',
                   'Frequency × severity, 1.0 = baseline',
                 ),
@@ -376,36 +387,44 @@ export default function InsuranceTelematicsPage() {
             ]}
           />
           <div className="mt-3">
-            <StatGrid
-              columns={4}
-              stats={[
+            <OwnershipBrief
+              title={t('ownership.insurance.exposureBrief.title', 'Recorded driving exposure')}
+              description={t('ownership.insurance.exposureBrief.description', 'Exposure distance and duration retain the selected observation window; peer percentile compares against your own history.')}
+              scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+              source={riskQuery} enabled={vehicleId != null}
+              window={data?.window}
+              metrics={[
                 {
-                  key: 'exposure',
+                  occurrenceId: 'exposure', metricId: 'distance',
                   label: t('ownership.insurance.stat.exposure', 'Exposure distance'),
-                  value: units.formatDistance(data?.exposure_distance_m ?? 0),
-                  hint: t('ownership.insurance.stat.drives', '{{count}} drives', {
-                    count: data?.drive_count ?? 0,
+                  rawValue: data?.exposure_distance_m,
+                  display: specialistDisplay(units.formatDistance),
+                  context: data?.drive_count == null ? '—' : t('ownership.insurance.stat.drives', '{{count}} drives', {
+                    count: data.drive_count,
                   }),
                 },
                 {
-                  key: 'duration',
+                  occurrenceId: 'duration', metricId: 'duration',
                   label: t('ownership.insurance.stat.duration', 'Time behind the wheel'),
-                  value: units.formatDuration(data?.exposure_duration_s ?? 0),
+                  rawValue: data?.exposure_duration_s,
+                  display: specialistDisplay(units.formatDuration),
                 },
                 {
-                  key: 'night',
+                  occurrenceId: 'night', metricId: 'distance',
                   label: t('ownership.insurance.stat.night', 'Night distance'),
-                  value: units.formatDistance(data?.night_distance_m ?? 0),
-                  hint:
+                  rawValue: data?.night_distance_m,
+                  display: specialistDisplay(units.formatDistance),
+                  context:
                     data && data.exposure_distance_m > 0
                       ? formatPct((data.night_distance_m / data.exposure_distance_m) * 100)
                       : undefined,
                 },
                 {
-                  key: 'percentile',
+                  occurrenceId: 'percentile', metricId: 'percent',
                   label: t('ownership.insurance.stat.percentile', 'Peer percentile'),
-                  value: formatPct(data?.peer_percentile),
-                  hint: t(
+                  rawValue: data?.peer_percentile,
+                  display: specialistDisplay(formatPct),
+                  context: t(
                     'ownership.insurance.stat.percentileHint',
                     'Against your own history distribution',
                   ),
@@ -426,6 +445,7 @@ export default function InsuranceTelematicsPage() {
             'What the stored policy would cost if the telematics discount tracked the measured loss cost.',
           )}
           empty={!data?.premium}
+          preserveSummary
           emptyMessage={t(
             'ownership.insurance.premium.empty',
             'Register a policy below to simulate a telematics-adjusted premium.',
@@ -438,32 +458,40 @@ export default function InsuranceTelematicsPage() {
             </Button>
           }
         >
-          <StatGrid
-            columns={4}
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.insurance.premiumBrief.title', 'Policy-based premium model')}
+            description={t('ownership.insurance.notice.body', 'The premium simulation applies your policy’s own stated maximum telematics discount to a loss-cost index derived from measured exposure. It is an internal negotiation aid, never an insurer quote.')}
+            scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
+            source={riskQuery} enabled={vehicleId != null}
+            window={data?.window}
+            metrics={[
               {
-                key: 'baseline',
+                occurrenceId: 'baseline', metricId: 'currency',
                 label: t('ownership.insurance.premium.baseline', 'Baseline annual premium'),
-                value: money(data?.premium?.baseline_premium_minor),
+                rawValue: data?.premium?.baseline_premium_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'modelled',
+                occurrenceId: 'modelled', metricId: 'currency',
                 label: t('ownership.insurance.premium.modelled', 'Modelled annual premium'),
-                value: money(data?.premium?.modelled_premium_minor),
+                rawValue: data?.premium?.modelled_premium_minor,
+                display: specialistDisplay(money),
                 tone: (data?.premium?.delta_minor ?? 0) <= 0 ? 'positive' : 'critical',
               },
               {
-                key: 'delta',
+                occurrenceId: 'delta', metricId: 'currency',
                 label: t('ownership.insurance.premium.delta', 'Difference'),
-                value: money(data?.premium?.delta_minor),
-                hint: formatSignedPct(data?.premium?.delta_pct),
+                rawValue: data?.premium?.delta_minor,
+                display: specialistDisplay(money),
+                context: formatSignedPct(data?.premium?.delta_pct),
                 tone: (data?.premium?.delta_minor ?? 0) <= 0 ? 'positive' : 'critical',
               },
               {
-                key: 'discount',
+                occurrenceId: 'discount', metricId: 'percent',
                 label: t('ownership.insurance.premium.discount', 'Applied discount'),
-                value: formatPct(data?.premium?.applied_discount_pct),
-                hint: t('ownership.insurance.premium.cap', 'Cap {{value}}', {
+                rawValue: data?.premium?.applied_discount_pct,
+                display: specialistDisplay(formatPct),
+                context: t('ownership.insurance.premium.cap', 'Cap {{value}}', {
                   value: formatPct(data?.premium?.max_discount_pct),
                 }),
                 tone: 'accent',
@@ -471,26 +499,30 @@ export default function InsuranceTelematicsPage() {
             ]}
           />
           <div className="mt-3">
-            <StatGrid
-              columns={3}
-              stats={[
+            <OwnershipBrief
+              title={t('ownership.insurance.costBrief.title', 'Policy loss and distance costs')}
+              description={t('ownership.insurance.costBrief.description', 'Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis.')}
+              scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
+              source={riskQuery} enabled={vehicleId != null}
+              window={data?.window}
+              metrics={[
                 {
-                  key: 'expected',
+                  occurrenceId: 'expected', metricId: 'currency',
                   label: t('ownership.insurance.premium.expectedLoss', 'Expected annual loss'),
-                  value: money(data?.premium?.expected_loss_minor),
+                  rawValue: data?.premium?.expected_loss_minor,
+                  display: specialistDisplay(money),
                 },
                 {
-                  key: 'deductible',
+                  occurrenceId: 'deductible', metricId: 'currency',
                   label: t('ownership.insurance.premium.deductible', 'Deductible'),
-                  value: money(data?.premium?.deductible_minor),
+                  rawValue: data?.premium?.deductible_minor,
+                  display: specialistDisplay(money),
                 },
                 {
-                  key: 'perDistance',
+                  occurrenceId: 'perDistance', metricId: 'rate',
                   label: t('ownership.insurance.premium.perDistance', 'Cost per distance'),
-                  value:
-                    data?.premium?.cost_per_distance_minor_per_m != null
-                      ? `${money(data.premium.cost_per_distance_minor_per_m * 1000)} / 1000 m`
-                      : '—',
+                  rawValue: data?.premium?.cost_per_distance_minor_per_m,
+                  display: specialistDisplay((raw) => `${money(raw * 1000)} / 1000 m`),
                 },
               ]}
             />

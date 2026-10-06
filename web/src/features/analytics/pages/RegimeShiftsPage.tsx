@@ -4,7 +4,8 @@ import { GitBranch, Layers } from 'lucide-react';
 
 import { PageLayout, LayoutCard, ChartCard, SourceContent } from '@/components/layout';
 import { Text, Badge, HelpTooltip } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { OperationalBrief, type StatMetric } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { Skeleton, EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
@@ -65,41 +66,51 @@ export default function RegimeShiftsPage() {
   const latest = summary.segments[summary.segments.length - 1] ?? null;
   const lastShift = summary.shifts[summary.shifts.length - 1] ?? null;
 
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('regimes.title', 'Regime shifts')} />;
-  }
-
   const source = deriveDataState(drivesQuery, { provenance: 'historical' });
   const isLoading = source.status === 'initial';
   const isError = source.fatalError != null;
   const retry = () => { void drivesQuery.refetch(); };
   const metrics: StatMetric[] = [
     {
-      metricId: 'text', occurrenceId: 'regimes-count',
+      metricId: 'count', occurrenceId: 'regimes-count',
       label: t('regimes.regimeCount', 'Regimes detected'),
-      rawValue: source.hasData ? summary.segments.length || '—' : null,
+      rawValue: source.hasData ? summary.segments.length : null,
       context: source.hasData ? t('regimes.overWeeks', 'over {{count}} weeks', { count: summary.analyzedWeeks }) : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'regimes-current',
+      metricId: 'efficiency', occurrenceId: 'regimes-current',
       label: t('regimes.currentRegime', 'Current regime'),
-      rawValue: source.hasData && latest ? `${toEff(latest.meanWhPerKm)} ${effUnit}` : null,
+      rawValue: source.hasData && latest ? latest.meanWhPerKm / 1000 : null,
+      display: { formatter: raw => ({ value: String(toEff(raw * 1000)), unit: effUnit }) },
       context: latest ? t('regimes.since', 'since {{date}}', { date: formatDateShort(latest.startWeek) }) : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'regimes-last-shift',
+      metricId: 'percent', occurrenceId: 'regimes-last-shift',
       label: t('regimes.lastShift', 'Last shift'),
-      rawValue: source.hasData && lastShift ? `${lastShift.deltaShare > 0 ? '+' : ''}${Math.round(lastShift.deltaShare * 100)}%` : null,
+      rawValue: source.hasData && lastShift ? lastShift.deltaShare * 100 : null,
+      display: { formatter: raw => ({ value: `${raw > 0 ? '+' : ''}${Math.round(raw)}`, unit: '%' }) },
       context: source.hasData ? lastShift ? formatDateShort(lastShift.weekStart) : t('regimes.noShifts', 'none detected') : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'regimes-temperature',
+      metricId: 'temperature', occurrenceId: 'regimes-temperature',
       label: t('regimes.tempLink', 'Temp link'),
-      rawValue: source.hasData && lastShift?.tempDeltaC != null
-        ? `${lastShift.tempDeltaC > 0 ? '+' : ''}${formatTemperature(Math.abs(lastShift.tempDeltaC))}` : null,
+      rawValue: source.hasData ? lastShift?.tempDeltaC : null,
+      display: { formatter: raw => ({ value: `${raw > 0 ? '+' : ''}${formatTemperature(Math.abs(raw))}`, unit: '' }) },
       context: t('regimes.tempLinkHint', 'avg temp change at last shift'),
     },
   ];
+  const operationalMetrics = useOperationalMetrics(metrics);
+  const sourceLabels = {
+    initial: t('regimes.brief.status.initial', 'Loading drive history'),
+    ok: t('regimes.brief.status.ok', 'Returned drive history'),
+    stale: t('regimes.brief.status.stale', 'Retained drive history'),
+    partial: t('regimes.brief.status.partial', 'Partial drive history'),
+    unavailable: t('regimes.brief.status.unavailable', 'Drive history unavailable'),
+    initialFailure: t('regimes.brief.status.initialFailure', 'Drive history failed'),
+  };
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('regimes.title', 'Regime shifts')} />;
+  }
 
   return (
     <PageLayout
@@ -114,14 +125,21 @@ export default function RegimeShiftsPage() {
         <section
           aria-label={t('regimes.kpis', 'Regime summary metrics')}
         >
-          <StatStrip
-            id="regime-summary"
-            metrics={metrics}
-            period={{ kind: 'unknown', label: t('regimes.sourceWindow', 'Returned drive-history window'), reason: t('regimes.coverageUnknown', 'Continuous observation coverage is unknown.') }}
+          <OperationalBrief
+            compact
+            testId="regime-summary"
+            eyebrow={t('regimes.brief.eyebrow', 'Consumption evidence')}
+            title={t('regimes.kpis', 'Regime summary metrics')}
+            description={t('regimes.subtitle', 'Statistical changepoints in your weekly consumption')}
+            statusLabel={sourceLabels[source.status]}
+            statusTone={source.refreshError || isError ? 'warning' : 'neutral'}
+            metrics={operationalMetrics}
+            scope={t('regimes.sourceWindow', 'Returned drive-history window')}
+            freshness={t('regimes.coverageUnknown', 'Continuous observation coverage is unknown.')}
+            provenance={t('dataSources.labels.driveHistory', 'Drive history')}
             loading={isLoading}
-            retained={source.hasData && !!source.refreshError}
-            footer={isError ? <SourceContent state="error" label={t('regimes.kpis', 'Regime summary metrics')} emptyMessage="" errorMessage={t('error.loadFailed', 'Failed to load data')} error={source.fatalError} errorRecovery={{ onRetry: retry }}>{null}</SourceContent> : undefined}
           />
+          {isError && <SourceContent state="error" label={t('regimes.kpis', 'Regime summary metrics')} emptyMessage="" errorMessage={t('error.loadFailed', 'Failed to load data')} error={source.fatalError} errorRecovery={{ onRetry: retry }}>{null}</SourceContent>}
         </section>
       </FadeIn>
 

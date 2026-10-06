@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { MediaSnapshot } from '@/api/types';
 import { deriveDataState, type DataState } from '@/api/dataState';
@@ -54,8 +55,7 @@ export function MediaStats({
   const mediaReason = !hasVehicle ? selection : mediaState.loading ? loading
     : mediaState.fatal ? unavailable : !mediaState.available ? unknown : undefined;
   const historyAvailable = hasVehicle && historyState.available;
-  // Text is deliberately source-formatted: preserve acquired fmtInt rounding of
-  // average volume and fmtNumber precision of step. Neither is a percentage.
+  // Audio levels are source scalars, not percentages or physical unit guesses.
   const metrics: StatMetric[] = [
     {
       metricId: 'count', occurrenceId: 'media-unique-tracks',
@@ -72,26 +72,29 @@ export function MediaStats({
       description: t('media.modernization.topSourceHelp', 'Most frequent reported playback source in the returned history; missing source names are excluded.'),
     },
     {
-      metricId: 'text', occurrenceId: 'media-average-volume',
+      metricId: 'number', occurrenceId: 'media-average-volume',
       label: t('media.avgVolume', 'Avg volume'),
-      rawValue: historyAvailable && stats.avgVolume != null ? fmtInt(stats.avgVolume) : null,
+      rawValue: historyAvailable ? stats.avgVolume : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       missingReason: historyReason ?? unknown,
       description: t('media.modernization.averageVolumeHelp', 'Arithmetic mean of finite audio volume readings in the returned history, rounded as before. Missing readings are excluded.'),
     },
     {
-      metricId: 'text', occurrenceId: 'media-volume-step',
+      metricId: 'number', occurrenceId: 'media-volume-step',
       label: t('media.volumeStepFull', 'Volume step'),
-      rawValue: hasVehicle && latest && finiteReading(latest.audio_volume_increment) ? fmtNumber(latest.audio_volume_increment) : null,
+      rawValue: hasVehicle && latest && finiteReading(latest.audio_volume_increment) ? latest.audio_volume_increment : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) },
       missingReason: mediaReason ?? unknown,
       description: t('media.modernization.volumeStepHelp', 'Audio volume increment from the latest media snapshot, not a historical average.'),
       context: t('media.modernization.latestSnapshot', 'Latest media snapshot'),
     },
   ];
   return (
-    <StatStrip
+    <VehicleOperationalBrief
       id="media-listening-stats"
       title={t('media.statsSection', 'Listening stats')}
       metrics={metrics}
+      available={historyAvailable && hasVehicle && mediaState.available}
       period={{
         kind: 'unknown',
         label: t('media.modernization.returnedHistory', 'Returned history: {{start}} – {{end}}', { start, end }),

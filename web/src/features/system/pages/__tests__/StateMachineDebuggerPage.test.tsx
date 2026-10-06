@@ -191,11 +191,11 @@ function renderPage(initialEntries: string[] = ['/system/fsm']) {
   );
 }
 
-/** Resolve a StatCard root element from its unique label. */
+/** Resolve the canonical stat tile from its unique source label. */
 function kpiCard(label: string): HTMLElement {
   const labelEl = screen.getByText(label);
-  const card = labelEl.closest('div')?.parentElement;
-  if (!card) throw new Error(`StatCard not found for label "${label}"`);
+  const card = labelEl.closest('[data-operational-metric]');
+  if (!card) throw new Error(`Stat tile not found for label "${label}"`);
   return card as HTMLElement;
 }
 

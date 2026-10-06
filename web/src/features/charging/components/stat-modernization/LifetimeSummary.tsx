@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { CoreStats, LifetimeMetrics } from '../cost-analysis/types';
 import { CostStatSection } from './CostStatSection';
@@ -71,7 +72,8 @@ export function LifetimeSummary({
       isEmpty={!hasData} period={period}
       emptyMessage={t('costAnalysis.lifetime.noData', 'No data')} skeletonHeight={200}>
       {periodHeaderId => (
-        <StatGroup metrics={metrics} period={period} preferences={preferences}
+        <ChargingSummaryBrief title={t('costAnalysis.lifetime.title', 'Lifetime Summary')}
+          metrics={metrics} period={period} preferences={preferences}
           periodInHeader periodContextInHeader periodHeaderId={periodHeaderId} />
       )}
     </CostStatSection>

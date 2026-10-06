@@ -162,9 +162,9 @@ describe('battery degradation trust and preservation', () => {
   it('preserves actual zero metrics while unknown temperature remains neutral with its evidence', () => {
     const mounted = render(<BatteryDegradationPage />, { wrapper: Harness });
     const summary = mounted.container.querySelector('#battery-degradation-summary')!;
-    const zeroSoh = summary.querySelector('[data-metric="percent"] [data-stat-value]')!;
-    expect(zeroSoh.textContent).toMatch(/^0(?:[.,]0+)?$/);
-    expect(summary.querySelector('[data-metric="energy"] [data-stat-value]')!.textContent).toMatch(/^0(?:[.,]0+)?$/);
+    const zeroSoh = summary.querySelectorAll('[data-operational-value]')[0]!;
+    expect(zeroSoh.textContent).toMatch(/^0(?:[.,]0+)?%$/);
+    expect(summary.querySelectorAll('[data-operational-value]')[1]!.textContent).toMatch(/^0(?:[.,]0+)? kWh$/);
     const tempTitle = screen.getByText('Temperature exposure');
     const tempPanel = tempTitle.closest('[data-glass-panel]') ?? tempTitle.parentElement!.parentElement!;
     expect(within(tempPanel as HTMLElement).getByText('—/100')).toBeVisible();
@@ -242,8 +242,8 @@ describe('battery degradation trust and preservation', () => {
     Reflect.deleteProperty(source.data!, 'current_soh');
     const mounted = render(<BatteryDegradationPage />, { wrapper: Harness });
     const summary = mounted.container.querySelector('#battery-degradation-summary')!;
-    expect(summary.querySelector('[data-metric="percent"]')).toHaveAttribute('data-state', 'missing');
-    expect(summary.querySelector('[data-metric="percent"] [data-stat-value]')).toHaveTextContent('—');
+    expect(summary.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-value]')).toHaveTextContent('—');
     expect(screen.getByText('Battery health is not available yet.')).toBeVisible();
     expect(screen.queryByText('Excellent', { exact: true })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Prediction', exact: true })).toBeVisible();

@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Icons } from '@/lib/icons';
 import { useArrival, type ChecklistStatus, type JourneySession } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { Badge, Text } from '@/components/ui';
-import { ListSkeleton, QueryError } from '@/components/feedback';
+import { Badge, MetricValue, Text } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { ListSkeleton } from '@/components/feedback';
+import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
 import { formatTime } from '@/lib/dateFormat';
 
 import { safeArray } from '@/lib/safeArray';
@@ -53,34 +54,31 @@ export function ArrivalPanel({ session }: { session: JourneySession }) {
   const arrivalEvidence = safeArray(arrival?.evidence);
 
   return (
-    <div className="space-y-4">
-      <Text as="p" variant="label" className="flex items-center gap-2">
-        <Icons.flag className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-        {t('journey.arrival.title', 'Arrival')}
-        {arrival?.dest_name ? (
-          <Text as="span" variant="caption">
-            · {arrival.dest_name}
-          </Text>
-        ) : null}
-      </Text>
-
-      {arrivalQuery.isLoading ? (
-        <ListSkeleton label={t('journey.arrival.loading', 'Preparing arrival…')} />
-      ) : arrivalState.fatalError ? (
-        <QueryError error={arrivalState.fatalError} onRetry={() => arrivalState.retry?.()} />
-      ) : arrival == null ? (
-        <Text as="p" size="sm" color="secondary">
-          {t('journey.arrival.empty', 'No arrival reading yet.')}
-        </Text>
-      ) : (
+    <LayoutCard title={t('journey.arrival.title', 'Arrival')}>
+      <SourceContent
+        state={arrivalState.fatalError ? 'error' : arrivalQuery.isLoading && !arrivalState.hasData
+          ? 'loading' : arrivalState.status === 'stale' ? 'retained' : arrival == null ? 'empty' : 'ready'}
+        label={t('journey.arrival.title', 'Arrival')}
+        emptyMessage={t('journey.arrival.empty', 'No arrival reading yet.')}
+        errorMessage={t('journey.arrival.loadFailed', 'Arrival advice could not be loaded.')}
+        error={arrivalState.fatalError}
+        errorRecovery={{ onRetry: arrivalState.retry ?? undefined }}
+        loadingContent={<ListSkeleton label={t('journey.arrival.loading', 'Preparing arrival…')} />}
+      >
+      {arrival != null ? (
         <div className="space-y-3">
+          {arrival.dest_name ? (
+            <Text as="p" variant="bodySm" className="break-words [overflow-wrap:anywhere]">
+              {arrival.dest_name}
+            </Text>
+          ) : null}
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <Text as="p" variant="label">
               {t('journey.arrival.eta', 'ETA')}
             </Text>
-            <span className="text-2xl font-semibold tabular-nums">
+            <MetricValue>
               {arrival.eta_at != null ? formatTime(arrival.eta_at) : '—'}
-            </span>
+            </MetricValue>
             <Text as="p" variant="caption" className="tabular-nums">
               {arrival.moving
                 ? t('journey.arrival.moving', 'moving')
@@ -111,17 +109,12 @@ export function ArrivalPanel({ session }: { session: JourneySession }) {
             ) : null}
           </div>
 
-          {arrivalEvidence.length > 0 ? (
-            <ul className="space-y-1">
-              {arrivalEvidence.map((line) => (
-                <Text as="li" key={line} size="xs" color="muted">
-                  · {line}
-                </Text>
-              ))}
-            </ul>
-          ) : null}
+          <JourneyEvidenceList evidence={arrivalEvidence} />
         </div>
+      ) : (
+        <Text as="p" variant="bodySm">{t('journey.arrival.empty', 'No arrival reading yet.')}</Text>
       )}
-    </div>
+      </SourceContent>
+    </LayoutCard>
   );
 }

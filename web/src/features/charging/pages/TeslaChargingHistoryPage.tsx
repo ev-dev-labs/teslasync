@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Button, Select, DataTable, Caption, Text, type Column } from '@/components/ui';
-import { StatStrip, MetricBar, type StatMetric } from '@/components/data-display';
+import { MetricBar, type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip, ChartGradient, chartGrid, axisTickSm,
@@ -359,18 +360,24 @@ export default function TeslaChargingHistoryPage() {
   const firstLoading = isLoading && !historyState.hasData;
   const unavailableMessage = t('tesla_charging.sourceUnavailable', 'Tesla charging history has not loaded. Retry this source or reconnect to continue.');
   const summaryMetrics: StatMetric[] = [
-    { metricId: 'text', occurrenceId: 'sessions', label: t('tesla_charging.stats.sessions', 'Total sessions'),
-      rawValue: historyState.hasData ? fmtInt(summary.total_sessions) : null },
-    { metricId: 'text', occurrenceId: 'energy', label: t('tesla_charging.stats.energy', 'Total energy'),
-      rawValue: summary.total_wh != null ? formatEnergy(summary.total_wh) : null },
-    { metricId: 'text', occurrenceId: 'spend', label: t('tesla_charging.stats.spend', 'Total spend'),
-      rawValue: summary.total_spend != null ? formatCurrency(summary.total_spend) : null },
-    { metricId: 'text', occurrenceId: 'average-cost', label: t('tesla_charging.stats.avgCost', 'Avg cost/kWh'),
-      rawValue: summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh) : null },
-    { metricId: 'text', occurrenceId: 'duration', label: t('tesla_charging.stats.duration', 'Total duration'),
-      rawValue: totalDurationMin > 0 ? formatDurationMinutes(totalDurationMin) : null },
-    { metricId: 'text', occurrenceId: 'sites', label: t('tesla_charging.stats.sites', 'Sites visited'),
-      rawValue: historyState.hasData ? fmtInt(sitesVisited) : null },
+    { metricId: 'count', occurrenceId: 'sessions', label: t('tesla_charging.stats.sessions', 'Total sessions'),
+      rawValue: historyState.hasData ? summary.total_sessions : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'energy', occurrenceId: 'energy', label: t('tesla_charging.stats.energy', 'Total energy'),
+      rawValue: summary.total_wh,
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+    { metricId: 'currency', occurrenceId: 'spend', label: t('tesla_charging.stats.spend', 'Total spend'),
+      rawValue: summary.total_spend,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'currency', occurrenceId: 'average-cost', label: t('tesla_charging.stats.avgCost', 'Avg cost/kWh'),
+      rawValue: summary.avg_cost_per_kwh,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'duration', occurrenceId: 'duration', label: t('tesla_charging.stats.duration', 'Total duration'),
+      rawValue: totalDurationMin > 0 ? totalDurationMin * 60 : null,
+      display: { formatter: raw => ({ value: formatDurationMinutes(raw / 60), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'sites', label: t('tesla_charging.stats.sites', 'Sites visited'),
+      rawValue: historyState.hasData ? sitesVisited : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
   ];
 
   return (
@@ -421,7 +428,7 @@ export default function TeslaChargingHistoryPage() {
       {/* 1 — KPI band: full-width responsive metric grid. */}
       <FadeIn>
         <section aria-label={t('tesla_charging.kpis', 'Charging summary metrics')}>
-          <StatStrip id="tesla-charging-history-summary" metrics={summaryMetrics}
+          <ChargingSummaryBrief id="tesla-charging-history-summary" metrics={summaryMetrics}
             loading={firstLoading} retained={historyState.hasData && (historyState.refreshError != null || historyState.isRefreshBlocked)}
             period={{
               kind: 'unknown', label: t('tesla_charging.kpis', 'Charging summary metrics'),

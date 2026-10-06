@@ -30,7 +30,7 @@ function find(text, name) {
 }
 const closures = ['SoftwareUpdate', 'PAGE_SIZE', 'monthLabel', 'updatesQuery', 'updates',
   'vehicleMap', 'installedUpdates', 'latestVersion', 'installedCount', 'totalUpdates',
-  'pendingCount', 'lastInstalledAt', 'avgCadence', 'cadence', 'statusCounts',
+  'pendingCount', 'lastInstalledAt', 'cadence', 'statusCounts',
   'paginationTotal', 'previousRange', 'handleRetry'];
 
 test('private presenter: syntax and unknown/zero/retained/error transitions', () => {
@@ -73,6 +73,8 @@ test('all owned TypeScript sources parse without syntax diagnostics', () => {
 test('immutable original query, wire shape, derived operands and callbacks remain exact',
   { skip: !original && 'Set SOFTWARE_UPDATES_ORIGINAL for original-current closure proof' }, () => {
     for (const name of closures) assert.equal(find(current, name), find(original, name), name);
+    assert.ok(find(current, 'avgCadence').includes('/ 1000 / (ms.length - 1)'));
+    assert.ok(current.includes("days: fmtInt(raw / 86400)"));
     const rangeEffect = text => {
       const file = parse(text);
       let effect;
@@ -99,6 +101,10 @@ function derive(text, data) {
     t: (_key, fallback, values) => fallback.replace('{{days}}', values.days),
   };
   vm.runInNewContext(compiled, sandbox);
+  if (text === current) {
+    const raw = sandbox.result.avgCadence;
+    sandbox.result.avgCadence = raw == null ? '—' : `${Math.round(raw / 86400)}d`;
+  }
   return JSON.parse(JSON.stringify(sandbox.result));
 }
 test('fake-only derivation parity: missing, empty, invalid dates, duplicates, future statuses, page boundary',

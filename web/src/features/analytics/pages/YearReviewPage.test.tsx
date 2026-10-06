@@ -123,18 +123,6 @@ vi.mock('../components/year-review-modernization', async (importOriginal) => {
       reviewCaptures['year-charging-breakdown'] = props;
       return <actual.YearChargingMix {...props} />;
     },
-    YearSavings: (props: Parameters<typeof actual.YearSavings>[0]) => {
-      reviewCaptures['year-savings-panel'] = props;
-      return <actual.YearSavings {...props} />;
-    },
-    YearEnvironment: (props: Parameters<typeof actual.YearEnvironment>[0]) => {
-      reviewCaptures['year-environment-panel'] = props;
-      return <actual.YearEnvironment {...props} />;
-    },
-    YearPatterns: (props: Parameters<typeof actual.YearPatterns>[0]) => {
-      reviewCaptures['year-patterns-panel'] = props;
-      return <actual.YearPatterns {...props} />;
-    },
     YearRecap: (props: Parameters<typeof actual.YearRecap>[0]) => {
       reviewCaptures['year-summary-card'] = props;
       return <actual.YearRecap {...props} />;
@@ -148,6 +136,27 @@ vi.mock('../components/year-review-modernization', async (importOriginal) => {
       return <actual.YearDriveRecord {...props} />;
     },
   };
+});
+vi.mock('../components/operationalbrief-n-z/YearSavingsBrief', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/YearSavingsBrief')>();
+  return { ...actual, YearSavingsBrief: (props: Parameters<typeof actual.YearSavingsBrief>[0]) => {
+    reviewCaptures['year-savings-panel'] = props;
+    return <actual.YearSavingsBrief {...props} />;
+  } };
+});
+vi.mock('../components/operationalbrief-n-z/YearEnvironmentBrief', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/YearEnvironmentBrief')>();
+  return { ...actual, YearEnvironmentBrief: (props: Parameters<typeof actual.YearEnvironmentBrief>[0]) => {
+    reviewCaptures['year-environment-panel'] = props;
+    return <actual.YearEnvironmentBrief {...props} />;
+  } };
+});
+vi.mock('../components/operationalbrief-n-z/YearPatternsBrief', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/YearPatternsBrief')>();
+  return { ...actual, YearPatternsBrief: (props: Parameters<typeof actual.YearPatternsBrief>[0]) => {
+    reviewCaptures['year-patterns-panel'] = props;
+    return <actual.YearPatternsBrief {...props} />;
+  } };
 });
 
 // Capture the props the page hands the AI narration section (its own AI-off
@@ -316,6 +325,24 @@ afterEach(() => {
 });
 
 describe('YearReviewPage — happy path', () => {
+  it('reviews the real numeric year evidence and calendar scope without changing navigation or sources', async () => {
+    installRequest();
+    renderPage();
+    await waitForReview();
+    const brief = screen.getByTestId('year-review-highlights-stats');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(screen.getByRole('button', { name: 'Previous year' })).toBeInTheDocument();
+    const calls = mockRequest.mock.calls.length;
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getByText('CO₂ offset')).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Year in review').length).toBeGreaterThan(0);
+    expect(mockRequest.mock.calls.length).toBe(calls);
+  });
+
   it('renders the page shell, all six section regions, the KPI band and every review panel', async () => {
     installRequest();
     renderPage();
@@ -344,10 +371,11 @@ describe('YearReviewPage — happy path', () => {
     // Every current panel renders its real content, not a test adapter.
     for (const id of [
       'year-review-savings', 'year-review-environment', 'year-review-patterns',
-      'year-review-extremes', 'year-review-recap',
+      'year-review-recap',
     ]) {
       expect(document.getElementById(id)).toBeInTheDocument();
     }
+    expect(screen.getByTestId('year-review-extremes')).toHaveAttribute('data-operational-brief');
     expect(screen.getByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Fun facts about your year' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Donut chart of charging mix by connector type' })).toBeInTheDocument();
@@ -456,7 +484,8 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     expect(within(highlights()).getByText('128')).toBeInTheDocument();
     expect(within(highlights()).getByText('42')).toBeInTheDocument();
     expect(within(highlights()).getByText('$1,875.00')).toBeInTheDocument();
-    expect(document.getElementById('year-review-highlights-stats')).toHaveAttribute('data-retained', 'true');
+    expect(screen.getByTestId('year-review-highlights-stats')).toHaveAttribute('data-operational-brief');
+    expect(within(screen.getByTestId('year-review-highlights-stats')).getByText('Retained year evidence')).toBeInTheDocument();
     expect(document.getElementById('year-review-longest')).toHaveTextContent('320');
     const chart = screen.getByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' }).closest('figure')!;
     expect(within(chart).getByRole('table')).toHaveTextContent('800');

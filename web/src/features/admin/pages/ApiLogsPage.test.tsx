@@ -307,9 +307,12 @@ describe('ApiLogsPage', () => {
 
     // KPI band — formatted with the default en-US / precision-2 formatters.
     await waitFor(() => expect(screen.getByText('1,234')).toBeInTheDocument());
-    expect(screen.getByText('Total calls')).toBeInTheDocument();
-    expect(screen.getByText('6.50%')).toBeInTheDocument(); // error_rate
-    expect(screen.getByText('145ms')).toBeInTheDocument(); // avg_duration_ms
+    expect(screen.getAllByText('Total calls')[0]).toBeInTheDocument();
+    const rangeSummary = screen.getByTestId('api-logs-range-summary');
+    const errorRate = rangeSummary.querySelector('[data-operational-metric="api-error-rate"]');
+    expect(errorRate?.querySelector('[data-operational-value]')).toHaveTextContent('6.50%');
+    const duration = rangeSummary.querySelector('[data-operational-metric="api-average-duration"]');
+    expect(duration?.querySelector('[data-operational-value]')).toHaveTextContent('145 ms');
     expect(screen.getByText('56')).toBeInTheDocument(); // last_24h
 
     // Service rail: known label + count, and the unknown service falls back
@@ -329,6 +332,40 @@ describe('ApiLogsPage', () => {
     expect(screen.getByText('404')).toBeInTheDocument();
     expect(screen.getByText('500')).toBeInTheDocument();
     expect(screen.getByText('N/A')).toBeInTheDocument();
+  });
+
+  it('uses canonical numeric strips without conflating the selected window with last 24h', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    renderPage('/api-logs?from=2026-09-19&to=2026-09-25');
+    await screen.findByText('1,234');
+    const range = screen.getByTestId('api-logs-range-summary');
+    const rolling = screen.getByTestId('api-logs-24h-summary');
+    expect(range).toHaveAttribute('data-operational-brief');
+    expect(range).toHaveTextContent('exclusive end');
+    expect(range.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(rolling.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(rolling).toHaveTextContent('Independent rolling 24-hour count');
+    const trend = range.querySelector('[data-operational-metric="api-error-rate"]');
+    expect(trend).toHaveTextContent('increased');
+    expect(trend).toHaveTextContent('80');
+  });
+
+  it('distinguishes real zero stats from absent fields without manufacturing measurements', async () => {
+    mockedStats.mockResolvedValue(makeStats({
+      total_calls: 0, error_rate: 0, error_count: 0, avg_duration_ms: 0,
+      last_24h: undefined as unknown as number,
+    }));
+    mockedLogs.mockResolvedValue(makeLogsResponse({ data: [], total: 0 }));
+    renderPage();
+    const range = await screen.findByTestId('api-logs-range-summary');
+    await waitFor(() => expect(range.querySelector('[data-operational-metric="api-total-calls"]')).toHaveAttribute('data-value-state', 'value'));
+    expect(range.querySelector('[data-operational-metric="api-total-calls"] [data-operational-value]')).toHaveTextContent('0');
+    expect(range.querySelector('[data-operational-metric="api-error-rate"] [data-operational-value]')).toHaveTextContent('0.00%');
+    expect(range.querySelector('[data-operational-metric="api-average-duration"] [data-operational-value]')).toHaveTextContent('0 ms');
+    expect(range).not.toHaveTextContent('increased');
+    expect(screen.getByTestId('api-logs-24h-summary').querySelector('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
   });
 
   it('shows verified app key and installation separately and filters full server results', async () => {

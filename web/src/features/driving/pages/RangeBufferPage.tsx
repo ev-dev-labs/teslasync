@@ -5,7 +5,9 @@ import { useDrives } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -13,14 +15,10 @@ import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
-  RangeBufferAccounting,
   RangeBufferDestinationDirectory,
   RangeBufferDistanceProfile,
   RangeBufferDistribution,
-  RangeBufferDriveContext,
-  RangeBufferEvidenceSupport,
   RangeBufferHourProfile,
-  RangeBufferKpiBand,
   RangeBufferLowArrivals,
   RangeBufferMethodology,
   RangeBufferMonthTrend,
@@ -28,6 +26,7 @@ import {
   RangeBufferWeekdayProfile,
   type RangeBufferQueryState,
 } from '../components/range-buffer';
+import { RangeBufferSummaryBrief } from '../components/operationalbrief-n-z/RangeBufferSummaryBrief';
 import {
   analyzeRangeBuffer,
   DEFAULT_RANGE_BUFFER_THRESHOLD_PCT,
@@ -55,12 +54,13 @@ export default function RangeBufferPage() {
     end: endInstantExclusive,
     limit: DRIVE_WINDOW_LIMIT,
   });
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const [nowMs] = useState(() => Date.now());
   const [thresholdPct, setThresholdPct] = useState(
     DEFAULT_RANGE_BUFFER_THRESHOLD_PCT,
   );
   const hasCachedData =
-    vehicleId != null && drivesQuery.data !== undefined;
+    vehicleId != null && drivesState.hasData;
   const isResolved =
     vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -78,36 +78,34 @@ export default function RangeBufferPage() {
   const state: RangeBufferQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && !hasCachedData && drivesQuery.isLoading,
+      vehicleId != null && drivesState.status === 'initial',
     isResolved,
     error:
-      drivesQuery.isError && !hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.fatalError,
     refreshError:
-      drivesQuery.isError && hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
   const locale = i18n.language;
+  const summaryProps = {
+    result, state, locale, thresholdPct, onThresholdChange: setThresholdPct,
+    formatDistance, scope: `${start} — ${end} (${result.timeZone})`,
+  };
 
   return (
     <PageLayout
       title={t('rangeBuffer.title', 'Range Buffer')}
+      query={drivesQuery}
       subtitle={t(
         'rangeBuffer.subtitle',
         'Observed arrival SoC distribution, context, and evidence coverage in the vehicle timezone',
       )}
     >
+      {drivesState.isRefreshBlocked && (
+        <StaleRefreshWarning state={drivesState} label={t('rangeBuffer.title', 'Range Buffer')} />
+      )}
       <FadeIn>
-        <RangeBufferKpiBand
-          result={result}
-          state={state}
-          locale={locale}
-          thresholdPct={thresholdPct}
-          onThresholdChange={setThresholdPct}
-        />
+        <RangeBufferSummaryBrief kind="arrivals" {...summaryProps} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
@@ -151,12 +149,7 @@ export default function RangeBufferPage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <RangeBufferDriveContext
-          result={result}
-          state={state}
-          locale={locale}
-          formatDistance={formatDistance}
-        />
+        <RangeBufferSummaryBrief kind="context" {...summaryProps} />
       </FadeIn>
 
       <FadeIn delay={0.25}>
@@ -180,15 +173,11 @@ export default function RangeBufferPage() {
       </FadeIn>
 
       <FadeIn delay={0.35}>
-        <RangeBufferEvidenceSupport
-          result={result}
-          state={state}
-          locale={locale}
-        />
+        <RangeBufferSummaryBrief kind="support" {...summaryProps} />
       </FadeIn>
 
       <FadeIn delay={0.4}>
-        <RangeBufferAccounting result={result} state={state} />
+        <RangeBufferSummaryBrief kind="accounting" {...summaryProps} />
       </FadeIn>
 
       <FadeIn delay={0.45}>

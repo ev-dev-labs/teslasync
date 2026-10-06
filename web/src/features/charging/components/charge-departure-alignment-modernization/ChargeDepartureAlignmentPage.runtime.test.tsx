@@ -118,7 +118,7 @@ function mountPage() {
   return render(<ChargeDepartureAlignmentPage />, { wrapper: Harness });
 }
 function tiles(container: HTMLElement) {
-  return Array.from(container.querySelectorAll<HTMLElement>('[data-stat]'));
+  return Array.from(container.querySelectorAll<HTMLElement>('[data-operational-metric]'));
 }
 function figure() {
   return screen.getByRole('figure', {
@@ -166,16 +166,16 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(source.chargeHook).toHaveBeenLastCalledWith('7');
     expect(source.driveHook).toHaveBeenLastCalledWith('7');
     const stats = tiles(result.container);
-    expect(stats.map(tile => tile.querySelector('[data-stat-label]')?.textContent)).toEqual([
+    expect(stats.map(tile => tile.querySelector(':scope > div:first-child > div:first-child')?.textContent)).toEqual([
       'Avg. Dwell Time', 'Avg. Readiness Margin', 'Misaligned Rate', 'Paired Sessions',
     ]);
-    expect(stats[0]?.querySelector('[data-stat-value]'))
+    expect(stats[0]?.querySelector('[data-operational-value]'))
       .toHaveTextContent(formatDurationSecondsAsMinutes(summary.avgDwellS));
-    expect(stats[1]?.querySelector('[data-stat-value]')).toHaveTextContent('65.10');
-    expect(stats[2]?.querySelector('[data-stat-context]')).toHaveTextContent('15 of 15 paired sessions');
-    expect(stats[3]?.querySelector('[data-stat-context]')).toHaveTextContent('of 15 ended charges within 24h of a drive');
+    expect(stats[1]?.querySelector('[data-operational-value]')).toHaveTextContent('65.10');
+    expect(stats[2]?.querySelector(':scope > div:last-child')).toHaveTextContent('15 of 15 paired sessions');
+    expect(stats[3]?.querySelector(':scope > div:last-child')).toHaveTextContent('of 15 ended charges within 24h of a drive');
     expect(result.container.querySelector('[data-layout-reference]')).toHaveClass('w-full', 'min-w-0');
-    expect(result.container.querySelector('[data-stat-strip]')).toHaveAttribute('data-period-kind', 'unknown');
+    expect(result.container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
     expect(screen.getByText(/not complete lifetime coverage/)).toBeInTheDocument();
     expect(screen.getByText(/Pairing and flags are model-derived/)).toBeInTheDocument();
     expect(result.container.querySelector('[data-alignment-bounds="charging-history"]'))
@@ -211,10 +211,10 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     setGlobalLocale('de-DE');
     setGlobalPrecision(3);
     const result = mountPage();
-    expect(tiles(result.container)[1]?.querySelector('[data-stat-value]')).toHaveTextContent('65,100');
+    expect(tiles(result.container)[1]?.querySelector('[data-operational-value]')).toHaveTextContent('65,100');
     const table = screen.getByRole('table', { name: 'Recent Pairs' });
     expect(within(table).getAllByText('65,125%').length).toBeGreaterThan(0);
-    expect(tiles(result.container)[0]?.querySelector('[data-stat-value]'))
+    expect(tiles(result.container)[0]?.querySelector('[data-operational-value]'))
       .toHaveTextContent(formatDurationSecondsAsMinutes(3_600));
   });
 
@@ -232,9 +232,9 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     for (const name of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
       expect(within(menu).getByRole('menuitem', { name, exact: true })).toBeInTheDocument();
     }
-    // Original page passed data (accessible table), not exportData (CSV).
-    // Do not claim or invent a previously unwired export/fullscreen/annotation action.
-    expect(within(menu).queryByRole('menuitem', { name: 'Download data as CSV' })).not.toBeInTheDocument();
+    // The production page now explicitly supplies scalar exportData as well
+    // as accessible rows; keep its data export alongside the image actions.
+    expect(within(menu).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
     expect(within(chart).queryByRole('button', { name: /fullscreen|annotation/i })).not.toBeInTheDocument();
     fireEvent.keyDown(menu, { key: 'Escape' });
     expect(within(chart).queryByRole('menu')).not.toBeInTheDocument();
@@ -246,10 +246,10 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     const result = mountPage();
     const stats = tiles(result.container);
     expect(stats).toHaveLength(4);
-    expect(stats[0]?.querySelector('[data-stat-value]')).toHaveTextContent('—');
-    expect(stats[1]?.querySelector('[data-stat-value]')).toHaveTextContent('—');
-    expect(stats[2]?.querySelector('[data-stat-value]')).toHaveTextContent('—');
-    expect(stats[3]?.querySelector('[data-stat-value]')).toHaveTextContent('0');
+    expect(stats[0]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(stats[1]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(stats[2]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(stats[3]?.querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(figure()).toBeInTheDocument();
     expect(pairsHeading()).toBeInTheDocument();
     expect(screen.getAllByText('No paired sessions to show yet.').length).toBeGreaterThan(0);
@@ -258,7 +258,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
   it('does not infer a zero readiness margin from a missing drive-end reading', () => {
     source.drives.data = drives.map(row => ({ ...row, endBatteryPct: null }));
     const result = mountPage();
-    expect(tiles(result.container)[1]?.querySelector('[data-stat-value]')).toHaveTextContent('—');
+    expect(tiles(result.container)[1]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
     expect(screen.getByText('No paired drive has a recorded end SoC.')).toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: 'Recent Pairs' })).getAllByText('—').length).toBeGreaterThan(0);
   });
@@ -268,7 +268,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     query.error = new Error('private upstream failure details');
     query.isError = true;
     const result = mountPage();
-    expect(tiles(result.container)[3]?.querySelector('[data-stat-value]')).toHaveTextContent('15');
+    expect(tiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('15');
     expect(screen.getByRole('table', { name: 'Recent Pairs' })).toBeInTheDocument();
     expect(figure()).toBeInTheDocument();
     expect(screen.queryByText('private upstream failure details')).not.toBeInTheDocument();
@@ -285,7 +285,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     }
     const result = mountPage();
     expect(tiles(result.container)).toHaveLength(4);
-    expect(tiles(result.container)[3]?.querySelector('[data-stat-value]')).toHaveTextContent('—');
+    expect(tiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
     expect(figure()).toBeInTheDocument();
     expect(pairsHeading()).toBeInTheDocument();
     expect(screen.queryByText('sensitive backend detail')).not.toBeInTheDocument();
@@ -300,7 +300,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     source.sessions.fetchStatus = 'paused';
     source.drives.isFetching = true;
     const result = mountPage();
-    expect(tiles(result.container)[3]?.querySelector('[data-stat-value]')).toHaveTextContent('15');
+    expect(tiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('15');
     expect(screen.getByRole('table', { name: 'Recent Pairs' })).toBeInTheDocument();
     const warning = sourcePanel(result.container, 'charging-history');
     expect(within(warning).getByText(/last values it received/)).toBeInTheDocument();
@@ -319,7 +319,8 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     source.sessions = { isLoading: true, refetch: source.chargeRetry };
     source.drives = { isLoading: true, refetch: source.driveRetry };
     const result = mountPage();
-    expect(tiles(result.container).every(tile => tile.getAttribute('data-state') === 'loading')).toBe(true);
+    expect(result.container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(result.container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(figure()).toBeInTheDocument();
     expect(pairsHeading()).toBeInTheDocument();
     source.sessions = { fetchStatus: 'paused', refetch: source.chargeRetry };

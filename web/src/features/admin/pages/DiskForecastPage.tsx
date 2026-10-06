@@ -16,13 +16,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Database, HardDrive, Archive, Boxes, TrendingUp, Gauge, Timer, ShieldAlert,
+  Database, TrendingUp, Gauge,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, DataTable, type Column } from '@/components/ui';
-import { PanelTitle, Caption, Text } from '@/components/ui';
-import { MetricCard, MetricBar } from '@/components/data-display';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { Badge, DataTable, type Column } from '@/components/ui';
+import { Caption, Text } from '@/components/ui';
+import { MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
   EmptyState, AlertBanner, DataStateNotice, SectionErrorBoundary, Skeleton, QueryError,
@@ -45,6 +45,8 @@ import type {
 } from '@/types/admin-operator-confidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
+import { deriveDataState } from '@/api/dataState';
+import { DiskForecastSummary } from '../components/statstrip-performance-storage/DiskForecastSummary';
 
 const SEVERITY_VARIANT: Record<DiskForecastSeverity, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
@@ -82,8 +84,9 @@ export default function DiskForecastPage() {
   usePageTitle(t('admin.diskForecast.pageTitle', 'Disk forecast'));
 
   const query = useDiskForecast();
-  const subsystemMissing = isApiError(query.error) && query.error.status === 503;
-  const showError = query.isError && !subsystemMissing;
+  const source = deriveDataState(query);
+  const subsystemMissing = isApiError(source.fatalError) && source.fatalError.status === 503;
+  const showError = source.fatalError !== null && !subsystemMissing;
   const isLoading = query.isLoading;
   const rows = query.data?.hypertables ?? [];
 
@@ -245,13 +248,18 @@ export default function DiskForecastPage() {
   const retry = () => query.refetch();
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('admin.diskForecast.pageTitle', 'Disk forecast')}
       subtitle={t(
         'admin.diskForecast.subtitle',
         'Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold.',
       )}
       query={query}
+      dataSources={[{
+        id: 'disk-forecast',
+        label: t('admin.diskForecast.pageTitle', 'Disk forecast'),
+        query,
+      }]}
     >
       {subsystemMissing && (
         <DataStateNotice state="unsupported" title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}>
@@ -274,68 +282,10 @@ export default function DiskForecastPage() {
 
       {/* 1 — KPI band ---------------------------------------------------- */}
       <FadeIn>
-        <section
-          aria-label={t('admin.diskForecast.kpis', 'Fleet disk summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
-        >
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} height={92} className="rounded-xl" />
-            ))
-          ) : showError ? (
-            // A genuine (non-503) fetch failure must not surface fabricated
-            // zero totals — mirror the error state the sections below own so
-            // the whole band reads as "failed", not "0 B on disk".
-            <div className="col-span-full">
-              <QueryError error={query.error} onRetry={retry} />
-            </div>
-          ) : (
-            <>
-              <MetricCard
-                label={t('admin.diskForecast.fleetTotal', 'Total disk')}
-                value={formatBytes(totals.total)}
-                icon={<Database className="h-5 w-5" />}
-                color="cyan"
-                subtitle={t('admin.diskForecast.tableCount', '{{count}} hypertables', { count: rows.length })}
-              />
-              <MetricCard
-                label={t('admin.diskForecast.fleetUncompressed', 'Uncompressed')}
-                value={formatBytes(totals.uncompressed)}
-                icon={<HardDrive className="h-5 w-5" />}
-                color="amber"
-                subtitle={t('admin.diskForecast.percentSub', '{{pct}} of total', { pct: pctOf(totals.uncompressed, totals.total) })}
-              />
-              <MetricCard
-                label={t('admin.diskForecast.fleetCompressed', 'Compressed')}
-                value={formatBytes(totals.compressed)}
-                icon={<Archive className="h-5 w-5" />}
-                color="green"
-                subtitle={t('admin.diskForecast.percentSub', '{{pct}} of total', { pct: pctOf(totals.compressed, totals.total) })}
-              />
-              <MetricCard
-                label={t('admin.diskForecast.fleetGrowth', 'Growth (per day)')}
-                value={`${formatBytes(totals.growth)}/d`}
-                icon={<TrendingUp className="h-5 w-5" />}
-                color="blue"
-                subtitle={t('admin.diskForecast.growthSub', 'Sum across all hypertables')}
-              />
-              <MetricCard
-                label={t('admin.diskForecast.largest', 'Largest table')}
-                value={largest ? formatBytes(largest.total_bytes ?? 0) : '—'}
-                icon={<Boxes className="h-5 w-5" />}
-                color="purple"
-                subtitle={largest ? truncate(largest.hypertable_name) : t('admin.diskForecast.noData', 'No data')}
-              />
-              <MetricCard
-                label={t('admin.diskForecast.soonestQuota', 'Soonest quota')}
-                value={soonest ? `${fmtNumber(soonest.est_days_to_quota ?? 0)} d` : '—'}
-                icon={<Gauge className="h-5 w-5" />}
-                color={soonest && soonest.severity === 'critical' ? 'red' : 'cyan'}
-                subtitle={soonest ? truncate(soonest.hypertable_name) : t('admin.diskForecast.noQuota', 'No quota configured')}
-              />
-            </>
-          )}
-        </section>
+        <DiskForecastSummary totals={totals} count={rows.length} largest={largest} soonest={soonest}
+          known={source.hasData} loading={source.status === 'initial'}
+          retained={source.hasData && (source.status === 'stale' || source.isRefreshing)}
+          error={showError ? source.fatalError : null} onRetry={retry} pctOf={pctOf} />
       </FadeIn>
 
       {/* 2 — Composition + severity ------------------------------------- */}
@@ -344,11 +294,8 @@ export default function DiskForecastPage() {
           aria-label={t('admin.diskForecast.composition', 'Storage composition')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.diskForecast.compositionTitle', 'Compressed vs uncompressed')}
-            </PanelTitle>
+          <div className="min-w-0 xl:col-span-2">
+          <LayoutCard title={t('admin.diskForecast.compositionTitle', 'Compressed vs uncompressed')}>
             <EmbeddedChart
               chartKey="admin-disk-composition"
               title={t('admin.diskForecast.compositionTitle', 'Compressed vs uncompressed')}
@@ -404,13 +351,10 @@ export default function DiskForecastPage() {
                 </ResponsiveContainer>
               )}
             </EmbeddedChart>
-          </GlassPanel>
+          </LayoutCard>
+          </div>
 
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.diskForecast.severityTitle', 'Severity mix')}
-            </PanelTitle>
+          <LayoutCard title={t('admin.diskForecast.severityTitle', 'Severity mix')}>
             <div className="space-y-4">
               <EmbeddedChart
                 title={t('admin.diskForecast.severityTitle', 'Severity mix')}
@@ -465,7 +409,7 @@ export default function DiskForecastPage() {
                 </ul>
               )}
             </div>
-          </GlassPanel>
+          </LayoutCard>
         </section>
       </FadeIn>
 
@@ -475,11 +419,7 @@ export default function DiskForecastPage() {
           aria-label={t('admin.diskForecast.outlook', 'Growth and quota outlook')}
           className="grid grid-cols-1 gap-4 2xl:grid-cols-2 xl:gap-5"
         >
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.diskForecast.growthTitle', 'Fastest-growing hypertables')}
-            </PanelTitle>
+          <LayoutCard title={t('admin.diskForecast.growthTitle', 'Fastest-growing hypertables')}>
             {isLoading ? (
               <Skeleton height={200} />
             ) : showError ? (
@@ -494,7 +434,7 @@ export default function DiskForecastPage() {
                 {growthLeaders.map((r) => (
                   <MetricBar
                     key={r.hypertable_name}
-                    label={truncate(r.hypertable_name, 28)}
+                    label={r.hypertable_name}
                     value={r.growth_bytes_per_day ?? 0}
                     max={maxGrowth || (r.growth_bytes_per_day ?? 1)}
                     color={SEVERITY_HEX[r.severity] ?? SEVERITY_HEX.unknown}
@@ -503,13 +443,9 @@ export default function DiskForecastPage() {
                 ))}
               </div>
             )}
-          </GlassPanel>
+          </LayoutCard>
 
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Timer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.diskForecast.quotaTitle', 'Days to quota')}
-            </PanelTitle>
+          <LayoutCard title={t('admin.diskForecast.quotaTitle', 'Days to quota')}>
             {isLoading ? (
               <Skeleton height={200} />
             ) : showError ? (
@@ -526,9 +462,9 @@ export default function DiskForecastPage() {
             ) : (
               <ul className="divide-y divide-[var(--border-subtle)]">
                 {quotaWatch.map((r) => (
-                  <li key={r.hypertable_name} className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+                  <li key={r.hypertable_name} className="flex flex-wrap items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
                     <div className="min-w-0">
-                      <Text variant="body" className="block truncate">{r.hypertable_name}</Text>
+                      <Text variant="body" className="block break-words">{r.hypertable_name}</Text>
                       <Caption>{formatBytes(r.total_bytes ?? 0)} · {formatBytes(r.growth_bytes_per_day ?? 0)}/d</Caption>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -543,15 +479,14 @@ export default function DiskForecastPage() {
                 ))}
               </ul>
             )}
-          </GlassPanel>
+          </LayoutCard>
         </section>
       </FadeIn>
 
       {/* 4 — Per-hypertable detail table -------------------------------- */}
       <FadeIn delay={0.3}>
         <section aria-label={t('admin.diskForecast.tableTitle', 'Hypertables')}>
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-4">{t('admin.diskForecast.tableTitle', 'Hypertables')}</PanelTitle>
+          <LayoutCard title={t('admin.diskForecast.tableTitle', 'Hypertables')}>
             <SectionErrorBoundary name="disk-forecast-table">
               {isLoading ? (
                 <Skeleton height={280} />
@@ -579,9 +514,9 @@ export default function DiskForecastPage() {
                 />
               )}
             </SectionErrorBoundary>
-          </GlassPanel>
+          </LayoutCard>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

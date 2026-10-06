@@ -1,5 +1,4 @@
 import { useLocation } from 'react-router-dom';
-import { StatStrip } from '@/components/data-display';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 
@@ -7,6 +6,7 @@ import { PhysicsInvestigation } from '../components/tesla-physics/PhysicsInvesti
 import { PhysicsInvestigationNav } from '../components/tesla-physics/PhysicsInvestigationNav';
 import { features, hours, PhysicsPageShell, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 
 export default function TeslaPhysicsPage() {
   const { fmtNumber } = useNumberFormatting();
@@ -23,14 +23,19 @@ export default function TeslaPhysicsPage() {
   return <PhysicsPageShell physics={physics} navigation={<PhysicsInvestigationNav activeSlug={slug} t={t} />}>
     <LayoutCard title={slug ? t('teslaOnly.workbench.summary', 'Evidence at a glance') : t('teslaOnly.whereToStart', 'Where to start')}>
       {!slug && <Text as="p" variant="bodySm">{t('teslaOnly.hubGuide', 'Choose a focused investigation. Each section explains its measurements, interpretation limits, related evidence, and optional timestamp-level drilldowns. Start by checking source coverage.')}</Text>}
-      <StatStrip id="tesla-physics-evidence-summary" variant="embedded" retained={physics.state.status === 'stale'}
-        period={{ kind: 'unknown', label: t('teslaOnly.returnedEvidence', 'Returned evidence'),
-          reason: t('teslaOnly.hubWindow', 'Exclusive history is bounded to at most 14 days') }}
+      <VehicleEvidenceBrief id="tesla-physics-evidence-summary"
+        title={t('teslaOnly.returnedEvidence', 'Returned evidence')}
+        description={t('teslaOnly.zeroScope', 'A zero means no finding in the returned evidence, not proof that nothing happened outside the observed window.')}
+        status={physics.state.status}
+        scope={t('teslaOnly.hubWindow', 'Exclusive history is bounded to at most 14 days')}
+        provenance={t('teslaOnly.briefSource', 'Bounded exclusive physics report')}
         metrics={[
-          { metricId: 'text', occurrenceId: 'coverage', label: t('teslaOnly.sampleCoverage', 'Sampled window'),
-            rawValue: percentage == null ? null : `${fmtNumber(percentage)}%`, missingReason: unknown(t) },
-          { metricId: 'text', occurrenceId: 'unknown-hours', label: t('teslaOnly.unknownHours', 'Unknown'),
-            rawValue: coverage?.unknown_hours == null ? null : hours(coverage.unknown_hours, t), missingReason: unknown(t) },
+          { metricId: 'percent', occurrenceId: 'coverage', label: t('teslaOnly.sampleCoverage', 'Sampled window'),
+            rawValue: percentage, missingReason: unknown(t),
+            display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+          { metricId: 'duration', occurrenceId: 'unknown-hours', label: t('teslaOnly.unknownHours', 'Unknown'),
+            rawValue: coverage?.unknown_hours == null ? null : coverage.unknown_hours * 3600, missingReason: unknown(t),
+            display: { formatter: raw => ({ value: hours(raw / 3600, t), unit: '' }) } },
           { metricId: 'count', occurrenceId: 'episodes', label: t('teslaOnly.contradictionEpisodes', 'Returned episodes'),
             rawValue: findings ? findings.length : null, missingReason: unknown(t) },
           { metricId: 'count', occurrenceId: 'meter-drops', label: t('teslaOnly.workbench.resetCount', 'Returned meter drops'),
@@ -40,7 +45,6 @@ export default function TeslaPhysicsPage() {
       <div className="flex flex-wrap gap-2">
         {attention && <Badge variant="warning" size="sm">{t('teslaOnly.hubSignals', 'Non-alive returned signals: {{count}}', { count: attention.length })}</Badge>}
       </div>
-      <Text as="p" variant="caption">{t('teslaOnly.zeroScope', 'A zero means no finding in the returned evidence, not proof that nothing happened outside the observed window.')}</Text>
     </LayoutCard>
     {slug && <PhysicsInvestigation slug={slug} physics={physics} />}
   </PhysicsPageShell>;

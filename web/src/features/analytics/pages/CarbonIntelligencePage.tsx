@@ -15,21 +15,21 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import {
   CarbonAccountingIdentities,
-  CarbonCurveCoverage,
-  CarbonEvidenceLedger,
-  CarbonGreenTimingScore,
-  CarbonHourlyDirectory,
   CarbonIntensityCurve,
-  CarbonLifetimeContext,
   CarbonMethodology,
   CarbonMonthlyTrend,
-  CarbonOpportunityMath,
-  CarbonPeriodFootprint,
-  CarbonRecommendation,
   CarbonSourceScopeLedger,
   useCarbonDisplay,
   useCarbonQueryStates,
 } from '../components/carbon-intelligence';
+import { CarbonEvidenceBrief as CarbonEvidenceLedger } from '../components/operationalbrief-a-m/CarbonEvidenceBrief';
+import { CarbonCoverageBrief as CarbonCurveCoverage } from '../components/operationalbrief-a-m/CarbonCoverageBrief';
+import { CarbonLifetimeBrief as CarbonLifetimeContext } from '../components/operationalbrief-a-m/CarbonLifetimeBrief';
+import { CarbonFootprintBrief as CarbonPeriodFootprint } from '../components/operationalbrief-a-m/CarbonFootprintBrief';
+import { CarbonDirectoryBrief as CarbonHourlyDirectory } from '../components/operationalbrief-a-m/CarbonDirectoryBrief';
+import { CarbonScoreBrief as CarbonGreenTimingScore } from '../components/operationalbrief-a-m/CarbonScoreBrief';
+import { CarbonRecommendationBrief as CarbonRecommendation } from '../components/operationalbrief-a-m/CarbonRecommendationBrief';
+import { CarbonOpportunityBrief as CarbonOpportunityMath } from '../components/operationalbrief-a-m/CarbonOpportunityBrief';
 import { buildCarbonIntelligence } from '../lib/carbonIntelligence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 

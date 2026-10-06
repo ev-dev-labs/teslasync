@@ -91,9 +91,10 @@ describe('local clip canonical transport preservation', () => {
     const { container } = render(<ClipPlayerPanel clip={input} />);
     const video = container.querySelector('video')!;
     expect(screen.queryByText('0s')).not.toBeInTheDocument();
+    expect(screen.getByText('— / —')).toBeInTheDocument();
     Object.defineProperty(video, 'duration', { configurable: true, value: 90 });
     fireEvent.loadedMetadata(video);
-    expect(screen.getByText('90s')).toBeInTheDocument();
+    expect(screen.getByText('0s / 90s')).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole('slider'), { key: 'End' });
     expect(video.currentTime).toBe(90);
   });

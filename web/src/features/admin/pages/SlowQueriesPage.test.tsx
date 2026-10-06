@@ -109,7 +109,7 @@ import SlowQueriesPage from './SlowQueriesPage';
 const mockUseSlowQueries = useSlowQueries as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -123,10 +123,10 @@ function makeQuery(over: Record<string, unknown> = {}): any {
   };
 }
 
-// Read the value <p> that sits immediately after a MetricCard's label span.
+// Read the canonical value and unit, not the legacy MetricCard markup.
 function metricValue(label: string): string {
-  const labelSpan = screen.getByText(label);
-  const valueEl = labelSpan.closest('p')?.nextElementSibling;
+  const labelSpan = screen.getAllByText(label).find(node => node.closest('[data-operational-metric]'));
+  const valueEl = labelSpan?.closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
   return valueEl?.textContent ?? '';
 }
 
@@ -213,7 +213,13 @@ describe('SlowQueriesPage — populated view', () => {
     // Weighted cache ratio = (900 + 20) / (900 + 100 + 20 + 180).
     // Its label collides with the table
     // column header, so assert the value directly.
-    expect(screen.getByText('76.67%')).toBeInTheDocument();
+    expect(metricValue('Cache hit ratio')).toBe('76.67%');
+    const strip = screen.getByTestId('slow-queries-summary');
+    expect(strip).toHaveAttribute('data-operational-brief');
+    expect([...strip.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-operational-metric')))
+      .toEqual(['queries-analyzed', 'total-calls', 'aggregate-time', 'slowest-mean', 'peak-max', 'cache-hit-ratio']);
+    expect(strip).toHaveTextContent('Top 25 by Mean time');
+    expect(strip).toHaveTextContent('Across shown queries');
   });
 
   it('renders the ranking chart region, cache panel and detail table', () => {
@@ -251,14 +257,14 @@ describe('SlowQueriesPage — populated view', () => {
     act(() => setGlobalPrecision(3));
     expect(metricValue('Slowest mean')).toBe('40.000 ms');
     expect(metricValue('Aggregate time')).toBe('7.000 s');
-    expect(screen.getByText('76.667%')).toBeInTheDocument();
+    expect(metricValue('Cache hit ratio')).toBe('76.667%');
     expect(screen.getByText('1,200')).toBeInTheDocument();
     expect(screen.getByText('3,400')).toBeInTheDocument();
 
     act(() => setGlobalPrecision(0));
     expect(metricValue('Slowest mean')).toBe('40 ms');
     expect(metricValue('Aggregate time')).toBe('7 s');
-    expect(screen.getByText('77%')).toBeInTheDocument();
+    expect(metricValue('Cache hit ratio')).toBe('77%');
     expect(ROWS[0].mean_time_ms).toBe(4);
     expect(ROWS[0].shared_blks_hit).toBe(900);
   });
@@ -276,9 +282,10 @@ describe('SlowQueriesPage — non-happy states', () => {
     expect(
       screen.getByRole('heading', { name: 'Slow queries', level: 1 }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Queries analyzed')).toBeNull();
+    expect(screen.getByTestId('slow-queries-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(metricValue('Queries analyzed')).toBe('');
     // At least one skeleton placeholder is on screen.
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[data-operational-brief][aria-busy="true"]')).toBeTruthy();
   });
 
   it('surfaces the error state on a first-load failure (no data to fall back on)', () => {
@@ -293,7 +300,8 @@ describe('SlowQueriesPage — non-happy states', () => {
     // …with a working Retry affordance.
     expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThanOrEqual(1);
     // …and the KPI band never fabricates a "0".
-    expect(screen.queryByText('Queries analyzed')).toBeNull();
+    expect(metricValue('Queries analyzed')).toBe('—');
+    expect(screen.getByTestId('slow-queries-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
   });
 
   it('routes a 503 to the "subsystem unavailable" banner, not the network error', () => {
@@ -311,8 +319,8 @@ describe('SlowQueriesPage — non-happy states', () => {
     expect(screen.getByText(/pg_stat_statements is not installed/i)).toBeInTheDocument();
     // The generic QueryError must NOT show for the 503 branch.
     expect(screen.queryByText("Can't reach server")).toBeNull();
-    // KPI band renders (empty subsystem → honest 0), not the error panel.
-    expect(metricValue('Queries analyzed')).toBe('0');
+    // Unsupported/unmeasured is unknown, not a measured empty response.
+    expect(metricValue('Queries analyzed')).toBe('—');
   });
 
   it('shows per-section empty states when the query returns zero rows', () => {
@@ -327,6 +335,11 @@ describe('SlowQueriesPage — non-happy states', () => {
     expect(screen.getByText('No slow queries')).toBeInTheDocument();
     // KPI band honestly reads 0 rather than hiding.
     expect(metricValue('Queries analyzed')).toBe('0');
+    expect(metricValue('Total calls')).toBe('0');
+    expect(metricValue('Aggregate time')).toBe('0.00 ms');
+    const strip = screen.getByTestId('slow-queries-summary');
+    expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
+    expect(strip.querySelector('[data-operational-metric="cache-hit-ratio"]')).toHaveAttribute('data-value-state', 'missing');
   });
 
   it('keeps the last-good data visible when a background refetch fails', () => {
@@ -347,6 +360,7 @@ describe('SlowQueriesPage — non-happy states', () => {
     ).toBeInTheDocument();
     expect(metricValue('Queries analyzed')).toBe('3');
     expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.getByTestId('slow-queries-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
   });
 });
 
@@ -361,10 +375,53 @@ describe('SlowQueriesPage — header controls', () => {
     fireEvent.change(screen.getByLabelText('Order by'), {
       target: { value: 'total_time' },
     });
-    expect(mockUseSlowQueries).toHaveBeenLastCalledWith('total_time', 25);
 
-    // Limit select → numeric limit, order key preserved.
+    expect(mockUseSlowQueries).toHaveBeenLastCalledWith('total_time', 25);
     fireEvent.change(screen.getByLabelText('Limit'), { target: { value: '50' } });
     expect(mockUseSlowQueries).toHaveBeenLastCalledWith('total_time', 50);
   });
+});
+
+describe('SlowQueriesPage — full evidence and retained refresh', () => {
+      it('preserves the top-twelve ranking and full fingerprints in the data alternative, and the eight worst cache candidates', () => {
+        const rows = Array.from({ length: 20 }, (_, index): SlowQueryRow => ({
+          ...ROWS[0],
+          query_id: index + 1,
+          fingerprint: `SELECT ranked ${index + 1} ${'exact_full_fingerprint_'.repeat(12)}`,
+          mean_time_ms: index + 1,
+          shared_blks_hit: index * 10,
+          shared_blks_read: 200 - index * 10,
+        }));
+        mockUseSlowQueries.mockReturnValue(makeQuery({ data: response(rows) }));
+        renderPage();
+        const alternative = screen.getByRole('table', { name: 'Top queries by Mean time — data table' });
+        const ranked = within(alternative).getAllByRole('row').slice(1);
+        expect(ranked).toHaveLength(12);
+        expect(ranked.map(row => within(row).getAllByRole('cell')[0].textContent))
+          .toEqual([...rows].reverse().slice(0, 12).map(row => row.fingerprint));
+        const cache = screen.getByText('Cache efficiency').closest<HTMLElement>('[data-print-card]');
+        if (!cache) throw new Error('Cache panel must retain its canonical card surface');
+        for (const row of rows.slice(0, 8)) {
+          expect(within(cache).getByText(row.fingerprint)).toBeInTheDocument();
+        }
+        expect(within(cache).queryByText(rows[8].fingerprint)).toBeNull();
+        const table = screen.getByRole('region', { name: 'Top queries' });
+        expect(within(table).getByText(rows[0].fingerprint)).toBeInTheDocument();
+      });
+
+      it('keeps measured query metrics, chart and complete table after a retained 503 and offers source recovery without reclassifying it as unsupported', () => {
+        const refetch = vi.fn();
+        mockUseSlowQueries.mockReturnValue(makeQuery({
+          data: response(), isError: true, error: new ApiError('refresh unavailable', 503), refetch,
+        }));
+        renderPage();
+        expect(metricValue('Queries analyzed')).toBe('3');
+        expect(screen.getByRole('img', { name: /Horizontal bar chart ranking/ })).toBeInTheDocument();
+        expect(within(screen.getByRole('region', { name: 'Top queries' })).getByText('VACUUM analyze')).toBeInTheDocument();
+        expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+        expect(screen.queryByText('Feature not supported')).toBeNull();
+        expect(refetch).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
+        expect(refetch).toHaveBeenCalledTimes(1);
+      });
 });

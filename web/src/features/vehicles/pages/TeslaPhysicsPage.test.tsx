@@ -111,6 +111,18 @@ async function renderAt(path = '/tesla-physics') {
 }
 
 describe('Tesla Physics consolidated workbench', () => {
+  it('reviews the actual returned-evidence brief while keeping absent coverage separate from real zero findings', async () => {
+    await renderAt();
+    const brief = screen.getByTestId('tesla-physics-evidence-summary');
+    expect(brief.querySelector('[data-operational-metric="coverage"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Exclusive history is bounded to at most 14 days')).toBeInTheDocument();
+    expect(within(drawer).getByText('Returned episodes')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/not proof that nothing happened outside/).length).toBeGreaterThan(0);
+  });
+
   it('hub exposes source caps and all fifteen deep links in grouped navigation', async () => {
     await renderAt();
     expect(screen.getByText('History row cap reached')).toBeInTheDocument();

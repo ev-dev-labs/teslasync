@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
-import { Skeleton } from '@/components/feedback';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import type { TeslaEnergySite } from '@/types/energy';
 import { fmtEnergy } from './helpers';
 
@@ -20,18 +20,16 @@ export function SummaryBand({ sites, isLoading, retained, hasData }: {
     { metricId: 'count', occurrenceId: 'backup', label: t('energy.products.backupCapable', 'Backup Capable'), rawValue: hasData ? sites.filter(site => site.backup_capable).length : null },
     { metricId: 'count', occurrenceId: 'storm', label: t('energy.products.stormReady', 'Storm-Ready'), rawValue: hasData ? sites.filter(site => site.storm_mode_capable).length : null },
     // The existing energy-product formatter deliberately scales by magnitude.
-    { metricId: 'text', occurrenceId: 'capacity', label: t('energy.products.totalCapacity', 'Total Capacity'), rawValue: totalCapacity == null ? null : fmtEnergy(totalCapacity) },
+    { metricId: 'energy', occurrenceId: 'capacity', label: t('energy.products.totalCapacity', 'Total Capacity'), rawValue: totalCapacity,
+      display: { formatter: raw => ({ value: fmtEnergy(raw), unit: '' }) } },
   ];
   return (
-    <section aria-label={t('energy.products.summary', 'Energy summary')}>
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-[92px] rounded-xl" />)}
-        </div>
-      ) : (
-        <StatStrip
+    <section>
+        <BatteryEvidenceBrief
           id="energy-products-summary"
+          title={t('energy.products.summary', 'Energy summary')}
           metrics={metrics}
+          loading={isLoading}
           retained={retained}
           period={{
             kind: 'snapshot',
@@ -40,7 +38,6 @@ export function SummaryBand({ sites, isLoading, retained, hasData }: {
             provenance: t('energy.products.modernization.snapshotSource', 'Cached Tesla products; site timestamps are shown on each card.'),
           }}
         />
-      )}
     </section>
   );
 }

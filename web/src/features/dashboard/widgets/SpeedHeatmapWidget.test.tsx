@@ -44,7 +44,7 @@
  * because the shared `QueryError` panel (error branch) calls `useNavigate()`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { Drive } from '@/api/types';
@@ -460,12 +460,12 @@ describe('SpeedHeatmapWidget — populated (full size)', () => {
     useQueryMock.mockReturnValue(makeResult({ data: [makeDrive({ avg_speed_mps: 20 })] }));
 
     const wide = renderWidget({ cols: 3, rows: 2 });
-    expect(screen.getByText('Wed')).toBeInTheDocument();
+    expect(within(screen.getByRole('img', { name: /average speed by day of week/i })).getByText('Wed')).toBeInTheDocument();
     wide.unmount();
 
     // The narrow variant uses single-letter labels, so "Wed" is absent.
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.queryByText('Wed')).toBeNull();
+    expect(within(screen.getByRole('img', { name: /average speed by day of week/i })).queryByText('Wed')).toBeNull();
   });
 });
 

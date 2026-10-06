@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlaskConical, Wind, Gauge, RotateCcw, TrendingDown, TrendingUp,
-  BatteryCharging, Timer, Zap,
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -107,6 +107,29 @@ export default function WhatIfPage() {
   const saves = result.energyDeltaWh <= 0;
   const baselineDurationS = driveQuery.data?.durationS;
   const loading = drivesQuery.isLoading || driveQuery.isLoading || telemetryQuery.isLoading;
+  const summaryMetrics: readonly StatMetric[] = [
+    {
+      metricId: 'energy', occurrenceId: 'scenario-energy',
+      rawValue: result.ok ? result.scenario.total : null,
+      label: t('whatIf.energy', 'Energy used'),
+      display: { formatter: (raw) => ({ value: kwh(raw), unit: '' }) },
+      context: result.ok ? `${t('whatIf.was', 'was')} ${kwh(result.baseline.total)}` : undefined,
+    },
+    {
+      metricId: 'percent', occurrenceId: 'scenario-arrival',
+      rawValue: result.ok ? result.scenarioArrivalSoc : null,
+      label: t('whatIf.arrival', 'Arrival battery'),
+      display: { precision: 0 },
+      context: result.ok && socDelta != null ? `${socDelta >= 0 ? '+' : '−'}${fmtNumber(Math.abs(socDelta))}%` : undefined,
+    },
+    {
+      metricId: 'duration', occurrenceId: 'scenario-duration',
+      rawValue: result.ok ? result.scenarioDurationS : null,
+      label: t('whatIf.duration', 'Duration'),
+      display: { formatter: (raw) => ({ value: formatDuration(raw), unit: '' }) },
+      context: baselineDurationS != null ? `${t('whatIf.was', 'was')} ${formatDuration(baselineDurationS)}` : undefined,
+    },
+  ];
 
   return (
     <PageLayout
@@ -126,17 +149,25 @@ export default function WhatIfPage() {
         </div>
       }
     >
+      <FadeIn>
+        <DrivingSummaryBrief
+          id="what-if-brief"
+          title={t('whatIf.kpis', 'Simulated drive outcome')}
+          description={t('whatIf.brief.description', 'Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.')}
+          metrics={summaryMetrics}
+          scope={driveQuery.data ? formatDateShort(driveQuery.data.startTs) : t('whatIf.brief.noDrive', 'No selected recorded drive')}
+          provenance={t('whatIf.brief.provenance', 'Selected drive and telemetry, recomputed locally with the current simulation knobs.')}
+          loading={loading}
+          unavailable={!activeId || !result.ok}
+          retained={driveQuery.isError || telemetryQuery.isError}
+        />
+      </FadeIn>
       {drivesQuery.isError ? (
         <GlassPanel className="p-4 sm:p-5">
           <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
         </GlassPanel>
       ) : loading ? (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))}
-          </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <Skeleton height={340} className="rounded-xl xl:col-span-1" />
             <Skeleton height={340} className="rounded-xl xl:col-span-2" />
@@ -159,44 +190,6 @@ export default function WhatIfPage() {
         </GlassPanel>
       ) : (
         <>
-          {/* 1 — KPI band: the simulated outcome at a glance */}
-          <FadeIn>
-            <section
-              aria-label={t('whatIf.kpis', 'Simulated drive outcome')}
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4"
-            >
-              <MetricCard
-                label={t('whatIf.energy', 'Energy used')}
-                value={kwh(result.scenario.total)}
-                subtitle={`${t('whatIf.was', 'was')} ${kwh(result.baseline.total)}`}
-                icon={<Zap className="h-5 w-5" />}
-                color={saves ? 'green' : 'amber'}
-              />
-              <MetricCard
-                label={t('whatIf.arrival', 'Arrival battery')}
-                value={result.scenarioArrivalSoc != null ? `${Math.round(result.scenarioArrivalSoc)}%` : '—'}
-                subtitle={
-                  socDelta != null
-                    ? `${socDelta >= 0 ? '+' : '−'}${fmtNumber(Math.abs(socDelta))}%`
-                    : undefined
-                }
-                icon={<BatteryCharging className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('whatIf.duration', 'Duration')}
-                value={formatDuration(result.scenarioDurationS)}
-                subtitle={
-                  baselineDurationS != null
-                    ? `${t('whatIf.was', 'was')} ${formatDuration(baselineDurationS)}`
-                    : undefined
-                }
-                icon={<Timer className="h-5 w-5" />}
-                color="purple"
-              />
-            </section>
-          </FadeIn>
-
           {/* 2 — Knobs (1/3) + energy breakdown & takeaway (2/3) */}
           <FadeIn delay={0.1}>
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">

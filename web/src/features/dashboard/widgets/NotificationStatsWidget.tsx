@@ -1,13 +1,15 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, Send, AlertTriangle, Radio, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge, DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import type { NotificationLog } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -75,36 +77,31 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
   const enabledChannels = knownNumber(stats?.enabled_channels);
   const deliveryRate = totalSent != null && totalSent > 0 && sent != null ? (sent / totalSent) * 100 : null;
 
-  const coreStats = useMemo((): StatGridItem[] => {
-    if (!stats) return [];
+  const coreStats = useMemo((): StatMetric[] => {
     return [
       {
         label: t('widget.notificationStats.totalSent', 'Total sent (7d)'),
-        value: totalSent == null ? null : fmtInt(totalSent),
-        icon: <Send className="h-3.5 w-3.5" />,
-        trend: totalSent != null && totalSent > 0 ? 'up' as const : 'flat' as const,
-        trendValue: totalSent != null && totalSent > 0 ? fmtInt(totalSent) : undefined,
+        metricId: 'count', rawValue: totalSent,
+        description: t('widget.notificationStats.sentDescription', 'Recorded total sent for the reported seven-day window.'),
+        comparisonContent: totalSent != null && totalSent > 0 ? <Badge variant="success">{fmtInt(totalSent)}</Badge> : undefined,
       },
       {
         label: t('widget.notificationStats.deliveryRate', 'Delivery rate'),
-        value: deliveryRate == null ? null : fmtNumber(deliveryRate),
-        unit: deliveryRate != null ? '%' : undefined,
-        icon: <CheckCircle className="h-3.5 w-3.5" />,
-        trend: deliveryRate != null && deliveryRate >= 95 ? 'up' as const : deliveryRate != null && deliveryRate > 0 ? 'down' as const : 'flat' as const,
-        trendValue: deliveryRate != null && deliveryRate >= 95 ? t('widget.notificationStats.healthy', 'Healthy') : undefined,
+        metricId: 'percent', rawValue: deliveryRate,
+        display: { formatter: raw => ({ value: fmtNumber(Number(raw)), unit: '%' }) },
+        description: t('widget.notificationStats.deliveryDescription', 'Sent divided by a positive reported total; a zero denominator leaves delivery rate unknown.'),
+        comparisonContent: deliveryRate != null && deliveryRate >= 95 ? <Badge variant="success">{t('widget.notificationStats.healthy', 'Healthy')}</Badge> : undefined,
       },
       {
         label: t('widget.notificationStats.failed', 'Failed'),
-        value: failed == null ? null : fmtInt(failed),
-        icon: <AlertTriangle className="h-3.5 w-3.5" />,
-        valueColor: failed != null && failed > 0 ? 'text-red-400' : undefined,
-        trend: failed != null && failed > 0 ? 'down' as const : 'flat' as const,
-        trendValue: failed != null && failed > 0 ? t('widget.notificationStats.needsAttention', 'Needs attention') : undefined,
+        metricId: 'count', rawValue: failed,
+        description: t('widget.notificationStats.failedDescription', 'Reported failures remain independent of the recent notification log rows.'),
+        comparisonContent: failed != null && failed > 0 ? <Badge variant="danger">{t('widget.notificationStats.needsAttention', 'Needs attention')}</Badge> : undefined,
       },
       {
         label: t('widget.notificationStats.activeChannels', 'Active channels'),
-        value: enabledChannels == null ? null : fmtInt(enabledChannels),
-        icon: <Radio className="h-3.5 w-3.5" />,
+        metricId: 'count', rawValue: enabledChannels,
+        description: t('widget.notificationStats.channelsDescription', 'Enabled notification channels, not a delivery-success guarantee.'),
       },
     ];
   }, [stats, totalSent, deliveryRate, failed, enabledChannels, t, fmtInt, fmtNumber]);
@@ -192,7 +189,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
-        title={t('widget.notificationStats.title', 'Notification stats')}
+        title={t('widget.notificationStats.summaryTitle', 'Notification counters')}
         loading={statsLoading}
         dataState={displayState}
         updatedAt={statsUpdatedAt}
@@ -244,13 +241,19 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       <div className="space-y-3">
+        <DashboardSourceBrief
+          metrics={coreStats} state={statsState}
+          eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+          title={t('widget.notificationStats.title', 'Notification stats')}
+          description={t('widget.notificationStats.summaryDescription', 'Notification counters preserve the existing delivery formula and attention thresholds; recent logs recover independently.')}
+          scope={t('widget.notificationStats.summaryScope', 'System notifications; reported seven-day counters and separate latest log rows')}
+          loading={statsLoading && !stats} testId="notification-stats-operational-brief"
+        />
         {statsState.fatalError ? (
           <QueryError error={statsState.fatalError} onRetry={() => { void statsRefetch(); }} />
         ) : statsLoading && stats == null ? (
           <Skeleton className="h-20 rounded-xl" />
-        ) : stats ? (
-          <WidgetStatGrid stats={coreStats} cols={isWide ? 4 : 2} />
-        ) : (
+        ) : stats ? null : (
           <EmptyState /* no-action: source activity supplies these statistics */
             icon={<Bell className="h-5 w-5" />}
             message={t('widget.notificationStats.noData', 'No notification data')}

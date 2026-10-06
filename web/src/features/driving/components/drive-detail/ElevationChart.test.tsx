@@ -179,6 +179,11 @@ vi.mock('@/components/charts', () => {
 
 import { ElevationChart } from './ElevationChart';
 
+vi.mock('@/components/layout', async () => {
+  const charts = await import('@/components/charts');
+  return { ChartCard: charts.ChartContainer };
+});
+
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 function makePoint(over: Partial<ChartDataPoint> = {}): ChartDataPoint {

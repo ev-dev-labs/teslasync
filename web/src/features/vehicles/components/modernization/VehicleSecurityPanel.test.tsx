@@ -17,6 +17,8 @@ describe('independent security without invented live state', () => {
     render(<VehicleSecurityPanel securityData={syntheticSecurity} state={undefined} />);
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
     for (const label of ['Locked', 'Sentry', 'Doors', 'Windows']) expect(screen.getByText(label)).toBeInTheDocument();
+    expect(document.querySelector('[data-testid="vehicle-security-summary"][data-operational-brief]')).not.toBeNull();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(screen.getAllByText('—')).toHaveLength(2);
     expect(screen.getByText('Open')).toBeInTheDocument();
     expect(screen.getByText('2 open')).toBeInTheDocument();
@@ -45,10 +47,27 @@ describe('independent security without invented live state', () => {
     render(<VehicleSecurityPanel securityData={null} state={undefined} />);
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('No security data available');
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     for (const value of ['Closed', 'No', 'Off']) {
       expect(screen.queryByText(value)).not.toBeInTheDocument();
     }
+  });
+
+  it('distinguishes false live flags and closed telemetry from missing readings', () => {
+    const { rerender } = render(<VehicleSecurityPanel securityData={{
+      ...syntheticSecurity, door_state: false,
+      fd_window: '0', fp_window: false, rd_window: '0', rp_window: false,
+    }} state={undefined} />);
+    expect(screen.getAllByText('Closed')).toHaveLength(2);
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    rerender(<VehicleSecurityPanel securityData={{
+      ...syntheticSecurity, door_state: null,
+      fd_window: null, fp_window: null, rd_window: null, rp_window: null,
+    }} state={undefined} />);
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('Closed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Off')).not.toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Zap, BatteryCharging, Plug } from 'lucide-react';
 import { Sparkline } from '@/components/charts';
-import { Badge } from '@/components/ui';
+import { Badge, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { deriveDataState, knownNumber } from '@/api/dataState';
 import { useChargingTelemetryLatest, useVehicles } from '@/api/hooks/useVehicles';
@@ -11,7 +11,6 @@ import { convertPowerFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -58,6 +57,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
   const current = knownNumber(data?.charger_actual_current);
   const power = knownNumber(data?.charger_power_w);
   const phases = knownNumber(data?.charger_phases);
+  const dataState = deriveDataState(query, { provenance: 'live' });
 
   // `charger_power_w` is SI watts. Convert to the user's power unit (kW) at the
   // render boundary — rendering the raw watt magnitude with a "kW" suffix was a
@@ -145,8 +145,8 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
       <WidgetShell
         title={t('widget.chargingTelemetry.title', 'Charging telemetry')}
         loading={isLoading && !data}
-        dataState={data ? deriveDataState(query, { provenance: 'live' }) : undefined}
-        error={isError && !data ? String(error ?? t('widget.chargingTelemetry.error', 'Unable to load charging telemetry')) : null}
+        dataState={data != null || isLoading || isError || error ? dataState : undefined}
+        error={dataState.fatalError ? String(dataState.fatalError) : null}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -157,9 +157,9 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
           <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
             <BatteryCharging className="h-5 w-5 text-emerald-300" />
             <WidgetBigNumber value={power == null ? null : `${powerDisplay} ${unitPrefs.power}`} align="center" size="secondary" animated={false} />
-            <span className={dashboardTokens.metricLabel}>
+            <Caption className="max-w-full [overflow-wrap:anywhere]">
               {voltage == null ? '—' : `${fmtNumber(voltage)}V`} · {current == null ? '—' : `${fmtNumber(current)}A`}
-            </span>
+            </Caption>
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -178,8 +178,8 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
       title={t('widget.chargingTelemetry.title', 'Charging telemetry')}
       icon={<Gauge className="h-3.5 w-3.5 text-emerald-300" />}
       loading={isLoading && !data}
-      dataState={data ? deriveDataState(query, { provenance: 'live' }) : undefined}
-      error={isError && !data ? String(error ?? t('widget.chargingTelemetry.error', 'Unable to load charging telemetry')) : null}
+      dataState={data != null || isLoading || isError || error ? dataState : undefined}
+      error={dataState.fatalError ? String(dataState.fatalError) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}

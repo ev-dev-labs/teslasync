@@ -301,6 +301,7 @@ export function AppearanceSettings() {
                       {choice.swatches.map((hex, i) => (
                         <span
                           key={`${choice.id}-${i}`}
+                          data-chart-palette-swatch={choice.id}
                           className="h-3 w-3 rounded-full border border-[var(--glass-border)]"
                           style={{ background: hex }}
                         />

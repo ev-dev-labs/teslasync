@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout, CardGrid, Section } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { AIDigestNarration } from '@/components/ai/AIDigestNarration';
+import { AIDigestNarration } from '@/components/ai';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { browserTimezone } from '@/lib/timezone';
 
@@ -12,14 +12,14 @@ import {
 } from '../components/weekly-digest';
 import {
   WeekNavigation,
-  DigestSummary,
   DrivingPanel,
   ChargingPanel,
   BatteryPanel,
   AlertsPanel,
-  FsdPanel,
   weeklyPeriod,
 } from '../components/weekly-digest-modernization';
+import { DigestOperationalSummary } from '../components/operationalbrief-n-z/DigestOperationalSummary';
+import { FsdOperationalPanel } from '../components/operationalbrief-n-z/FsdOperationalPanel';
 
 export default function WeeklyDigestPage() {
   const { t } = useTranslation();
@@ -154,7 +154,7 @@ export default function WeeklyDigestPage() {
             id: 'week-summary',
             size: 'full',
             content: (
-              <DigestSummary
+              <DigestOperationalSummary
                 metrics={metrics}
                 period={period}
                 funFact={funFact}
@@ -162,6 +162,8 @@ export default function WeeklyDigestPage() {
                 isError={Boolean(summaryError)}
                 error={summaryError}
                 onRetry={refetchAll}
+                driveAvailable={freshnessQueries[0] ? freshnessQueries[0].data != null : undefined}
+                chargingAvailable={freshnessQueries[1] ? freshnessQueries[1].data != null : undefined}
               />
             ),
           }]}
@@ -216,7 +218,7 @@ export default function WeeklyDigestPage() {
             id: 'supervised-driving',
             size: 'full',
             content: (
-              <FsdPanel
+              <FsdOperationalPanel
                 insights={fsdInsights}
                 period={period}
                 isLoading={fsdLoading}
@@ -278,7 +280,7 @@ export default function WeeklyDigestPage() {
             id: 'week-comparison',
             size: 'full',
             content: (
-              <DigestSummary
+              <DigestOperationalSummary
                 comparison
                 metrics={metrics}
                 period={period}
@@ -286,6 +288,8 @@ export default function WeeklyDigestPage() {
                 isError={Boolean(summaryError)}
                 error={summaryError}
                 onRetry={refetchAll}
+                driveAvailable={freshnessQueries[0] ? freshnessQueries[0].data != null : undefined}
+                chargingAvailable={freshnessQueries[1] ? freshnessQueries[1].data != null : undefined}
               />
             ),
           }]}

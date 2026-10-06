@@ -314,12 +314,13 @@ describe('VersionInfoWidget — shell states', () => {
     expect(screen.queryByText('Go version')).toBeNull();
   });
 
-  it('keeps undefined version data initial even when a loading flag is absent and capture has resolved', () => {
+  it('keeps version locally pending without hiding resolved capture readings', () => {
     mockVersion.mockReturnValue(qr({ data: undefined, isLoading: false, error: null }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Version info' })).toBeInTheDocument();
+    expect(screen.getByText('Signals/sec')).toBeInTheDocument();
     expect(screen.queryByText('No version data available')).not.toBeInTheDocument();
     expect(screen.queryByText('Go version')).not.toBeInTheDocument();
   });

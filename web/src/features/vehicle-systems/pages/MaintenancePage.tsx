@@ -10,7 +10,7 @@ import { CalendarPlus, RefreshCw } from 'lucide-react';
 import { PageLayout, CardGrid, type CardGridItem } from '@/components/layout';
 import { Button } from '@/components/ui';
 // The opt-in child remains unchanged; the shared AI category has no barrel.
-import { AIPredictiveMaintenance } from '@/components/ai/AIPredictiveMaintenance';
+import { AIPredictiveMaintenance } from '@/components/ai';
 import { useMaintenance, useServiceRecords } from '@/api/hooks/useMaintenance';
 import { deriveDataState } from '@/api/dataState';
 import { usePageTitle } from '@/hooks/usePageTitle';

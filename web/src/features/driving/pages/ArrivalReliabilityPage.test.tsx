@@ -231,6 +231,16 @@ beforeEach(() => {
 });
 
 describe('ArrivalReliabilityPage', () => {
+  it('keeps all timing evidence while a cached history refresh is paused offline', () => {
+    h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
+    renderPage();
+    expectEverySection();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent('offline');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all ten persistent analytical shells with the capped hook and vehicle timezone', () => {
     renderPage();
 

@@ -8,7 +8,7 @@ import { useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, Button as UiButton, Badge, Text, Caption, Tooltip } from '@/components/ui';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { SourceContent } from '@/components/layout';
 import { PillFilterBar, SearchInput } from '@/components/forms';
@@ -83,7 +83,7 @@ function PresetCard({
           <Icon className="h-5 w-5 text-cyan-400" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
-          <Text as="h3" size="sm" weight="semibold" color="primary" className="truncate">
+          <Text as="h3" variant="bodySm" weight="semibold" color="primary" className="break-words">
             {preset.name}
           </Text>
           <Text as="p" variant="bodySm" className="mt-0.5">
@@ -113,11 +113,12 @@ function PresetCard({
         </Tooltip>
       </div>
 
-      <Text as="p" variant="bodySm" className="leading-relaxed line-clamp-2">
+      <Text as="p" variant="bodySm" className="break-words">
         {preset.description}
       </Text>
 
       <UiButton
+        wrapLabel
         size="sm"
         variant="secondary"
         onClick={handleInstall}
@@ -197,42 +198,29 @@ export function PresetGallery({
     return items;
   }, [categories, presetList, t]);
 
-  if (isLoading && !source.hasData) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <PresetCardSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
-
-  if (source.fatalError) {
-    return (
-      <QueryError
-        error={source.fatalError}
-        onRetry={() => refetch()}
-        resourceName={t('automations.presets.resource', 'Automation presets')}
-      />
-    );
-  }
-
-  if (presetList.length === 0) {
-    return (
-      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-        icon={<Icons.clock className="h-8 w-8" />}
-        message={t('automations.presets.empty', 'No preset templates available')}
-      />
-    );
-  }
-
   return (
     <SourceContent
-      state={source.refreshError || source.isRefreshBlocked ? 'retained' : 'ready'}
+      state={isLoading && !source.hasData ? 'loading'
+        : source.fatalError ? 'error'
+          : source.refreshError || source.isRefreshBlocked ? 'retained'
+            : presetList.length === 0 ? 'empty' : 'ready'}
       label={t('automations.presets.resource', 'Automation presets')}
       emptyMessage={t('automations.presets.empty', 'No preset templates available')}
       errorMessage={t('automations.presets.resource', 'Automation presets')}
+      error={source.fatalError}
       errorRecovery={{ onRetry: () => { void refetch(); } }}
+      loadingContent={
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <PresetCardSkeleton key={i} />)}
+        </div>
+      }
+      emptyContent={
+        <EmptyState
+          icon={<Icons.clock className="h-8 w-8" />}
+          message={t('automations.presets.empty', 'No preset templates available')}
+          action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }}
+        />
+      }
     >
     <div className="space-y-6">
       {!category && (
@@ -263,7 +251,12 @@ export function PresetGallery({
           })}
         </Caption>
       )}
-      {filteredPresets.length === 0 ? (
+      {presetList.length === 0 ? (
+        <EmptyState
+          icon={<Icons.clock className="h-8 w-8" />}
+          message={t('automations.presets.empty', 'No preset templates available')}
+        />
+      ) : filteredPresets.length === 0 ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.clock className="h-8 w-8" />}
           message={t('automations.presets.emptyCategory', 'No templates match your filters')}

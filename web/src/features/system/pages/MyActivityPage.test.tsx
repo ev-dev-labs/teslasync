@@ -65,6 +65,10 @@ vi.mock('react-i18next', async () => {
 import { request } from '@/api/client';
 import { ApiError } from '@/lib/resilience';
 import MyActivityPage from './MyActivityPage';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 import type { UserActivityEntry } from '@/types/admin';
 
 const mockedRequest = request as unknown as Mock;
@@ -167,7 +171,7 @@ function renderPage(initialEntry = '/my-activity') {
 /** Return the KPI card (`div.flex-1`) that owns a given label so the value
  *  paragraph can be asserted without cross-card collisions. */
 function kpiCard(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('.flex-1');
+  const el = screen.getByText(label).closest('[data-operational-metric]');
   if (!el) throw new Error(`no KPI card for "${label}"`);
   return el as HTMLElement;
 }
@@ -195,7 +199,8 @@ describe('MyActivityPage — Project Apex elevation', () => {
     expect(screen.getByText('My activity')).toBeInTheDocument();
     expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
-    expect(screen.queryByText('Total actions')).toBeNull();
+    expect(screen.getByText('Total actions')).toBeInTheDocument();
+    expect(kpiCard('Total actions').querySelector('[data-operational-value]')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 

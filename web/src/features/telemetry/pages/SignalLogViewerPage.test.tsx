@@ -28,6 +28,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -228,16 +229,17 @@ describe('SignalLogViewerPage', () => {
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
 
-  it('renders the cockpit with a disabled Query gate and honest zero/empty states before any query', () => {
+  it('renders the cockpit with a disabled Query gate and unknown result counts before any query', () => {
     // No `?signals=` ⇒ zero selected signals ⇒ canQuery is false.
     renderPage(`?${RANGE}`);
 
     const queryBtn = screen.getByRole('button', { name: 'Query' });
     expect(queryBtn).toBeDisabled();
 
-    // KPI band shows honest zeros (not skeletons — the query is disabled).
-    const totalCard = screen.getByText('Total records').closest('div') as HTMLElement;
-    expect(within(totalCard).getByText('0')).toBeInTheDocument();
+    // No request has run: a known selection count is distinct from unknown result counts.
+    const totalCard = screen.getByText('Total records').closest('[data-operational-metric]') as HTMLElement;
+    expect(within(totalCard).getByText('—')).toBeInTheDocument();
+    expect(within(totalCard).queryByText('0')).toBeNull();
 
     // Breakdown + history each own their pre-query empty state (never a blank panel).
     expect(

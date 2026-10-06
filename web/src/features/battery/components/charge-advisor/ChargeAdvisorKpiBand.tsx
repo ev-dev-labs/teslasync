@@ -9,7 +9,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, QueryError } from '@/components/feedback';
-import { StatGroup, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Button, Text } from '@/components/ui';
 
@@ -41,9 +42,6 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
       'No immediate need',
     ),
   };
-  const currentValue = analysis.current.batteryPct == null
-    ? '—'
-    : fmtPercent(analysis.current.batteryPct);
   const currentSubtitle = analysis.current.freshness === 'fresh'
     ? t('chargeAdvisor.kpis.currentFresh', 'Fresh observed state')
     : analysis.current.freshness === 'stale'
@@ -61,29 +59,33 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
       </Badge></>,
     },
     {
-      metricId: 'text', occurrenceId: 'advisor-current-soc',
+      metricId: 'percent', occurrenceId: 'advisor-current-soc',
       label: t('chargeAdvisor.kpis.current', 'Current SoC'),
-      rawValue: state.vehicleSelected ? currentValue : null,
+      rawValue: state.vehicleSelected ? analysis.current.batteryPct : null,
+      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: <><BatteryMedium className="h-5 w-5" aria-hidden="true" />{currentSubtitle}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'advisor-drive-evidence',
+      metricId: 'count', occurrenceId: 'advisor-drive-evidence',
       label: t('chargeAdvisor.kpis.history', 'Drive evidence'),
-      rawValue: state.driveAvailable ? fmtInt(analysis.evidence.includedRows) : null,
+      rawValue: state.driveAvailable ? analysis.evidence.includedRows : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       context: <><Database className="h-5 w-5" aria-hidden="true" />{t('chargeAdvisor.kpis.historyDetail', '{{days}} active local days · {{weeks}} active weeks', {
         days: analysis.evidence.activeLocalDays, weeks: analysis.evidence.activeWeeks,
       })}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'advisor-daily-drop',
+      metricId: 'percent', occurrenceId: 'advisor-daily-drop',
       label: t('chargeAdvisor.kpis.typicalUse', 'Daily SoC drop'),
-      rawValue: analysis.burnDistribution.medianPct == null ? null : fmtPercent(analysis.burnDistribution.medianPct),
+      rawValue: analysis.burnDistribution.medianPct,
+      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: <><Activity className="h-5 w-5" aria-hidden="true" />{t('chargeAdvisor.kpis.dailyUseDetail', 'Median across active local days')}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'advisor-charging-evidence',
+      metricId: 'count', occurrenceId: 'advisor-charging-evidence',
       label: t('chargeAdvisor.kpis.charging', 'Charging evidence'),
-      rawValue: state.chargingAvailable ? fmtInt(analysis.chargingProfile.sessions) : null,
+      rawValue: state.chargingAvailable ? analysis.chargingProfile.sessions : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       context: <><ShieldCheck className="h-5 w-5" aria-hidden="true" />{state.chargingAvailable
         ? t('chargeAdvisor.kpis.chargingDetail', 'Completed sessions in window')
         : t('chargeAdvisor.kpis.chargingMissing', 'Charging history unavailable')}</>,
@@ -96,7 +98,7 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
       'Charge advisor guidance and evidence summary',
     )}>
       <LayoutCard title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')}>
-        <StatGroup metrics={metrics} retained={Boolean(state.refreshError)}
+        <BatteryEvidenceBrief title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')} metrics={metrics} loading={state.isLoading} retained={Boolean(state.refreshError)}
           period={{ kind: 'unknown', label: t('chargeAdvisor.kpis.title', 'Observed charge planning evidence'),
             reason: t('chargeAdvisor.summaryScope', 'History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.') }} />
 

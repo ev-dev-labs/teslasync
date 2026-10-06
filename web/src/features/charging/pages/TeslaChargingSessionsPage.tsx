@@ -16,7 +16,6 @@ import {
   type Column,
 } from '@/components/ui';
 import {
-  StatStrip,
   type StatMetric,
   MetricBar,
   DataProvenanceBadge,
@@ -62,6 +61,8 @@ import type { OperationalNarrative } from '@/types/operationalNarrative';
 
 import { WaitOraclePanel } from '../components/WaitOraclePanel';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
 
@@ -628,17 +629,40 @@ export default function TeslaChargingSessionsPage() {
     </Button>
   );
   const summaryMetrics: StatMetric[] = [
-    { metricId: 'text', occurrenceId: 'sessions', label: t('tesla_sessions.stats.sessions', 'Total sessions'),
-      rawValue: sessionsDataState.hasData ? fmtInt(summary.total_sessions) : null },
-    { metricId: 'text', occurrenceId: 'energy', label: t('tesla_sessions.stats.energy', 'Total energy'),
-      rawValue: summary.total_wh != null ? formatEnergy(summary.total_wh) : null },
-    { metricId: 'text', occurrenceId: 'cost', label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
-      rawValue: summary.total_cost != null ? formatCurrency(summary.total_cost) : null },
-    { metricId: 'text', occurrenceId: 'average-cost', label: t('tesla_sessions.stats.avgCost', 'Avg cost/kWh'),
-      rawValue: summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh) : null },
-    { metricId: 'text', occurrenceId: 'peak-power', label: t('tesla_sessions.stats.peakPower', 'Peak power'),
-      rawValue: summary.peak_power_kw != null ? `${fmtNumber(summary.peak_power_kw)} kW` : null },
+    { metricId: 'count', occurrenceId: 'sessions', label: t('tesla_sessions.stats.sessions', 'Total sessions'),
+      rawValue: sessionsDataState.hasData ? summary.total_sessions : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'energy', occurrenceId: 'energy', label: t('tesla_sessions.stats.energy', 'Total energy'),
+      rawValue: summary.total_wh,
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+    { metricId: 'currency', occurrenceId: 'cost', label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
+      rawValue: summary.total_cost,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'currency', occurrenceId: 'average-cost', label: t('tesla_sessions.stats.avgCost', 'Avg cost/kWh'),
+      rawValue: summary.avg_cost_per_kwh,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'power', occurrenceId: 'peak-power', label: t('tesla_sessions.stats.peakPower', 'Peak power'),
+      rawValue: summary.peak_power_kw != null ? summary.peak_power_kw * 1000 : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) } },
   ];
+  const scopedMetrics = useOperationalMetrics([
+    { metricId: 'count', occurrenceId: 'sessions', label: t('tesla_sessions.stats.sessions', 'Total sessions'),
+      rawValue: sourceUnresolved || isLoading || error ? null : sessions.length,
+      description: t('operations.charging.sessionsDetail', 'Sessions matching the active vehicle and date scope.'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'energy', occurrenceId: 'energy', label: t('tesla_sessions.stats.energy', 'Total energy'),
+      rawValue: sourceUnresolved || isLoading || error ? null : operationalTotals.totalWh,
+      description: t('operations.charging.energyDetail', 'Energy added across the matching charging sessions.'),
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+    { metricId: 'currency', occurrenceId: 'cost', label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
+      rawValue: sourceUnresolved || isLoading || error || sessions.length === 0 ? null : operationalTotals.totalCost,
+      description: t('operations.charging.costDetail', 'Reported session cost; sessions without cost remain flagged as partial.'),
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'duration', occurrenceId: 'duration', label: t('operations.charging.averageDuration', 'Average duration'),
+      rawValue: sourceUnresolved || isLoading || error ? null : operationalTotals.averageDurationSeconds,
+      description: t('operations.charging.durationDetail', 'Mean charging duration for sessions with valid timing data.'),
+      display: { formatter: raw => ({ value: formatDurationSeconds(raw), unit: '' }) } },
+  ]);
 
   return (
     <PageLayout
@@ -659,6 +683,8 @@ export default function TeslaChargingSessionsPage() {
       )}
 
       <OperationalBrief
+        compact
+        loading={isLoading && !sessionsDataState.hasData}
         testId="charging-operational-brief"
         eyebrow={t('operations.charging.eyebrow', 'Charging posture')}
         title={t('operations.charging.title', 'Cost, energy, and session evidence in one operating view')}
@@ -674,7 +700,7 @@ export default function TeslaChargingSessionsPage() {
                   ? t('operations.status.awaitingData', 'Awaiting data')
                   : chargingAttention.length > 0
                     ? t('operations.status.review', 'Review recommended')
-                    : t('operations.status.onTrack', 'On track')
+                    : t('charging.brief.available', 'Source measurements available')
         }
         statusTone={
           error
@@ -701,42 +727,8 @@ export default function TeslaChargingSessionsPage() {
             />
           </div>
         }
-        metrics={[
-          {
-            key: 'sessions',
-            label: t('tesla_sessions.stats.sessions', 'Total sessions'),
-            value: sourceUnresolved || isLoading || error ? '—' : fmtInt(sessions.length),
-            detail: t('operations.charging.sessionsDetail', 'Sessions matching the active vehicle and date scope.'),
-            tone: 'info',
-          },
-          {
-            key: 'energy',
-            label: t('tesla_sessions.stats.energy', 'Total energy'),
-            value: sourceUnresolved || isLoading || error
-              ? '—'
-              : formatEnergy(operationalTotals.totalWh),
-            detail: t('operations.charging.energyDetail', 'Energy added across the matching charging sessions.'),
-            tone: 'success',
-          },
-          {
-            key: 'cost',
-            label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
-            value: sourceUnresolved || isLoading || error || sessions.length === 0
-              ? '—'
-              : formatCurrency(operationalTotals.totalCost),
-            detail: t('operations.charging.costDetail', 'Reported session cost; sessions without cost remain flagged as partial.'),
-            tone: operationalTotals.totalFees > 0 ? 'warning' : 'neutral',
-          },
-          {
-            key: 'duration',
-            label: t('operations.charging.averageDuration', 'Average duration'),
-            value: sourceUnresolved || isLoading || error
-              ? '—'
-              : formatDurationSeconds(operationalTotals.averageDurationSeconds),
-            detail: t('operations.charging.durationDetail', 'Mean charging duration for sessions with valid timing data.'),
-            tone: 'neutral',
-          },
-        ]}
+        metrics={scopedMetrics.map(metric => ({ ...metric, tone: metric.key === 'sessions' ? 'info'
+          : metric.key === 'energy' ? 'success' : metric.key === 'cost' && operationalTotals.totalFees > 0 ? 'warning' : 'neutral' }))}
         attention={chargingAttention}
         provenance={t('operations.charging.provenance', 'Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display.')}
       />
@@ -778,7 +770,7 @@ export default function TeslaChargingSessionsPage() {
         <section
           aria-label={t('tesla_sessions.kpis', 'Summary metrics')}
         >
-          <StatStrip id="tesla-fleet-charging-summary" metrics={summaryMetrics} loading={isLoading}
+          <ChargingSummaryBrief id="tesla-fleet-charging-summary" metrics={summaryMetrics} loading={isLoading}
             retained={sessionsDataState.hasData && (sessionsDataState.refreshError != null || sessionsDataState.isRefreshBlocked)}
             period={{
               kind: 'unknown', label: t('tesla_sessions.kpis', 'Summary metrics'),

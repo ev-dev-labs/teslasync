@@ -168,6 +168,20 @@ describe('SignalTypeBreakdown', () => {
     expect(screen.getAllByText(/^(Numeric|Boolean|String)$/)).toHaveLength(3);
   });
 
+  it('separates wrapping readouts from named passive tracks while retaining exact counts and denominators', () => {
+    renderBreakdown({ numericCount: 9, booleanCount: 3, stringCount: 0 });
+    for (const [label, count] of [['Numeric', 9], ['Boolean', 3], ['String', 0]] as const) {
+      const track = screen.getByRole('progressbar', { name: label });
+      expect(track).toHaveAttribute('aria-valuenow', String(count));
+      expect(track).toHaveAttribute('aria-valuemax', '12');
+      expect(track).not.toHaveTextContent(label);
+      expect(screen.getByText(label).parentElement).toHaveClass('flex-wrap');
+    }
+    expect(sublabelText('Numeric')).toBe('9 · 75.00%');
+    expect(sublabelText('Boolean')).toBe('3 · 25.00%');
+    expect(sublabelText('String')).toBe('0 · 0.00%');
+  });
+
   it('renders the rows in numeric → boolean → string order', () => {
     const { container } = renderBreakdown({ numericCount: 3, booleanCount: 2, stringCount: 1 });
     expect(renderedRowOrder(container)).toEqual(['Numeric', 'Boolean', 'String']);

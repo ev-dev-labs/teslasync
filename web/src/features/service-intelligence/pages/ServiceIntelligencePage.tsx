@@ -129,6 +129,9 @@ export default function ServiceIntelligencePage() {
           error={serviceState.fatalError}
           context={data?.vehicle_context ?? null}
           summary={data?.summary ?? null}
+          generatedAt={data?.generated_at ?? null}
+          sources={data?.sources ?? []}
+          retained={serviceState.hasData && query.error != null}
           onRetry={retry}
         />
       </FadeIn>

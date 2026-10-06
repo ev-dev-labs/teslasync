@@ -2,14 +2,15 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Car, MapPin, Route, BatteryCharging, Zap, DollarSign, Gauge, Leaf,
+  Car,
   RefreshCw, LayoutDashboard, BarChart3,
 } from 'lucide-react';
 
 import { PageLayout, Section } from '@/components/layout';
 import { GlassPanel, Button, Caption } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError, StatGridSkeleton, StaleRefreshWarning } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { VehicleHeroCard } from '@/components/vehicles';
@@ -22,7 +23,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { knownNumber } from '@/api/dataState';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -32,13 +32,8 @@ const KM_PER_MILE = 1.609344;
 
 const ANALYTICS_WINDOW_DAYS = 30;
 
-function formatKnown(value: unknown, formatter: (value: number) => string): string {
-  const reading = knownNumber(value);
-  return reading == null ? '—' : formatter(reading);
-}
-
 export default function QuickStatsPage() {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('quickStats.title', 'Quick stats'));
   const navigate = useNavigate();
@@ -59,6 +54,32 @@ export default function QuickStatsPage() {
     refetch: refetchAnalytics,
   } = analyticsQuery;
   const analyticsState = useDataState(analyticsQuery, { provenance: 'historical' });
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'distance', rawValue: analytics?.totalDistanceKm == null ? null : analytics.totalDistanceKm * METERS_PER_KM,
+      label: t('quickStats.distanceDriven', 'Distance driven'),
+      description: t('quickStats.summary.distanceHelp', 'Fleet distance over the last 30 days; source kilometres normalized to metres.'),
+      display: { formatter: raw => ({ value: fmtNumber(fromKm(raw / METERS_PER_KM)), unit: distanceUnit }) } },
+    { metricId: 'count', rawValue: analytics?.totalDrives, label: t('quickStats.drives', 'Drives'),
+      description: t('quickStats.summary.drivesHelp', 'Fleet drive count in the 30-day rollup.') },
+    { metricId: 'count', rawValue: analytics?.totalChargingSessions, label: t('quickStats.chargingSessions', 'Charging sessions'),
+      description: t('quickStats.summary.sessionsHelp', 'Fleet charging-session count in the 30-day rollup.') },
+    { metricId: 'energy', rawValue: analytics?.totalEnergyKwh == null ? null : analytics.totalEnergyKwh * 1000,
+      label: t('quickStats.energyUsed', 'Energy used'),
+      description: t('quickStats.summary.energyHelp', 'Fleet energy over the last 30 days; source kilowatt-hours normalized to watt-hours.'),
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+    { metricId: 'currency', rawValue: analytics?.totalCost, label: t('quickStats.totalCost', 'Total cost'),
+      description: t('quickStats.summary.costHelp', 'Recorded fleet cost in the source denomination; no currency conversion.'),
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'efficiency', rawValue: analytics?.avgEfficiencyWhKm == null ? null : analytics.avgEfficiencyWhKm / METERS_PER_KM,
+      label: t('quickStats.avgEfficiency', 'Avg efficiency'),
+      description: t('quickStats.summary.efficiencyHelp', 'Fleet average consumption over the last 30 days; source Wh/km normalized to Wh/m.'),
+      display: { formatter: raw => ({ value: fmtNumber(whPerKmToDisplay(raw * METERS_PER_KM)), unit: efficiencyUnit }) } },
+    { metricId: 'mass', rawValue: analytics?.co2SavedKg, label: t('quickStats.co2Saved', 'CO₂ saved'),
+      description: t('quickStats.summary.carbonHelp', 'Source-reported fleet CO₂ savings in kilograms for the 30-day rollup.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) } },
+    { metricId: 'count', rawValue: analytics?.totalVehicles, label: t('quickStats.fleetVehicles', 'Fleet vehicles'),
+      description: t('quickStats.summary.vehiclesHelp', 'Fleet vehicle count reported by analytics, not the selected spotlight vehicle.') },
+  ];
 
   // Workspace selection scopes the spotlight; the KPI band stays fleet-wide.
   const { vehicleId, vehicle } = useSelectedVehicle();
@@ -123,11 +144,19 @@ export default function QuickStatsPage() {
       {/* 1 — Fleet KPI band: full-width responsive metric grid */}
       <FadeIn>
         <Section id="quick-stats-metrics" title={t('quickStats.kpis', 'Fleet metrics')}>
-          {analyticsLoading && !analytics ? (
-            <StatGridSkeleton cards={8} />
-          ) : analyticsState.fatalError ? (
+          <DashboardSourceBrief
+            metrics={metrics}
+            state={analyticsState}
+            eyebrow={t('quickStats.summary.eyebrow', 'Fleet rollup')}
+            title={t('quickStats.summary.title', 'Fleet operating summary')}
+            description={t('quickStats.summary.description', 'Fleet-wide analytics for the last 30 days. The selected vehicle only scopes the spotlight; exact rollup bounds and source coverage are not supplied.')}
+            scope={t('quickStats.summary.scope', 'All fleet vehicles · last 30 days')}
+            loading={analyticsLoading && !analytics}
+            testId="quick-stats-operational-brief"
+          />
+          {analyticsState.fatalError ? (
             <QueryError error={analyticsState.fatalError} onRetry={refetchAnalytics} />
-          ) : !analytics ? (
+          ) : !analytics && !analyticsLoading ? (
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState
                 icon={<BarChart3 className="h-8 w-8" />}
@@ -135,58 +164,7 @@ export default function QuickStatsPage() {
                 action={{ label: t('common.retry', 'Retry'), onClick: refetchAnalytics }}
               />
             </GlassPanel>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
-              <MetricCard
-                label={t('quickStats.distanceDriven', 'Distance driven')}
-                value={formatKnown(analytics.totalDistanceKm, value => `${fmtNumber(fromKm(value))} ${distanceUnit}`)}
-                icon={<MapPin className="h-4 w-4" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('quickStats.drives', 'Drives')}
-                value={formatKnown(analytics.totalDrives, value => fmtInt(value))}
-                icon={<Route className="h-4 w-4" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('quickStats.chargingSessions', 'Charging sessions')}
-                value={formatKnown(analytics.totalChargingSessions, value => fmtInt(value))}
-                icon={<BatteryCharging className="h-4 w-4" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('quickStats.energyUsed', 'Energy used')}
-                value={formatKnown(analytics.totalEnergyKwh, value => formatEnergy(value * 1000))}
-                icon={<Zap className="h-4 w-4" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('quickStats.totalCost', 'Total cost')}
-                value={formatKnown(analytics.totalCost, value => formatCurrency(value))}
-                icon={<DollarSign className="h-4 w-4" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('quickStats.avgEfficiency', 'Avg efficiency')}
-                value={formatKnown(analytics.avgEfficiencyWhKm, value => `${fmtNumber(whPerKmToDisplay(value))} ${efficiencyUnit}`)}
-                icon={<Gauge className="h-4 w-4" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('quickStats.co2Saved', 'CO₂ saved')}
-                value={formatKnown(analytics.co2SavedKg, value => `${fmtNumber(value)} kg`)}
-                icon={<Leaf className="h-4 w-4" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('quickStats.fleetVehicles', 'Fleet vehicles')}
-                value={formatKnown(analytics.totalVehicles, value => fmtInt(value))}
-                icon={<Car className="h-4 w-4" />}
-                color="cyan"
-              />
-            </div>
-          )}
+          ) : null}
         </Section>
       </FadeIn>
 

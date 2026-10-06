@@ -12,7 +12,7 @@ import {
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
-import { AIPiiRedactionSharedExports } from '@/components/ai/AIPiiRedactionSharedExports';
+import { AIPiiRedactionSharedExports } from '@/components/ai';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -205,9 +205,9 @@ export default function ExportsPage() {
     >
       <div className="space-y-6">
         <StaleRefreshWarning state={jobsState} />
-        {/* 1 — KPI band: full-width, reflows up to 5 columns on wide screens. */}
+        {/* 1 — Loaded-list summary; independent of table filters and selection. */}
         <FadeIn>
-          <ExportKpiBand stats={stats} isLoading={isLoading} hasData={jobsState.hasData} retained={jobsState.status === 'stale'} />
+          <ExportKpiBand stats={stats} isLoading={isLoading} hasData={jobsState.hasData} retained={jobsState.status === 'stale'} sourceState={jobsState} />
         </FadeIn>
 
         {/* 2 — Opt-in Helix PII-redaction advisor. Renders null when AI is off,

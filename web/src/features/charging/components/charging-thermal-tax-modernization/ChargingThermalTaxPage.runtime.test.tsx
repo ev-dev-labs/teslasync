@@ -111,7 +111,7 @@ function chooseSession() {
   fireEvent.change(screen.getByRole('combobox', { name: 'Inspect session' }), { target: { value: '42' } });
 }
 function metricTiles(container: HTMLElement) {
-  return container.querySelectorAll('[data-stat]');
+  return container.querySelectorAll('[data-operational-metric]');
 }
 const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
 function resizeAllocatedWidth(width: number) {
@@ -168,7 +168,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(sources.historyRetry).not.toHaveBeenCalled();
     expect(screen.getByRole('combobox', { name: 'Inspect session' })).toHaveValue('42');
     expect(screen.getByText('No usable telemetry to segment into phases.')).toBeInTheDocument();
-    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-state', 'missing');
+    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
   });
   it('keeps all four shells before selection without inventing zero metrics', () => {
     const { container } = mountPage();
@@ -177,7 +177,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(screen.getByRole('heading', { name: 'Heater vs. Charge Power' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Thermal Phases' })).toBeInTheDocument();
     expect(metricTiles(container)).toHaveLength(4);
-    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-state', 'missing');
+    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
     expect(sources.historyHook).toHaveBeenCalledWith('7');
     expect(sources.telemetryHook).toHaveBeenCalledWith(null);
   });
@@ -188,10 +188,10 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(sources.telemetryHook).toHaveBeenLastCalledWith(42);
     const tiles = metricTiles(container);
     expect(tiles).toHaveLength(4);
-    expect(tiles[0]?.querySelector('[data-stat-value]')).toHaveTextContent('0.03');
-    expect(tiles[1]?.querySelector('[data-stat-value]')).toHaveTextContent('2.50');
-    expect(tiles[2]?.querySelector('[data-stat-value]')).toHaveTextContent('2m');
-    expect(tiles[3]?.querySelector('[data-stat-value]')).toHaveTextContent('1.00');
+    expect(tiles[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0.03');
+    expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent('2.50');
+    expect(tiles[2]?.querySelector('[data-operational-value]')).toHaveTextContent('2m');
+    expect(tiles[3]?.querySelector('[data-operational-value]')).toHaveTextContent('1.00');
     expect(screen.getByText('Metered running total')).toBeInTheDocument();
     expect(screen.getByText(/Heater-on threshold: 50 W/)).toBeInTheDocument();
     const chart = screen.getByRole('figure', { name: 'Heater vs. Charge Power' });
@@ -209,7 +209,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     sources.telemetry = { ...sources.telemetry, error: new Error('telemetry refresh failed'), isError: true };
     result.rerender(<ChargingThermalTaxPage />);
     expect(screen.getByRole('combobox', { name: 'Inspect session' })).toHaveValue('42');
-    expect(metricTiles(result.container)[0]?.querySelector('[data-stat-value]')).toHaveTextContent('0.03');
+    expect(metricTiles(result.container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0.03');
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(result.container.querySelector('[data-test-series="heaterW"]')).toHaveAttribute('data-hidden', 'true');
     expect(screen.getByText('Metered running total')).toBeInTheDocument();
@@ -225,7 +225,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     sources.telemetry = { ...sources.telemetry, fetchStatus: 'paused' };
     result.rerender(<ChargingThermalTaxPage />);
     expect(screen.getByText(/device is offline/)).toBeInTheDocument();
-    expect(metricTiles(result.container)[0]).toHaveAttribute('data-state', 'value');
+    expect(metricTiles(result.container)[0]).toHaveAttribute('data-value-state', 'value');
     sources.telemetry = { fetchStatus: 'paused', isLoading: false, refetch: sources.telemetryRetry };
     result.rerender(<ChargingThermalTaxPage />);
     expect(screen.getAllByText('Telemetry loading is paused. Connect to resume or retry.').length).toBeGreaterThan(0);
@@ -238,7 +238,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     sources.telemetry = { ...sources.telemetry, data: samples.map(sample => ({ ...sample, battery_heater_power_w: null })) };
     const { container } = mountPage();
     chooseSession();
-    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-state', 'missing');
+    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getByText('Metered running total')).toBeInTheDocument();
     expect(screen.getByText(/missing readings do not mean no heater draw/)).toBeInTheDocument();
     expect(screen.getAllByText('Heater state uncertain').length).toBeGreaterThan(0);
@@ -250,8 +250,8 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     })) };
     const { container } = mountPage();
     chooseSession();
-    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-state', 'value');
-    expect(metricTiles(container)[0]?.querySelector('[data-stat-value]')).toHaveTextContent('0.00');
+    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-value-state', 'value');
+    expect(metricTiles(container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0.00');
     expect(screen.getByText('Estimated from instantaneous power')).toBeInTheDocument();
   });
 
@@ -259,7 +259,9 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     sources.telemetry = { isLoading: true, isPending: true, fetchStatus: 'fetching', refetch: sources.telemetryRetry };
     const result = mountPage();
     chooseSession();
-    expect(result.container.querySelectorAll('[data-stat][data-state="loading"]')).toHaveLength(4);
+    expect(metricTiles(result.container)).toHaveLength(4);
+    expect(result.container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(result.container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     sources.telemetry = { error: new Error('telemetry failed'), isError: true, fetchStatus: 'idle', refetch: sources.telemetryRetry };
     result.rerender(<ChargingThermalTaxPage />);
     expect(screen.getByRole('combobox', { name: 'Inspect session' })).not.toBeDisabled();

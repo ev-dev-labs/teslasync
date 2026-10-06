@@ -195,13 +195,11 @@ const odometerRegion = () => panel('Odometer over time');
 const dailyRegion = () => panel('Daily distance');
 const chartsRegion = () => panel('Monthly distance');
 
-/** Read the real shared stat tile's displayed value and unit. */
+/** Read the real OperationalBrief metric's formatted quantity. */
 function cardValue(region: HTMLElement, label: string): string {
-  const tile = within(region).getByText(label).closest('[data-stat]');
+  const tile = within(region).getByText(label).closest('[data-operational-metric]');
   if (!(tile instanceof HTMLElement)) throw new Error(`Missing mileage metric: ${label}`);
-  const value = tile.querySelector('[data-stat-value]')?.textContent ?? '';
-  const unit = tile.querySelector('[data-stat-unit]')?.textContent;
-  return unit ? `${value} ${unit}` : value;
+  return tile.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 /** Sibling that immediately follows a label span (MetricBar sublabel / KVList dd). */

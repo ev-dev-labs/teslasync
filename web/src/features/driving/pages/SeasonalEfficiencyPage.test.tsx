@@ -261,6 +261,16 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('SeasonalEfficiencyPage', () => {
+  it('keeps every seasonal fit and accounting shell during a paused retained refresh', () => {
+    h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
+    renderPage();
+    expectEveryShell();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent('offline');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all persistent analytical shells and exact capped query inputs', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Seasonal Efficiency' })).toBeInTheDocument();

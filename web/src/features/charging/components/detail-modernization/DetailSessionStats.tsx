@@ -1,6 +1,7 @@
 import type { ChargingSession } from '@/api/types';
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { HelpTooltip } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -22,19 +23,20 @@ export interface DetailSessionStatsProps {
   rateText: string;
   currencySymbol: string;
   distanceText: string;
+  distanceM?: number | null;
   averageRate: number | null;
   retained: boolean;
 }
 
 /**
- * Numeric quantities bind directly to canonical raw values. Compound ranges,
- * currency/rate contracts and the inherited distance formatter remain source
- * text, never numbers parsed from labels or silently reclassified quantities.
+ * Numeric quantities bind to raw measurements; supplied specialist displays
+ * preserve invoice denomination and range formatting. Only the compound SoC
+ * interval remains text, never a number parsed from its label.
  */
 export function DetailSessionStats({
   session, energy, duration, vehicleEnergy, billedEnergy, cost, billedCost,
   costText, configuredRate, calculatedRate, rateText, currencySymbol,
-  distanceText, averageRate, retained,
+  distanceText, distanceM, averageRate, retained,
 }: DetailSessionStatsProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
@@ -94,7 +96,9 @@ export function DetailSessionStats({
       label: t('charging.detail.socRange', 'SoC Range'),
     },
     {
-      metricId: 'text', occurrenceId: 'jsx-17209', rawValue: costText,
+      metricId: 'currency', occurrenceId: 'jsx-17209',
+      rawValue: cost ?? (energy > 0 && configuredRate != null ? energy / 1000 * configuredRate : null),
+      display: { formatter: () => ({ value: costText, unit: '' }) },
       label: cost != null ? t('charging.detail.totalCost', 'Total Cost') : t('charging.detail.estCost', 'Est. Cost'),
       context: billedCost != null
         ? t('charging.detail.teslaInvoice', 'Tesla invoice')
@@ -106,23 +110,26 @@ export function DetailSessionStats({
           : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'jsx-17211', rawValue: rateText,
+      metricId: 'currency', occurrenceId: 'jsx-17211', rawValue: calculatedRate ?? configuredRate,
+      display: { formatter: () => ({ value: rateText, unit: '' }) },
       label: t('charging.detail.perKwh', 'Per kWh'),
       context: calculatedRate == null ? t('charging.detail.fromSettings', 'from settings') : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'jsx-17213', rawValue: distanceText,
+      metricId: 'distance', occurrenceId: 'jsx-17213', rawValue: distanceM,
+      display: { formatter: () => ({ value: distanceText, unit: '' }) },
       label: t('charging.detail.milesAdded', 'Miles Added'),
     },
     {
-      metricId: 'text', occurrenceId: 'jsx-17215',
-      rawValue: averageRate != null ? `${fmtNumber(averageRate)} kWh/h` : '—',
+      metricId: 'power', occurrenceId: 'jsx-17215',
+      rawValue: averageRate != null ? averageRate * 1000 : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh/h' }) },
       label: t('charging.detail.avgRate', 'kWh/h Avg'),
     },
   ];
   return (
     <section aria-label={t('charging.detail.kpis', 'Key metrics')}>
-    <StatStrip
+    <ChargingSummaryBrief
       id="charging-detail-metrics"
       testId="charging-detail-metrics"
       title={t('charging.detail.kpis', 'Key metrics')}

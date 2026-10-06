@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -252,6 +252,20 @@ beforeEach(() => {
 });
 
 describe('PhysicsLedgerPage', () => {
+  it('reviews the real ledger brief without dropping truncation and contradiction evidence', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ truncated: true, contradictions: ['gear_P_with_speed'] }),
+    }));
+    renderPage();
+    const brief = screen.getByTestId('ledger-summary');
+    expect(brief.querySelector('[data-operational-metric="ledger-kind"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText(/Sample cap hit/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/gear_P_with_speed/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Predicted vs measured.').length).toBeGreaterThan(0);
+  });
+
   it('renders all eleven domain panels with data', () => {
     renderPage();
     for (const testId of [

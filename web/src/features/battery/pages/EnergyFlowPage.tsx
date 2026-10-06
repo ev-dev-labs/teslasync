@@ -12,7 +12,8 @@ import {
   Text, Caption, Label,
 } from '@/components/ui';
 
-import { StatStrip, StatGroup, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import {
   LinearGauge, ChartTooltip, ChartGradient, EmbeddedChart,
@@ -431,16 +432,19 @@ export default function EnergyFlowPage() {
       label: t('energyFlow.kpi.distance', 'Distance'), missingReason },
     // Preserve the original whole-Wh rating/display calculation. Generic
     // efficiency defaults to kWh/distance, which is not this page's contract.
-    { metricId: 'text', occurrenceId: 'average-efficiency',
-      rawValue: avgEfficiency != null ? `${fmtNumber(avgEfficiency)} ${efficiencyUnit}` : null,
+    { metricId: 'efficiency', occurrenceId: 'average-efficiency',
+      rawValue: stats?.avg_efficiency_wh_per_m,
+      display: { formatter: raw => ({ value: fmtNumber(scaleEfficiency(raw, distanceUnit)), unit: efficiencyUnit }) },
       label: t('energyFlow.kpi.efficiency', 'Efficiency'), missingReason },
-    { metricId: 'text', occurrenceId: 'co2-saved',
-      rawValue: stats?.co2_saved_kg != null ? `${fmtNumber(stats.co2_saved_kg)} ${t('energyFlow.units.kg', 'kg')}` : null,
+    { metricId: 'mass', occurrenceId: 'co2-saved',
+      rawValue: stats?.co2_saved_kg,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: t('energyFlow.units.kg', 'kg') }) },
       label: t('energyFlow.kpi.co2Saved', 'CO₂ saved'), missingReason,
       context: t('energyFlow.metrics.estimated', 'Estimated'),
       description: t('energyFlow.metrics.co2Estimate', 'Estimated avoided CO₂, not a vehicle emissions measurement.') },
-    { metricId: 'text', occurrenceId: 'period-days',
-      rawValue: stats?.period_days != null ? `${stats.period_days} ${t('energyFlow.units.days', 'days')}` : null,
+    { metricId: 'duration', occurrenceId: 'period-days',
+      rawValue: stats?.period_days != null ? stats.period_days * 86400 : null,
+      display: { formatter: raw => ({ value: String(raw / 86400), unit: t('energyFlow.units.days', 'days') }) },
       label: t('energyFlow.kpi.period', 'Period'), missingReason },
   ];
   const efficiencyMetrics: StatMetric[] = [
@@ -467,11 +471,11 @@ export default function EnergyFlowPage() {
     >
       {/* ── 1 — KPI band: full-width responsive metric grid ── */}
       <FadeIn>
-        <section aria-label={t('energyFlow.kpis', 'Energy summary metrics')}>
+        <section>
           <LayoutCard title={t('energyFlow.kpis', 'Energy summary metrics')}>
             {/* Keep all six metric labels/shells even before a source resolves.
                 Recovery and trust notices are independent of those facts. */}
-            <StatStrip metrics={summaryMetrics} period={period} variant="embedded"
+            <BatteryEvidenceBrief title={t('energyFlow.kpis', 'Energy summary metrics')} metrics={summaryMetrics} period={period}
               loading={!noVehicle && !statsState.hasData && statsLoading}
               retained={statsState.status === 'stale'} />
             <SectionState
@@ -672,7 +676,7 @@ export default function EnergyFlowPage() {
               onRetry={() => { void refetchStats(); }}
               skeletonHeight={240}
             >
-              <StatGroup metrics={efficiencyMetrics} period={period}
+              <BatteryEvidenceBrief title={t('energyFlow.metrics.title', 'Efficiency metrics')} metrics={efficiencyMetrics} period={period}
                 retained={statsState.status === 'stale'} />
             </SectionState>
           </LayoutCard>

@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, ArrowUpRight, Lock, Unlock, Shield } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { VehicleTwin } from '@/components/vehicles';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
@@ -81,9 +81,10 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
       actions={
         <Link
           to="/digital-twin"
-          className="flex min-h-11 items-center gap-1 rounded-shape-sm px-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          className="flex min-h-11 max-w-full items-center gap-1 rounded-shape-sm px-2 transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         >
-          {t('widget.open', 'Open')} <ArrowUpRight className="h-3 w-3" />
+          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]">{t('widget.open', 'Open')}</Text>
+          <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden="true" />
         </Link>
       }
     >
@@ -110,9 +111,9 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
                 }
               >
                 {twinState.locked === false ? (
-                  <Unlock className="h-2.5 w-2.5 mr-0.5" />
+                  <Unlock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
                 ) : (
-                  <Lock className="h-2.5 w-2.5 mr-0.5" />
+                  <Lock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
                 )}
                 {twinState.locked === false
                   ? t('widget.unlocked', 'Unlocked')
@@ -122,7 +123,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
               </Badge>
               {twinState.sentryMode != null && (
                 <Badge variant={twinState.sentryMode ? 'info' : 'neutral'}>
-                  <Shield className="h-2.5 w-2.5 mr-0.5" />
+                  <Shield className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
                   {twinState.sentryMode
                     ? t('widget.sentryOn', 'Sentry')
                     : t('widget.sentryOff', 'Off')}

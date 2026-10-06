@@ -28,6 +28,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import './operationalbrief-all/metricPreferencesTestSetup';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn> via useReducedMotion) reads
 // it during render. Install a benign stub before any module imports it.
@@ -96,7 +97,7 @@ function renderTail(over: Partial<LiveSignalTailProps> = {}) {
 // Scope a query to a single StatCard by its label — the Card root carries the
 // `flex-col` utility, so we climb to it and search within.
 function statCard(label: string) {
-  const card = screen.getByText(label).closest('div.flex-col') as HTMLElement;
+  const card = screen.getByText(label).closest('[data-operational-metric]') as HTMLElement;
   return within(card);
 }
 
@@ -222,10 +223,12 @@ describe('LiveSignalTail — controls', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     expect(onPauseToggle).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute('aria-pressed', 'false');
 
     // When paused, the control invites resuming instead.
     rerender(<LiveSignalTail {...props} paused />);
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument();
   });
 
@@ -257,7 +260,27 @@ describe('LiveSignalTail — optional slots + resilience', () => {
     });
 
     expect(screen.getByText('Live Signal Tail')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Live Signal Tail' })).toBeInTheDocument();
     expect(screen.getByTestId('conn-badge')).toHaveTextContent('Connected');
+  });
+
+  it('retains full raw names, values and units while controls remain reachable in a constrained host', () => {
+    const name = 'VehicleSpeedTelemetrySignal'.repeat(4);
+    const value = '32.75 m/s; producer=FleetTelemetry; sample='.repeat(6);
+    const { container, onPauseToggle, onClear } = renderTail({
+      entries: [makeEntry({ name, value })],
+      showStats: false,
+      title: 'Detailed live telemetry',
+    });
+    expect(screen.getByText(name)).toHaveTextContent(name);
+    expect(screen.getByText(value)).toHaveTextContent(value);
+    expect(container.querySelector('[data-print-card]')).toHaveClass('min-w-0', 'max-w-full');
+    fireEvent.change(screen.getByLabelText('Filter signals'), { target: { value: 'telemetrysignal' } });
+    expect(screen.getByText(value)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(onPauseToggle).toHaveBeenCalledTimes(1);
+    expect(onClear).toHaveBeenCalledTimes(1);
   });
 
   it('omits the title header when none is given but still renders the filter + tail', () => {

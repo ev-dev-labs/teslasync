@@ -470,7 +470,9 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
         expect(within(row).getByText(source === 'live' ? '—' : '82.00')).toBeInTheDocument();
         await within(row).findByRole('img', { name: 'Battery Level trend' });
         expectHistory();
-        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server");
+        expect(screen.getByText(source === 'catalogue' ? 'Signal catalog' : 'Live signals')).toBeInTheDocument();
+        expect(within(row).queryByRole('alert')).not.toBeInTheDocument();
       }
       expect(screen.queryByText('No signals available')).not.toBeInTheDocument();
 

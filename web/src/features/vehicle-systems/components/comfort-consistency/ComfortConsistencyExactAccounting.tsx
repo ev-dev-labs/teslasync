@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
 import { LayoutCard, Grid } from '@/components/layout';
-import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
+import { Badge, MetricLabel, Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
@@ -175,14 +176,16 @@ export function ComfortConsistencyExactAccounting({
           <Text as="h4" variant="label" className="mb-3 mt-5">
             {t('comfortConsistency.accounting.boundaries', 'Active-fragment boundary counts')}
           </Text>
-          <Grid cols={{ default: 2, md: 5 }} gap={3}>
-            {boundaries.map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-[var(--border-subtle)] p-3">
-                <MetricLabel>{label}</MetricLabel>
-                <MetricValue className="mt-1">{fmtInt(value)}</MetricValue>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="comfort-consistency-boundary-summary"
+            title={t('comfortConsistency.accounting.boundaries', 'Active-fragment boundary counts')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('comfortConsistency.accounting.subtitle', 'Independent identities keep returned rows, timestamps, intervals, duration, fragments, and stabilization outcomes distinct.') }}
+            metrics={boundaries.map(([label, rawValue], index) => ({
+              metricId: 'count' as const, occurrenceId: `boundary-${index}`, label, rawValue,
+              display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
+            }))}
+          />
         </ComfortConsistencySectionBody>
       </LayoutCard>
     </section>

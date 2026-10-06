@@ -33,7 +33,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -286,7 +286,7 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const result = render(
     <MemoryRouter initialEntries={['/admin/backup']}>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -295,11 +295,18 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...result, client };
 }
 
 // Wait until both queries have resolved and the KPI band replaced its skeleton.
 async function waitForLoaded() {
-  await screen.findByText('Total configs');
+  await waitFor(() => {
+    const summary = screen.getByTestId('backup-restore-summary');
+    expect(summary.querySelector('[data-operational-metric="configs"]')).toHaveAttribute('data-value-state', 'value');
+    expect(summary.querySelector('[data-operational-metric="backups"]')).toHaveAttribute('data-value-state', 'value');
+  });
+  expect(screen.getByText('Total configs')).toBeInTheDocument();
+  expect(screen.getByText('Total backups')).toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -312,6 +319,21 @@ afterEach(() => {
 });
 
 describe('BackupRestorePage — data rendering', () => {
+  it('preserves returned-list scope and all six measurements in the real brief and drawer', async () => {
+    renderPage();
+    await waitForLoaded();
+    const summary = screen.getByTestId('backup-restore-summary');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(summary.querySelector('[data-operational-metric="size"]')).toHaveAttribute('data-value-state', 'value');
+    expect(summary).toHaveTextContent('not a server-wide total');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('returned run list');
+    expect(screen.getByRole('button', { name: 'Quick backup' })).toBeInTheDocument();
+    expect(screen.getByText('Backup history')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+  });
+
   it('renders the KPI band with derived totals, success-rate and size', async () => {
     renderPage();
     await waitForLoaded();
@@ -393,6 +415,52 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(screen.queryByText('Nightly Full')).not.toBeInTheDocument();
     expect(screen.getByText('backup-101.sql.gz')).toBeInTheDocument();
+  });
+
+  it('retains both independent sources and every completed-run action after refresh failure', async () => {
+    const { client } = renderPage();
+    await waitForLoaded();
+    await screen.findByText('backup-101.sql.gz');
+    routeState.configsError = new Error('config refresh failed');
+    routeState.runsError = new Error('run refresh failed');
+
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['backup-configs'] });
+      await client.refetchQueries({ queryKey: ['backup-runs'] });
+    });
+    await waitFor(() => expect(screen.getAllByText('Data may be stale').length).toBeGreaterThan(0));
+    expect(screen.getByText('Nightly Full')).toBeInTheDocument();
+    expect(screen.getByText('Weekly Local')).toBeInTheDocument();
+    expect(screen.getByText('backup-101.sql.gz')).toBeInTheDocument();
+    expect(screen.getByText('3 / 4')).toBeInTheDocument();
+    expect(screen.getByText('6.00 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText(/disk full/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Download' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Verify' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
+    expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
+  });
+
+  it('keeps the known config count while failed run-source metrics remain unknown', async () => {
+    configureRoutes({ runsError: new Error('runs unavailable') });
+    renderPage();
+    await waitForLoaded();
+    const band = screen.getByRole('region', { name: 'Backup overview' });
+    expect(within(band).getByText('2')).toBeInTheDocument();
+    expect(within(band).getAllByText('—')).toHaveLength(5);
+    expect(screen.getByText('Nightly Full')).toBeInTheDocument();
+    expect(screen.queryByText('0 B')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New config' })).toBeInTheDocument();
+  });
+
+  it('retains an authoritative zero-byte file rather than rendering it as missing', async () => {
+    configureRoutes({ runs: [makeRun({ file_name: 'zero-length-backup.sql.gz', file_size: 0 })] });
+    renderPage();
+    await waitForLoaded();
+    const row = screen.getByRole('row', { name: /zero-length-backup\.sql\.gz/ });
+    expect(within(row).getByText(/^0(?:[.,]0+)?\s*B$/)).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Download' })).toBeInTheDocument();
   });
 });
 

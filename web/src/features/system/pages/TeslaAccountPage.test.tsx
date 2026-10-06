@@ -204,7 +204,10 @@ function panel(headingName: string): HTMLElement {
 }
 
 function kpiBand(): HTMLElement {
-  return screen.getByRole('region', { name: 'Account summary' });
+  const band = screen.getAllByRole('region', { name: 'Account summary' })
+    .find(region => region.hasAttribute('data-operational-brief'));
+  if (!band) throw new Error('OperationalBrief account summary region not found');
+  return band;
 }
 
 function refreshButtons(): HTMLElement[] {
@@ -231,13 +234,41 @@ describe('TeslaAccountPage — shell', () => {
       screen.getByRole('heading', { level: 1, name: 'Tesla account' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Your Tesla account profile synced from the Fleet API'),
-    ).toBeInTheDocument();
+      screen.getAllByText('Your Tesla account profile synced from the Fleet API'),
+    ).toHaveLength(2);
     expect(mockUsePageTitle).toHaveBeenCalledWith('Tesla account');
   });
 });
 
 describe('TeslaAccountPage — populated', () => {
+  it('uses one canonical summary and retains source ID, date contexts and all non-summary sections', () => {
+    const { container } = setup(makeQuery({ data: envelope(PROFILE) }));
+    const strip = screen.getByTestId('tesla-account-summary');
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-stat-strip]')).toHaveLength(0);
+    expect(strip).toHaveTextContent('Fleet API profile snapshot');
+    expect(strip).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT)}`);
+    const tiles = [...strip.querySelectorAll('[data-operational-metric]')];
+    expect(tiles.map(tile => tile.getAttribute('data-operational-metric'))).toEqual(['sync-status', 'account-id', 'member-since', 'last-updated']);
+    expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent('#42');
+    expect(tiles[1]).toHaveTextContent('Fleet API identity');
+    expect(tiles[0]).toHaveTextContent(formatDateTime(FETCHED_AT));
+    expect(tiles[2]).toHaveTextContent(formatDateTime(PROFILE.created_at));
+    expect(tiles[3]).toHaveTextContent(formatDateTime(PROFILE.updated_at));
+    for (const heading of ['Profile', 'Sync', 'Account details', 'Activity']) {
+      expect(panel(heading)).toBeInTheDocument();
+    }
+    expect(refreshButtons()).toHaveLength(2);
+  });
+
+  it('does not replace a real source account ID zero with an unknown placeholder', () => {
+    setup(makeQuery({ data: envelope({ ...PROFILE, id: 0 }) }));
+    const idTile = kpiBand().querySelectorAll('[data-operational-metric]')[1]!;
+    expect(idTile).toHaveAttribute('data-value-state', 'value');
+    expect(idTile.querySelector('[data-operational-value]')).toHaveTextContent('#0');
+    expect(within(panel('Account details')).getByText('#0')).toBeInTheDocument();
+  });
+
   it('keeps profile details, causal activity rows and refresh actions during a failed refresh', () => {
     setup(makeQuery({ data: envelope(PROFILE), isError: true, error: new Error('refresh failed') }));
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -250,6 +281,10 @@ describe('TeslaAccountPage — populated', () => {
     ]);
     expect(refreshButtons()).toHaveLength(2);
     expect(refreshButtons().every((button) => !button.hasAttribute('disabled'))).toBe(true);
+    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Retained source data');
+    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Showing retained measurements');
+    expect([...screen.getByTestId('tesla-account-summary').querySelectorAll('[data-operational-metric]')]
+      .every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
   });
 
   it('renders the four-card KPI band with real date formatting', () => {
@@ -257,7 +292,7 @@ describe('TeslaAccountPage — populated', () => {
     const band = kpiBand();
 
     // Sync status + account id.
-    expect(within(band).getByText('Synced')).toBeInTheDocument();
+    expect(within(band.querySelector('[data-operational-metric="sync-status"]') as HTMLElement).getByText('Synced')).toBeInTheDocument();
     expect(within(band).getByText('#42')).toBeInTheDocument();
     // Sync-status subtitle = relative fetched_at; last-updated value = relative
     // updated_at. Distinct, deterministic strings under the pinned clock.
@@ -413,8 +448,13 @@ describe('TeslaAccountPage — loading + empty branches', () => {
   it('shows skeletons (not data) for every section while the first fetch is in flight', () => {
     setup(makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
 
-    // KPI band renders its stat-grid skeleton, not metric cards.
-    expect(within(kpiBand()).getByTestId('stat-grid-skeleton')).toBeInTheDocument();
+    // Canonical summary retains four loading tiles, not measured zeroes.
+    const loadingStrip = kpiBand();
+    expect(loadingStrip).toHaveAttribute('aria-busy', 'true');
+    expect(loadingStrip).toHaveTextContent('Loading sources');
+    expect(loadingStrip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect([...loadingStrip.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true);
+    expect(loadingStrip.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     // No profile data has leaked into the DOM.
     expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument();
     expect(screen.queryByText('#42')).not.toBeInTheDocument();
@@ -429,7 +469,7 @@ describe('TeslaAccountPage — loading + empty branches', () => {
     const band = kpiBand();
 
     // KPI band shows the "never synced" copy and em-dash placeholders — never blank.
-    expect(within(band).getByText('Never synced')).toBeInTheDocument();
+    expect(within(band.querySelector('[data-operational-metric="sync-status"]') as HTMLElement).getByText('Never synced')).toBeInTheDocument();
     expect(within(band).getAllByText('—').length).toBeGreaterThanOrEqual(3);
 
     // Every section keeps a visible empty state.

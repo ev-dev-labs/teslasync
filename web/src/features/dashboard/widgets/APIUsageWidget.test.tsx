@@ -32,7 +32,7 @@
  * wraps every render because the error branch's <QueryError> uses `useNavigate`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { APICallLogStats } from '@/types/admin';
 import APIUsageWidget from './APIUsageWidget';
@@ -142,10 +142,9 @@ describe('APIUsageWidget — standard / wide layout', () => {
     expect(screen.getByText('Total calls (24h)')).toBeInTheDocument();
     expect(screen.getByText('12,345')).toBeInTheDocument();
     expect(screen.getByText('Avg response')).toBeInTheDocument();
-    expect(screen.getByText('123.40')).toBeInTheDocument();
-    expect(screen.getByText('ms')).toBeInTheDocument();
+    expect(screen.getByText('123.40 ms')).toBeInTheDocument();
     expect(screen.getByText('Error rate')).toBeInTheDocument();
-    expect(screen.getByText('2.00')).toBeInTheDocument();
+    expect(screen.getByText('2.00%')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
   });
@@ -159,7 +158,7 @@ describe('APIUsageWidget — standard / wide layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('12.00')).toBeInTheDocument();
+    expect(screen.getByText('12.00%')).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
     // StatCard renders a down arrow for the negative trend.
     expect(screen.getByText('↓')).toBeInTheDocument();
@@ -174,7 +173,7 @@ describe('APIUsageWidget — standard / wide layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('3.00')).toBeInTheDocument();
+    expect(screen.getByText('3.00%')).toBeInTheDocument();
     expect(screen.queryByText('High')).not.toBeInTheDocument();
     expect(screen.queryByText('↓')).not.toBeInTheDocument();
   });
@@ -188,8 +187,8 @@ describe('APIUsageWidget — standard / wide layout', () => {
 
     const { container } = renderWidget({ cols: 4, rows: 2 });
 
-    // WidgetStatGrid maps cols=4 to the container-query 4-up class.
-    expect(container.querySelector('.\\@sm\\:grid-cols-4')).toBeTruthy();
+    expect(container.querySelector('[data-operational-brief]')).toBeTruthy();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(screen.getByText('API usage')).toBeInTheDocument();
     expect(screen.getByText('Total calls (24h)')).toBeInTheDocument();
     expect(screen.getByText('800')).toBeInTheDocument();
@@ -351,9 +350,25 @@ describe('APIUsageWidget — graceful degradation on transient error', () => {
       }));
       renderWidget({ cols: 3, rows: 2 });
       expect(screen.getAllByText('0')).toHaveLength(2);
-      expect(screen.getByText('0.00')).toBeInTheDocument();
+      expect(screen.getByText('0.00%')).toBeInTheDocument();
       expect(screen.getByText('—')).toBeInTheDocument();
       expect(screen.queryByText('High')).not.toBeInTheDocument();
+    });
+
+    it('opens the actual review drawer with retained source windows and latency', () => {
+      useApiLogStatsMock.mockReturnValue(makeQuery({
+        data: makeStats({ last24h: 200, avgDurationMs: 123.4, errorRate: 12, errorCount: 24 }),
+        isError: true, error: new Error('refresh failed'),
+      }));
+      renderWidget();
+      const brief = screen.getByTestId('api-usage-operational-brief');
+      expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      expect(within(drawer).getByText('123.40 ms')).toBeInTheDocument();
+      expect(within(drawer).getByText('12.00%')).toBeInTheDocument();
+      expect(within(drawer).getByText('High')).toBeInTheDocument();
+      expect(within(drawer).getByText(/other counters have no exact source bounds/)).toBeInTheDocument();
     });
   });
 });

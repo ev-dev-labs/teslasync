@@ -1,13 +1,15 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 
-const page = readFileSync(new URL('../../pages/TrueCostPage.tsx', import.meta.url), 'utf8');
-const slot = readFileSync(new URL('./TrueCostLayoutSlot.tsx', import.meta.url), 'utf8');
-const originalLedger = readFileSync(new URL('../true-cost/TrueCostFixedLedger.tsx', import.meta.url), 'utf8');
-const ledger = readFileSync(new URL('./TrueCostFixedLedger.tsx', import.meta.url), 'utf8');
-const columnsSource = readFileSync(new URL('./TrueCostLedgerColumns.tsx', import.meta.url), 'utf8');
-const formSource = readFileSync(new URL('./TrueCostLedgerForm.tsx', import.meta.url), 'utf8');
+const readSource = (path: string) => readFileSync(resolve('src/features/analytics', path), 'utf8');
+const page = readSource('pages/TrueCostPage.tsx');
+const slot = readSource('components/true-cost-modernization/TrueCostLayoutSlot.tsx');
+const originalLedger = readSource('components/true-cost/TrueCostFixedLedger.tsx');
+const ledger = readSource('components/true-cost-modernization/TrueCostFixedLedger.tsx');
+const columnsSource = readSource('components/true-cost-modernization/TrueCostLedgerColumns.tsx');
+const formSource = readSource('components/true-cost-modernization/TrueCostLedgerForm.tsx');
 
 function parse(source: string) {
   return ts.createSourceFile('source.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -53,7 +55,11 @@ describe('True Cost modernization source preservation', () => {
     expect(page).toContain('query={vehicleId != null ? query : undefined}');
     expect(page).toContain('<AITCONarration {...narrationProps} />');
     expect(page).toContain('const narrationProps = { vehicleId: vehicleId ?? undefined }');
-    expect(page).not.toMatch(/RangePicker|DateRangeFilter|VehicleSelect|fetch\(|useEffect\(/);
+    expect(nodes(page, node =>
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))
+      && ['RangePicker', 'DateRangeFilter', 'VehicleSelect'].includes(node.tagName.getText()),
+    )).toEqual([]);
+    expect(page).not.toMatch(/\bfetch\(|\buseEffect\(/);
   });
 
   it('has one shared measured grid, no extra canvas cap, provider or packer', () => {

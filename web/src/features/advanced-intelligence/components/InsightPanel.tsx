@@ -34,6 +34,7 @@ export function InsightPanel({
 }: InsightPanelProps) {
   const { t } = useTranslation();
   const dataState = useDataState(query ?? {});
+  const retry = onRetry ?? dataState.retry ?? undefined;
   const message = emptyMessage ?? t('advancedIntelligence.panel.empty', 'No supported data is available.');
   const resolvedState = query
     ? dataState.fatalError ? 'error'
@@ -46,7 +47,11 @@ export function InsightPanel({
         ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
         : t('advancedIntelligence.panel.unresolved', 'Evidence availability has not resolved yet.')}
     </Text>
-    : <EmptyState icon={<Info className="h-6 w-6" aria-hidden="true" />} message={message} />;
+    : <EmptyState
+      icon={<Info className="h-6 w-6" aria-hidden="true" />}
+      message={message}
+      action={retry ? { label: t('common.refresh', 'Refresh'), onClick: retry } : undefined}
+    />;
   return (
     <div className={className}>
       <LayoutCard title={title} description={description}>
@@ -56,7 +61,7 @@ export function InsightPanel({
           emptyMessage={message}
           errorMessage={t('advancedIntelligence.panel.error', 'Intelligence evidence could not be loaded.')}
           error={dataState.fatalError ?? error}
-          errorRecovery={{ onRetry: onRetry ?? dataState.retry ?? undefined }}
+          errorRecovery={{ onRetry: retry }}
           emptyContent={emptyBody}
         >
           {empty ? emptyBody : children}

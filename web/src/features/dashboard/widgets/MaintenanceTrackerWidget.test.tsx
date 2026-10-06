@@ -397,7 +397,8 @@ describe('MaintenanceTrackerWidget — shell states', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('No maintenance data')).toBeInTheDocument();
-    expect(screen.queryByText('Recent service')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Recent service' })).toBeInTheDocument();
+    expect(screen.getByText('No service records yet')).toBeInTheDocument();
   });
 
   it('invokes the maintenance refetch from the standard-layout freshness control', () => {

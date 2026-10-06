@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListOrdered, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption, Badge, type BadgeProps, HelpTooltip } from '@/components/ui';
@@ -22,6 +23,7 @@ export interface RootCauseHypothesisListProps {
   hypotheses: RankedHypothesis[];
   hasChosenSignal: boolean;
   focalShiftFound: boolean;
+  focalHistoryAvailable?: boolean;
   isLoading: boolean;
   isError: boolean;
   error?: unknown;
@@ -39,6 +41,7 @@ export function RootCauseHypothesisList({
   hypotheses,
   hasChosenSignal,
   focalShiftFound,
+  focalHistoryAvailable = true,
   isLoading,
   isError,
   error,
@@ -47,18 +50,21 @@ export function RootCauseHypothesisList({
 }: RootCauseHypothesisListProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const titleId = useId();
 
   const emptyMessage = !hasChosenSignal
     ? t('rootCauseIntelligence.hypotheses.pickOne', 'Choose a signal above to generate ranked hypotheses.')
-    : !focalShiftFound
-      ? t('rootCauseIntelligence.hypotheses.noFocalShift', 'No robust shift was found for this signal in the analyzed window, so no hypotheses are offered.')
-      : t('rootCauseIntelligence.hypotheses.noneCorroborate', 'This signal shows a shift, but no other analyzed signal showed a comparable, well-timed shift.');
+    : !focalHistoryAvailable
+      ? t('rootCauseIntelligence.timeline.notEnough', 'Not enough history yet for this signal and window.')
+      : !focalShiftFound
+        ? t('rootCauseIntelligence.hypotheses.noFocalShift', 'No robust shift was found for this signal in the analyzed window, so no hypotheses are offered.')
+        : t('rootCauseIntelligence.hypotheses.noneCorroborate', 'This signal shows a shift, but no other analyzed signal showed a comparable, well-timed shift.');
 
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
-      <PanelTitle className="mb-3 flex items-center gap-2">
+      <PanelTitle aria-labelledby={titleId} className="mb-3 flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('rootCauseIntelligence.hypotheses.title', 'Ranked hypotheses')}
+        <span id={titleId}>{t('rootCauseIntelligence.hypotheses.title', 'Ranked hypotheses')}</span>
         <HelpTooltip
           size="sm"
           i18nKey="help.rootCauseIntelligence.hypotheses"

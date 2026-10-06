@@ -6,8 +6,8 @@
  * the wait verdict with cost cards. The hook is mocked; i18n echoes fallbacks.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('react-i18next', () => ({
@@ -90,11 +90,15 @@ function renderStrip(soc?: number) {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <NextChargeDecisionStrip vehicleId={1} currentSoc={soc} />
+        <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
+function LocationProbe() {
+  return <output data-testid="next-charge-location">{useLocation().pathname}</output>;
+}
 beforeEach(() => {
   mockDecision.mockReturnValue(qr());
 });
@@ -116,6 +120,15 @@ describe('NextChargeDecisionStrip', () => {
     expect(screen.getByText('Home now')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
     expect(screen.getByText(/50% → 80%/)).toBeInTheDocument();
+    const band = document.querySelector('[data-testid="vehicle-next-charge-summary"][data-operational-brief]');
+    expect(band).not.toBeNull();
+    expect(band?.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(screen.getByText('Home now').closest('[data-operational-metric]')).toHaveTextContent('$8.20');
+    expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
+    expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    expect(screen.getByText(/22.50 kWh needed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Autopilot' }));
+    expect(screen.getByTestId('next-charge-location')).toHaveTextContent('/smart-charge');
   });
 
   it('shows no-data empty with Autopilot navigation', () => {
@@ -123,5 +136,38 @@ describe('NextChargeDecisionStrip', () => {
     renderStrip(40);
     expect(screen.getByText('No charge decision yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Autopilot' })).toHaveAttribute('href', '/smart-charge');
+  });
+
+  it('keeps a valid cached verdict, all costs and source context during a refresh failure or missing current SOC', () => {
+    const retry = vi.fn();
+    const decision = { ...WAIT, supercharger_cost: 12.34, supercharger_site: 'Recorded site' };
+    const original = JSON.stringify(decision);
+    mockDecision.mockReturnValue(qr({ data: decision, isError: true,
+      error: new Error('Refresh failed'), refetch: retry }));
+    renderStrip();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText('Waiting for live battery level')).not.toBeInTheDocument();
+    expect(screen.getByText('Recorded site')).toBeInTheDocument();
+    expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveTextContent('$12.34');
+    expect(within(screen.getByTestId('vehicle-next-charge-summary')).getByText('Retained source snapshot')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(JSON.stringify(decision)).toBe(original);
+  });
+
+  it('keeps fatal retry distinct from retained data and keeps initial loading source-standard', () => {
+    const retry = vi.fn();
+    mockDecision.mockReturnValue(qr({ isError: true, error: new Error('Decision unavailable'), refetch: retry }));
+    renderStrip(50);
+    expect(document.querySelector('[data-operational-brief]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+    cleanup();
+    mockDecision.mockReturnValue(qr({ isLoading: true, isPending: true }));
+    renderStrip(50);
+    expect(document.querySelector('[data-operational-brief]')).toBeNull();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
   });
 });

@@ -36,7 +36,7 @@
  * A `<MemoryRouter>` wraps every render because the error panel navigates.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { WeeklyDigestData } from '@/types/analytics';
@@ -97,6 +97,7 @@ interface StubDeltaProps {
 // keeping the real <DataFreshness>/<DataFreshnessAuto> (WidgetShell needs them)
 // by importing their own lightweight module rather than the heavy barrel.
 vi.mock('@/components/data-display', async () => {
+  const actual = await vi.importActual<typeof import('@/components/data-display')>('@/components/data-display');
   const df = await vi.importActual<typeof import('@/components/data-display/DataFreshness')>(
     '@/components/data-display/DataFreshness',
   );
@@ -104,6 +105,7 @@ vi.mock('@/components/data-display', async () => {
     '@/components/data-display/StatCard',
   );
   return {
+    ...actual,
     StatCard,
     DataFreshness: df.DataFreshness,
     DataFreshnessAuto: df.DataFreshnessAuto,
@@ -246,9 +248,9 @@ describe('WeeklyDigestWidget — unit conversion (miles)', () => {
   it('renders distance in miles by lifting km → SI → mi (100 km ⇒ 62.1 mi), not the pre-fix ~0.04', () => {
     renderWidget(FULL);
 
-    const distance = screen.getByText('62.14');
+    const distance = screen.getByText('62.14 mi');
     expect(distance).toBeInTheDocument();
-    expect(distance.querySelector('span')?.textContent).toBe('mi');
+    expect(distance).toHaveTextContent('mi');
     // Guard against the metres-vs-km regression that rendered ~0.0.
     expect(screen.queryByText('0.0')).toBeNull();
   });
@@ -256,9 +258,9 @@ describe('WeeklyDigestWidget — unit conversion (miles)', () => {
   it('renders efficiency scaled to Wh/mi exactly once (250 Wh/km ⇒ 402 Wh/mi), not the double-converted ~647', () => {
     renderWidget(FULL);
 
-    const efficiency = screen.getByText('402.34');
+    const efficiency = screen.getByText('402.34 Wh/mi');
     expect(efficiency).toBeInTheDocument();
-    expect(efficiency.querySelector('span')?.textContent).toBe('Wh/mi');
+    expect(efficiency).toHaveTextContent('Wh/mi');
     expect(screen.queryByText('647')).toBeNull();
     expect(screen.queryByText('648')).toBeNull();
   });
@@ -267,8 +269,8 @@ describe('WeeklyDigestWidget — unit conversion (miles)', () => {
     renderWidget(FULL);
 
     expect(screen.getByText('Drives')).toBeInTheDocument();
-    const energy = screen.getByText('25.00');
-    expect(energy.querySelector('span')?.textContent).toBe('kWh');
+    const energy = screen.getByText('25.00 kWh');
+    expect(energy).toHaveTextContent('kWh');
     // Drives delta carries the raw count with no unit label.
     expect(num(deltas()[1], 'data-current')).toBe(8);
   });
@@ -298,11 +300,11 @@ describe('WeeklyDigestWidget — unit conversion (kilometres)', () => {
   it('shows distance untouched in km (100.0 km) and efficiency as Wh/km (250), fixing the km branch too', () => {
     renderWidget(FULL);
 
-    const distance = screen.getByText('100.00');
-    expect(distance.querySelector('span')?.textContent).toBe('km');
+    const distance = screen.getByText('100.00 km');
+    expect(distance).toHaveTextContent('km');
 
-    const efficiency = screen.getByText('250.00');
-    expect(efficiency.querySelector('span')?.textContent).toBe('Wh/km');
+    const efficiency = screen.getByText('250.00 Wh/km');
+    expect(efficiency).toHaveTextContent('Wh/km');
   });
 
   it('passes km-native raw values to Delta (distance current 100, efficiency current 250)', () => {
@@ -311,6 +313,19 @@ describe('WeeklyDigestWidget — unit conversion (kilometres)', () => {
 
     expect(num(distance, 'data-current')).toBeCloseTo(100, 6);
     expect(num(efficiency, 'data-current')).toBeCloseTo(250, 6);
+  });
+
+  it('reviews the actual current metrics and retained comparison operands with explicit boundary limitations', () => {
+    renderWidget(FULL);
+    const brief = screen.getByTestId('weekly-digest-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('100.00 km')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Exact week boundaries, timezone and completeness are not supplied/).length).toBeGreaterThan(0);
+    const distanceDelta = within(drawer).getAllByTestId('delta')[0];
+    expect(distanceDelta).toHaveAttribute('data-current', '100');
+    expect(distanceDelta).toHaveAttribute('data-previous', '80');
   });
 });
 

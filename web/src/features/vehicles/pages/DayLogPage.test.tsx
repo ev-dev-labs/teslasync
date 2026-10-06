@@ -18,6 +18,9 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import * as operationalBridge from '@/hooks/useOperationalMetrics';
+
+const operationalMetricsSpy = vi.spyOn(operationalBridge, 'useOperationalMetrics');
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -493,5 +496,103 @@ describe('DayLogPage', () => {
 
     expect(screen.queryByTestId('daylog-controls')).not.toBeInTheDocument();
     expect(screen.getByText('Day log')).toBeInTheDocument();
+  });
+
+  it('bridges raw day counts and SI measurements and retains the real details drawer and routes', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents, {
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+        drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'drives', rawValue: 1 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'charges', rawValue: 0 }),
+      expect.objectContaining({ metricId: 'duration', occurrenceId: 'drive-time', rawValue: 3600 }),
+      expect.objectContaining({ metricId: 'distance', occurrenceId: 'distance', rawValue: 25000 }),
+      expect.objectContaining({ metricId: 'energy', occurrenceId: 'energy-added', rawValue: null }),
+      expect.objectContaining({ metricId: 'energy', occurrenceId: 'energy-used', rawValue: 5200 }),
+    ]));
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveTextContent('1.0 h');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('5.2 kWh');
+    expect(brief.querySelector('[data-operational-metric="energy-added"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(within(brief).getByText('[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z) · end exclusive')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Day summary details' });
+    expect(within(drawer).getByText('25.0 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('5.2 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Recorded driving duration in seconds/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/2026-09-14 · UTC/).length).toBeGreaterThanOrEqual(6);
+    expect(within(drawer).getByText(/\[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z\) · end exclusive/)).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-search')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Drive started' })[0]).toHaveAttribute('href', '/drives/7');
+  });
+
+  it('does not relabel day aggregates when the timeline is filtered to a subset', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents, {
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+        drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    fireEvent.change(screen.getByTestId('daylog-search'), { target: { value: 'locked' } });
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    expect(within(brief).getByText(/independent of timeline search and category filters/)).toBeInTheDocument();
+  });
+
+  it('keeps measured zero, missing aggregates and partial source coverage distinct', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse([], {
+      summary: { drive_count: 0, charge_count: 0, drive_duration_s: null,
+        drive_distance_m: 0, energy_added_wh: null, energy_used_wh: 0 },
+      sources: [{ source: 'drives', status: 'empty', count: 0 },
+        { source: 'user_presence', status: 'unavailable', count: 0, reason: 'no signal' }],
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    expect(within(brief).getByText('Some sources unavailable')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'value');
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('0.0 km');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('0.0 kWh');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(screen.getByRole('link', { name: 'Open drives' })).toHaveAttribute('href', '/drives');
+    expect(screen.getByText('no signal')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Sources' })).toBeInTheDocument();
+  });
+
+  it('keeps the summary busy on initial loading and reviewable after a retained refresh failure', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: undefined, isPending: true, isLoading: true,
+      isSuccess: false, status: 'pending', fetchStatus: 'fetching' }));
+    const pending = renderPage();
+    const loadingBrief = screen.getByTestId('day-log-summary');
+    expect(loadingBrief).toHaveAttribute('aria-busy', 'true');
+    expect(loadingBrief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    pending.unmount();
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents),
+      error: new Error('refresh failed'), isError: true, status: 'error' }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    expect(within(brief).getByText('Retained recorded history')).toBeInTheDocument();
+    expect(screen.getByText('Day log may be out of date')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Day summary details' })).toBeInTheDocument();
+  });
+
+  it('rejects invalid numeric measurements without displaying a fabricated zero', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse([], {
+      summary: { drive_count: 1, charge_count: 0, drive_duration_s: Number.NaN,
+        drive_distance_m: Number.POSITIVE_INFINITY, energy_added_wh: null, energy_used_wh: 0 },
+    }) }));
+    renderPage();
+    const brief = screen.getByTestId('day-log-summary');
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('—');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveAttribute('data-value-state', 'value');
   });
 });

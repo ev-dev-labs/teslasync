@@ -15,6 +15,7 @@ import { FormSection } from '@/components/forms';
 import { useInstalledPacks } from '../hooks/useInstalledPacks';
 import { downloadEnvelope, parseImportedEnvelopeText, readFileAsText } from '../lib/manifestImportExport';
 import { PackDetailModal } from './PackDetailModal';
+import { PackRepositorySource } from './PackRepositorySource';
 import type { CatalogEntryWithStatus } from '../hooks/useCatalog';
 import type { SignedPackEnvelope } from '../lib/manifestTypes';
 
@@ -110,23 +111,25 @@ export function ImportExportPanel() {
       </FormSection>
 
       <FormSection title={t('intelPacks.export.title', 'Export an installed pack')}>
-        {installedRecords.length === 0 ? (
-          <Text as="p" variant="caption">{t('intelPacks.export.empty', 'No installed packs to export yet.')}</Text>
-        ) : (
-          <ul className="space-y-2">
-            {installedRecords.map((r) => (
-              <li key={r.packId} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
-                <span className="flex items-center gap-2 text-sm text-[var(--text-primary)] min-w-0">
-                  <FileJson className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
-                  <span className="truncate">{r.envelope.manifest.name} · v{r.envelope.manifest.version}</span>
-                </span>
-                <Button variant="ghost" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={() => downloadEnvelope(r.envelope)}>
-                  {t('intelPacks.export.download', 'Export')}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <PackRepositorySource query={installedQuery} label={t('intelPacks.export.title', 'Export an installed pack')}>
+          {installedRecords.length === 0 ? (
+            <Text as="p" variant="caption">{t('intelPacks.export.empty', 'No installed packs to export yet.')}</Text>
+          ) : (
+            <ul className="space-y-2">
+              {installedRecords.map((r) => (
+                <li key={r.packId} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+                  <span className="flex items-center gap-2 text-sm text-[var(--text-primary)] min-w-0">
+                    <FileJson className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
+                    <span className="truncate">{r.envelope.manifest.name} · v{r.envelope.manifest.version}</span>
+                  </span>
+                  <Button variant="ghost" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={() => downloadEnvelope(r.envelope)}>
+                    {t('intelPacks.export.download', 'Export')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PackRepositorySource>
       </FormSection>
 
       <PackDetailModal entry={importedEntry} open={importedEntry != null} onClose={() => setImported(null)} />

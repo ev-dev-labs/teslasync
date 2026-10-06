@@ -1,11 +1,11 @@
 import { type FormEvent, useState } from 'react';
-import { Building2, Gauge } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useRunChargingSiteTwin } from '@/api/hooks/useAdvancedIntelligence';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -16,6 +16,7 @@ import { SI } from '@/lib/unitConversion';
 import type { ChargingSiteTwinRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
 
 type SiteForm = Omit<ChargingSiteTwinRequest, 'vehicle_id' | 'confirmed'>;
 
@@ -45,6 +46,30 @@ export default function ChargingSiteTwinPage() {
     mutation.mutate({ ...form, vehicle_id: vehicleId, confirmed: true });
   };
   const result = mutation.data;
+  const summaryMetrics: readonly StatMetric[] = [
+    { occurrenceId: 'utilization', metricId: 'percent', rawValue: result?.utilization_pct,
+      label: t('advancedIntelligence.site.utilization', 'Utilization'),
+      description: t('advancedIntelligence.site.brief.utilization', 'Modeled utilization under the submitted arrival and service assumptions.') },
+    { occurrenceId: 'queue-p50', metricId: 'duration', rawValue: result?.queue_wait_p50_s,
+      label: t('advancedIntelligence.site.queueP50', 'Queue wait P50'),
+      description: t('advancedIntelligence.site.brief.queueP50', 'Modeled median queue wait; unsupported is not zero wait.') },
+    { occurrenceId: 'queue-p90', metricId: 'duration', rawValue: result?.queue_wait_p90_s,
+      label: t('advancedIntelligence.site.queueP90', 'Queue wait P90'),
+      description: t('advancedIntelligence.site.brief.queueP90', 'Modeled 90th-percentile queue wait; not a live site observation.') },
+    { occurrenceId: 'peak', metricId: 'power', rawValue: result?.peak_demand_w,
+      label: t('advancedIntelligence.site.peak', 'Peak demand'),
+      description: t('advancedIntelligence.site.brief.peak', 'Projected electrical demand for the submitted site scenario.') },
+    { occurrenceId: 'panel', metricId: 'percent', rawValue: result?.panel_constraint_pct,
+      label: t('advancedIntelligence.site.panelConstraint', 'Panel constraint'),
+      description: t('advancedIntelligence.site.brief.panel', 'Returned panel constraint percentage; no charger limits are changed.') },
+    { occurrenceId: 'projection-status', metricId: 'status', rawValue: result?.projected_unstable != null
+      ? result.projected_unstable
+        ? t('advancedIntelligence.site.unstable', 'Unstable')
+        : t('advancedIntelligence.site.stable', 'Stable')
+      : null,
+      label: t('advancedIntelligence.site.status', 'Projection status'),
+      description: t('advancedIntelligence.site.brief.status', 'Stability is the returned queue projection, not a site-health assessment.') },
+  ];
 
   return (
     <PageLayout
@@ -114,7 +139,7 @@ export default function ChargingSiteTwinPage() {
                 value={form.arrival_rate_per_s}
                 min={0.000001}
                 max={1}
-                step={0.0001}
+                step="any"
                 required
                 onChange={(event) => setForm((current) => ({
                   ...current, arrival_rate_per_s: Number(event.target.value),
@@ -202,40 +227,28 @@ export default function ChargingSiteTwinPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <InsightPanel
+        <AnalysisBrief
+          id="advanced-intelligence-site-brief"
           title={t('advancedIntelligence.site.constraints.title', 'Utilization and constraints')}
-          empty={!result}
+          description={t('advancedIntelligence.site.brief.description', 'Planning outputs from the submitted site scenario, with unsupported queue estimates kept explicit.')}
+          metrics={summaryMetrics}
+          vehicleId={result?.vehicle_id ?? vehicleId}
+          hasResult={result != null}
+          pending={mutation.isPending}
+          error={mutation.error}
+          quality={result?.data_quality}
+          evidence={result?.evidence}
+          limitations={[...(result?.limitations ?? []), ...(result?.assumptions ?? [])]}
+          generatedAt={result?.generated_at}
+          provenance={t('advancedIntelligence.site.brief.source', 'Charging site simulation')}
           emptyMessage={t('advancedIntelligence.site.constraints.empty', 'Submit a site scenario to see constraints.')}
-        >
-          <Grid cols={{ default: 1, sm: 2, lg: 3 }} gap={4}>
-            <StatCard
-              label={t('advancedIntelligence.site.utilization', 'Utilization')}
-              value={result ? `${fmtNumber(result.utilization_pct)}%` : null}
-              icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-            />
-            <StatCard label={t('advancedIntelligence.site.queueP50', 'Queue wait P50')} value={units.formatDuration(result?.queue_wait_p50_s)} />
-            <StatCard label={t('advancedIntelligence.site.queueP90', 'Queue wait P90')} value={units.formatDuration(result?.queue_wait_p90_s)} />
-            <StatCard label={t('advancedIntelligence.site.peak', 'Peak demand')} value={units.formatPower(result?.peak_demand_w)} />
-            <StatCard
-              label={t('advancedIntelligence.site.panelConstraint', 'Panel constraint')}
-              value={result ? `${fmtNumber(result.panel_constraint_pct)}%` : null}
-            />
-            <StatCard
-              label={t('advancedIntelligence.site.status', 'Projection status')}
-              value={result
-                ? (result.projected_unstable
-                  ? t('advancedIntelligence.site.unstable', 'Unstable')
-                  : t('advancedIntelligence.site.stable', 'Stable'))
-                : null}
-            />
-          </Grid>
-        </InsightPanel>
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>
         <InsightPanel
           title={t('advancedIntelligence.site.mitigations.title', 'Ranked mitigations and assumptions')}
-          empty={!result || result.mitigations.length === 0}
+          empty={!result || (result.mitigations.length === 0 && result.assumptions.length === 0)}
           emptyMessage={t('advancedIntelligence.site.mitigations.empty', 'No supported mitigations were returned.')}
         >
           <div className="space-y-3">

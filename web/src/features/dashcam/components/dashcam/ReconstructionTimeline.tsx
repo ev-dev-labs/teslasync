@@ -12,6 +12,7 @@ import { toReconstructionMarkers } from '../../lib/timelineAlignment';
 import { SignalPicker } from './SignalPicker';
 import { ReconstructionSeriesList } from './ReconstructionSeriesList';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { SignalEvidenceSourceList } from '@/features/diagnostics/components/SignalEvidenceSourceList';
 
 export interface ReconstructionTimelineProps {
   clip: ClipRecord;
@@ -126,6 +127,11 @@ export function ReconstructionTimeline({
         </InlineCallout>
       )}
 
+      <SignalEvidenceSourceList
+        sources={result.sources ?? []}
+        label={t('dataSources.labels.selectedSignalHistory', 'Selected signal history')}
+      />
+
       <SourceContent
         state={source.fatalError ? 'error' : source.refreshError ? 'retained'
           : result.isLoading && !source.hasData ? 'loading' : source.hasData ? 'ready' : 'empty'}
@@ -167,7 +173,9 @@ export function ReconstructionTimeline({
             </div>
           ) : (
             <Text as="p" variant="caption">
-              {t('dashcam.reconstruction.noIncidents', 'No statistically significant telemetry changes were detected in this window.')}
+              {result.sources?.some(({ state }) => !state.hasData || state.status === 'unavailable')
+                ? t('dataState.partial.message', 'Some sources did not respond. Available results remain visible and are not treated as complete.')
+                : t('dashcam.reconstruction.noIncidents', 'No statistically significant telemetry changes were detected in this window.')}
             </Text>
           )}
         </>

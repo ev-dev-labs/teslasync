@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calculator, Play, RefreshCw } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Button, Input, ConfirmDialog, Badge, Text } from '@/components/ui';
+import { Button, Input, ConfirmDialog, Badge, Text } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
 import { MetricTile } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
@@ -49,6 +51,7 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
   );
 
   const preview = useGeofenceRatePreview(geofenceId, rate?.id, range);
+  const previewState = deriveDataState(preview);
   const apply = useApplyGeofenceRate();
 
   useEffect(() => {
@@ -84,11 +87,7 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
 
   if (!rate) {
     return (
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-3 flex items-center gap-2">
-          <Calculator className="h-4 w-4 text-violet-300" aria-hidden="true" />
-          {t('chargingPlaces.previewApply.title', 'Session pricing preview')}
-        </PanelTitle>
+      <LayoutCard title={t('chargingPlaces.previewApply.title', 'Session pricing preview')} actions={<Calculator className="h-4 w-4 text-violet-300" aria-hidden="true" />}>
         <>
           {/* no-action: rate selection is provided directly above this panel in the same workspace. */}
           <EmptyState
@@ -98,23 +97,21 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
             )}
           />
         </>
-      </GlassPanel>
+      </LayoutCard>
     );
   }
 
   const p = preview.data;
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <PanelTitle className="flex items-center gap-2">
+    <LayoutCard title={t('chargingPlaces.previewApply.title', 'Session pricing preview')} actions={
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Calculator className="h-4 w-4 text-violet-300" aria-hidden="true" />
-          {t('chargingPlaces.previewApply.title', 'Session pricing preview')}
           <Badge variant="neutral" size="sm">
             {formatRatePerWh(rate.rate_per_wh, rate.currency, locale)} / {t('chargingPlaces.kwh', 'kWh')}
           </Badge>
-        </PanelTitle>
         <Button
+          wrapLabel
           size="sm"
           variant="ghost"
           icon={<RefreshCw className={preview.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />}
@@ -124,6 +121,7 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
           {t('chargingPlaces.previewApply.refresh', 'Refresh preview')}
         </Button>
       </div>
+    }>
       <Text as="p" size="sm" color="muted" className="mb-3">
         {t(
           'chargingPlaces.previewApply.help',
@@ -146,21 +144,28 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
         />
       </div>
 
-      {preview.isError ? (
-        <QueryError error={preview.error} onRetry={() => void preview.refetch()} />
-      ) : preview.isLoading ? (
+      <SourceContent
+        state={previewState.refreshError ? 'retained' : 'ready'}
+        label={t('chargingPlaces.previewApply.title', 'Session pricing preview')}
+        errorMessage={t('chargingPlaces.previewApply.loadFailed', 'Session pricing preview could not be loaded.')}
+        emptyMessage={t('chargingPlaces.previewApply.selectRate', 'Choose preview sessions on a rate to see affected charging sessions and estimated cost.')}
+        errorRecovery={{ onRetry: () => void preview.refetch() }}
+      >
+      {previewState.fatalError ? (
+        <QueryError error={previewState.fatalError} onRetry={() => void preview.refetch()} />
+      ) : preview.isLoading && !previewState.hasData ? (
         <Skeleton className="h-24 w-full" />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <MetricTile value={p?.matched_sessions ?? 0} label={t('chargingPlaces.previewApply.matched', 'Matched')} />
+            <MetricTile value={p?.matched_sessions ?? '—'} label={t('chargingPlaces.previewApply.matched', 'Matched')} />
             <MetricTile
-              value={p?.eligible_sessions ?? 0}
+              value={p?.eligible_sessions ?? '—'}
               label={t('chargingPlaces.previewApply.eligible', 'Eligible')}
               accentClass="text-emerald-300"
             />
             <MetricTile
-              value={p?.protected_sessions ?? 0}
+              value={p?.protected_sessions ?? '—'}
               label={t('chargingPlaces.previewApply.protected', 'Protected')}
               accentClass="text-amber-300"
             />
@@ -199,6 +204,8 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
           )}
         </>
       )}
+      </SourceContent>
+      {apply.error && <QueryError error={apply.error} />}
 
       {apply.data && (
         <InlineCallout variant="success" className="mt-3">
@@ -219,6 +226,7 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
 
       <div className="mt-3 flex justify-end">
         <Button
+          wrapLabel
           variant="primary"
           icon={<Play className="h-4 w-4" aria-hidden="true" />}
           onClick={() => void handleApply()}
@@ -232,6 +240,6 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
       </div>
 
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

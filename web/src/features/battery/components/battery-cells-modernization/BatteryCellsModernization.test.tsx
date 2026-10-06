@@ -82,7 +82,7 @@ function fixture() {
 }
 function stat(container: HTMLElement, id: string, occurrence: number) {
   const strip = container.querySelector(`#${id}`) as HTMLElement;
-  const tile = strip.querySelectorAll('[data-stat]')[occurrence] as HTMLElement;
+  const tile = strip.querySelectorAll('[data-operational-metric]')[occurrence] as HTMLElement;
   return within(tile);
 }
 beforeEach(() => {
@@ -105,7 +105,22 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('Battery cells live modernization preservation', () => {
-  it('retains all eight sections, toggled view and measurements through a refresh failure', () => {
+  it('reviews actual electrical precision, extrema identity and synthesis limitations in the real drawer', () => {
+    const raw = payload();
+    const before = JSON.stringify(raw);
+    h.query = { ...h.query, data: raw };
+    const view = fixture();
+    const overview = view.container.querySelector('#battery-cells-overview')!;
+    fireEvent.click(within(overview as HTMLElement).getByRole('button', { name: 'Review details' }));
+    const drawer = within(screen.getByRole('dialog'));
+    expect(drawer.getByText('400.00 V')).toBeVisible();
+    expect(drawer.getByText(/#1 3\\.8900 V/)).toBeVisible();
+    expect(drawer.getAllByText(/synthesized from brick extrema/).length).toBeGreaterThan(0);
+    expect(drawer.getAllByText(/reported values alone do not establish health/).length).toBeGreaterThan(0);
+    expect(JSON.stringify(raw)).toBe(before);
+  });
+
+  it('retains all nine sections, toggled view and measurements through a refresh failure', () => {
     const view = fixture();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to bar view' }));
     const chart = screen.getByRole('img', { name: 'Voltage reading for each battery cell' });
@@ -117,8 +132,8 @@ describe('Battery cells live modernization preservation', () => {
     expect(view.container.querySelector('[data-grid-frame]')).toBe(table);
     expect(stat(view.container, 'battery-cells-overview', 5).getByText('400.00 V')).toBeInTheDocument();
     expect(view.container.querySelectorAll('[data-card-grid]')).toHaveLength(3);
-    expect(view.container.querySelectorAll('[data-card-title]')).toHaveLength(8);
-    expect(screen.getByText('Voltage spread trend')).toBeInTheDocument();
+    expect(view.container.querySelectorAll('[data-card-title]')).toHaveLength(9);
+    expect(screen.getByRole('heading', { name: 'Voltage spread trend', exact: true })).toBeInTheDocument();
     expect(view.container.querySelector('#battery-cells-summary')).toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(h.retry).toHaveBeenCalledOnce();
@@ -127,11 +142,11 @@ describe('Battery cells live modernization preservation', () => {
   it('keeps shells through initial loading and fatal failure without presenting zero metrics', () => {
     h.query = { data: undefined, isPending: true, isLoading: true, refetch: h.retry };
     const view = fixture();
-    expect(view.container.querySelectorAll('[data-card-title]')).toHaveLength(8);
-    expect(view.container.querySelectorAll('[data-stat-strip]')).toHaveLength(3);
+    expect(view.container.querySelectorAll('[data-card-title]')).toHaveLength(9);
+    expect(view.container.querySelectorAll('[data-operational-brief]')).toHaveLength(3);
     h.query = { data: undefined, isError: true, error: new Error('Initial failure'), refetch: h.retry };
     view.rerenderPage();
-    expect(view.container.querySelectorAll('[data-card-title]')).toHaveLength(8);
+    expect(view.container.querySelectorAll('[data-card-title]')).toHaveLength(9);
     expect(stat(view.container, 'battery-cells-overview', 0).getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('Cells well balanced')).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);

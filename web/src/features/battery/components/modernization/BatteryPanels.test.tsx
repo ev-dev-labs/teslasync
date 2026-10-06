@@ -1,5 +1,8 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import type { BatterySummaryMetric } from './BatterySpecialistSummary';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deriveDataState } from '@/api/dataState';
 import type { ChargingTelemetry } from '@/api/types';
@@ -9,6 +12,11 @@ import {
   BatteryPanelGrid, BatterySpecialistSummary, CostComparisonCard,
   HealthSummary, HealthThermalPanel, HealthQuickLinksPanel,
 } from './index';
+
+function Provider({ children }: { children: ReactNode }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>;
+}
 
 beforeEach(() => {
   setGlobalLocale('en-US');
@@ -67,24 +75,25 @@ describe('live battery canonical packing adapter', () => {
 
 describe('battery specialist display fidelity', () => {
   it('keeps denominator, lower bound, precision, unknowns and independent periods without inventing comparisons', () => {
-    const metrics = Object.freeze([
-      { key: 'costPerDist', label: 'Cost per mi', value: '$0.0167' },
-      { key: 'sessions', label: 'Sessions', value: '≥ 100' },
-      { key: 'cycles', label: 'Equivalent full cycles', value: '12.3456' },
-      { key: 'missing-health', label: 'State of Health', value: '—' },
+    const metrics: readonly BatterySummaryMetric[] = Object.freeze([
+      { key: 'costPerDist', label: 'Cost per mi', value: '$0.0167', metricId: 'currency', rawValue: 0.0167 },
+      { key: 'sessions', label: 'Sessions', value: '≥ 100', metricId: 'count', rawValue: 100 },
+      { key: 'cycles', label: 'Equivalent full cycles', value: '12.3456', metricId: 'number', rawValue: 12.3456 },
+      { key: 'missing-health', label: 'State of Health', value: '—', metricId: 'percent', rawValue: null },
     ]);
     const { container, rerender } = render(
       <BatterySpecialistSummary title="Source summary" testId="specialist-test" metrics={metrics}
         period={{ kind: 'unknown', label: 'Independent source periods', reason: 'Coverage is not a lifetime measurement.' }} />,
+      { wrapper: Provider },
     );
-    expect(Array.from(container.querySelectorAll('[data-stat-value]')).map(node => node.textContent))
+    expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent))
       .toEqual(['$0.0167', '≥ 100', '12.3456', '—']);
     expect(container.querySelector('[data-stat-delta]')).toBeNull();
     expect(screen.getByText('Coverage is not a lifetime measurement.')).toBeVisible();
     setGlobalPrecision(0);
     rerender(<BatterySpecialistSummary title="Source summary" testId="specialist-test" metrics={metrics}
       period={{ kind: 'unknown', label: 'Independent source periods' }} />);
-    expect(Array.from(container.querySelectorAll('[data-stat-value]')).map(node => node.textContent))
+    expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent))
       .toEqual(['$0.0167', '≥ 100', '12.3456', '—']);
     expect(metrics[0].value).toBe('$0.0167');
   });
@@ -92,12 +101,12 @@ describe('battery specialist display fidelity', () => {
   it('retains all seven health metrics and the live false BMS flag without a model or a false healthy score', () => {
     const { container } = render(<HealthSummary chargingLive={telemetry({ bms_fullcharge_complete: false })}
       healthMeasured={false} healthValue="—" capacityMeasured={false} originalCapacityMeasured={false}
-      formatEnergy={value => String(value)} formatNumber={value => String(value)} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(7);
-    expect(Array.from(container.querySelectorAll('[data-stat-value]')).map(node => node.textContent))
+      formatEnergy={value => String(value)} formatNumber={value => String(value)} />, { wrapper: Provider });
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
+    expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent))
       .toEqual(['—', '—', '—', '—', '—', '—', 'No']);
     expect(screen.getByText('Full Charge Complete')).toBeVisible();
-    expect(container.querySelector('[data-period-kind="unknown"]')).not.toBeNull();
+    expect(container.querySelector('[data-battery-period]')).toHaveTextContent('Battery health summary metrics');
   });
 
   it('preserves the original fractional health, capacity, annual rate, cycles and integer-month displays', () => {
@@ -119,8 +128,8 @@ describe('battery specialist display fidelity', () => {
     const before = JSON.stringify(health);
     const { container } = render(<HealthSummary health={health} chargingLive={telemetry({ bms_fullcharge_complete: true })}
       healthMeasured healthValue="95.1234%" capacityMeasured originalCapacityMeasured
-      formatEnergy={value => `${(value / 1000).toFixed(4)} kWh`} formatNumber={value => value.toFixed(4)} />);
-    expect(Array.from(container.querySelectorAll('[data-stat-value]')).map(node => node.textContent)).toEqual([
+      formatEnergy={value => `${(value / 1000).toFixed(4)} kWh`} formatNumber={value => value.toFixed(4)} />, { wrapper: Provider });
+    expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent)).toEqual([
       '95.1234%', '71.3425 kWh', '75.0000 kWh', '1.2345%/yr', '123.4567', '27 months', 'Yes',
     ]);
     expect(JSON.stringify(health)).toBe(before);

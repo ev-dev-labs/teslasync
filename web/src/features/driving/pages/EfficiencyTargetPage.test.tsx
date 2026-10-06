@@ -150,6 +150,10 @@ vi.mock('../components/efficiency-target', () => {
   };
 });
 
+vi.mock('../components/operationalbrief-a-m/EfficiencyTargetBrief', async () => ({
+  EfficiencyTargetBrief: (await import('../components/efficiency-target')).EfficiencyTargetKpis,
+}));
+
 import EfficiencyTargetPage from './EfficiencyTargetPage';
 
 function query(overrides: Record<string, unknown> = {}) {

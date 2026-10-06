@@ -103,7 +103,11 @@ function mount(entry = '/tire-pressure') {
   return { ...render(tree()), client, tree };
 }
 function stat(container: HTMLElement, metric: string) {
-  const tile = container.querySelector(`[data-metric="${metric}"]`);
+  const occurrence: Record<string, string> = {
+    pressure: 'tire-pressure-average', count: 'tire-pressure-warning-count',
+    text: 'tire-pressure-range-last-updated',
+  };
+  const tile = container.querySelector(`[data-operational-metric="${occurrence[metric]}"]`);
   if (!tile) throw new Error(`Missing metric ${metric}`);
   return within(tile as HTMLElement);
 }
@@ -170,8 +174,8 @@ describe('pressure page live composition — authored, execution owned by parent
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);
     expect(H.observed.filter(target => target.hasAttribute('data-card-grid'))).toHaveLength(1);
     expect(container.querySelectorAll('[data-card]')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-stat-strip]')).toHaveLength(1);
-    expect(container.querySelector('[data-stat-strip] [data-stat-value]')).toHaveTextContent('2.88');
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(container.querySelector('[data-operational-brief] [data-operational-value]')).toHaveTextContent('2.88 bar');
     expect(screen.getAllByRole('meter')).toHaveLength(4);
     expect(H.calls).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01&end=2026-06-30');
     expect(screen.getByTestId('pressure-ai-scope')).toHaveAttribute('data-vehicle', '42');
@@ -213,9 +217,9 @@ describe('pressure page live composition — authored, execution owned by parent
     expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
     expect(historyTable().getByText('Front left (bar)')).toBeInTheDocument();
     expect(screen.getAllByRole('meter')).toHaveLength(4);
-    expect(stat(container, 'pressure').getByText('2.88')).toBeInTheDocument();
-    expect(container.querySelector('[data-metric="pressure"]')).toHaveAttribute('data-state', 'value');
-    expect(container.querySelector('[data-stat-strip]')).toHaveAttribute('data-retained', 'true');
+    expect(stat(container, 'pressure').getByText('2.88 bar')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="tire-pressure-average"]')).toHaveAttribute('data-value-state', 'value');
+    expect(container.querySelector('[data-source-retained]')).toHaveAttribute('data-source-retained', 'true');
     expect(screen.getAllByRole('button', { name: /^Retry$/ }).length).toBeGreaterThan(0);
   });
 

@@ -71,7 +71,10 @@ describe('phase 4 private benchmark presentation preservation', () => {
     expect(screen.getByText('100th performance percentile')).toBeInTheDocument();
     expect(screen.getByText('0%')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('Higher bars mean better relative performance')).toBeInTheDocument();
+    expect(screen.getByText((text, element) =>
+      text === 'Higher bars mean better relative performance'
+      && element?.getAttribute('data-card-desc') === 'true',
+    )).toBeVisible();
     const table = screen.getByRole('table');
     expect(table).toHaveTextContent('Degradation');
     expect(table).toHaveTextContent('100');
@@ -84,9 +87,10 @@ describe('phase 4 private benchmark presentation preservation', () => {
     const retry = vi.fn();
     const source = deriveDataState({ data: status, error: new Error('refresh failed'), refetch: retry });
     show(<PrivacyBudgetPanel status={status} source={source} />);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText(/remaining/)).toHaveTextContent('4');
-    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toBeInTheDocument();
+    expect(screen.getByText('ε 4 remaining')).toHaveTextContent('4');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     expect(retry).toHaveBeenCalledOnce();
   });
 

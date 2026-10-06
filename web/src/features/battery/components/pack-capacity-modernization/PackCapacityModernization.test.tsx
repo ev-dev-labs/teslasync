@@ -154,18 +154,36 @@ function phoneContainer(): void {
 }
 
 describe('Pack Capacity source modernization (NOT RUN)', () => {
+  it('opens the real source review drawer with posterior uncertainty and no fabricated model confidence', () => {
+    const raw = history();
+    const before = JSON.stringify(raw);
+    setQuery({ data: raw });
+    mount();
+    const kpis = screen.getByTestId('pack-capacity-kpis');
+    const uncertainty = within(kpis).getByText('Filter uncertainty').closest('[data-operational-metric]');
+    expect(uncertainty).toHaveAttribute('data-value-state', 'value');
+    expect(uncertainty?.querySelector('[data-operational-value]')).toHaveTextContent('±');
+    fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
+    const drawer = within(screen.getByRole('dialog'));
+    expect(drawer.getByText('one sigma under selected assumptions')).toBeVisible();
+    expect(drawer.getByText('descriptive ratio, not state of health')).toBeVisible();
+    expect(drawer.getByText(/not a lifetime record or a battery-health measurement/)).toBeVisible();
+    expect(drawer.getByText('Not scored')).toBeVisible();
+    expect(JSON.stringify(raw)).toBe(before);
+  });
+
   it('retains fourteen ordered sections, capped hook, genuine business controls and shared stats', () => {
     mount();
     allShells();
     expect(h.hook).toHaveBeenLastCalledWith('7', 1_000);
     const kpis = screen.getByTestId('pack-capacity-kpis');
-    expect(kpis.querySelectorAll('[data-stat]')).toHaveLength(6);
+    expect(kpis.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(screen.getByRole('combobox', { name: 'Minimum SoC window' })).toHaveAttribute('id', 'pack-capacity-soc-window');
     expect(screen.getByRole('combobox', { name: 'Process uncertainty' })).toHaveAttribute('id', 'pack-capacity-process-noise');
     expect(within(kpis).getByText('Current estimate')).toBeInTheDocument();
     expect(within(kpis).getByText('Raw median')).toBeInTheDocument();
     expect(within(kpis).getByText('descriptive ratio, not state of health', {
-      selector: '[data-stat-context]',
+      selector: '[data-battery-detail-context]',
     })).toBeInTheDocument();
   });
 
@@ -208,18 +226,18 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
 
   it('retains estimates and directory through failed then paused refreshes', () => {
     const view = mount();
-    const before = screen.getByTestId('pack-capacity-kpis').querySelector('[data-stat-value]')?.textContent;
+    const before = screen.getByTestId('pack-capacity-kpis').querySelector('[data-operational-value]')?.textContent;
     setQuery({ isError: true, isSuccess: false, error: new Error('refresh diagnostic') });
     view.rerenderPage();
     allShells();
-    expect(screen.getByTestId('pack-capacity-kpis').querySelector('[data-stat-value]')?.textContent).toBe(before);
+    expect(screen.getByTestId('pack-capacity-kpis').querySelector('[data-operational-value]')?.textContent).toBe(before);
     expect(screen.getByText('Charging history could not refresh. Showing the most recently loaded evidence.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(h.refetch).toHaveBeenCalledTimes(1);
     setQuery({ fetchStatus: 'paused' });
     view.rerenderPage();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('showing the last values it received');
-    expect(screen.getByTestId('pack-capacity-kpis').querySelector('[data-stat-value]')?.textContent).toBe(before);
+    expect(screen.getByTestId('pack-capacity-kpis').querySelector('[data-operational-value]')?.textContent).toBe(before);
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(h.refetch).toHaveBeenCalledTimes(2);
   });
@@ -236,7 +254,7 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     expect(screen.getByText('No charging history was returned for this vehicle.')).toBeInTheDocument();
     expect(screen.getByText('0 returned = 0 included + 0 excluded. Missing completion times are never synthesized, and missing SoC or energy is never imputed.')).toBeInTheDocument();
     const annual = within(screen.getByTestId('pack-capacity-kpis'))
-      .getByText('Annualized linear change').closest('[data-stat]');
+      .getByText('Annualized linear change').closest('[data-operational-metric]');
     expect(annual).toHaveTextContent('Needs at least 12 measurements');
   });
 

@@ -159,7 +159,8 @@ describe('StateMachineDebuggerPage — query branches', () => {
 
     const kpis = screen.getByRole('region', { name: 'FSM summary metrics' });
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(within(kpis).queryByText('Transitions (Page)')).not.toBeInTheDocument();
+    expect(screen.getByTestId('fsm-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(kpis.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('surfaces the transitions failure in every dependent section with working retries', () => {

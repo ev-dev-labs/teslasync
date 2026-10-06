@@ -544,9 +544,9 @@ describe('resourceIcon', () => {
       renderPage();
 
       const summary = screen.getByRole('region', { name: 'Energy summary' });
-      const capacity = within(summary).getByText('Total Capacity').closest('[data-stat]');
-      expect(capacity).toHaveAttribute('data-state', 'missing');
-      expect(capacity?.querySelector('[data-stat-value]')).toHaveTextContent('—');
+      const capacity = within(summary).getByText('Total Capacity').closest('[data-operational-metric]');
+      expect(capacity).toHaveAttribute('data-value-state', 'missing');
+      expect(capacity?.querySelector('[data-operational-value]')).toHaveTextContent('—');
       expect(within(summary).queryByText('13.50 kWh')).not.toBeInTheDocument();
       expect(screen.getByText('Cabin')).toBeInTheDocument();
       expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
@@ -557,9 +557,9 @@ describe('resourceIcon', () => {
       renderPage();
 
       const summary = screen.getByRole('region', { name: 'Energy summary' });
-      const count = within(summary).getByText('Energy Sites').closest('[data-stat]');
-      expect(count).toHaveAttribute('data-state', 'missing');
-      expect(count?.querySelector('[data-stat-value]')).toHaveTextContent('—');
+      const count = within(summary).getByText('Energy Sites').closest('[data-operational-metric]');
+      expect(count).toHaveAttribute('data-value-state', 'missing');
+      expect(count?.querySelector('[data-operational-value]')).toHaveTextContent('—');
       expect(within(summary).queryByText('0.00 Wh')).not.toBeInTheDocument();
       expect(screen.getByText('No energy-site snapshot has loaded. Refresh from Tesla to discover your installations.')).toBeInTheDocument();
     });

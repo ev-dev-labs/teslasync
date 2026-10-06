@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Workflow, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react';
-import { Badge, Toggle } from '@/components/ui';
+import { Workflow, Clock } from 'lucide-react';
+import { Badge, Caption, Text, Toggle } from '@/components/ui';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useAutomations, useToggleAutomation } from '@/api/hooks/useAutomations';
@@ -10,8 +10,8 @@ import type { WidgetProps } from './types';
 import type { Automation } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 
 function formatRelativeTime(dateStr: string | null, t: (k: string, f: string) => string, fmtInt: (value: unknown) => string): string {
   if (!dateStr) return '—';
@@ -100,28 +100,28 @@ function AutomationRow({
     <div className="flex min-w-0 flex-wrap items-center gap-2 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-          <span className={dashboardTokens.metricLabel}>{automation.name}</span>
+          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]">{automation.name}</Text>
           <Badge variant={status.variant} size="sm">
             {status.label}
           </Badge>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-0.5">
           {lastRun && (
-            <span
-              className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5"
+            <Caption
+              className="flex items-center gap-0.5"
               title={t('widget.lastRun', 'Last run')}
             >
               <Clock className="h-2.5 w-2.5" aria-hidden="true" />
               {formatRelativeTime(lastRun, t, fmtInt)}
-            </span>
+            </Caption>
           )}
           {automation.next_fire_time && (
-            <span
-              className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5"
+            <Caption
+              className="flex items-center gap-0.5"
               title={t('widget.nextRun', 'Next run')}
             >
               <span aria-hidden="true">⏰</span> {formatRelativeTime(automation.next_fire_time, t, fmtInt)}
-            </span>
+            </Caption>
           )}
         </div>
       </div>
@@ -161,23 +161,8 @@ function FullView({
   actionsDisabled: boolean;
   actionsDisabledReason?: string;
 }) {
-  const { fmtInt } = useNumberFormatting();
-  const enabled = automations.filter((a) => a.enabled).length;
-  const failing = automations.filter((a) => a.consecutive_failures > 0 && a.enabled).length;
-  const disabled = automations.filter((a) => a.auto_disabled).length;
-  const summary: StatGridItem[] = [
-    { label: t('widget.active', 'Active'), value: fmtInt(enabled), icon: <CheckCircle2 className="h-3 w-3" /> },
-    ...(failing > 0 ? [{ label: t('widget.failing', 'Failing'), value: fmtInt(failing), icon: <AlertTriangle className="h-3 w-3" />, valueColor: 'text-amber-400' }] : []),
-    ...(disabled > 0 ? [{ label: t('widget.autoDisabled', 'Auto-disabled'), value: fmtInt(disabled), icon: <XCircle className="h-3 w-3" />, valueColor: 'text-red-400' }] : []),
-  ];
-
   return (
     <div className="h-full flex flex-col gap-2">
-      {/* Summary stats */}
-      <div className="pb-1.5 border-b border-[var(--border-subtle)]">
-        <WidgetStatGrid stats={summary} cols={3} />
-      </div>
-
       {/* Automation list */}
       <div className="flex-1 min-h-0 overflow-auto">
         {automations.map((a) => (
@@ -222,6 +207,18 @@ export default function AutomationStatusWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
+      {!isCompact && <DashboardSourceBrief
+        metrics={[
+          { metricId: 'count', rawValue: automations == null ? null : items.filter(a => a.enabled).length, label: t('widget.active', 'Active'), description: t('widget.automation.activeDescription', 'Enabled automations in the returned configuration list.') },
+          { metricId: 'count', rawValue: automations == null ? null : items.filter(a => a.consecutive_failures > 0 && a.enabled).length, label: t('widget.failing', 'Failing'), description: t('widget.automation.failingDescription', 'Enabled automations with consecutive failures; successful empty lists retain measured zero.') },
+          { metricId: 'count', rawValue: automations == null ? null : items.filter(a => a.auto_disabled).length, label: t('widget.autoDisabled', 'Auto-disabled'), description: t('widget.automation.disabledDescription', 'Automations explicitly auto-disabled by the source, not all manually disabled automations.') },
+        ]}
+        state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+        title={t('widget.automation.summaryTitle', 'Automation configuration')}
+        description={t('widget.automation.summaryDescription', 'Current automation configuration and reported failure flags; no execution-success confidence is inferred.')}
+        scope={t('widget.automation.summaryScope', 'Returned automation list; action permissions and per-row recovery remain independent')}
+        loading={isLoading && !automations} testId="automation-operational-brief"
+      />}
       {items.length > 0 ? (
         <FadeIn>
           {isCompact ? (

@@ -64,6 +64,7 @@ vi.mock('@/components/charts', () => ({
       {typeof children === 'function' ? children({}) : children}
     </section>
   ),
+  ChartLegend: () => null,
   ChartTooltip: () => null,
   Legend: () => null,
   Line: () => null,

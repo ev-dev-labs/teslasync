@@ -33,9 +33,9 @@ describe('AuditLogPanel', () => {
     expect(screen.getByText('First install.')).toBeInTheDocument();
   });
 
-  it('shows an empty state with no recorded actions', () => {
+  it('shows an empty state with no recorded actions', async () => {
     renderWithProviders(<AuditLogPanel />);
-    expect(screen.getByText(/No actions have been recorded yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/No actions have been recorded yet/i)).toBeInTheDocument();
   });
 
   it('renders entries appended to the repository', async () => {

@@ -33,7 +33,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -325,12 +325,12 @@ describe('YearReviewWidget standard layout', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Total distance: 12000 km → 12,000 km (NOT the old ~7 the bug produced).
-    expect(screen.getByText('12,000.00')).toBeInTheDocument();
+    expect(screen.getByText('12,000.00 km')).toBeInTheDocument();
     expect(screen.getByText('320')).toBeInTheDocument(); // total drives
-    expect(screen.getByText('2,400.00')).toBeInTheDocument(); // energy kWh
-    expect(screen.getByText('3,400.00')).toBeInTheDocument(); // CO₂ kg
+    expect(screen.getByText('2,400.00 kWh')).toBeInTheDocument(); // energy kWh
+    expect(screen.getByText('3,400.00 kg')).toBeInTheDocument(); // CO₂ kg
     expect(screen.getByText('Jul')).toBeInTheDocument(); // busiest month
-    expect(screen.getByText('500.00')).toBeInTheDocument(); // longest drive km
+    expect(screen.getByText('500.00 km')).toBeInTheDocument(); // longest drive km
 
     // Standard layout must NOT include the wide-only stats.
     expect(screen.queryByText('Driving time')).toBeNull();
@@ -346,11 +346,24 @@ describe('YearReviewWidget wide layout', () => {
 
     expect(await screen.findByText('Driving time')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('300.00')).toBeInTheDocument(); // 18000 min → 300 h
+    expect(screen.getByText('300.00 h')).toBeInTheDocument(); // 18000 min → 300 h
     expect(screen.getByText('Top speed')).toBeInTheDocument();
-    expect(screen.getByText('180.00')).toBeInTheDocument(); // 180 km/h
+    expect(screen.getByText('180.00 km/h')).toBeInTheDocument(); // 180 km/h
     // Core stats still present.
-    expect(screen.getByText('12,000.00')).toBeInTheDocument();
+    expect(screen.getByText('12,000.00 km')).toBeInTheDocument();
+  });
+
+  it('reviews all eight source quantities with calendar-year coverage and canonical time and speed', async () => {
+    renderWidget(4, 1);
+    const brief = await screen.findByTestId('year-review-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(8);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('300.00 h')).toBeInTheDocument();
+    expect(within(drawer).getByText('180.00 km/h')).toBeInTheDocument();
+    expect(within(drawer).getByText('Jul')).toBeInTheDocument();
+    expect(within(drawer).getByText(/driving minutes normalized to seconds/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/current year may be incomplete/).length).toBeGreaterThan(0);
   });
 });
 
@@ -362,15 +375,15 @@ describe('YearReviewWidget unit conversion (mi/mph)', () => {
     renderWidget(4, 1);
 
     // 12000 km → 12000*1000 m / 1609.344 = 7,456 mi.
-    expect(await screen.findByText('7,456.45')).toBeInTheDocument();
+    expect(await screen.findByText('7,456.45 mi')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // 180 km/h → (180/3.6) m/s → 111.85 → 112 mph.
-    expect(screen.getByText('111.85')).toBeInTheDocument();
+    expect(screen.getByText('111.85 mph')).toBeInTheDocument();
     // 500 km → 310.7 mi.
-    expect(screen.getByText('310.69')).toBeInTheDocument();
+    expect(screen.getByText('310.69 mi')).toBeInTheDocument();
 
     // The mi unit label is shown, and the old broken single-digit km value is gone.
-    expect(screen.getAllByText('mi').length).toBeGreaterThan(0);
+    expect(screen.getByText('7,456.45 mi')).toBeInTheDocument();
     expect(screen.queryByText('12,000.00')).toBeNull();
   });
 });

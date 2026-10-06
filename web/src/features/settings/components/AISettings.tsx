@@ -426,6 +426,9 @@ export function AISettings() {
           mode={serverMode === 'off' ? 'off' : mode}
           enabledCount={enabledCount}
           providerName={provider.provider}
+          settingsLoading={settingsState.status === 'initial'}
+          settingsUnavailable={!settingsState.hasData}
+          settingsRetained={settingsState.status === 'stale'}
         />
       </FadeIn>
 

@@ -147,7 +147,7 @@ describe.each([1, 2, 3])('StateTimelineWidget — identifying heading at cols=%i
       expect(headings).toHaveLength(1);
       expect(headings[0]).toBeVisible();
       if (populated) {
-        expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75.00%; idle: 1h 0m, 25.00%' })).toBeInTheDocument();
         if (cols === 3) expect(screen.getByText('24h timeline')).toBeInTheDocument();
       }
       if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
@@ -239,13 +239,11 @@ describe('StateTimelineWidget — standard layout (≥2 col)', () => {
     // State rows: label + human duration + percentage badge.
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('idle')).toBeInTheDocument();
-    expect(screen.getByText('3h 0m')).toBeInTheDocument();
-    expect(screen.getByText('1h 0m')).toBeInTheDocument();
-    expect(screen.getByText('75.00%')).toBeInTheDocument();
-    expect(screen.getByText('25.00%')).toBeInTheDocument();
-    // Stacked bar segments carry the state/percentage tooltip.
-    expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
-    expect(screen.getByTitle('idle: 25.00%')).toBeInTheDocument();
+    expect(screen.getAllByText('3h 0m').every(element => element.textContent === '3h 0m')).toBe(true);
+    expect(screen.getAllByText('1h 0m').every(element => element.textContent === '1h 0m')).toBe(true);
+    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('25.00%').length).toBeGreaterThan(0);
+    expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75.00%; idle: 1h 0m, 25.00%' })).toBeInTheDocument();
     // The 24h stripe is wide-only — it must NOT appear here even with timeline data.
     expect(screen.queryByText('24h timeline')).not.toBeInTheDocument();
   });
@@ -276,14 +274,14 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     renderWidget({ size: { cols: 4, rows: 3 } });
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('24h timeline')).toBeInTheDocument();
-    expect(screen.getByTitle('driving: 100.00 min')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'driving: 100.00 min; idle: 50.00 min' })).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
   it('keeps the summary readable while the independent transition query loads', () => {
     mockSummary.mockReturnValue(makeQuery({ data: summaryRows() }));
     mockTimeline.mockReturnValue(makeQuery({ isLoading: true }));
     const { container } = renderWidget({ size: { cols: 4, rows: 3 } });
-    expect(screen.getByText('3h 0m')).toBeInTheDocument();
+    expect(screen.getAllByText('3h 0m').length).toBeGreaterThan(0);
     expect(screen.getByText('75.00%')).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
@@ -294,7 +292,7 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     renderWidget({ size: { cols: 4, rows: 3 } });
     expect(screen.getByText('3h 0m')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75.00%; idle: 1h 0m, 25.00%' })).toBeInTheDocument();
   });
   it('adds the 24h transition stripe alongside the state rows', () => {
     mockSummary.mockReturnValue(makeQuery({ data: summaryRows() }));
@@ -303,11 +301,10 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
 
     expect(screen.getByRole('heading', { name: 'State timeline' })).toBeInTheDocument();
     // Full row list is shared with the standard layout.
-    expect(screen.getByText('3h 0m')).toBeInTheDocument();
+    expect(screen.getAllByText('3h 0m').length).toBeGreaterThan(0);
     // Wide-only stripe: label + per-transition tooltips.
     expect(screen.getByText('24h timeline')).toBeInTheDocument();
-    expect(screen.getByTitle('driving: 100.00 min')).toBeInTheDocument();
-    expect(screen.getByTitle('idle: 50.00 min')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'driving: 100.00 min; idle: 50.00 min' })).toBeInTheDocument();
   });
 });
 

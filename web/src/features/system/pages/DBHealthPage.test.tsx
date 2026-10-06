@@ -170,8 +170,8 @@ function kpiRegion() {
   return within(screen.getByRole('region', { name: 'Summary metrics' }));
 }
 function metricValue(label: string): string {
-  const labelSpan = kpiRegion().getByText(label);
-  return labelSpan.closest('p')?.nextElementSibling?.textContent ?? '';
+  const tile = kpiRegion().getAllByText(label)[0].closest('[data-operational-metric]');
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 // The chart renders a visually-hidden fallback <table>; the detail grid is the
@@ -307,12 +307,25 @@ describe('DBHealthPage — loading', () => {
 
     const { container } = renderPage();
 
-    // Page heading still renders; the KPI labels do not exist yet.
+    // Canonical strip shells and labels remain mounted during loading.
     expect(
       screen.getByRole('heading', { name: 'DB health dashboard', level: 1 }),
     ).toBeInTheDocument();
-    expect(kpiRegion().queryByText('Total DB size')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(kpiRegion().getAllByText('Total DB size')[0]).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-brief][aria-busy="true"]')).toHaveLength(3);
+    expect(kpiRegion().queryByText('0')).toBeNull();
+  });
+
+  it('does not let pending statistics mask a successful migration or pool snapshot', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
+    const { container } = renderPage();
+    expect(screen.getByTestId('db-health-summary-0').querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(screen.getByTestId('db-health-summary-0')).toHaveAttribute('aria-busy', 'true');
+    expect(metricValue('Migration')).toBe('185');
+    expect(metricValue('Pool usage')).toBe('20.00%');
+    expect(screen.getByTestId('db-health-summary-1')).not.toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('db-health-summary-2')).not.toHaveAttribute('aria-busy', 'true');
   });
 });
 
@@ -449,6 +462,19 @@ describe('DBHealthPage — hardening', () => {
   });
 
   describe('DBHealthPage — retained independent sources', () => {
+    it('marks only the failed retained source stale while preserving all six canonical tiles', () => {
+      mockUseMigrations.mockReturnValue(makeQuery({
+        data: migration(), isError: true, error: new Error('migration refresh'),
+      }));
+      const { container } = renderPage();
+      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+      expect(screen.getByTestId('db-health-summary-0')).toHaveTextContent('Source loaded');
+      expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Retained source');
+      expect(screen.getByTestId('db-health-summary-2')).toHaveTextContent('Source loaded');
+      expect(metricValue('Migration')).toBe('185');
+      expect(metricValue('Total DB size')).toBe('360.00 MB');
+      expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Migration status snapshot');
+    });
     it('retains table details, migration evidence and pool metrics after refresh errors', () => {
       mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats(), isError: true, error: new Error('stats refresh') }));
       mockUseMigrations.mockReturnValue(makeQuery({ data: migration(), isError: true, error: new Error('migration refresh') }));

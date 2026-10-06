@@ -58,6 +58,7 @@ export default function FleetSetupPage() {
           publicKey={publicKey.data}
           onboarding={onboarding.data}
           isLoading={kpiLoading}
+          retained={[authState, apiState, publicKeyState, onboardingState].some(state => state.status === 'stale')}
           sourceLoading={{
             account: !authState.hasData && !apiState.hasData && (authState.status === 'initial' || apiState.status === 'initial'),
             token: apiState.status === 'initial',

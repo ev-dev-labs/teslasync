@@ -1,15 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { StatStrip } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { LayoutCard } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import type { CostStatistics, ServiceRecord } from './maintenanceModel';
 import { MaintenanceSource } from './MaintenanceSource';
 
-/** Text metrics intentionally retain the authoritative currency formatter,
- * /yr suffix and all-record cost denominators. No generic currency recasing,
- * conversion or range completeness is imposed on service history. */
+/** Source denomination and annual estimate remain unchanged at the display boundary. */
 export function MaintenanceCostPanel({
   source,
   enabled,
@@ -31,18 +30,17 @@ export function MaintenanceCostPanel({
     {
       key: 'total-spent',
       label: t('maintenance.totalSpent', 'Total spent'),
-      value: costStats ? formatCurrency(costStats.totalCost) : null,
+      value: costStats?.totalCost ?? null,
     },
     {
       key: 'annual-estimate',
       label: t('maintenance.annualEst', 'Annual est.'),
-      value: costStats
-        ? `${formatCurrency(costStats.annualCost)}${t('maintenance.perYear', '/yr')}` : null,
+      value: costStats?.annualCost ?? null,
     },
     {
       key: 'average-service',
       label: t('maintenance.avgService', 'Avg / service'),
-      value: costStats ? formatCurrency(costStats.avgPerService) : null,
+      value: costStats?.avgPerService ?? null,
     },
   ];
   return (
@@ -50,20 +48,26 @@ export function MaintenanceCostPanel({
       <MaintenanceSource source={source} enabled={enabled} empty={empty} loading={<Skeleton height={120} />}>
         {costStats ? (
           <>
-            <StatStrip
+            <VehicleOperationalBrief embedded
               id="maintenance-cost-summary"
-              variant="embedded"
+              title={t('maintenance.costTitle', 'Estimated annual cost')}
+              available={enabled && source.hasData}
+              retained={source.hasData && (source.refreshError != null || source.isRefreshBlocked)}
               period={{
                 kind: 'unknown',
                 label: t('dataSources.labels.serviceRecords', 'Service records'),
                 reason: t('maintenance.cost.methodology', 'Annual estimate uses the span between valid service dates, with a minimum of 0.1 years; fewer than two valid dates use total cost. Average cost uses every returned record.'),
               }}
-              metrics={metrics.map(metric => ({
-                metricId: 'text',
+              metrics={metrics.map((metric): StatMetric => ({
+                metricId: 'currency',
                 occurrenceId: metric.key,
                 rawValue: metric.value,
                 label: metric.label,
                 description: metric.label,
+                display: { formatter: raw => ({
+                  value: `${formatCurrency(raw)}${metric.key === 'annual-estimate' ? t('maintenance.perYear', '/yr') : ''}`,
+                  unit: '',
+                }) },
               }))}
             />
             <Text as="p" variant="bodySm">

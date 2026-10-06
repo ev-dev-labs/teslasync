@@ -9,7 +9,6 @@ import type {
 import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import {
-  Badge,
   DataTable,
   Text,
   type Column
@@ -23,6 +22,8 @@ import { Link } from 'react-router-dom';
 import { asList, unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { ScienceSummaryBrief } from './operationalbrief-all/ScienceSummaryBrief';
 
 export function WeatherPanel({ window }: { window: ScienceWindow }) {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
@@ -31,6 +32,47 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
   const state = useDataState(query, { provenance: 'historical' });
   const data: ScienceWeather | undefined = state.data;
   const { formatSpeed, formatTemperature, unitPrefs } = useUnits();
+  const fitGuide = t('science.weather.fitGuide', 'Pearson r requires at least five complete matched drives and variation in both values. An unknown coefficient is not a zero effect; association is not causation.');
+  const metrics: StatMetric[] = [
+    {
+      metricId: 'count', occurrenceId: 'matched-drives',
+      label: t('science.overview.weather', 'Weather matches'),
+      rawValue: data ? asList(data.points).length : null,
+      description: data?.weather_unknown
+        ? t('science.weather.weatherUnknown', 'weather unknown')
+        : data ? t('science.weather.joined', 'joined {{n}} drives', { n: asList(data.points).length }) : t('science.overview.noCount', 'Awaiting a successful report'),
+      context: data?.honesty,
+    },
+    {
+      metricId: 'ratio', occurrenceId: 'density-correlation',
+      label: t('science.weather.densityCorrelation', 'r(density, residual)'),
+      rawValue: data?.density_r,
+      description: fitGuide,
+      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: '' }) },
+      missingReason: t('science.unknown', 'unknown'),
+    },
+    {
+      metricId: 'ratio', occurrenceId: 'wind-correlation',
+      label: t('science.weather.windCorrelation', 'r(wind, residual)'),
+      rawValue: data?.wind_r,
+      description: fitGuide,
+      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: '' }) },
+      missingReason: t('science.unknown', 'unknown'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'rain-drives',
+      label: t('science.weather.rainCount', 'Rain drives'),
+      rawValue: data?.rain_n,
+      description: t('science.weather.rainDry', 'rain/dry'),
+      context: data ? `${t('science.weather.rainDry', 'rain/dry')}: ${fmtNumber(data.rain_n)}/${fmtNumber(data.dry_n)}` : undefined,
+    },
+    {
+      metricId: 'count', occurrenceId: 'dry-drives',
+      label: t('science.weather.dryCount', 'Dry drives'),
+      rawValue: data?.dry_n,
+      description: t('science.weather.rainDry', 'rain/dry'),
+    },
+  ];
 
   const columns: Column<ScienceWeatherPoint>[] = [
     { key: 'drive', header: t('science.weather.drive', 'Drive'), render: (r) =>
@@ -52,6 +94,13 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
     <section data-testid="science-weather" className="min-w-0">
       <LayoutCard title={t('science.weather.title', 'Weather coupling (correlation)')}>
       <StaleRefreshWarning state={state} />
+      <ScienceSummaryBrief
+        title={t('science.weather.title', 'Weather coupling (correlation)')}
+        description={data?.honesty ?? t('science.overview.weatherMeaning', 'Associations with energy residuals do not establish causation.')}
+        metrics={metrics} states={[state]} window={window} report={data}
+        limited={!data || data.weather_unknown || data.density_r == null || data.wind_r == null}
+        testId="science-weather-brief"
+      />
       <SourceContent
         state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.weather.title', 'Weather coupling (correlation)')}
@@ -65,24 +114,8 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
       {data && (
         <>
           <Text as="p" size="sm" color="secondary">{data.honesty}</Text>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={data.weather_unknown ? 'warning' : 'success'} size="sm">
-              {data.weather_unknown
-                ? t('science.weather.weatherUnknown', 'weather unknown')
-                : t('science.weather.joined', 'joined {{n}} drives', { n: asList(data.points).length })}
-            </Badge>
-            <Badge variant="neutral" size="sm">
-              r(density, residual): {data.density_r != null ? fmtNumber(data.density_r) : unknown(t)}
-            </Badge>
-            <Badge variant="neutral" size="sm">
-              r(wind, residual): {data.wind_r != null ? fmtNumber(data.wind_r) : unknown(t)}
-            </Badge>
-            <Badge variant="neutral" size="sm">
-              {t('science.weather.rainDry', 'rain/dry')}: {fmtNumber(data.rain_n)}/{fmtNumber(data.dry_n)}
-            </Badge>
-          </div>
           <Text as="p" size="sm" color="secondary">
-            {t('science.weather.fitGuide', 'Pearson r requires at least five complete matched drives and variation in both values. An unknown coefficient is not a zero effect; association is not causation.')}
+            {fitGuide}
           </Text>
           {asList(data.points).length > 0 ? (
             <DataTable

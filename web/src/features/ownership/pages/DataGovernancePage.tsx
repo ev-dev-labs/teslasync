@@ -23,7 +23,9 @@ import type {
   RetentionPolicy,
   RetentionRun,
 } from '@/types/ownership';
-import { EvidencePanel, MutationError, OwnershipPanel, StatGrid } from '../components';
+import { EvidencePanel, MutationError, OwnershipPanel } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { daysToSeconds, formatBytes, formatPct, formatSpan, secondsToDays } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -466,39 +468,49 @@ export default function DataGovernancePage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.governance.summary.title', 'Storage posture')}
-          source={overviewQuery} empty={!overview}>
-          <StatGrid
-            stats={[
+          source={overviewQuery} empty={!overview} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.governance.brief.title', 'Governed storage and policy coverage')}
+            description={t('ownership.governance.brief.description', 'Policy coverage describes intent, not deletion. Legal holds remain exempt from every plan.')}
+            scope={t('ownership.governance.brief.scope', 'Current database catalog and retention policies; coverage does not imply enforcement')}
+            source={overviewQuery}
+            observedAt={overview?.as_of}
+            metrics={[
               {
-                key: 'total',
+                occurrenceId: 'total', metricId: 'bytes',
                 label: t('ownership.governance.stat.total', 'Total governed footprint'),
-                value: formatBytes(overview?.total_bytes ?? 0),
+                rawValue: overview?.total_bytes,
+                display: specialistDisplay(formatBytes),
               },
               {
-                key: 'governed',
+                occurrenceId: 'governed', metricId: 'bytes',
                 label: t('ownership.governance.stat.governed', 'Under a policy'),
-                value: formatBytes(overview?.governed_bytes ?? 0),
-                hint: formatPct(overview?.governed_share_pct ?? 0),
+                rawValue: overview?.governed_bytes,
+                display: specialistDisplay(formatBytes),
+                context: formatPct(overview?.governed_share_pct),
                 tone: 'positive',
               },
               {
-                key: 'ungoverned',
+                occurrenceId: 'ungoverned', metricId: 'bytes',
                 label: t('ownership.governance.stat.ungoverned', 'No policy'),
-                value: formatBytes(overview?.ungoverned_bytes ?? 0),
+                rawValue: overview?.ungoverned_bytes,
+                display: specialistDisplay(formatBytes),
                 tone: (overview?.ungoverned_bytes ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                key: 'holds',
+                occurrenceId: 'holds', metricId: 'count',
                 label: t('ownership.governance.stat.holds', 'Legal holds'),
-                value: fmtInt(overview?.legal_hold_count ?? 0),
-                hint: t('ownership.governance.stat.holdsHint', 'Exempt from every plan'),
+                rawValue: overview?.legal_hold_count,
+                display: specialistDisplay(fmtInt),
+                context: t('ownership.governance.stat.holdsHint', 'Exempt from every plan'),
               },
               {
-                key: 'mode',
+                occurrenceId: 'mode', metricId: 'status',
                 label: t('ownership.governance.stat.mode', 'Enforcement mode'),
-                value: overview?.plan_only
+                rawValue: overview?.plan_only == null ? null : overview.plan_only
                   ? t('ownership.governance.stat.planOnly', 'Plan only')
                   : t('ownership.governance.stat.enforcing', 'Enforcing'),
+                missingReason: t('ownership.governance.brief.modeUnknown', 'Enforcement mode unknown; this screen only computes dry-run plans.'),
                 tone: 'positive',
               },
             ]}
@@ -646,35 +658,43 @@ export default function DataGovernancePage() {
             'Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.',
           )}
           empty={impacts.length === 0}
+          preserveSummary
           emptyMessage={t(
             'ownership.governance.impact.empty',
             'Run the dry-run plan above to see what a policy would reclaim.',
           )}
         >
-          <StatGrid
-            columns={4}
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.governance.impactBrief.title', 'Computed dry-run totals')}
+            description={t('ownership.governance.impact.subtitle', 'Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.')}
+            scope={t('ownership.governance.impactBrief.scope', 'Latest requested dry-run plan; no rows are deleted')}
+            source={simulate}
+            observedAt={simulate.data?.as_of}
+            metrics={[
               {
-                key: 'rows',
+                occurrenceId: 'rows', metricId: 'count',
                 label: t('ownership.governance.impactStat.rows', 'Rows in plan'),
-                value: fmtInt(simulate.data?.total_rows_expiring ?? 0),
+                rawValue: simulate.data?.total_rows_expiring,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'bytes',
+                occurrenceId: 'bytes', metricId: 'bytes',
                 label: t('ownership.governance.impactStat.bytes', 'Reclaimable'),
-                value: formatBytes(simulate.data?.total_bytes_reclaimable ?? 0),
+                rawValue: simulate.data?.total_bytes_reclaimable,
+                display: specialistDisplay(formatBytes),
                 tone: 'positive',
               },
               {
-                key: 'fidelity',
+                occurrenceId: 'fidelity', metricId: 'percent',
                 label: t('ownership.governance.impactStat.fidelity', 'Fidelity traded away'),
-                value: formatPct(simulate.data?.total_fidelity_loss_pct ?? 0),
+                rawValue: simulate.data?.total_fidelity_loss_pct,
+                display: specialistDisplay(formatPct),
                 tone: (simulate.data?.total_fidelity_loss_pct ?? 0) > 20 ? 'warning' : 'default',
               },
               {
-                key: 'mode',
+                occurrenceId: 'mode', metricId: 'status',
                 label: t('ownership.governance.impactStat.mode', 'Executed'),
-                value: t('ownership.governance.impactStat.never', 'Never — dry run'),
+                rawValue: t('ownership.governance.impactStat.never', 'Never — dry run'),
               },
             ]}
           />

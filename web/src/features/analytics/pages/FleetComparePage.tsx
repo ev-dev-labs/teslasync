@@ -36,9 +36,10 @@ import type { Vehicle } from '@/types/vehicle';
 import type { VehicleStateReadings } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import {
-  FleetHighlights, FleetTrendCard, formatKnown, getWinner,
+  FleetTrendCard, formatKnown, getWinner,
   type ComparisonRow,
 } from '../components/fleet-compare-modernization';
+import { FleetComparisonBrief as FleetHighlights } from '../components/operationalbrief-a-m/FleetComparisonBrief';
 
 /* ── Helpers ───────────────────────────────────────────── */
 
@@ -656,16 +657,26 @@ export default function FleetComparePage() {
       {/* ── Key highlights (KPI band) ── */}
       <FadeIn delay={0.05}>
         <Section id="fleet-compare-highlights-section" title={t('comparison.highlights', 'Key highlights')}>
-          <FleetHighlights items={[
+          <FleetHighlights nameA={nameA} nameB={nameB} items={[
             {
               id: 'battery-pair',
               label: t('comparison.batteryDiff', 'Battery level'),
+              metricId: 'percent', rawA: stateA?.battery_level, rawB: stateB?.battery_level,
+              format: value => `${value}%`,
+              retained: (stateA != null && (stateQueryA.isError || stateQueryA.fetchStatus === 'paused'))
+                || (stateB != null && (stateQueryB.isError || stateQueryB.fetchStatus === 'paused')),
               value: vs(formatKnown(stateA?.battery_level, value => `${value}%`), formatKnown(stateB?.battery_level, value => `${value}%`)),
               loading: (stateQueryA.isLoading || stateQueryB.isLoading) && !stateA && !stateB,
             },
             {
               id: 'efficiency-pair',
               label: t('comparison.efficiencyDiff', 'Avg efficiency'),
+              metricId: 'efficiency',
+              rawA: drivingStatsA?.avgEfficiencyWhKm != null ? drivingStatsA.avgEfficiencyWhKm / 1000 : null,
+              rawB: drivingStatsB?.avgEfficiencyWhKm != null ? drivingStatsB.avgEfficiencyWhKm / 1000 : null,
+              format: value => `${fmtNumber(whPerKmToDisplay(value * 1000))} ${efficiencyUnit}`,
+              retained: (drivingStatsA != null && (statsQueryA.isError || statsQueryA.fetchStatus === 'paused'))
+                || (drivingStatsB != null && (statsQueryB.isError || statsQueryB.fetchStatus === 'paused')),
               value: `${vs(
                 formatKnown(drivingStatsA?.avgEfficiencyWhKm, value => fmtNumber(whPerKmToDisplay(value))),
                 formatKnown(drivingStatsB?.avgEfficiencyWhKm, value => fmtNumber(whPerKmToDisplay(value))),
@@ -675,12 +686,20 @@ export default function FleetComparePage() {
             {
               id: 'cost-pair',
               label: t('comparison.costDiff', 'Charging cost'),
+              metricId: 'currency', rawA: costA?.total_charging_cost, rawB: costB?.total_charging_cost,
+              format: formatCurrency,
+              retained: (costA != null && (costQueryA.isError || costQueryA.fetchStatus === 'paused'))
+                || (costB != null && (costQueryB.isError || costQueryB.fetchStatus === 'paused')),
               value: vs(formatKnown(costA?.total_charging_cost, formatCurrency), formatKnown(costB?.total_charging_cost, formatCurrency)),
               loading: (costQueryA.isLoading || costQueryB.isLoading) && !costA && !costB,
             },
             {
               id: 'co2-pair',
               label: t('comparison.co2Diff', 'CO₂ saved'),
+              metricId: 'mass', rawA: drivingStatsA?.co2SavedKg, rawB: drivingStatsB?.co2SavedKg,
+              format: value => `${fmtNumber(value)} kg`,
+              retained: (drivingStatsA != null && (statsQueryA.isError || statsQueryA.fetchStatus === 'paused'))
+                || (drivingStatsB != null && (statsQueryB.isError || statsQueryB.fetchStatus === 'paused')),
               value: `${vs(formatKnown(drivingStatsA?.co2SavedKg, fmtNumber), formatKnown(drivingStatsB?.co2SavedKg, fmtNumber))} kg`,
               loading: statsLoading && !drivingStatsA && !drivingStatsB,
             },

@@ -94,13 +94,13 @@ afterEach(() => {
   setGlobalPrecision(initial.precision); setGlobalLocale(initial.locale);
 });
 function tile(container: HTMLElement, label: string): Element {
-  const found = Array.from(container.querySelectorAll('[data-stat]'))
-    .find(item => item.querySelector('[data-stat-label]')?.textContent === label);
+  const found = Array.from(container.querySelectorAll('[data-stat], [data-operational-metric]'))
+    .find(item => item.querySelector('[data-stat-label], :scope > div:first-child > div:first-child')?.textContent === label);
   expect(found, `preserved stat label: ${label}`).toBeDefined();
   return found!;
 }
 function value(container: HTMLElement, label: string): string | null | undefined {
-  return tile(container, label).querySelector('[data-stat-value]')?.textContent;
+  return tile(container, label).querySelector('[data-stat-value], [data-operational-value]')?.textContent;
 }
 const summaryProps = { coreStats, gasPrice: 3.5, distanceUnit: 'mi', isMiles: true, period };
 const savingsProps = {
@@ -112,18 +112,18 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
   it('keeps six summary metrics and all six secondary facts with exact original explicit units', () => {
     const before = JSON.stringify(coreStats);
     const { container, rerender } = render(<CostSummaryCards {...summaryProps} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(value(container, 'Total Cost')).toBe(`$${fmtNumber(coreStats.totalCost)}`);
     expect(tile(container, 'Total Cost')).toHaveTextContent('7 sessions');
     expect(value(container, 'Avg $/kWh')).toBe(`$${fmtNumber(coreStats.avgCostPerKwh)}`);
     expect(tile(container, 'Avg $/kWh')).toHaveTextContent('blended rate');
     expect(value(container, 'Cost Per Mile')).toBe(`$${fmtNumber(coreStats.costPerDist)}`);
     expect(tile(container, 'Cost Per Mile')).toHaveTextContent('per mi');
-    expect(value(container, 'Total Energy')).toBe(fmtNumber(coreStats.totalEnergy));
+    expect(value(container, 'Total Energy')).toBe(`${fmtNumber(coreStats.totalEnergy)} kWh`);
     expect(tile(container, 'Total Energy')).toHaveTextContent('kWh');
     expect(tile(container, 'Total Energy')).toHaveTextContent(`${fmtNumber(coreStats.gallonsEquiv)} gal equiv`);
     expect(tile(container, 'Gas Savings $')).toHaveTextContent(`vs $${fmtNumber(3.5)}/gal`);
-    expect(value(container, 'Savings %')).toBe(fmtNumber(coreStats.savingsPercent));
+    expect(value(container, 'Savings %')).toBe(`${fmtNumber(coreStats.savingsPercent)}%`);
     expect(tile(container, 'Savings %')).toHaveTextContent('vs gasoline');
     state.gasUnit = 'liter'; state.symbol = '€';
     rerender(<CostSummaryCards {...summaryProps} isMiles={false} distanceUnit="km" />);
@@ -134,20 +134,22 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
   it('keeps summary skeleton count, real empty/reset action and cached readings on an actionable refresh error', () => {
     const reset = vi.fn(); const retry = vi.fn();
     const { container, rerender } = render(<CostSummaryCards {...summaryProps} coreStats={null} isLoading />);
-    expect(container.querySelectorAll('[data-state="loading"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     rerender(<CostSummaryCards {...summaryProps} coreStats={null} onResetRange={reset} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
     fireEvent.click(screen.getByRole('button', { name: 'Reset date range' }));
     expect(reset).toHaveBeenCalledOnce();
     rerender(<CostSummaryCards {...summaryProps} error={new Error('Synthetic refresh error')} onRetry={retry} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(value(container, 'Total Cost')).toBe(`$${fmtNumber(coreStats.totalCost)}`);
-    expect(screen.getByText('Showing retained measurements')).toBeInTheDocument();
+    expect(screen.getByText('Retained source measurements')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
     expect(retry).toHaveBeenCalledOnce();
     rerender(<CostSummaryCards {...summaryProps} coreStats={null} error={new Error('Synthetic initial error')} onRetry={retry} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reset date range' })).not.toBeInTheDocument();
   });
@@ -155,31 +157,31 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     const malformed = Object.freeze({ ...coreStats, totalCost: NaN, totalEnergy: 0,
       savingsPercent: undefined as unknown as number });
     const { container } = render(<CostSummaryCards {...summaryProps} coreStats={malformed} />);
-    expect(tile(container, 'Total Cost')).toHaveAttribute('data-state', 'invalid');
-    expect(tile(container, 'Savings %')).toHaveAttribute('data-state', 'missing');
-    expect(tile(container, 'Total Energy')).toHaveAttribute('data-state', 'value');
-    expect(value(container, 'Total Energy')).toBe('0.00');
+    expect(tile(container, 'Total Cost')).toHaveAttribute('data-value-state', 'invalid');
+    expect(tile(container, 'Savings %')).toHaveAttribute('data-value-state', 'missing');
+    expect(tile(container, 'Total Energy')).toHaveAttribute('data-value-state', 'value');
+    expect(value(container, 'Total Energy')).toBe('0.00 kWh');
     expect(screen.getByText('Expected a finite numeric measurement')).toBeInTheDocument();
     expect(screen.getByText('No measurement supplied')).toBeInTheDocument();
     expect(Number.isNaN(malformed.totalCost)).toBe(true);
   });
   it('keeps all seven lifetime metrics, free-energy fact, numeric minutes and unknown bounded lifetime scope', () => {
     const { container } = render(<LifetimeSummary lifetimeMetrics={lifetimeMetrics} coreStats={coreStats} period={period} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(7);
-    expect(container.querySelectorAll('[data-stat-bank]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
+    expect(container.querySelector('[data-operational-brief] [role="list"]')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3');
     expect(value(container, 'Total Spent')).toBe(`$${fmtNumber(coreStats.totalCost)}`);
     expect(value(container, 'Total Sessions')).toBe('7');
     expect(value(container, 'Avg Session Cost')).toBe(`$${fmtNumber(lifetimeMetrics.avgSessionCost)}`);
-    expect(value(container, 'Avg Energy / Session')).toBe(fmtNumber(lifetimeMetrics.avgSessionEnergy));
-    expect(value(container, 'Avg Duration')).toBe(fmtNumber(lifetimeMetrics.avgDuration));
+    expect(value(container, 'Avg Energy / Session')).toBe(`${fmtNumber(lifetimeMetrics.avgSessionEnergy)} kWh`);
+    expect(value(container, 'Avg Duration')).toBe(`${fmtNumber(lifetimeMetrics.avgDuration)} min`);
     expect(tile(container, 'Avg Duration')).toHaveTextContent('min');
     expect(tile(container, 'Free Sessions')).toHaveTextContent(`(${fmtNumber(lifetimeMetrics.freeEnergy)} kWh)`);
-    expect(screen.getByText(period.reason)).toBeInTheDocument();
+    expect(screen.getAllByText(period.reason).length).toBeGreaterThan(0);
     expect(container.querySelector('[data-period-kind="alltime"]')).toBeNull();
   });
   it('keeps five impact metrics and the full repeated kg/tree explanation, without adding a currency prefix', () => {
     const { container } = render(<EnvironmentalImpact coreStats={coreStats} period={period} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(5);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
     expect(value(container, 'kg CO₂ saved')).toBe(fmtNumber(coreStats.co2SavedKg));
     expect(value(container, 'tree-years equivalent')).toBe(fmtNumber(coreStats.treeEquiv));
     expect(value(container, 'gallons avoided')).toBe(fmtNumber(coreStats.gallonsEquiv));
@@ -202,7 +204,7 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     const price = vi.fn(); const mpg = vi.fn(); const rate = vi.fn();
     const { container, rerender } = render(<SavingsCalculator {...savingsProps}
       onGasPriceChange={price} onMpgChange={mpg} onElectricityRateChange={rate} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(value(container, 'Gas Cost (equivalent)')).toBe(`$${fmtNumber(gasComparison.gasCost)}`);
     expect(value(container, 'EV Cost (actual)')).toBe(`$${fmtNumber(gasComparison.actualCost)}`);
     expect(value(container, 'Total Savings')).toBe(`$${fmtNumber(gasComparison.savings)}`);
@@ -221,16 +223,16 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(screen.getByRole('spinbutton', { name: 'Gas Price ($/gal)' })).toHaveValue(DEFAULT_GAS_PRICE);
     expect(screen.getByRole('spinbutton', { name: 'Gas Car MPG' })).toHaveValue(DEFAULT_MPG);
     expect(screen.getByRole('spinbutton', { name: 'Electricity Rate ($/kWh)' })).toHaveValue(DEFAULT_ELECTRICITY_RATE);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
   });
   it('keeps ToU text hours, numeric per-session costs, busiest count, percentage and hourly chart rows', () => {
     const { container } = render(<TimeOfUseAnalysis hourlyData={hourlyData} touInsights={touInsights} period={period} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(value(container, 'Cheapest Hour')).toBe('02:00');
     expect(tile(container, 'Cheapest Hour')).toHaveTextContent(`avg ${fmtNumber(touInsights.cheapest.avgCost)} / session`);
     expect(value(container, 'Priciest Hour')).toBe('16:00');
     expect(tile(container, 'Busiest Hour')).toHaveTextContent('3 sessions');
-    expect(value(container, 'Off-Peak Charging')).toBe('75.00');
+    expect(value(container, 'Off-Peak Charging')).toBe('75.00%');
     expect(screen.getByText('of sessions between 10 PM–6 AM')).toBeInTheDocument();
     expect(JSON.parse(container.querySelector('[data-chart-rows]')?.getAttribute('data-chart-rows') ?? '[]')).toEqual(hourlyData);
   });
@@ -242,7 +244,7 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(screen.getByText('Not enough data for comparison')).toBeInTheDocument();
     expect(screen.getAllByRole('spinbutton')).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Reset Defaults' })).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
     expect(price).not.toHaveBeenCalled();
@@ -258,7 +260,7 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(screen.getByText('Not enough data')).toBeInTheDocument();
     rerender(<TimeOfUseAnalysis hourlyData={hourlyData} touInsights={null} onRetry={retry} period={period} />);
     expect(screen.getByText('No insights available')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     expect(JSON.parse(container.querySelector('[data-chart-rows]')?.getAttribute('data-chart-rows') ?? '[]')).toEqual(hourlyData);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledTimes(2);
@@ -278,24 +280,24 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
   it('keeps signed bill operands/percentages, verdict/counts/explanation and independent unknown scope on refresh failure', () => {
     state.query.error = new Error('Synthetic bill refresh failure');
     const { container } = render(<BillVarianceCard vehicleId={7} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(4);
-    expect(value(container, 'Energy Δ')).toBe('-2.00');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(value(container, 'Energy Δ')).toBe('-2.00 kWh');
     expect(tile(container, 'Energy Δ')).toHaveTextContent(`(${fmtNumber(bill.energy_delta_pct)}%)`);
     expect(value(container, 'Cost Δ')).toBe('$-1.25');
     expect(tile(container, 'Cost Δ')).toHaveTextContent(`(${fmtNumber(bill.cost_delta_pct)}%)`);
-    expect(value(container, 'Cabinet loss')).toBe(fmtNumber(bill.cabinet_loss_pct));
+    expect(value(container, 'Cabinet loss')).toBe(`${fmtNumber(bill.cabinet_loss_pct)}%`);
     expect(value(container, 'Invoiced total')).toBe(`$${fmtNumber(bill.invoiced_cost)}`);
-    expect(screen.getByText('Needs review')).toBeInTheDocument();
+    expect(screen.getAllByText('Needs review').length).toBeGreaterThan(0);
     expect(screen.getByText('3 measured · 2 invoiced DC sessions')).toBeInTheDocument();
     expect(screen.getByText(bill.explanation)).toBeInTheDocument();
-    expect(screen.getByText(/Reconciliation is independent of the selected date range/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Reconciliation is independent of the selected date range/).length).toBeGreaterThan(0);
     expect(screen.getByRole('alert')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
     expect(state.query.refetch).toHaveBeenCalledOnce();
   });
   it('keeps eight forecast detail metrics, both shares/rates, annual/lifetime/modelled operands and all valid insights', () => {
     const { container } = render(<ForecastDetails forecastData={forecastData} period={period} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(value(container, 'Home')).toBe(`$${fmtNumber(forecastData.breakdown.home.avg_cost_per_kwh)}`);
     expect(value(container, 'Supercharger')).toBe(`$${fmtNumber(forecastData.breakdown.supercharger.avg_cost_per_kwh)}`);
     expect(value(container, 'Monthly Savings')).toBe(`$${fmtNumber(forecastData.gas_comparison.monthly_savings)}`);
@@ -303,7 +305,7 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(value(container, 'Lifetime')).toBe(`$${fmtNumber(forecastData.gas_comparison.lifetime_savings)}`);
     expect(value(container, 'Gas cost/mo')).toBe(`$${fmtNumber(forecastData.gas_comparison.gas_cost_per_month)}`);
     expect(value(container, 'EV cost/mo')).toBe(`$${fmtNumber(forecastData.gas_comparison.ev_cost_per_month)}`);
-    expect(value(container, 'Avg km/mo')).toBe(fmtNumber(forecastData.gas_comparison.avg_km_per_month));
+    expect(value(container, 'Avg km/mo')).toBe(`${fmtNumber(forecastData.gas_comparison.avg_km_per_month)} km`);
     expect(tile(container, 'Avg km/mo')).toHaveTextContent('km');
     expect(screen.getByText('Synthetic retained insight')).toBeInTheDocument();
     const shares = JSON.parse(container.querySelector('[data-chart-rows]')?.getAttribute('data-chart-rows') ?? '[]');
@@ -313,8 +315,8 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     const partial = { ...forecastData, breakdown: undefined, insights: [],
       gas_comparison: { ...forecastData.gas_comparison, monthly_savings: undefined } } as unknown as typeof forecastData;
     const { container } = render(<ForecastDetails forecastData={partial} period={period} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(6);
-    expect(tile(container, 'Monthly Savings')).toHaveAttribute('data-state', 'missing');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(tile(container, 'Monthly Savings')).toHaveAttribute('data-value-state', 'missing');
     expect(value(container, 'Monthly Savings')).toBe('—');
     expect(screen.getByText('Breakdown will appear once charging data is available.')).toBeInTheDocument();
     expect(screen.getByText('Insights will appear as more data is collected.')).toBeInTheDocument();
@@ -331,7 +333,7 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(container.querySelector('[data-series="ci_band"]')).toHaveAttribute('data-connect-nulls', 'false');
     expect(container.querySelector('[data-series="actual"]')).toHaveAttribute('data-connect-nulls', 'false');
     expect(container.querySelector('[data-series="forecast"]')).toHaveAttribute('data-connect-nulls', 'false');
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(screen.getAllByText(/Forecast is independent of the selected date range/).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('alert')).toHaveLength(5);
     const retries = screen.getAllByRole('button', { name: /Retry/i });
@@ -348,7 +350,7 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
       <LifetimeSummary lifetimeMetrics={lifetimeMetrics} coreStats={coreStats} period={period} /></>);
     act(() => { setGlobalPrecision(5); setGlobalLocale('fr-FR'); });
     expect(value(container, 'Total Cost')).toBe(`$${fmtNumber(coreStats.totalCost, 5, 'fr-FR')}`);
-    expect(value(container, 'Avg Duration')).toBe(fmtNumber(lifetimeMetrics.avgDuration, 5, 'fr-FR'));
+    expect(value(container, 'Avg Duration')).toBe(`${fmtNumber(lifetimeMetrics.avgDuration, 5, 'fr-FR')} min`);
     expect(tile(container, 'Avg Duration')).toHaveTextContent('min');
     expect(tile(container, 'Total Energy')).toHaveTextContent('kWh');
   });

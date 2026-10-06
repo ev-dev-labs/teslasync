@@ -30,7 +30,7 @@
  *   - refresh wiring: the accessible freshness control refetches system health.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -382,10 +382,47 @@ describe('SystemHealthWidget — states & interaction', () => {
     setup({ health: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.getByText('2.4 GB')).toBeInTheDocument();
     expect(screen.queryByText('System health')).toBeInTheDocument();
-    expect(screen.getByText('No system health data')).toBeInTheDocument();
+    expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
+    expect(screen.getByText('5/25')).toBeInTheDocument();
+  });
+
+  describe('SystemHealthWidget canonical independent source boundaries', () => {
+    it('keeps database and pool readings when services fail and retries only services', () => {
+      const healthRetry = vi.fn();
+      const databaseRetry = vi.fn();
+      const poolRetry = vi.fn();
+      setup({
+        health: makeQuery({ error: new Error('service read failed'), isError: true, refetch: healthRetry }),
+        db: makeQuery({ data: makeDbStats({ databaseSize: '9.2 GB' }), refetch: databaseRetry }),
+        pool: makeQuery({ data: makePool({ inUse: 0, goroutines: 0, memoryMB: 0 }), refetch: poolRetry }),
+      });
+      renderWidget(STANDARD);
+      expect(screen.getByText('9.2 GB')).toBeInTheDocument();
+      expect(screen.getByText('0/25')).toBeInTheDocument();
+      expect(screen.getByText('0 MB')).toBeInTheDocument();
+      expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
+      const failure = screen.getByText('Unable to load service health').closest('[role="alert"]');
+      expect(failure).not.toBeNull();
+      fireEvent.click(within(failure as HTMLElement).getByRole('button', { name: 'Retry' }));
+      expect(healthRetry).toHaveBeenCalledOnce();
+      expect(databaseRetry).not.toHaveBeenCalled();
+      expect(poolRetry).not.toHaveBeenCalled();
+    });
+
+    it('keeps all four services and database size when the pool alone fails', () => {
+      const poolRetry = vi.fn();
+      setup({ pool: makeQuery({ error: new Error('pool read failed'), isError: true, refetch: poolRetry }) });
+      renderWidget(STANDARD);
+      expect(screen.getAllByText('Healthy')).toHaveLength(4);
+      expect(screen.getByText('2.4 GB')).toBeInTheDocument();
+      const failure = screen.getByText('Unable to load connection pool data').closest('[role="alert"]');
+      expect(failure).not.toBeNull();
+      fireEvent.click(within(failure as HTMLElement).getByRole('button', { name: 'Retry' }));
+      expect(poolRetry).toHaveBeenCalledOnce();
+    });
   });
 
   it('renders the error branch (role="alert") instead of the widget body on failure', () => {
@@ -409,5 +446,39 @@ describe('SystemHealthWidget — states & interaction', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat service metadata as a retained database size when its fallback fails', () => {
+    const refetchHealth = vi.fn();
+    const refetchDb = vi.fn();
+    const refetchPool = vi.fn();
+    setup({
+      health: makeQuery({ data: makeHealth({ databaseSize: '' }), refetch: refetchHealth }),
+      db: makeQuery({ error: new Error('database statistics offline'), isError: true, refetch: refetchDb }),
+      pool: makeQuery({ data: makePool(), refetch: refetchPool }),
+    });
+    renderWidget(STANDARD);
+
+    expect(screen.getByText('Unable to load database size')).toBeInTheDocument();
+    expect(screen.getByText('Tesla API')).toBeInTheDocument();
+    expect(screen.getByText('512 MB')).toBeInTheDocument();
+    const alert = screen.getByText('Unable to load database size').closest('[role="alert"]');
+    expect(alert).not.toBeNull();
+    fireEvent.click(within(alert as HTMLElement).getByRole('button', { name: /retry/i }));
+    expect(refetchHealth).toHaveBeenCalledTimes(1);
+    expect(refetchDb).toHaveBeenCalledTimes(1);
+    expect(refetchPool).not.toHaveBeenCalled();
+  });
+
+  it('keeps the preferred health database size when database statistics fail independently', () => {
+    setup({
+      health: makeQuery({ data: makeHealth({ databaseSize: '3.141592653589 GB' }) }),
+      db: makeQuery({ error: new Error('database statistics offline'), isError: true }),
+    });
+    renderWidget(STANDARD);
+
+    expect(screen.getByText('3.141592653589 GB')).toBeInTheDocument();
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByText('512 MB')).toBeInTheDocument();
   });
 });

@@ -1,9 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PageContainer } from '@/components/layout';
+import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
 import {
-  GlassPanel,
   Badge,
   Button,
   Input,
@@ -13,23 +12,23 @@ import {
   ConfirmDialog,
   DataTable,
   Textarea,
-  SectionTitle,
   PanelTitle,
   Text,
   Label,
   type Column,
 } from '@/components/ui';
-import { MetricCard, MetricBar, TimeStamp } from '@/components/data-display';
+import { MetricBar, TimeStamp, type StatMetric } from '@/components/data-display';
+import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
 import {
   EmptyState,
   InlineCallout,
   QueryError,
   Skeleton,
   TableSkeleton,
+  useToast,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useToast } from '@/components/feedback/Toast';
 import { formatRelative } from '@/lib/dateFormat';
 
 import { cn } from '@/lib/cn';
@@ -42,6 +41,8 @@ import { Icons } from '@/lib/icons';
 // inside SettingsPage, which read as a duplicate of this page).
 import { SettingsExportImport } from '@/features/settings/components/SettingsExportImport';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FormSection } from '@/components/forms';
+import { deriveDataState } from '@/api/dataState';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -242,9 +243,10 @@ export default function BackupRestorePage() {
   const runs = runsQuery.data ?? [];
   const loadingConfigs = configsQuery.isLoading;
   const loadingRuns = runsQuery.isLoading;
-  const configsError = configsQuery.error;
-  const runsError = runsQuery.error;
-  const kpiLoading = loadingConfigs || loadingRuns;
+  const configsState = deriveDataState(configsQuery);
+  const runsState = deriveDataState(runsQuery);
+  const configsError = configsState.fatalError;
+  const runsError = runsState.fatalError;
 
   /* ---- derived stats ---- */
   const stats = useMemo(() => {
@@ -256,6 +258,29 @@ export default function BackupRestorePage() {
     const successRate = totalBackups > 0 ? (completedCount / totalBackups) * 100 : 0;
     return { totalBackups, completedCount, failedCount, lastBackup, totalSize, successRate };
   }, [runs]);
+
+  const summaryMetrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'configs', label: t('backup.totalConfigs', 'Total configs'),
+      rawValue: configsState.hasData ? configs.length : undefined },
+    { metricId: 'count', occurrenceId: 'backups', label: t('backup.totalBackups', 'Total backups'),
+      rawValue: runsState.hasData ? stats.totalBackups : undefined },
+    { metricId: 'percent', occurrenceId: 'success', label: t('backup.successRate', 'Success rate'),
+      rawValue: runsState.hasData && stats.totalBackups > 0 ? stats.successRate : undefined,
+      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'failed', label: t('backup.failedRuns', 'Failed runs'),
+      rawValue: runsState.hasData ? stats.failedCount : undefined },
+    { metricId: 'text', occurrenceId: 'last', label: t('backup.lastBackup', 'Last backup'),
+      rawValue: stats.lastBackup ? formatRelative(stats.lastBackup.completed_at ?? stats.lastBackup.created_at) : undefined,
+      context: stats.lastBackup ? <TimeStamp value={stats.lastBackup.completed_at ?? stats.lastBackup.created_at} /> : undefined },
+    { metricId: 'bytes', occurrenceId: 'size', label: t('backup.totalSize', 'Total size'),
+      rawValue: runsState.hasData ? stats.totalSize : undefined,
+      display: { formatter: raw => ({ value: formatBytes(raw), unit: '' }) } },
+  ];
+  const summaryStatus = configsState.status === 'stale' || runsState.status === 'stale'
+    ? 'stale' : configsState.isRefreshing || runsState.isRefreshing ? 'refreshing'
+      : configsState.hasData && runsState.hasData ? 'ready'
+      : configsState.hasData || runsState.hasData ? 'partial'
+        : configsError || runsError ? 'error' : 'initial';
 
   const failedRuns = useMemo(
     () => runs.filter((r) => r.status === 'failed' && r.error_message).slice(0, 5),
@@ -600,7 +625,7 @@ export default function BackupRestorePage() {
       filterValue: (row) => row.file_name ?? null,
       header: t('backup.file', 'File'),
       render: (row) => (
-        <Text mono size="xs" color="secondary" className="block max-w-[200px] truncate">
+        <Text mono size="xs" color="secondary" className="block break-all">
           {row.file_name ?? '—'}
         </Text>
       ),
@@ -614,7 +639,7 @@ export default function BackupRestorePage() {
       header: t('backup.size', 'Size'),
       sortable: true,
       render: (row) => (
-        <Text size="sm" color="primary" className="tabular-nums">{row.file_size ? formatBytes(row.file_size) : '—'}</Text>
+        <Text size="sm" color="primary" className="tabular-nums">{row.file_size != null ? formatBytes(row.file_size) : '—'}</Text>
       ),
     },
     {
@@ -691,10 +716,26 @@ export default function BackupRestorePage() {
   // Defensive: the type contract says non-null, but harden against a
   // backend returning `tables: null` so the modal never crashes on `.length`.
   const previewTables = previewData?.tables ?? [];
+  const configsEmpty = (
+    <EmptyState
+      icon={<Icons.database className="h-10 w-10 text-[var(--text-muted)]" />}
+      title={t('backup.noConfigs', 'No backup configurations')}
+      message={t('backup.noConfigsMessage', 'Create a backup configuration to start protecting your data.')}
+      action={{ label: t('backup.newConfig', 'New config'), onClick: openCreate }}
+    />
+  );
+  const runsEmpty = (
+    <EmptyState
+      icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
+      title={t('backup.noRuns', 'No backup runs yet')}
+      message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
+      action={{ label: t('backup.quickBackup', 'Quick backup'), onClick: () => quickBackupMutation.mutate() }}
+    />
+  );
 
   /* ---- render ---- */
   return (
-    <PageContainer
+    <PageLayout
       title={t('backup.title', 'Backup & restore')}
       subtitle={t('backup.subtitle', 'Manage automated backups and restore points')}
       query={[configsQuery, runsQuery]}
@@ -723,57 +764,12 @@ export default function BackupRestorePage() {
     >
       {/* ── 1 · KPI band — full-width responsive metric grid ────────── */}
       <FadeIn>
-        <section
-          aria-label={t('backup.overview', 'Backup overview')}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
-        >
-          {kpiLoading ? (
-            Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={92} rounded />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('backup.totalConfigs', 'Total configs')}
-                value={fmtInt(configs.length)}
-                icon={<Icons.database className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('backup.totalBackups', 'Total backups')}
-                value={fmtInt(stats.totalBackups)}
-                icon={<Icons.archive className="h-5 w-5" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('backup.successRate', 'Success rate')}
-                value={stats.totalBackups > 0 ? fmtPercent(stats.successRate) : '—'}
-                icon={<Icons.successFilled className="h-5 w-5" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('backup.failedRuns', 'Failed runs')}
-                value={fmtInt(stats.failedCount)}
-                icon={<Icons.error className="h-5 w-5" />}
-                color={stats.failedCount > 0 ? 'red' : 'cyan'}
-              />
-              <MetricCard
-                label={t('backup.lastBackup', 'Last backup')}
-                value={
-                  stats.lastBackup
-                    ? formatRelative(stats.lastBackup.completed_at ?? stats.lastBackup.created_at)
-                    : '—'
-                }
-                icon={<Icons.clock className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('backup.totalSize', 'Total size')}
-                value={formatBytes(stats.totalSize)}
-                icon={<Icons.hardDrive className="h-5 w-5" />}
-                color="blue"
-              />
-            </>
-          )}
-        </section>
+        <AdminSummary metrics={summaryMetrics} testId="backup-restore-summary"
+          eyebrow={t('backup.title', 'Backup & restore')} title={t('backup.overview', 'Backup overview')}
+          description={t('backup.summary.source', 'Configuration counts use the loaded configurations. Run counts, completion rate, last completed backup and storage size use the returned run list, not a server-wide total.')}
+          scope={t('backup.summary.scope', 'Independent configuration and run snapshots; run-list coverage and observation bounds are not supplied.')}
+          sourceStatus={summaryStatus}
+          loading={!configsState.hasData && !runsState.hasData && (loadingConfigs || loadingRuns)} />
       </FadeIn>
 
       {/* ── 2 · Primary bento — configs (hero) + reliability (side) ──── */}
@@ -783,25 +779,24 @@ export default function BackupRestorePage() {
       >
         {/* Backup configurations — hero, spans two of three columns on wide */}
         <FadeIn delay={0.1} className="h-full min-w-0 xl:col-span-2">
-          <GlassPanel className="flex h-full min-w-0 flex-col p-4 sm:p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <SectionTitle>{t('backup.configurations', 'Backup configurations')}</SectionTitle>
-              {!loadingConfigs && !configsError && (
+          <LayoutCard
+            title={t('backup.configurations', 'Backup configurations')}
+            actions={!loadingConfigs && configsState.hasData && (
                 <Badge variant="neutral" size="sm">{fmtInt(configs.length)}</Badge>
-              )}
-            </div>
-            {loadingConfigs ? (
-              <Skeleton height={280} />
-            ) : configsError ? (
+            )}
+          >
+            {configsError ? (
               <QueryError error={configsError} onRetry={() => configsQuery.refetch()} />
-            ) : configs.length === 0 ? (
-              <EmptyState
-                icon={<Icons.database className="h-10 w-10 text-[var(--text-muted)]" />}
-                title={t('backup.noConfigs', 'No backup configurations')}
-                message={t('backup.noConfigsMessage', 'Create a backup configuration to start protecting your data.')}
-                action={{ label: t('backup.newConfig', 'New config'), onClick: openCreate }}
-              />
             ) : (
+              <SourceContent
+                state={loadingConfigs ? 'loading' : configsState.status === 'stale' ? 'retained' : configs.length === 0 ? 'empty' : 'ready'}
+                label={t('backup.configurations', 'Backup configurations')}
+                emptyMessage={t('backup.noConfigs', 'No backup configurations')}
+                errorMessage={t('backup.configurations', 'Backup configurations')}
+                loadingContent={<Skeleton height={280} />}
+                emptyContent={configsEmpty}
+              >
+              {configs.length === 0 ? configsEmpty : (
               <DataTable<BackupConfig>
                 tableId="admin:backup-configs"
                 columns={configColumns}
@@ -813,14 +808,15 @@ export default function BackupRestorePage() {
                 compact
                 pagination
               />
+              )}
+              </SourceContent>
             )}
-          </GlassPanel>
+          </LayoutCard>
         </FadeIn>
 
         {/* Reliability & storage — success rate, per-provider footprint, recent errors */}
         <FadeIn delay={0.15} className="h-full xl:col-span-1">
-          <GlassPanel className="flex h-full flex-col gap-5 p-4 sm:p-5">
-            <SectionTitle>{t('backup.reliability', 'Reliability & storage')}</SectionTitle>
+          <LayoutCard title={t('backup.reliability', 'Reliability & storage')}>
             {loadingRuns ? (
               <Skeleton height={260} />
             ) : runsError ? (
@@ -894,20 +890,19 @@ export default function BackupRestorePage() {
                 </div>
               </>
             )}
-          </GlassPanel>
+          </LayoutCard>
         </FadeIn>
       </section>
 
       {/* ── 3 · Detail band — full-width backup history ─────────────── */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <SectionTitle>{t('backup.history', 'Backup history')}</SectionTitle>
-              {!loadingRuns && !runsError && (
+        <LayoutCard
+          title={t('backup.history', 'Backup history')}
+          actions={
+          <>
+              {!loadingRuns && runsState.hasData && (
                 <Badge variant="neutral" size="sm">{fmtInt(runs.length)}</Badge>
               )}
-            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -916,19 +911,21 @@ export default function BackupRestorePage() {
             >
               {t('backup.refresh', 'Refresh')}
             </Button>
-          </div>
-          {loadingRuns ? (
-            <Skeleton height={320} />
-          ) : runsError ? (
+          </>
+          }
+        >
+          {runsError ? (
             <QueryError error={runsError} onRetry={() => runsQuery.refetch()} />
-          ) : runs.length === 0 ? (
-            <EmptyState
-              icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
-              title={t('backup.noRuns', 'No backup runs yet')}
-              message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
-              action={{ label: t('backup.quickBackup', 'Quick backup'), onClick: () => quickBackupMutation.mutate() }}
-            />
           ) : (
+            <SourceContent
+              state={loadingRuns ? 'loading' : runsState.status === 'stale' ? 'retained' : runs.length === 0 ? 'empty' : 'ready'}
+              label={t('backup.history', 'Backup history')}
+              emptyMessage={t('backup.noRuns', 'No backup runs yet')}
+              errorMessage={t('backup.history', 'Backup history')}
+              loadingContent={<Skeleton height={320} />}
+              emptyContent={runsEmpty}
+            >
+            {runs.length === 0 ? runsEmpty : (
             <DataTable<BackupRun>
               tableId="admin:backup-runs"
               columns={runColumns}
@@ -940,8 +937,10 @@ export default function BackupRestorePage() {
               compact
               pagination
             />
+            )}
+            </SourceContent>
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
 
       {/* ── 4 · Portable settings JSON bundle ───────────────────────
@@ -1009,8 +1008,7 @@ export default function BackupRestorePage() {
           </div>
 
           {/* dynamic provider fields */}
-          <div className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4">
-            <Label className="mb-3 block">{t('backup.providerSettings', 'Provider settings')}</Label>
+          <FormSection title={t('backup.providerSettings', 'Provider settings')}>
             <div className="grid gap-3">
               {(PROVIDER_FIELDS[form.provider] ?? []).map((field) => {
                 const fieldLabel = t(`backup.field.${field.key}`, field.label) + (field.required ? ' *' : '');
@@ -1037,7 +1035,7 @@ export default function BackupRestorePage() {
                 );
               })}
             </div>
-          </div>
+          </FormSection>
 
           <div className="flex flex-wrap gap-6">
             <Toggle
@@ -1150,6 +1148,6 @@ export default function BackupRestorePage() {
           />
         )}
       </Modal>
-    </PageContainer>
+    </PageLayout>
   );
 }

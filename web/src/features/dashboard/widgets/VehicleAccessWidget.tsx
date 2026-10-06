@@ -1,131 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react';
-import { Badge } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { EmptyState, QueryError } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
-import { combineDataStates, knownString, type DataState } from '@/api/dataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { combineDataStates, knownString } from '@/api/dataState';
+import { VehicleAccessBody } from '../components/continuation-dashboard-3/VehicleAccessBody';
+import { VehicleAccessCompact } from '../components/continuation-dashboard-3/VehicleAccessCompact';
 import { useVehicleDrivers, useVehicleInvitations } from '@/api/hooks/useVehicleAccess';
 import { useVehicleMobileEnabled, useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import { WidgetDetailCard } from './shared';
 import type { DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { formatDateShort } from '@/lib/dateFormat';
-
-// ── Compact layout (1×2) ─────────────────────────────────────────────
-
-function CompactView({
-  driverCount,
-  mobileEnabled,
-  t,
-}: {
-  driverCount: number | null;
-  mobileEnabled: boolean | null;
-  t: (key: string, fallback: string) => string;
-}) {
-  const mobileLabel =
-    mobileEnabled === true
-      ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
-      : mobileEnabled === false
-        ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
-        : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown');
-
-  return (
-    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
-      <div className="flex items-center gap-2 min-w-0">
-        <Users className="h-4 w-4 flex-shrink-0 text-[var(--text-secondary)]" />
-        <span className={dashboardTokens.metricLabel}>
-          {driverCount ?? '—'} {t('widget.vehicleAccessDrivers', 'drivers')}
-        </span>
-      </div>
-      <span
-        role="img"
-        aria-label={mobileLabel}
-        className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-          mobileEnabled === true
-            ? 'bg-emerald-400'
-            : mobileEnabled === false
-              ? 'bg-red-400'
-              : 'bg-[var(--surface-2)]'
-        }`}
-        title={mobileLabel}
-      />
-    </div>
-  );
-}
-
-// ── Standard / Wide layout ───────────────────────────────────────────
-
-function StandardView({
-  mobileEnabled,
-  driverEntries,
-  invitationEntries,
-  isCompact,
-  driverState,
-  invitationState,
-  mobileState,
-  t,
-}: {
-  mobileEnabled: boolean | null;
-  driverEntries: DetailEntry[];
-  invitationEntries: DetailEntry[];
-  isCompact: boolean;
-  driverState: DataState<unknown>;
-  invitationState: DataState<unknown>;
-  mobileState: DataState<unknown>;
-  t: (key: string, fallback: string) => string;
-}) {
-  return (
-    <div className="flex flex-col gap-3 h-full">
-      {/* Mobile access status */}
-      <div className="flex flex-wrap items-center justify-between gap-2 flex-shrink-0 min-h-[44px]">
-        <span className={dashboardTokens.metricLabel}>
-          {t('widget.vehicleAccessMobile', 'Mobile access')}
-        </span>
-        <Badge variant={mobileEnabled === true ? 'success' : mobileEnabled === false ? 'danger' : 'neutral'}>
-          {mobileEnabled === true
-            ? t('widget.vehicleAccessEnabled', 'Enabled')
-            : mobileEnabled === false
-              ? t('widget.vehicleAccessDisabled', 'Disabled')
-              : t('widget.vehicleAccessUnknown', 'Unknown')}
-        </Badge>
-      </div>
-      {mobileState.fatalError && <QueryError error={mobileState.fatalError} onRetry={mobileState.retry ?? undefined} />}
-      {mobileState.status === 'initial' && <Skeleton className="h-8" />}
-
-      {/* Drivers section */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <p className={`${dashboardTokens.metricLabel} mb-1`}>
-          {t('widget.vehicleAccessAuthorized', 'Authorized drivers')}
-        </p>
-        {driverState.fatalError ? <QueryError error={driverState.fatalError} onRetry={driverState.retry ?? undefined} />
-          : driverState.status === 'initial' ? <Skeleton className="h-16" /> : <WidgetDetailCard
-          entries={driverEntries}
-          compact={isCompact}
-          emptyMessage={t('widget.vehicleAccessNoDrivers', 'No authorized drivers')}
-          emptyIcon={<Users className="h-5 w-5" />}
-        />}
-      </div>
-
-      {/* Invitations section */}
-        <div className="min-w-0 shrink-0 border-t border-[var(--border-subtle)] pt-2">
-          <p className={`${dashboardTokens.metricLabel} mb-1`}>
-            {t('widget.vehicleAccessPending', 'Pending invitations')}
-          </p>
-          {invitationState.fatalError ? <QueryError error={invitationState.fatalError} onRetry={invitationState.retry ?? undefined} />
-            : invitationState.status === 'initial' ? <Skeleton className="h-16" /> : <WidgetDetailCard
-            entries={invitationEntries}
-            compact={isCompact}
-            emptyMessage={t('widget.vehicleAccessNoInvitations', 'No pending invitations')}
-          />}
-        </div>
-    </div>
-  );
-}
-
-// ── Main widget ──────────────────────────────────────────────────────
 
 export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -181,6 +67,7 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const driverEntries = useMemo<DetailEntry[]>(
     () =>
       safeDrivers.map((d) => ({
+        id: d.id,
         label: knownString(d.driver_name) ?? knownString(d.driver_email) ?? '—',
         value: formatDateShort(d.fetched_at),
         badge: {
@@ -198,6 +85,7 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const invitationEntries = useMemo<DetailEntry[]>(
     () =>
       safeInvitations.map((inv) => ({
+        id: inv.id,
         label: inv.created_by ?? '—',
         value: formatDateShort(inv.created_at),
         badge: {
@@ -261,21 +149,19 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     >
       {hasAnyData ? (
         isCompact ? (
-          <CompactView
+          <VehicleAccessCompact
             driverCount={drivers === undefined ? null : safeDrivers.length}
             mobileEnabled={mobileEnabled}
-            t={t}
           />
         ) : (
-          <StandardView
+          <VehicleAccessBody
             mobileEnabled={mobileEnabled}
             driverEntries={driverEntries}
             invitationEntries={invitationEntries}
-            isCompact={isCompact}
+            compact={isCompact}
             driverState={{ ...driverState, status: driverState.status === 'initial' && !driversLoading ? 'unavailable' : driverState.status }}
             invitationState={{ ...invitationState, status: invitationState.status === 'initial' && !invitationsLoading ? 'unavailable' : invitationState.status }}
             mobileState={mobileState}
-            t={t}
           />
         )
       ) : (

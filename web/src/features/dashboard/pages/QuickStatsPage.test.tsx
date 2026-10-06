@@ -12,8 +12,8 @@
  *   2. Vehicle spotlight — loading / error / empty / hero branches and the
  *      exact props handed to <VehicleHeroCard>.
  *   3. <FleetComparisonPanel> prop wiring (entries / loading / error / onRetry).
- *   4. Vehicle picker — visibility (>1 vehicle), change → setVehicleId with a
- *      parsed id, and the guard that rejects the empty placeholder.
+ *   4. Workspace-owned selection — no competing local picker; selection
+ *      changes scope the spotlight without re-scoping the fleet KPI rollup.
  *   5. Toolbar refresh → refetches analytics + state + vehicles.
  *   6. Quick-link navigation.
  *   7. Null-safe analytics extraction (a partial payload must not throw).
@@ -266,6 +266,7 @@ beforeEach(() => {
   });
   setUnits('km');
   useFormattingMock.mockReturnValue({
+    currencySymbol: '$',
     formatCurrency: (amount: number, decimals?: number) =>
       `$${Number(amount ?? 0).toFixed(decimals ?? 2)}`,
   });
@@ -332,12 +333,15 @@ describe('QuickStatsPage', () => {
     expect(screen.queryByText('158.00 Wh/km')).not.toBeInTheDocument();
   });
 
-  it('shows the stat-grid skeleton while the rollup is loading (no cards yet)', () => {
+  it('keeps all metric labels and suppresses values while the rollup is loading', () => {
     analyticsMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     renderPage();
 
-    expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument();
-    expect(screen.queryByText('Distance driven')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('quick-stats-operational-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
   });
 
   it('shows a retry-able error when the rollup fails', () => {
@@ -349,8 +353,9 @@ describe('QuickStatsPage', () => {
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(retry);
     expect(q.refetch).toHaveBeenCalledTimes(1);
-    // KPI cards are not rendered in the error state.
-    expect(screen.queryByText('Distance driven')).not.toBeInTheDocument();
+    // The summary remains visible with unknown readings, alongside recovery.
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-stats-operational-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(8);
   });
 
   it('shows the empty state when the rollup resolves to no data', () => {
@@ -358,7 +363,7 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     expect(screen.getByText('No fleet metrics available yet')).toBeInTheDocument();
-    expect(screen.queryByText('Distance driven')).not.toBeInTheDocument();
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
   });
 
   it('keeps all partial-rollup metrics visible and unknown instead of inventing zero', () => {
@@ -418,11 +423,35 @@ describe('QuickStatsPage', () => {
 
   it('shows a spotlight skeleton (not the hero/empty) while vehicles load', () => {
     vehiclesMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
-    const { container } = renderPage();
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: null,
+      vehicle: null,
+      vehicles: [],
+      setVehicleId: vi.fn(),
+    });
+    const page = renderPage();
+    const spotlight = screen.getByRole('region', { name: 'Vehicle spotlight' });
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
-    expect(screen.queryByText('No vehicle found')).not.toBeInTheDocument();
+    expect(spotlight.querySelectorAll('.animate-pulse[aria-hidden="true"]')).toHaveLength(1);
+    expect(within(spotlight).queryByTestId('vehicle-hero')).not.toBeInTheDocument();
+    expect(within(spotlight).queryByText('No vehicle found')).not.toBeInTheDocument();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+
+    page.unmount();
+    vehiclesMock.mockReturnValue(makeQuery({ data: [makeVehicle()], isLoading: true }));
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: 1,
+      vehicle: makeVehicle(),
+      vehicles: [makeVehicle()],
+      setVehicleId: vi.fn(),
+    });
+    renderPage();
+    const cachedSpotlight = screen.getByRole('region', { name: 'Vehicle spotlight' });
+    expect(within(cachedSpotlight).getByTestId('vehicle-hero')).toBeInTheDocument();
+    expect(captured.hero.vehicle).toMatchObject({ id: 1, display_name: 'Model Y' });
+    expect(captured.hero.vehicleState).toEqual(STATE);
+    expect(cachedSpotlight.querySelector('.animate-pulse')).toBeNull();
+    expect(within(cachedSpotlight).queryByText('No vehicle found')).not.toBeInTheDocument();
   });
 
   it('shows a retry-able error in the spotlight when the vehicle list fails', () => {
@@ -480,6 +509,24 @@ describe('QuickStatsPage', () => {
     expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Fleet metrics' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open dashboard' })).toBeInTheDocument();
+    expect(within(screen.getByTestId('quick-stats-operational-brief')).getByText('Retained readings')).toBeInTheDocument();
+  });
+
+  it('opens the real review drawer with fleet scope, source units and all eight measurements', () => {
+    renderPage();
+    const brief = screen.getByTestId('quick-stats-operational-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(8);
+    expect(within(brief).getByText('All fleet vehicles · last 30 days')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('heading', { name: 'Fleet operating summary details' })).toBeInTheDocument();
+    expect(within(drawer).getByText('12,345.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText(/source kilometres normalized to metres/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/source Wh\/km normalized to Wh\/m/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/exact rollup bounds and source coverage are not supplied/).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('vehicle-hero')).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-comparison')).toBeInTheDocument();
   });
 
   it('does not duplicate the workspace vehicle picker for multi-vehicle or single-vehicle fleets', () => {

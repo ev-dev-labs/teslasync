@@ -31,12 +31,13 @@ export function ChargeAdvisorSection({
   className,
 }: ChargeAdvisorSectionProps) {
   const { t } = useTranslation();
+  const needsDrive = dependency === 'drive' || dependency === 'both';
+  const needsCharging = dependency === 'charging' || dependency === 'both';
   const loading =
-    state.isLoading
-    || (dependency !== 'charging' && state.driveLoading)
-    || (dependency !== 'drive' && state.chargingLoading);
-  const missingDrive = dependency !== 'charging' && !state.driveAvailable;
-  const missingCharging = dependency !== 'drive' && !state.chargingAvailable;
+    (needsDrive && state.driveLoading)
+    || (needsCharging && state.chargingLoading);
+  const missingDrive = needsDrive && !state.driveAvailable;
+  const missingCharging = needsCharging && !state.chargingAvailable;
 
   return (
     <section data-testid={dataTestId} className={cn('min-w-0', className)}>

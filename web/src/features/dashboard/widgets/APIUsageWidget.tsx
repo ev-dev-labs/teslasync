@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BarChart2, Clock, AlertTriangle, Activity, Zap } from 'lucide-react';
+import { BarChart2 } from 'lucide-react';
+import { Badge } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { EmptyState } from '@/components/feedback';
 
 import { useApiLogStats } from '@/api/hooks/useAdmin';
 import { deriveDataState, knownNumber } from '@/api/dataState';
-import { severityTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -27,7 +29,6 @@ export default function APIUsageWidget({ size }: WidgetProps) {
   const state = deriveDataState({ ...query, data: data ?? (isLoading || query.isError || query.error ? undefined : null) });
 
   const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
 
   const totalCalls = knownNumber(data?.last24h);
   const avgResponseMs = knownNumber(data?.avgDurationMs);
@@ -42,34 +43,35 @@ export default function APIUsageWidget({ size }: WidgetProps) {
   // (WidgetShell forwards `isError` to <DataFreshness>).
   const blockingError = state.fatalError?.message;
 
-  const coreStats = useMemo((): StatGridItem[] => {
+  const coreStats = useMemo((): StatMetric[] => {
     return [
       {
         label: t('widget.apiUsage.totalCalls', 'Total calls (24h)'),
-        value: totalCalls == null ? '—' : fmtInt(totalCalls),
-        icon: <Zap className="h-3.5 w-3.5" />,
+        metricId: 'count',
+        rawValue: totalCalls,
+        description: t('widget.apiUsage.callsDescription', 'API calls reported by the 24-hour source counter.'),
       },
       {
         label: t('widget.apiUsage.avgResponse', 'Avg response'),
-        value: avgResponseMs == null ? '—' : fmtNumber(avgResponseMs),
-        unit: 'ms',
-        icon: <Clock className="h-3.5 w-3.5" />,
+        metricId: 'duration',
+        rawValue: avgResponseMs == null ? null : avgResponseMs / 1000,
+        display: { formatter: raw => ({ value: fmtNumber(Number(raw) * 1000), unit: 'ms' }) },
+        description: t('widget.apiUsage.responseDescription', 'Reported average latency; source milliseconds are retained as canonical seconds.'),
       },
       {
         label: t('widget.apiUsage.errorRate', 'Error rate'),
-        value: errorRate == null ? '—' : fmtNumber(errorRate),
-        unit: '%',
-        icon: <AlertTriangle className="h-3.5 w-3.5" />,
-        valueColor: errorRate != null && errorRate > 5 ? severityTokens.critical.fg : undefined,
-        trend: errorRate != null && errorRate > 5 ? 'down' : undefined,
-        trendPositive: false,
-        trendValue: errorRate != null && errorRate > 5 ? t('widget.apiUsage.highErrors', 'High') : undefined,
+        metricId: 'percent',
+        rawValue: errorRate,
+        display: { formatter: raw => ({ value: fmtNumber(Number(raw)), unit: '%' }) },
+        description: t('widget.apiUsage.errorRateDescription', 'Reported error percentage; the existing high-error threshold is above 5%.'),
+        comparisonContent: errorRate != null && errorRate > 5 ? <Badge variant="danger"><span aria-hidden="true">↓</span><span>{t('widget.apiUsage.highErrors', 'High')}</span></Badge> : undefined,
       },
       {
         label: t('widget.apiUsage.totalErrors', 'Errors'),
-        value: errorCount == null ? '—' : fmtInt(errorCount),
-        icon: <Activity className="h-3.5 w-3.5" />,
-        valueColor: errorCount != null && errorCount > 0 ? severityTokens.critical.fg : undefined,
+        metricId: 'count',
+        rawValue: errorCount,
+        description: t('widget.apiUsage.errorCountDescription', 'Recorded API errors; a missing counter is not zero.'),
+        comparisonContent: errorCount != null && errorCount > 0 ? <Badge variant="danger">{t('widget.apiUsage.errors', 'errors')}</Badge> : undefined,
       },
     ];
   }, [data, totalCalls, avgResponseMs, errorRate, errorCount, t, fmtInt, fmtNumber]);
@@ -78,7 +80,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
-        title={t('widget.apiUsage.title', 'API usage')}
+        title={t('widget.apiUsage.summaryTitle', 'API source counters')}
         icon={<BarChart2 className="h-3.5 w-3.5" />}
         loading={isLoading}
         dataState={state}
@@ -124,7 +126,14 @@ export default function APIUsageWidget({ size }: WidgetProps) {
       onRefresh={refetch}
     >
         <div className="space-y-3 min-w-0">
-          <WidgetStatGrid stats={coreStats} cols={isWide ? 4 : 2} />
+          <DashboardSourceBrief
+            metrics={coreStats} state={state}
+            eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+            title={t('widget.apiUsage.title', 'API usage')}
+            description={t('widget.apiUsage.summaryDescription', 'API activity and latency retain their reported windows; no service-wide confidence score is inferred.')}
+            scope={t('widget.apiUsage.summaryScope', 'System API logs; calls cover 24 hours, other counters have no exact source bounds')}
+            loading={isLoading && !data} testId="api-usage-operational-brief"
+          />
         {!data && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BarChart2 className="h-5 w-5" />}

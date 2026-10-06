@@ -5,26 +5,23 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
-import { VisuallyHidden } from '@/components/a11y';
-import { Icons } from '@/lib/icons';
+import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief';
 
 import { formatRelative } from '@/lib/dateFormat';
 import type { ActivityKpis } from './myActivityAnalytics';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface MyActivityKpiBandProps {
-  kpis: ActivityKpis;
+  kpis?: ActivityKpis;
   isLoading: boolean;
+  available?: boolean;
+  retained?: boolean;
+  scope?: string;
 }
 
-const CARD_COUNT = 5;
 
 /**
- * Zeroed KPI snapshot used as a defensive fallback. A missing or partial
- * `kpis` payload degrades to zeros + an em-dash instead of throwing on
- * `kpis.lastActivityTs` and blanking the whole page.
+ * Defensive computation fallback only. Unavailable source readings are
+ * passed to the raw bridge as null, never presented as measured zeros.
  */
 const EMPTY_KPIS: ActivityKpis = {
   total: 0,
@@ -34,8 +31,9 @@ const EMPTY_KPIS: ActivityKpis = {
   lastActivityTs: null,
 };
 
-export function MyActivityKpiBand({ kpis, isLoading }: MyActivityKpiBandProps) {
-  const { fmtInt } = useNumberFormatting();
+export function MyActivityKpiBand({
+  kpis, isLoading, available = kpis != null, retained = false, scope,
+}: MyActivityKpiBandProps) {
   const { t } = useTranslation();
 
   const { total, activeDays, actionTypes, entitiesTouched, lastActivityTs } =
@@ -46,52 +44,22 @@ export function MyActivityKpiBand({ kpis, isLoading }: MyActivityKpiBandProps) {
   const lastActive = formatRelative(lastActivityTs);
 
   return (
-    <section
-      aria-label={t('activity.myActivity.kpi.aria', 'Activity summary')}
-      aria-busy={isLoading}
-      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-5"
-    >
-      {isLoading ? (
-        <>
-          <VisuallyHidden liveRegion>{t('common.loading', 'Loading…')}</VisuallyHidden>
-          {Array.from({ length: CARD_COUNT }).map((_, i) => (
-            <Skeleton key={i} height={76} className="rounded-xl" />
-          ))}
-        </>
-      ) : (
-        <>
-          <MetricCard
-            label={t('activity.myActivity.kpi.total', 'Total actions')}
-            value={fmtInt(total)}
-            icon={<Icons.activity className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('activity.myActivity.kpi.activeDays', 'Active days')}
-            value={fmtInt(activeDays)}
-            icon={<Icons.calendar className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('activity.myActivity.kpi.actionTypes', 'Action types')}
-            value={fmtInt(actionTypes)}
-            icon={<Icons.workflow className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('activity.myActivity.kpi.entities', 'Entities touched')}
-            value={fmtInt(entitiesTouched)}
-            icon={<Icons.database className="h-5 w-5" aria-hidden="true" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('activity.myActivity.kpi.lastActive', 'Last active')}
-            value={lastActive}
-            icon={<Icons.clock className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-          />
-        </>
-      )}
-    </section>
+    <SystemSummaryBrief
+      title={t('activity.myActivity.kpi.aria', 'Activity summary')}
+      description={t('activity.myActivity.brief.description', 'Actions, active days, action types, and entities derived from the loaded personal activity feed.')}
+      scope={scope ?? t('activity.myActivity.brief.scope', 'Loaded recent activity only; not a complete account lifetime total.')}
+      available={available} retained={retained} loading={isLoading}
+      metrics={[
+        { metricId: 'count', occurrenceId: 'total', rawValue: available ? total : null, label: t('activity.myActivity.kpi.total', 'Total actions') },
+        { metricId: 'count', occurrenceId: 'days', rawValue: available ? activeDays : null, label: t('activity.myActivity.kpi.activeDays', 'Active days') },
+        { metricId: 'count', occurrenceId: 'types', rawValue: available ? actionTypes : null, label: t('activity.myActivity.kpi.actionTypes', 'Action types') },
+        { metricId: 'count', occurrenceId: 'entities', rawValue: available ? entitiesTouched : null, label: t('activity.myActivity.kpi.entities', 'Entities touched') },
+      ]}
+      textMetrics={[{
+        key: 'last-active', label: t('activity.myActivity.kpi.lastActive', 'Last active'),
+        value: available ? lastActive : '—', valueState: available && lastActivityTs ? 'value' : 'missing',
+        detail: t('activity.myActivity.brief.lastContext', 'Most recent timestamp in the loaded feed.'),
+      }]}
+    />
   );
 }

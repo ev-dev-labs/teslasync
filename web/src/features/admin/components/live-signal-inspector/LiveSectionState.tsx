@@ -52,6 +52,7 @@ export function LiveSectionState({
     );
   }
   const emptyBody = status === 'no-vehicle'
+    // no-action: the page toolbar owns vehicle selection; retrying without a vehicle cannot load a snapshot.
     ? <EmptyState icon={noVehicleIcon} message={noVehicleMessage} />
     : (
       <EmptyState

@@ -1,6 +1,6 @@
 import { useCallback, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, BatteryCharging, Leaf, DollarSign, Route, TrendingUp } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { Caption } from '@/components/ui';
@@ -14,7 +14,9 @@ import { convertEfficiencyFromSI, convertEnergyFromSI, type EnergyUnitPref } fro
 
 import { chartTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import type { DailyEnergy } from '@/types/energy';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -89,49 +91,56 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
   });
 
   // Build stat items for the grid
-  const stats = useMemo((): StatGridItem[] => {
+  const stats = useMemo((): StatMetric[] => {
     if (!data) return [];
 
-    const items: StatGridItem[] = [
+    const items: StatMetric[] = [
       {
+        metricId: 'energy',
         label: t('widget.energyStats.totalUsed', 'Total used'),
-        value: formatEnergy(knownNumber(data.total_energy_used_wh)),
-        icon: <Zap className="h-3.5 w-3.5" />,
+        rawValue: data.total_energy_used_wh,
+        description: t('widget.energyStats.summary.usedHelp', 'Reported driving energy in watt-hours for this vehicle’s source period.'),
+        display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
       },
       {
+        metricId: 'energy',
         label: t('widget.energyStats.totalCharged', 'Total charged'),
-        value: formatEnergy(knownNumber(data.total_energy_charged_wh)),
-        icon: <BatteryCharging className="h-3.5 w-3.5" />,
+        rawValue: data.total_energy_charged_wh,
+        description: t('widget.energyStats.summary.chargedHelp', 'Reported charging energy in watt-hours for the same source period.'),
+        display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
       },
       {
+        metricId: 'efficiency',
         label: t('widget.energyStats.avgEfficiency', 'Avg efficiency'),
-        value: knownNumber(data.avg_efficiency_wh_per_m) == null ? null : fmtNumber(toEfficiencyDisplay(data.avg_efficiency_wh_per_m)),
-        unit: efficiencyUnit,
-        icon: <TrendingUp className="h-3.5 w-3.5" />,
+        rawValue: data.avg_efficiency_wh_per_m,
+        description: t('widget.energyStats.summary.efficiencyHelp', 'Reported average consumption in Wh/m, converted to the existing Wh/distance display.'),
+        display: { formatter: raw => ({ value: fmtNumber(toEfficiencyDisplay(raw)), unit: efficiencyUnit }) },
       },
       {
+        metricId: 'mass',
         label: t('widget.energyStats.co2Saved', 'CO₂ saved'),
-        value: knownNumber(data.co2_saved_kg) == null ? null : fmtNumber(data.co2_saved_kg),
-        unit: 'kg',
-        icon: <Leaf className="h-3.5 w-3.5" />,
+        rawValue: data.co2_saved_kg,
+        description: t('widget.energyStats.co2Estimate', 'CO₂ savings are estimated.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) },
       },
     ];
 
     if (isWide) {
       items.push(
         {
+          metricId: 'currency',
           label: t('widget.energyStats.totalCost', 'Total cost'),
-          value: knownNumber(data.total_cost) == null ? null : fmtNumber(data.total_cost),
-          unit: '$',
-          icon: <DollarSign className="h-3.5 w-3.5" />,
+          rawValue: data.total_cost,
+          description: t('widget.energyStats.summary.costHelp', 'Source cost retains its original $ suffix; no currency conversion or inferred ISO denomination.'),
+          display: { formatter: raw => ({ value: fmtNumber(raw), unit: '$' }) },
         },
         {
+          metricId: 'energy',
           label: t('widget.energyStats.netBalance', 'Net energy'),
-          value: formatEnergy(
-            knownNumber(data.total_energy_charged_wh) == null || knownNumber(data.total_energy_used_wh) == null
-              ? null : data.total_energy_charged_wh - data.total_energy_used_wh,
-          ),
-          icon: <Route className="h-3.5 w-3.5" />,
+          rawValue: knownNumber(data.total_energy_charged_wh) == null || knownNumber(data.total_energy_used_wh) == null
+            ? null : data.total_energy_charged_wh - data.total_energy_used_wh,
+          description: t('widget.energyStats.summary.netHelp', 'Charged minus used energy for the same source period; both operands must be measured.'),
+          display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
         },
       );
     }
@@ -253,7 +262,15 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
           </EmbeddedChart>
 
           {/* Stat cards grid */}
-          <WidgetStatGrid stats={stats} cols={isWide ? 3 : 2} />
+          <DashboardSourceBrief
+            metrics={stats}
+            state={dataState}
+            eyebrow={t('widget.energyStats.summary.eyebrow', 'Vehicle energy')}
+            title={t('widget.energyStats.summary.title', 'Energy operating summary')}
+            description={t('widget.energyStats.summary.description', 'Vehicle energy totals and daily breakdown share the returned source period. Exact bounds and coverage are not supplied; CO₂ savings remain estimates.')}
+            scope={t('widget.energyStats.summary.scope', 'Vehicle {{id}} · source period {{days}} days', { id, days: data.period_days ?? '—' })}
+            testId="energy-stats-operational-brief"
+          />
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

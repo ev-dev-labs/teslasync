@@ -357,13 +357,11 @@ function renderPage() {
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Key metrics' });
 
-/** Canonical StatStrip value and unit, selected by its unique source label. */
+/** Real OperationalBrief reading, selected by its retained source label. */
 function cardValue(scope: HTMLElement, label: string): string {
-  const tile = within(scope).getByText(label, { selector: '[data-stat-label]' }).closest('[data-stat]');
+  const tile = within(scope).getByText(label).closest('[data-operational-metric]');
   if (!tile) throw new Error(`Stat tile missing for ${label}`);
-  const value = tile.querySelector('[data-stat-value]')?.textContent ?? '';
-  const unit = tile.querySelector('[data-stat-unit]')?.textContent ?? '';
-  return unit ? `${value} ${unit}` : value;
+  return tile.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 /** The named card owns its complete content, not just the heading's header. */

@@ -410,7 +410,7 @@ describe('ChargingListPage — responsive evidence adoption', () => {
     expect(captured.toDistanceDisplay).toBeNull();
     expect(table.querySelector('th[data-column-key="energy"]')).toBeInTheDocument();
     expect(table.querySelector('th[data-column-key="batteryEnd"]')).toBeInTheDocument();
-    expect(screen.getByTestId('charging-overview').querySelector('[data-stat-provenance]'))
+    expect(screen.getByTestId('charging-overview'))
       .toHaveTextContent('Search, collections, and exports cover up to 500 loaded sessions in this range.');
     expect(screen.getByTestId('charging-export')).toBeInTheDocument();
   });
@@ -532,7 +532,7 @@ describe('ChargingListPage — happy path', () => {
     // Real shared overview metric labels.
     expect(screen.getByText('Energy (kWh)')).toBeInTheDocument();
     expect(screen.getByText('Avg rate (kW)')).toBeInTheDocument();
-    expect(screen.getByTestId('charging-overview').querySelectorAll('[data-stat]')).toHaveLength(6);
+    expect(screen.getByTestId('charging-overview').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
 
     // Trend chart branch fired (currentStats.count > 0).
     expect(trendChart()).toBeInTheDocument();

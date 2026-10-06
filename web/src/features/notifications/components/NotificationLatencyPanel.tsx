@@ -7,8 +7,8 @@ import {
   Bar, BarChart, CartesianGrid, ChartContainer, ChartTooltip,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { MetricCard } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -17,11 +17,14 @@ import { chartTokens } from '@/lib/tokens';
 
 import { analyzeNotificationLatency } from '../lib/notificationLatency';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 export function NotificationLatencyPanel() {
   const { fmtNumber, fmtPercent, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
+  const source = useDataState(logsQuery);
   const summary = useMemo(
     () => analyzeNotificationLatency(logsQuery.data ?? []),
     [logsQuery.data],
@@ -78,8 +81,35 @@ export function NotificationLatencyPanel() {
     })),
     [summary.histogram, t, fmtNumber],
   );
-  const isLoading = logsQuery.isLoading;
-  const isError = logsQuery.isError;
+  const isLoading = !source.hasData && !source.fatalError;
+  const isError = Boolean(source.fatalError);
+  const latencyProvenance = t('notificationLatency.brief.provenance', 'Percentiles use recorded delivery latency or created-to-sent timestamps for attempts with usable measurements. The recorded sample is not a guaranteed complete analysis window.');
+  const metrics: StatMetric[] = [
+    { metricId: 'latency', occurrenceId: 'latency-p50', rawValue: source.hasData && summary.p50Ms != null ? summary.p50Ms / 1000 : null,
+      label: t('notificationLatency.kpis.p50', 'p50 latency'),
+      display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'ms' }) },
+      context: <><Rabbit className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.trimmed', 'trimmed mean {{value}}', { value: latencyLabel(summary.trimmedMeanMs) })}</> },
+    { metricId: 'latency', occurrenceId: 'latency-p95', rawValue: source.hasData && summary.p95Ms != null ? summary.p95Ms / 1000 : null,
+      label: t('notificationLatency.kpis.p95', 'p95 latency'),
+      display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'ms' }) },
+      context: <><TimerReset className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.samples', '{{count}} measured deliveries', { count: summary.count })}</> },
+    { metricId: 'latency', occurrenceId: 'latency-p99', rawValue: source.hasData && summary.p99Ms != null ? summary.p99Ms / 1000 : null,
+      label: t('notificationLatency.kpis.p99', 'p99 latency'),
+      display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'ms' }) },
+      context: <><Hourglass className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.tail', '{{value}} slower than 4 seconds', {
+        value: summary.tailShare != null ? fmtPercent(summary.tailShare * 100) : '—',
+      })}</> },
+    { metricId: 'number', occurrenceId: 'latency-apdex', rawValue: source.hasData ? summary.apdex : null,
+      label: t('notificationLatency.kpis.apdex', 'Delivery Apdex'),
+      display: { formatter: raw => ({ value: fmtScientificNumber(raw, 3), unit: '' }) },
+      context: <><Gauge className="h-5 w-5" aria-hidden="true" />{t('notificationLatency.kpis.apdexThreshold', 'T = 1 s · tolerating through 4 s')}</> },
+  ];
+  const operationalMetrics = useOperationalMetrics(metrics).map((metric, index) => ({
+    ...metric,
+    tone: index === 2 && (summary.tailShare ?? 0) > 0.05 ? 'warning' as const
+      : index === 3 ? (summary.apdex ?? 0) >= 0.85 ? 'success' as const : 'warning' as const
+        : 'neutral' as const,
+  }));
 
   return (
     <section id="latency" aria-label={t('notificationLatency.title', 'Notification latency')} className="min-w-0 space-y-5 scroll-mt-24">
@@ -89,58 +119,31 @@ export function NotificationLatencyPanel() {
           {t('notificationLatency.subtitle', 'Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records')}
         </Text>
       </div>
+      <StaleRefreshWarning state={source} label={t('notificationLatency.title', 'Notification latency')} />
       <FadeIn>
         <section
           aria-label={t('notificationLatency.kpis.label', 'Notification latency metrics')}
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4"
+          className="min-w-0"
         >
           {isError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={logsQuery.error} onRetry={() => logsQuery.refetch()} />
+              <QueryError error={source.fatalError} onRetry={() => logsQuery.refetch()} />
             </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} height={96} className="rounded-xl" />
-            ))
           ) : (
-            <>
-              <MetricCard
-                label={t('notificationLatency.kpis.p50', 'p50 latency')}
-                value={latencyLabel(summary.p50Ms)}
-                subtitle={t('notificationLatency.kpis.trimmed', 'trimmed mean {{value}}', {
-                  value: latencyLabel(summary.trimmedMeanMs),
-                })}
-                icon={<Rabbit className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('notificationLatency.kpis.p95', 'p95 latency')}
-                value={latencyLabel(summary.p95Ms)}
-                subtitle={t('notificationLatency.kpis.samples', '{{count}} measured deliveries', {
-                  count: summary.count,
-                })}
-                icon={<TimerReset className="h-5 w-5" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('notificationLatency.kpis.p99', 'p99 latency')}
-                value={latencyLabel(summary.p99Ms)}
-                subtitle={t('notificationLatency.kpis.tail', '{{value}} slower than 4 seconds', {
-                  value: summary.tailShare != null
-                    ? fmtPercent(summary.tailShare * 100)
-                    : '—',
-                })}
-                icon={<Hourglass className="h-5 w-5" />}
-                color={(summary.tailShare ?? 0) > 0.05 ? 'amber' : 'purple'}
-              />
-              <MetricCard
-                label={t('notificationLatency.kpis.apdex', 'Delivery Apdex')}
-                value={summary.apdex != null ? fmtScientificNumber(summary.apdex, 3) : '—'}
-                subtitle={t('notificationLatency.kpis.apdexThreshold', 'T = 1 s · tolerating through 4 s')}
-                icon={<Gauge className="h-5 w-5" />}
-                color={(summary.apdex ?? 0) >= 0.85 ? 'green' : 'amber'}
-              />
-            </>
+            <OperationalBrief compact loading={isLoading} testId="notification-latency-brief"
+              eyebrow={t('notificationLatency.title', 'Notification latency')}
+              title={t('notificationLatency.brief.title', 'Delivery speed, tail latency, and Apdex')}
+              description={latencyProvenance}
+              statusLabel={isLoading ? t('common.loading', 'Loading…') : source.status === 'stale'
+                ? t('dataState.stale.title', 'Data may be stale')
+                : source.status === 'offline' ? t('dataState.offline.title', 'Offline')
+                  : summary.count === 0 ? t('notificationLatency.brief.empty', 'No usable latency measurements')
+                    : t('notificationLatency.brief.available', 'Latency measurements recorded')}
+              statusTone={source.status === 'stale' || source.status === 'offline' ? 'warning' : 'neutral'}
+              metrics={operationalMetrics}
+              scope={t('notificationLatency.brief.scope', 'Recorded delivery attempts · usable latency sample')}
+              freshness={<DataProvenanceBadge provenance={source.provenance} status={source.status} updatedAt={source.updatedAt} />}
+              provenance={latencyProvenance} />
           )}
         </section>
       </FadeIn>
@@ -148,7 +151,7 @@ export function NotificationLatencyPanel() {
       <FadeIn delay={0.1}>
         {isError ? (
           <GlassPanel className="p-4 sm:p-5">
-            <QueryError error={logsQuery.error} onRetry={() => logsQuery.refetch()} />
+            <QueryError error={source.fatalError} onRetry={() => logsQuery.refetch()} />
           </GlassPanel>
         ) : (
           <ChartContainer
@@ -196,7 +199,9 @@ export function NotificationLatencyPanel() {
             <BellRing className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('notificationLatency.cohorts.title', 'Severity and status cohorts')}
           </PanelTitle>
-          {isLoading ? (
+          {isError ? (
+            <QueryError error={source.fatalError} onRetry={() => { void logsQuery.refetch(); }} />
+          ) : isLoading ? (
             <Skeleton height={96} />
           ) : summary.count === 0 ? (
             <EmptyState
@@ -256,7 +261,9 @@ export function NotificationLatencyPanel() {
             <Hourglass className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('notificationLatency.slowest.title', 'Slowest delivery records')}
           </PanelTitle>
-          {isLoading ? (
+          {isError ? (
+            <QueryError error={source.fatalError} onRetry={() => { void logsQuery.refetch(); }} />
+          ) : isLoading ? (
             <Skeleton height={180} />
           ) : summary.slowest.length === 0 ? (
             <EmptyState /* no-action: slow records appear automatically when delivery latency is observed. */

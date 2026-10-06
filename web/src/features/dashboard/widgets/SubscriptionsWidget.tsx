@@ -201,7 +201,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
                 <Badge
                   variant="neutral"
                   size="sm"
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-center truncate max-w-full"
+                  className="min-h-[44px] min-w-[44px] max-w-full whitespace-normal break-words text-center"
                 >
                   {fmtDate(nextExpiry.expiryDate) ?? '—'}
                 </Badge>

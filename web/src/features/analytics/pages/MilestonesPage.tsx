@@ -18,7 +18,6 @@ import {
 
 import {
   MilestoneControls,
-  MilestoneKpis,
   MilestoneMethodology,
   MilestoneProgress,
   MonthlyDistanceChart,
@@ -28,6 +27,7 @@ import {
   UpcomingRoadmap,
   type MilestoneSectionState,
 } from '../components/odometer-milestones';
+import { MilestoneBrief as MilestoneKpis } from '../components/operationalbrief-a-m/MilestoneBrief';
 import {
   DEFAULT_HISTORY_LIMIT,
   buildOdometerMilestones,
@@ -119,10 +119,10 @@ export default function MilestonesPage() {
         />
       }
     >
-      <StaleRefreshWarning hasData={source.hasData} error={source.refreshError}
-        onRetry={source.retry ?? undefined} />
+      <StaleRefreshWarning state={source} />
       <FadeIn>
-        <MilestoneKpis summary={summary} {...sectionState} />
+        <MilestoneKpis summary={summary} {...sectionState}
+          retained={source.status === 'stale' || source.isRefreshBlocked} />
       </FadeIn>
 
       <FadeIn delay={0.05}>

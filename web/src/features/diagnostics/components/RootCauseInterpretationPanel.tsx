@@ -11,6 +11,7 @@ export interface RootCauseInterpretationPanelProps {
   summary: string;
   limitations: string[];
   quality: EvidenceQuality;
+  focalHistoryAvailable?: boolean;
   hasChosenSignal: boolean;
   isLoading: boolean;
   isError: boolean;
@@ -30,6 +31,7 @@ export function RootCauseInterpretationPanel({
   summary,
   limitations,
   quality,
+  focalHistoryAvailable = true,
   hasChosenSignal,
   isLoading,
   isError,
@@ -63,7 +65,7 @@ export function RootCauseInterpretationPanel({
               {t('rootCauseIntelligence.interpretation.coverage', '{{withEvidence}} of {{considered}} related signals corroborated · {{samples}} focal samples', {
                 withEvidence: quality.candidatesWithEvidence,
                 considered: quality.candidatesConsidered,
-                samples: quality.focalSampleCount,
+                samples: focalHistoryAvailable ? quality.focalSampleCount : '—',
               })}
             </Caption>
           </div>

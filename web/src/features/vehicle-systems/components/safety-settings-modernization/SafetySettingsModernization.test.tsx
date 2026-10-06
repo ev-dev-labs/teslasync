@@ -1,8 +1,8 @@
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render as renderWithoutRouter, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
-import type { StatStripProps } from '@/components/data-display/stat-reference';
 
 const fake = vi.hoisted(() => ({
   safety: vi.fn(),
@@ -14,6 +14,10 @@ const fake = vi.hoisted(() => ({
   refreshHistory: vi.fn(),
   refreshSecurity: vi.fn(),
 }));
+
+function render(content: ReactNode) {
+  return renderWithoutRouter(content, { wrapper: MemoryRouter });
+}
 
 // No actual hook, request client, vehicle command, or mutation runs in these cases.
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
@@ -28,6 +32,9 @@ vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ formatDistance: fake.distance, unitPrefs: { distance: 'km' } }),
 }));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
 vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({ fmtInt: (value: number) => String(Math.round(value)), precision: 2 }),
 }));
@@ -37,9 +44,11 @@ vi.mock('react-i18next', () => ({
       fallback.replace(/{{(\w+)}}/g, (_match, key: string) => String(options?.[key] ?? `{{${key}}}`)),
   }),
 }));
-vi.mock('@/components/ui', () => {
+vi.mock('@/components/ui', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/ui')>();
   const pass = ({ children }: { children?: ReactNode }) => createElement('div', null, children);
   return {
+    ...actual,
     GlassPanel: pass, Badge: pass, PanelTitle: pass, Caption: pass, Label: pass, Text: pass,
     Icon: () => null,
     Button: ({ children, onClick, ...props }: {
@@ -85,16 +94,6 @@ vi.mock('@/components/layout/layout-reference', async importOriginal => ({
       description ? createElement('p', null, description) : null, children),
   CardGrid: ({ items }: { items: { id: string; content: ReactNode }[] }) =>
     createElement('div', null, items.map(item => createElement('div', { key: item.id }, item.content))),
-}));
-vi.mock('@/components/data-display/stat-reference', async importOriginal => ({
-  ...await importOriginal<typeof import('@/components/data-display/stat-reference')>(),
-  StatStrip: ({ metrics, period, retained, footer }: StatStripProps) =>
-    createElement('section', { 'aria-label': 'Summary metrics', 'data-retained': retained },
-      createElement('div', null, period.label, period.kind === 'snapshot' ? period.provenance : ''),
-      metrics.map(metric => createElement('div', { key: metric.occurrenceId },
-        createElement('span', null, metric.label),
-        createElement('span', null, metric.rawValue == null ? '—' : String(metric.rawValue)))),
-      footer),
 }));
 vi.mock('@/components/data-display', async importOriginal => ({
   ...await importOriginal<typeof import('@/components/data-display')>(),

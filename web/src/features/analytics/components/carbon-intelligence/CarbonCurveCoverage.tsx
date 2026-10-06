@@ -7,10 +7,10 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
+import { StatStrip } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { Grid } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -30,61 +30,48 @@ export function CarbonCurveCoverage({
         'Grid intensity model source completeness',
       )}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <DatabaseZap
-            className="h-4 w-4 text-[var(--text-muted)]"
-            aria-hidden="true"
-          />
-          {t('carbon.coverage.title', 'Curve source accounting and completeness')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('carbon.coverage.title', 'Curve source accounting and completeness')}
+        actions={<DatabaseZap className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <CarbonSectionBody state={states.intensity}>
-          <Grid cols={{ default: 1, sm: 2, xl: 5 }} gap={3}>
-            <MetricCard
-              label={t('carbon.coverage.returned', 'Rows returned')}
-              value={display.formatNumber(source.returnedRows)}
-              subtitle={t('carbon.coverage.expected', '24 expected clock-hours')}
-              icon={<DatabaseZap className="h-5 w-5" aria-hidden="true" />}
-              color="blue"
-            />
-            <MetricCard
-              label={t('carbon.coverage.unique', 'Valid unique hours')}
-              value={display.formatNumber(source.validUniqueHours)}
-              subtitle={t(
-                'carbon.coverage.uniqueHint',
-                'Canonical rows used in analysis',
-              )}
-              icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('carbon.coverage.invalidHours', 'Invalid hour rows')}
-              value={display.formatNumber(source.invalidHourRows)}
-              subtitle={t('carbon.coverage.hourRange', 'Required integer 0–23')}
-              icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
-              color={source.invalidHourRows > 0 ? 'red' : 'green'}
-            />
-            <MetricCard
-              label={t('carbon.coverage.invalidIntensity', 'Invalid intensity rows')}
-              value={display.formatNumber(source.invalidIntensityRows)}
-              subtitle={t(
-                'carbon.coverage.intensityRule',
-                'Required finite non-negative value',
-              )}
-              icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
-              color={source.invalidIntensityRows > 0 ? 'red' : 'green'}
-            />
-            <MetricCard
-              label={t('carbon.coverage.duplicates', 'Duplicate hour rows')}
-              value={display.formatNumber(source.duplicateHourRows)}
-              subtitle={t(
-                'carbon.coverage.duplicateRule',
-                'First valid row retained deterministically',
-              )}
-              icon={<CopyX className="h-5 w-5" aria-hidden="true" />}
-              color={source.duplicateHourRows > 0 ? 'red' : 'green'}
-            />
-          </Grid>
+          <StatStrip
+            id="carbon-curve-coverage-metrics"
+            variant="embedded"
+            period={{ kind: 'unknown', label: t('carbon.source.intensityScope', 'Built-in, admin-editable static 24-hour model') }}
+            metrics={[
+              {
+                metricId: 'text', occurrenceId: 'carbon-coverage-returned',
+                label: t('carbon.coverage.returned', 'Rows returned'),
+                rawValue: display.formatNumber(source.returnedRows),
+                context: <><DatabaseZap className="h-5 w-5" aria-hidden="true" />{t('carbon.coverage.expected', '24 expected clock-hours')}</>,
+              },
+              {
+                metricId: 'text', occurrenceId: 'carbon-coverage-unique',
+                label: t('carbon.coverage.unique', 'Valid unique hours'),
+                rawValue: display.formatNumber(source.validUniqueHours),
+                context: <><CheckCircle2 className="h-5 w-5" aria-hidden="true" />{t('carbon.coverage.uniqueHint', 'Canonical rows used in analysis')}</>,
+              },
+              {
+                metricId: 'text', occurrenceId: 'carbon-coverage-invalid-hours',
+                label: t('carbon.coverage.invalidHours', 'Invalid hour rows'),
+                rawValue: display.formatNumber(source.invalidHourRows),
+                context: <><ShieldAlert className="h-5 w-5" aria-hidden="true" />{t('carbon.coverage.hourRange', 'Required integer 0–23')}</>,
+              },
+              {
+                metricId: 'text', occurrenceId: 'carbon-coverage-invalid-intensity',
+                label: t('carbon.coverage.invalidIntensity', 'Invalid intensity rows'),
+                rawValue: display.formatNumber(source.invalidIntensityRows),
+                context: <><ShieldAlert className="h-5 w-5" aria-hidden="true" />{t('carbon.coverage.intensityRule', 'Required finite non-negative value')}</>,
+              },
+              {
+                metricId: 'text', occurrenceId: 'carbon-coverage-duplicates',
+                label: t('carbon.coverage.duplicates', 'Duplicate hour rows'),
+                rawValue: display.formatNumber(source.duplicateHourRows),
+                context: <><CopyX className="h-5 w-5" aria-hidden="true" />{t('carbon.coverage.duplicateRule', 'First valid row retained deterministically')}</>,
+              },
+            ]}
+          />
           {source.coverageComplete ? (
             <AlertBanner className="mt-4" variant="success">
               {t(
@@ -117,7 +104,7 @@ export function CarbonCurveCoverage({
             </AlertBanner>
           )}
         </CarbonSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

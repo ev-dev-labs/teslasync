@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric, type StatPeriod } from '@/components/data-display';
+import { type StatMetric, type StatPeriod } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { HelperText } from '@/components/ui';
 import type { GuardPageModel } from './useGuardPageModel';
@@ -71,9 +72,14 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
   };
 
   return (
-    <section aria-label={t('guard.overview', 'Guard status overview')} className="min-w-0">
-      <StatStrip id="guard-overview" metrics={metrics} period={period}
-        retained={m.configState.refreshError != null || m.eventsState.refreshError != null || m.vehicleState.refreshError != null}
+    <div className="min-w-0">
+      <VehicleOperationalBrief id="guard-overview" metrics={metrics} period={period}
+        title={t('guard.overview', 'Guard status overview')}
+        available={!m.noVehicle && m.eventsKnown && m.guardConfig != null && m.vehicleState.hasData}
+        retained={m.configState.refreshError != null || m.eventsState.refreshError != null || m.vehicleState.refreshError != null
+          || (m.configState.hasData && m.configState.isRefreshBlocked)
+          || (m.eventsState.hasData && m.eventsState.isRefreshBlocked)
+          || (m.vehicleState.hasData && m.vehicleState.isRefreshBlocked)}
         footer={<div className="space-y-3">
           {m.noVehicle && <HelperText>{t('guard.modernization.selectVehicle', 'Select a vehicle in the workspace header to load guard data.')}</HelperText>}
           {m.configState.fatalError && <QueryError error={m.configState.fatalError} onRetry={m.configState.retry ?? undefined} />}
@@ -83,6 +89,6 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
           <StaleRefreshWarning state={m.eventsState} label={t('guard.eventTimeline', 'Event timeline')} />
           <StaleRefreshWarning state={m.vehicleState} label={t('guard.status', 'Status')} />
         </div>} />
-    </section>
+    </div>
   );
 }

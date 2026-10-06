@@ -43,7 +43,7 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -180,6 +180,25 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('SecurityStatusWidget', () => {
+  it('uses canonical retained trust without losing the four independent tri-state readings', () => {
+    const refetch = vi.fn();
+    securityMock.mockReturnValue(makeQuery({
+      data: makeSecurity({ locked: null, sentry_mode: false }),
+      isError: true, error: new Error('security refresh failed'), refetch,
+    }));
+    const { container } = renderWidget();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Lock')).toBeInTheDocument();
+    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getByText('Doors')).toBeInTheDocument();
+    expect(screen.getByText('Windows')).toBeInTheDocument();
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
   it('renders the titled shell and four "ok" cells when fully secured', () => {
     renderWidget();
 

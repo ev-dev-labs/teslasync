@@ -352,7 +352,10 @@ describe('RegenEfficiencyPage', () => {
     ]) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
-    expect(screen.getAllByText('Loading…').length).toBeGreaterThanOrEqual(6);
+    const loadingBrief = screen.getByTestId('regen-selected-window-summary');
+    expect(loadingBrief).toHaveAttribute('aria-busy', 'true');
+    expect(loadingBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(loadingBrief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(
       screen.queryByText('Below the 1,000-row request cap'),
     ).not.toBeInTheDocument();
@@ -504,11 +507,11 @@ describe('RegenEfficiencyPage', () => {
 
     renderPage();
 
-    const returnedRows = screen.getByText('Detailed rows returned').closest('[data-stat]');
+    const returnedRows = screen.getByText('Detailed rows returned').closest('[data-operational-metric]');
     expect(returnedRows).not.toBeNull();
-    expect(within(returnedRows as HTMLElement).getByText('1,000-row cap reached', { selector: '[data-stat-context]' })).toBeInTheDocument();
-    expect(within(returnedRows as HTMLElement).getByText('1,000', { selector: '[data-stat-value]' })).toBeInTheDocument();
-    expect(returnedRows).toHaveAttribute('data-state', 'value');
+    expect(within(returnedRows as HTMLElement).getByText('1,000-row cap reached')).toBeInTheDocument();
+    expect(within(returnedRows as HTMLElement).getByText('1,000', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    expect(returnedRows).toHaveAttribute('data-value-state', 'value');
     expect(
       screen.getAllByText('Detailed history cap reached').length,
     ).toBeGreaterThanOrEqual(6);
@@ -636,7 +639,7 @@ describe('RegenEfficiencyPage', () => {
 
     const shareCard = screen
       .getByText('Aggregate recovery share')
-      .closest('[data-stat]');
+      .closest('[data-operational-metric]');
     expect(shareCard).not.toBeNull();
     expect(within(shareCard as HTMLElement).getByText('—')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();

@@ -37,7 +37,7 @@ export function ArchetypeQueryStatus({
           'Loading drive-archetype evidence',
         )}
       >
-        <RefreshCw className="h-4 w-4 animate-spin text-[var(--text-muted)]" aria-hidden="true" />
+        <RefreshCw className="h-4 w-4 motion-safe:animate-spin text-[var(--text-muted)]" aria-hidden="true" />
         <Text variant="bodySm">
           {t(
             'archetypes.query.loading',

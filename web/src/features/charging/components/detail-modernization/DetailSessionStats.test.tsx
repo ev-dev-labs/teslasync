@@ -43,23 +43,21 @@ afterEach(() => {
 });
 
 function metric(container: HTMLElement, label: string): Element {
-  const item = Array.from(container.querySelectorAll('[data-stat]'))
-    .find(tile => tile.querySelector('[data-stat-label]')?.textContent === label);
+  const item = Array.from(container.querySelectorAll('[data-operational-metric]'))
+    .find(tile => tile.querySelector(':scope > div:first-child > div:first-child')?.textContent === label);
   if (!item) throw new Error(`Missing retained metric: ${label}`);
   return item;
 }
 function text(container: HTMLElement, label: string): string {
   const tile = metric(container, label);
-  const value = tile.querySelector('[data-stat-value]')?.textContent ?? '';
-  const unit = tile.querySelector('[data-stat-unit]')?.textContent ?? '';
-  return unit ? `${value} ${unit}` : value;
+  return tile.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 describe('detail stats bind real canonical formatting without changing specialist semantics', () => {
   it('retains eight readings, cabinet/pack distinctions, cost/rate contracts and exact event period', () => {
     const before = JSON.stringify(props);
     const { container } = render(<DetailSessionStats {...props} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(text(container, 'Energy')).toBe('44.49 kWh');
     expect(text(container, 'Duration')).toBe('60.00 min');
     expect(text(container, 'Peak Power')).toBe('150.00 kW');
@@ -72,7 +70,7 @@ describe('detail stats bind real canonical formatting without changing specialis
     expect(screen.getByText('Tesla invoice')).toBeInTheDocument();
     expect(container.querySelector('[data-help-key]')).toHaveAttribute('data-help-key', 'charging.detail.billedEnergyHelp');
     expect(container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'event');
-    expect(container.querySelector('[data-stat-period]')).toHaveTextContent('Charge Session #42');
+    expect(container.querySelector('[data-operational-brief]')).toHaveTextContent('Charge Session #42');
     expect(JSON.stringify(props)).toBe(before);
   });
   it('retains settings estimates, meaningful zero, absent rate/distance and ongoing event without all-time claims', () => {
@@ -94,12 +92,12 @@ describe('detail stats bind real canonical formatting without changing specialis
     act(() => { setGlobalPrecision(3); });
     expect(text(container, 'Energy')).toBe('44.491 kWh');
     state.energy = 'Wh';
-    rerender(<DetailSessionStats {...props} retained distanceText="source specialist range" />);
+    rerender(<DetailSessionStats {...props} retained distanceM={45000} distanceText="source specialist range" />);
     expect(text(container, 'Energy')).toBe('44,490.600 Wh');
     expect(text(container, 'Duration')).toBe('60.000 min');
     expect(text(container, 'Peak Power')).toBe('150.000 kW');
     expect(text(container, 'Total Cost')).toBe('$21.80');
     expect(text(container, 'Miles Added')).toBe('source specialist range');
-    expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
+    expect(screen.getByText('Retained source measurements')).toBeInTheDocument();
   });
 });

@@ -223,15 +223,15 @@ function renderPage() {
 }
 
 function kpiValue(label: string): string {
-  const card = screen.getByText(label).closest('[data-stat]');
+  const card = screen.getByText(label).closest('[data-operational-metric]');
   expect(card).not.toBeNull();
-  const value = card!.querySelector('[data-stat-value]');
+  const value = card!.querySelector('[data-operational-value]');
   expect(value).not.toBeNull();
   return value!.textContent ?? '';
 }
 function waitForSummary() {
   return waitFor(() => expect(
-    screen.getByText('Total sessions').closest('[data-stat]')?.querySelector('[data-stat-value]'),
+    screen.getByText('Total sessions').closest('[data-operational-metric]')?.querySelector('[data-operational-value]'),
   ).not.toBeNull());
 }
 
@@ -475,9 +475,9 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
     expect(screen.getByText('Monthly spending')).toBeInTheDocument();
     expect(screen.getByText('Charging sessions')).toBeInTheDocument();
     // Every metric identity stays mounted while its value is loading.
-    const metric = screen.getByText('Total sessions').closest('[data-stat]');
-    expect(metric).toHaveAttribute('data-state', 'loading');
-    expect(metric?.querySelector('[data-stat-value]')).toBeNull();
+    const metric = screen.getByText('Total sessions').closest('[data-operational-metric]');
+    expect(metric?.closest('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(metric?.querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('renders per-section QueryError with a Retry that refetches the feed', async () => {

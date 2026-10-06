@@ -89,6 +89,17 @@ function signalNameSpan(name: string): HTMLElement {
 }
 
 describe('SignalHistoryTable', () => {
+  it('retains exact long raw identities and SI values in wrapped cells and the complete expanded payload', () => {
+    const signal = 'CanonicalTelemetryProducerSignal'.repeat(5);
+    const value = '32.75 m/s; exact producer value; '.repeat(15);
+    const row = numRow({ signal, value_num: null, value_str: value });
+    const { container } = renderTable({ rows: [row], selectedSignals: [signal] });
+    expect(screen.getByText(signal)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.getByText(value.trim())).toHaveClass('[overflow-wrap:anywhere]');
+    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    expect(container.querySelector('pre')?.textContent).toBe(JSON.stringify(row, null, 2));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
   it('keeps the history shell and retry while initial failure is not misreported as no samples', () => {
     const onRetry = vi.fn();
     renderTable({ rows: [], totalRows: 0, error: new Error('unavailable'), onRetry });

@@ -83,6 +83,7 @@ export default function ExplorerPage() {
           summary={summary}
           state={sectionState}
           formatDistance={formatDistance}
+          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
       </FadeIn>
 

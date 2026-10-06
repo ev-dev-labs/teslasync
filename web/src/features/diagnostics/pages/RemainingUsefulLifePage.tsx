@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  HeartPulse, CalendarClock, TrendingDown, BatteryCharging, Battery,
+  HeartPulse, TrendingDown, BatteryCharging, Battery,
   Circle, Disc, Wind, Gauge, type LucideIcon,
 } from 'lucide-react';
 
@@ -21,9 +21,11 @@ import { useRUL, useComponentRUL, type ComponentRUL, type RULStatus } from '@/ap
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useUnits } from '@/hooks/useUnits';
 
 import { cn } from '@/lib/cn';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { NextServiceBrief } from '../components/operationalbrief-all/NextServiceBrief';
 
 const DASH = '—';
 
@@ -63,6 +65,7 @@ const COMPONENT_ICON: Record<string, LucideIcon> = {
 
 export default function RemainingUsefulLifePage() {
   const { fmtNumber, fmtInt, precision: displayPrecision } = useNumberFormatting();
+  const { formatDistance } = useUnits();
   const { t } = useTranslation();
   usePageTitle(t('rul.title', 'Remaining useful life'));
 
@@ -107,9 +110,10 @@ export default function RemainingUsefulLifePage() {
     return DASH; // indeterminate — not enough trend to project
   }, [t, fmtNumber, fmtInt]);
 
-  const kmText = useCallback((c: ComponentRUL): string => (
-    c.remaining_km == null ? DASH : `${fmtInt(c.remaining_km)} ${t('rul.units.km', 'km')}`
-  ), [t, fmtInt]);
+  // The deferred RUL wire contract is kilometres; the display formatter takes SI metres.
+  const remainingDistanceText = useCallback((c: ComponentRUL): string => (
+    c.remaining_km == null ? DASH : formatDistance(c.remaining_km * 1000, { precision: 0 })
+  ), [formatDistance]);
 
   const confLabel = useCallback((conf: number): string => {
     if (conf >= 0.66) return t('rul.confidence.high', 'High');
@@ -148,33 +152,13 @@ export default function RemainingUsefulLifePage() {
       <StaleRefreshWarning state={boardState} label={t('rul.board.title', 'Component health')} />
       {/* ── 1. Next-service banner ─────────────────────────────────────── */}
       <FadeIn>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="flex items-start gap-3">
-            <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
-            <div className="min-w-0">
-              <Text as="p" variant="label">{t('rul.nextService.title', 'Next service due')}</Text>
-              {noVehicle ? (
-                <Text as="p" variant="body">{selectVehicleMsg}</Text>
-              ) : boardLoading && !board ? (
-                <Skeleton height={20} width="16rem" className="mt-1" />
-              ) : boardError ? (
-                <Text as="p" variant="body" className="text-rose-300">
-                  {t('rul.nextService.error', 'Unable to load service projection.')}
-                </Text>
-              ) : nextService && nextService.date ? (
-                <Text as="p" variant="body" weight="semibold">
-                  <span className={statusMeta('replace_soon').text}>{nextServiceLabel}</span>
-                  {' — '}
-                  {t('rul.nextService.by', 'projected by')} {nextService.date}
-                </Text>
-              ) : (
-                <Text as="p" variant="body" className="text-emerald-300">
-                  {t('rul.nextService.none', 'No upcoming service projected — all components healthy.')}
-                </Text>
-              )}
-            </div>
-          </div>
-        </GlassPanel>
+        <NextServiceBrief
+          state={boardState}
+          loading={boardLoading}
+          noVehicle={noVehicle}
+          componentLabel={nextServiceLabel}
+          projectedDate={nextService?.date || null}
+        />
       </FadeIn>
 
       {/* ── 2. Component health board ──────────────────────────────────── */}
@@ -256,7 +240,7 @@ export default function RemainingUsefulLifePage() {
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.distanceLeft', 'Distance left')}</Text>
-                          <Text as="dd" variant="bodySm" className="tabular-nums">{kmText(c)}</Text>
+                          <Text as="dd" variant="bodySm" className="tabular-nums">{remainingDistanceText(c)}</Text>
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.replaceBy', 'Replace by')}</Text>

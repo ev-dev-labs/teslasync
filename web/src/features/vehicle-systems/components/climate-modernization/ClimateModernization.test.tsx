@@ -119,7 +119,8 @@ function mountPage() {
   </QueryClientProvider>);
 }
 function metric(label: string): HTMLElement {
-  const match = screen.getByText(label).closest<HTMLElement>('[data-stat]');
+  const match = screen.getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' })
+    .closest<HTMLElement>('[data-operational-metric]');
   if (!match) throw new Error(`Missing canonical stat: ${label}`);
   return match;
 }
@@ -155,7 +156,7 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     expect(Array.from(container.querySelectorAll('[data-climate-group]'))
       .map(node => node.getAttribute('data-climate-group'))).toEqual(outline);
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(23);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(23);
     expect(screen.getAllByTestId('embedded-chart').map(node =>
       node.getAttribute('data-chart-key'))).toEqual(['climate-temp-history', 'climate-hvac-history']);
     expect(Array.from(container.querySelectorAll('[data-series]')).map(node =>
@@ -281,6 +282,83 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2);
     expect(within(metric('AC on time')).getByText('50.00%')).toBeInTheDocument();
     expect(screen.getAllByText(/Showing retained measurements/).length).toBeGreaterThan(0);
+  });
+
+  it('retains a paused charging warning independently and recovers it without erasing failed-refresh climate/history', () => {
+    const latestRetry = vi.fn();
+    const historyRetry = vi.fn();
+    const chargingRetry = vi.fn();
+    latest(snapshot, { isError: true, error: new Error('Live climate refresh failed'), refetch: latestRetry });
+    historical(history, { isError: true, error: new Error('Climate history refresh failed'), refetch: historyRetry });
+    vi.mocked(useChargingTelemetryLatest).mockReturnValue(query({
+      not_enough_power_to_heat: true,
+    }, { fetchStatus: 'paused', refetch: chargingRetry }) as unknown as ReturnType<typeof useChargingTelemetryLatest>);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/climate-control']}><ClimateControlPage /></MemoryRouter>
+    </QueryClientProvider>;
+    const view = render(ui());
+    const status = within(group(view.container, 'climate-status'));
+    expect(status.getByText('Insufficient power to heat')).toBeInTheDocument();
+    const chargingNotice = status.getByText(/Showing retained measurements.*Insufficient power to heat/);
+    const boundary = chargingNotice.parentElement;
+    if (!boundary) throw new Error('Missing charging source recovery boundary');
+    fireEvent.click(within(boundary).getByRole('button', { name: 'Retry' }));
+    expect(chargingRetry).toHaveBeenCalledOnce();
+    expect(latestRetry).not.toHaveBeenCalled();
+    expect(historyRetry).not.toHaveBeenCalled();
+    expect(within(metric('Passenger setting')).getByText('20.00°C')).toBeInTheDocument();
+    expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2);
+
+    vi.mocked(useChargingTelemetryLatest).mockReturnValue(query({
+      not_enough_power_to_heat: false,
+    }, { refetch: chargingRetry }) as unknown as ReturnType<typeof useChargingTelemetryLatest>);
+    view.rerender(ui());
+    expect(status.queryByText('Insufficient power to heat')).not.toBeInTheDocument();
+    expect(status.queryByText(/Showing retained measurements.*Insufficient power to heat/)).not.toBeInTheDocument();
+    expect(within(group(view.container, 'climate-systems')).getByText(/Live climate refresh failed/)).toBeInTheDocument();
+    expect(within(group(view.container, 'climate-temperature-history')).getByText(/Climate history refresh failed/))
+      .toBeInTheDocument();
+    expect(within(metric('Fan speed')).getByText('2.5')).toBeInTheDocument();
+    expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2);
+  });
+
+  it('keeps explicit live zero/false settings distinct from nullable readings through pause and recovery', () => {
+    const zero: ClimateState = {
+      ...snapshot, insideTemp: 0, driverTempSetting: 0, passengerTempSetting: 0,
+      hvacPower: false, isAcOn: false, fanSpeed: 0, batteryHeater: false,
+    };
+    latest(zero, { fetchStatus: 'paused' });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/climate-control']}><ClimateControlPage /></MemoryRouter>
+    </QueryClientProvider>;
+    const view = render(ui());
+    expect(within(metric('Passenger setting')).getByText('0.00°C')).toBeInTheDocument();
+    expect(within(metric('Fan speed')).getByText('0')).toBeInTheDocument();
+    expect(within(metric('HVAC power')).getByText('State: Off')).toBeInTheDocument();
+    expect(within(group(view.container, 'climate-comfort')).getByText('100.00')).toBeInTheDocument();
+    expect(within(group(view.container, 'climate-systems')).getByText(/Showing retained measurements/))
+      .toHaveTextContent('The device is offline, so this section is showing the last values it received.');
+
+    latest({
+      ...zero, insideTemp: null, driverTempSetting: null,
+      passengerTempSetting: null, fanSpeed: null,
+      hvacPower: null, isAcOn: null, batteryHeater: null,
+    });
+    view.rerender(ui());
+    expect(within(metric('Passenger setting')).getByText('—')).toBeInTheDocument();
+    expect(within(metric('Fan speed')).getByText('—')).toBeInTheDocument();
+    expect(within(metric('HVAC power')).getByText('—')).toBeInTheDocument();
+    expect(within(metric('Battery heater')).getByText('—')).toBeInTheDocument();
+    expect(within(group(view.container, 'climate-systems')).queryByText(/Showing retained measurements/))
+      .not.toBeInTheDocument();
+    expect(within(group(view.container, 'climate-comfort')).queryByText('100.00')).not.toBeInTheDocument();
+    expect(within(metric('Avg fan speed')).getByText('5.00')).toBeInTheDocument();
+    expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2);
+    expect(zero.insideTemp).toBe(0);
+    expect(zero.fanSpeed).toBe(0);
+    expect(zero.hvacPower).toBe(false);
   });
 
   it('never presents unknown values as measured zero, off, poor or comfortable', () => {

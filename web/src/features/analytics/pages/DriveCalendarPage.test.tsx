@@ -189,7 +189,7 @@ describe('DriveCalendarPage', () => {
     renderCalendar('/drive-calendar?from=2024-07-01&to=2024-09-30');
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
     expect(retry).toHaveBeenCalledOnce();
     expect(useHistoryMock).toHaveBeenCalledWith('42', expect.any(String), expect.any(String));
   });

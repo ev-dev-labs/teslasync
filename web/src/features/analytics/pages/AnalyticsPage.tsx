@@ -6,9 +6,10 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
-  HeroGauges, OverviewTab, DrivingTab, ChargingTab, BatteryTab,
+  OverviewTab, DrivingTab, ChargingTab, BatteryTab,
   type TabKey,
 } from '../components/analytics';
+import { FleetOverviewBrief } from '../components/operationalbrief-a-m/FleetOverviewBrief';
 import { AnalyticsWorkspace, retainFleetContent } from '../components/overview-modernization';
 
 export default function AnalyticsPage() {
@@ -49,7 +50,8 @@ export default function AnalyticsPage() {
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        summary={<HeroGauges query={contentQuery} />}
+        summary={<FleetOverviewBrief query={contentQuery} scope={`${start} – ${end}`}
+          retained={fleetQuery.data != null && (fleetQuery.isError || fleetQuery.fetchStatus === 'paused')} />}
       >
         {activeTab === 'overview' && <OverviewTab query={contentQuery} />}
         {activeTab === 'driving' && <DrivingTab query={contentQuery} />}

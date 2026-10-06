@@ -88,7 +88,7 @@ export default function WholeHomeEnergyPage() {
       {/* 1 — headline outcome */}
       <FadeIn>
         <KpiSummary result={result} startTimeIso={startTimeIso} horizonHours={scenario.horizonHours}
-          loading={isLoading} unavailable={error != null} />
+          loading={isLoading} unavailable={error != null} sourceStates={sourceStates} slotMinutes={scenario.slotMinutes} />
       </FadeIn>
 
       {/* 2 — scenario controls (horizon, tariff, grid, Powerwall, weight preset) */}
@@ -133,6 +133,7 @@ export default function WholeHomeEnergyPage() {
           loadForecast={loadForecast}
           hasEnergySite={hasEnergySite}
           siteName={siteName}
+          historyState={sourceStates.find(({ id }) => id === 'history')?.state}
         />
       </FadeIn>
 

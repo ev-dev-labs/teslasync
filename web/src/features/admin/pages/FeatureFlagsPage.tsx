@@ -6,8 +6,8 @@
  * registry (hero) beside a value-type composition breakdown, and finally
  * the recent change-audit log as a full-width detail band:
  *
- *   1. FlagStatsBand — total / boolean / structured / change / delete /
- *      contributor counts derived from both feeds.
+ *   1. FeatureFlagsOperationalBrief — typed total / boolean / structured /
+ *      change / delete / contributor counts with independent feed context.
  *   2. FlagsTable — the CURRENT set of flags with inline Edit + Delete
  *      per row. The "Add flag" CTA in the page header opens the same
  *      drawer with `initial=null`.
@@ -29,8 +29,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Flag, History, Layers, Plus } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, Heading, Input, Modal, Text } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { Button, Input, Modal, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -44,12 +44,13 @@ import type {
   FeatureFlagEntry,
   FeatureFlagValue,
 } from '@/types/admin-diagnostics';
+import { deriveDataState } from '@/api/dataState';
+import { FeatureFlagsOperationalBrief } from '../components/statstrip-coverage-flags-secrets/FeatureFlagsOperationalBrief';
 
 import {
   ChangesPanel,
   FlagCompositionPanel,
   FlagEditDrawer,
-  FlagStatsBand,
   FlagsTable,
 } from '../components/feature-flags';
 
@@ -66,6 +67,8 @@ export default function FeatureFlagsPage() {
   const changes = useFlagChanges(null, 50);
   const setFlag = useSetFlag();
   const deleteFlag = useDeleteFlag();
+  const flagsState = deriveDataState(flags);
+  const changesState = deriveDataState(changes);
 
   const flagRows = flags.data?.flags ?? [];
   const changeRows = changes.data?.rows ?? [];
@@ -115,7 +118,7 @@ export default function FeatureFlagsPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('admin.flags.pageTitle', 'Feature flags')}
       subtitle={t(
         'admin.flags.subtitle',
@@ -126,70 +129,57 @@ export default function FeatureFlagsPage() {
           variant="primary"
           icon={<Plus className="h-4 w-4" />}
           onClick={handleCreate}
+          wrapLabel
         >
           {t('admin.flags.actions.add', 'Add flag')}
         </Button>
       }
       query={[flags, changes]}
+      dataSources={[
+        { id: 'flag-registry', label: t('admin.flags.panels.registry', 'Registry'), query: flags },
+        { id: 'flag-changes', label: t('admin.flags.panels.changes', 'Recent changes'), query: changes },
+      ]}
     >
       {/* 1 — Summary KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <FlagStatsBand
-          flags={flagRows}
-          changes={changeRows}
-          loading={flags.isLoading}
-          error={flags.error}
-          onRetry={() => flags.refetch()}
-        />
+        <FeatureFlagsOperationalBrief flags={flags} changes={changes} />
       </FadeIn>
 
       {/* 2 — Registry (hero) beside the value-type composition breakdown */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <SectionErrorBoundary name="flags-table">
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-              <Heading
-                level="panel"
-                as="h2"
-                className="mb-4 flex items-center gap-2"
-              >
-                <Flag className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('admin.flags.panels.registry', 'Registry')}
-              </Heading>
-              {flags.isError ? (
+            <div className="min-w-0 xl:col-span-2">
+            <LayoutCard title={t('admin.flags.panels.registry', 'Registry')}
+              actions={<Flag className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+              {flagsState.fatalError ? (
                 <QueryError
-                  error={flags.error}
+                  error={flagsState.fatalError}
                   onRetry={() => flags.refetch()}
                   resourceName={t('admin.flags.stats.resource', 'Feature flags')}
                 />
               ) : (
                 <FlagsTable
                   rows={flagRows}
-                  loading={flags.isLoading}
+                  loading={flagsState.status === 'initial'}
                   onEdit={handleEdit}
                   onAskDelete={handleAskDelete}
                 />
               )}
-            </GlassPanel>
+            </LayoutCard>
+            </div>
           </SectionErrorBoundary>
 
           <SectionErrorBoundary name="flags-composition">
-            <GlassPanel className="p-4 sm:p-5">
-              <Heading
-                level="panel"
-                as="h2"
-                className="mb-4 flex items-center gap-2"
-              >
-                <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('admin.flags.panels.composition', 'Value composition')}
-              </Heading>
+            <LayoutCard title={t('admin.flags.panels.composition', 'Value composition')}
+              actions={<Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
               <FlagCompositionPanel
                 flags={flagRows}
-                loading={flags.isLoading}
-                error={flags.error}
+                loading={flagsState.status === 'initial'}
+                error={flagsState.fatalError}
                 onRetry={() => flags.refetch()}
               />
-            </GlassPanel>
+            </LayoutCard>
           </SectionErrorBoundary>
         </section>
       </FadeIn>
@@ -197,25 +187,18 @@ export default function FeatureFlagsPage() {
       {/* 3 — Recent change-audit log: full-width detail band */}
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="flags-changes">
-          <GlassPanel className="p-4 sm:p-5">
-            <Heading
-              level="panel"
-              as="h2"
-              className="mb-4 flex items-center gap-2"
-            >
-              <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.flags.panels.changes', 'Recent changes')}
-            </Heading>
-            {changes.isError ? (
+          <LayoutCard title={t('admin.flags.panels.changes', 'Recent changes')}
+            actions={<History className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+            {changesState.fatalError ? (
               <QueryError
-                error={changes.error}
+                error={changesState.fatalError}
                 onRetry={() => changes.refetch()}
                 resourceName={t('admin.flags.stats.resource', 'Feature flags')}
               />
             ) : (
-              <ChangesPanel rows={changeRows} loading={changes.isLoading} />
+              <ChangesPanel rows={changeRows} loading={changesState.status === 'initial'} />
             )}
-          </GlassPanel>
+          </LayoutCard>
         </SectionErrorBoundary>
       </FadeIn>
 
@@ -258,7 +241,7 @@ export default function FeatureFlagsPage() {
               'Why this delete? (logged in audit)',
             )}
           />
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
               variant="secondary"
               onClick={() => {
@@ -266,6 +249,7 @@ export default function FeatureFlagsPage() {
                 setDeleteReason('');
               }}
               disabled={deleteFlag.isPending}
+              wrapLabel
             >
               {t('common.cancel', 'Cancel')}
             </Button>
@@ -274,12 +258,13 @@ export default function FeatureFlagsPage() {
               loading={deleteFlag.isPending}
               disabled={deleteReason.trim().length === 0 || deleteFlag.isPending}
               onClick={handleConfirmDelete}
+              wrapLabel
             >
               {t('admin.flags.delete.confirm', 'Delete flag')}
             </Button>
           </div>
         </div>
       </Modal>
-    </PageContainer>
+    </PageLayout>
   );
 }

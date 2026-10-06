@@ -3,7 +3,8 @@
  *
  * SignalGapKpis is the pure-render KPI band for the Signal Gap Detector. It
  * owns NO data — every figure is a prop (`buckets` / `freshnessPct`) gated by a
- * single `hasVehicle` flag — and it renders NO interactive controls, so these
+ * `hasVehicle` flag — and its actual Brief retains the shared Review drawer.
+ * These
  * specs drive it purely through props and assert its OWN behaviour:
  *
  *   1. Populated (hasVehicle=true): the six cards render with their accessible
@@ -12,24 +13,19 @@
  *      yet) rather than the em-dash.
  *   2. No vehicle (hasVehicle=false): every value collapses to the em-dash
  *      placeholder regardless of the numbers handed in.
- *   3. Resilience / formatting (the hardening this file adds): an `undefined`
- *      buckets object renders `—`/`0` instead of throwing on `.total`; a
- *      missing bucket field coerces to `0`; a NaN/undefined `freshnessPct`
- *      renders `0%` rather than the literal "NaN%".
- *   4. Accessibility: the band is a labelled `region` and every metric icon is
- *      marked decorative (`aria-hidden`), so screen readers announce the
- *      labelled figures, not the glyphs.
+ *   3. Resilience / formatting: undefined buckets and missing fields remain
+ *      missing; NaN freshness remains invalid, never fictitious measured 0%.
+ *   4. Accessibility: the band is a labelled region with metric/value markers.
  *
- * The real shared UI (MetricCard, FadeIn) is rendered — only react-i18next is
+ * The real shared bridge and OperationalBrief are rendered — react-i18next is
  * mocked to resolve the developer fallback strings, matching
  * ./LiveSignalTail.test.tsx / ./SignalCompareControls.test.tsx. The component
- * exposes no interactive elements, so there is nothing to drive with
- * fireEvent/user-event (user-event is not a dependency of this codebase — see
- * web/package.json).
+ * keeps the actual Review interaction, covered by RetainedBands.test.tsx.
  */
 import { type ComponentProps } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import './operationalbrief-all/metricPreferencesTestSetup';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn> via useReducedMotion) reads
 // it during render. Install a benign stub before any module imports it.
@@ -98,7 +94,7 @@ function renderKpis(over: Partial<Props> = {}) {
 // Scope a query to a single MetricCard by its label — the card root carries the
 // `data-role="metric-card"` semantic hook, so we climb to it and search within.
 function card(label: string) {
-  const root = screen.getByText(label).closest('[data-role="metric-card"]') as HTMLElement;
+  const root = screen.getByText(label).closest('[data-operational-metric]') as HTMLElement;
   return within(root);
 }
 
@@ -160,14 +156,14 @@ describe('SignalGapKpis — no vehicle (hasVehicle=false)', () => {
 });
 
 describe('SignalGapKpis — resilience + formatting', () => {
-  it('renders 0s instead of throwing when buckets is undefined but a vehicle is selected', () => {
+  it('renders unknowns instead of throwing when buckets is undefined but a vehicle is selected', () => {
     expect(() =>
       renderKpis({ buckets: undefined as unknown as GapBuckets, freshnessPct: 50 }),
     ).not.toThrow();
 
-    expect(card(LABELS.total).getByText('0')).toBeInTheDocument();
-    expect(card(LABELS.stale).getByText('0')).toBeInTheDocument();
-    expect(card(LABELS.freshness).getByText('50%')).toBeInTheDocument();
+    expect(card(LABELS.total).getByText(DASH)).toBeInTheDocument();
+    expect(card(LABELS.stale).getByText(DASH)).toBeInTheDocument();
+    expect(card(LABELS.freshness).getByText(DASH)).toBeInTheDocument();
   });
 
   it('renders the em-dash without throwing when buckets is undefined and no vehicle is selected', () => {
@@ -178,7 +174,7 @@ describe('SignalGapKpis — resilience + formatting', () => {
     expect(screen.getAllByText(DASH)).toHaveLength(6);
   });
 
-  it('coerces a missing bucket field to 0 rather than a blank value', () => {
+  it('keeps a missing bucket field unknown rather than silently measuring zero', () => {
     // A partial payload (only `total`) must not leave `.aging`/`.never` blank.
     renderKpis({
       buckets: { total: 5, active: 2 } as unknown as GapBuckets,
@@ -187,21 +183,23 @@ describe('SignalGapKpis — resilience + formatting', () => {
 
     expect(card(LABELS.total).getByText('5')).toBeInTheDocument();
     expect(card(LABELS.active).getByText('2')).toBeInTheDocument();
-    expect(card(LABELS.aging).getByText('0')).toBeInTheDocument();
-    expect(card(LABELS.never).getByText('0')).toBeInTheDocument();
+    expect(card(LABELS.aging).getByText(DASH)).toBeInTheDocument();
+    expect(card(LABELS.never).getByText(DASH)).toBeInTheDocument();
   });
 
-  it('defaults a NaN freshness to 0% instead of "NaN%"', () => {
+  it('marks NaN freshness invalid instead of reporting 0%', () => {
     renderKpis({ freshnessPct: Number.NaN });
 
-    expect(card(LABELS.freshness).getByText('0%')).toBeInTheDocument();
+    expect(card(LABELS.freshness).getByText(DASH)).toBeInTheDocument();
+    expect(screen.getByText(LABELS.freshness).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
     expect(screen.queryByText('NaN%')).not.toBeInTheDocument();
   });
 
-  it('defaults an undefined freshness to 0% instead of "undefined%"', () => {
+  it('keeps undefined freshness missing instead of reporting 0%', () => {
     renderKpis({ freshnessPct: undefined as unknown as number });
 
-    expect(card(LABELS.freshness).getByText('0%')).toBeInTheDocument();
+    expect(card(LABELS.freshness).getByText(DASH)).toBeInTheDocument();
+    expect(screen.getByText(LABELS.freshness).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.queryByText('undefined%')).not.toBeInTheDocument();
   });
 });
@@ -219,7 +217,8 @@ describe('SignalGapKpis — accessibility', () => {
     const icons = container.querySelectorAll('svg');
 
     // One decorative icon per card, and none of them expose an a11y name.
-    expect(icons).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(icons).toHaveLength(1);
     expect(Array.from(icons).every((svg) => svg.getAttribute('aria-hidden') === 'true')).toBe(
       true,
     );

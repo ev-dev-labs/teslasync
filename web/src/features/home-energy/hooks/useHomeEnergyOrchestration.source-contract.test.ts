@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import ts from 'typescript';
 
 const root = existsSync(resolve(process.cwd(), 'src'))
   ? resolve(process.cwd(), 'src', 'features', 'home-energy')
@@ -35,7 +36,23 @@ describe('home-energy source and business policy preservation', () => {
     expect(page).toContain('<StaleRefreshWarning state={state}');
     expect(page).toContain('state.fatalError && <QueryError');
     expect(page).toContain('!state.hasData && state.isRefreshBlocked');
-    expect(page).not.toMatch(/loading=\{isLoading\}|error=\{error\}|onRetry=\{refreshNow\}/);
+    const parsedPage = ts.createSourceFile('WholeHomeEnergyPage.tsx', page, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const hostAttributes: string[] = [];
+    let hostCount = 0;
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxOpeningElement(node) && node.tagName.getText(parsedPage) === 'PageLayout') {
+        hostCount++;
+        for (const attribute of node.attributes.properties) {
+          if (ts.isJsxAttribute(attribute)) hostAttributes.push(attribute.name.getText(parsedPage));
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(parsedPage);
+    expect(hostCount).toBe(1);
+    for (const blanketGate of ['loading', 'error', 'onRetry']) {
+      expect(hostAttributes).not.toContain(blanketGate);
+    }
   });
   it('keeps all ten section bindings mounted without a blanket loading/error gate or an autonomous apply action', () => {
     for (const section of [

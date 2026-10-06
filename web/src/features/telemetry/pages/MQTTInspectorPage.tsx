@@ -2,12 +2,12 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Radio, Wifi, WifiOff, RefreshCw, AlertTriangle, AlertCircle,
-  Activity, Layers, Gauge, Server, Clock,
+  Activity, Server, Clock,
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -15,7 +15,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { AIMqttSseInspectorExplanations } from '@/components/ai/AIMqttSseInspectorExplanations';
+import { AIMqttSseInspectorExplanations } from '@/components/ai';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -24,6 +24,8 @@ import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { mqttSummary } from '../components/statstrip-signals-mqtt/mqttSummary';
 
 /* ------------------------------------------------------------------ */
 /*  Constants & helpers                                                */
@@ -133,7 +135,7 @@ function buildVehicleColumns(
 /* ------------------------------------------------------------------ */
 
 export default function MQTTInspectorPage() {
-  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime, formatRelative } = useDateFormat();
   usePageTitle(t('mqtt.title', 'MQTT inspector'));
@@ -142,7 +144,7 @@ export default function MQTTInspectorPage() {
   const { data: status, isLoading } = statusQuery;
   const statusState = useDataState(statusQuery, { provenance: 'live' });
   const error = statusState.fatalError;
-  const metricsUnavailable = (isLoading && !statusState.hasData) || error != null;
+  const metricsUnavailable = !statusState.hasData || error != null;
 
   /* ---- derived totals ---- */
   const vehicles: VehicleTelemetry[] = Array.isArray(status?.vehicles) ? status.vehicles : [];
@@ -184,6 +186,13 @@ export default function MQTTInspectorPage() {
   }, []);
 
   const connected = status?.connected ?? false;
+  const summary = mqttSummary({
+    available: !metricsUnavailable, vehicles: vehicles.length,
+    signals: totalSignals, batches: totalBatches, rate: totalRate,
+    observedAt: statusQuery.dataUpdatedAt ? new Date(statusQuery.dataUpdatedAt).toISOString() : null,
+    precision: displayPrecision, locale: displayLocale,
+  }, t);
+  const briefMetrics = useOperationalMetrics(summary.metrics);
 
   return (
     <PageLayout
@@ -212,35 +221,23 @@ export default function MQTTInspectorPage() {
       )}
       <StaleRefreshWarning state={statusState} label={t('mqtt.connectionInfo', 'Connection')} />
 
-      {/* 1 — KPI band: full-width responsive metric grid */}
+      {/* 1 — Summary: source broker counters and reported rates */}
       <FadeIn>
-        <section
-          aria-label={t('mqtt.metrics', 'Stream metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <MetricCard
-            label={t('mqtt.streamingVehicles', 'Streaming vehicles')}
-            value={metricsUnavailable ? '—' : vehicles.length}
-            icon={<Radio className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('mqtt.totalSignals', 'Total signals')}
-            value={metricsUnavailable ? '—' : fmtInt(totalSignals)}
-            icon={<Activity className="h-5 w-5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('mqtt.totalBatches', 'Total batches')}
-            value={metricsUnavailable ? '—' : fmtInt(totalBatches)}
-            icon={<Layers className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('mqtt.signalsPerSec', 'Signals / sec')}
-            value={metricsUnavailable ? '—' : fmtNumber(totalRate)}
-            icon={<Gauge className="h-5 w-5" />}
-            color="amber"
+        <section aria-label={t('mqtt.metrics', 'Stream metrics')}>
+          <OperationalBrief
+            compact
+            testId="mqtt-summary"
+            eyebrow={t('mqtt.title', 'MQTT inspector')}
+            title={t('mqtt.summary.title', 'Broker counters and reported rates')}
+            description={summary.period.kind === 'snapshot' ? summary.period.provenance : summary.period.label}
+            metrics={briefMetrics}
+            scope={summary.period.label}
+            statusLabel={metricsUnavailable
+              ? isLoading ? t('common.loading', 'Loading') : t('mqtt.summary.unavailable', 'Broker snapshot unavailable')
+              : statusState.refreshError || statusState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
+                : t('mqtt.summary.available', 'Broker snapshot available')}
+            statusTone={error ? 'danger' : statusState.refreshError || statusState.isRefreshBlocked ? 'warning' : 'neutral'}
+            freshness={statusQuery.dataUpdatedAt ? formatRelative(new Date(statusQuery.dataUpdatedAt)) : undefined}
           />
         </section>
       </FadeIn>

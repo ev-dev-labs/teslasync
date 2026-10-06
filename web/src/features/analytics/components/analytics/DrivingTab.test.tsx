@@ -286,8 +286,8 @@ describe('DrivingTab — loading', () => {
     const { container } = renderTab(makeQuery({ isLoading: true }));
 
     // Panel titles always render (they frame the section)…
-    expect(screen.getByText('Speed distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency trend')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Speed distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency trend' })).toBeInTheDocument();
     // …but the performance band is a skeleton — no card labels leak through…
     expect(screen.queryByText('Top speed')).toBeNull();
     // …pulsing skeletons are on screen…
@@ -356,13 +356,13 @@ describe('DrivingTab — populated', () => {
     renderTab(makeQuery({ data: populated() }));
 
     // Every panel title frames its section.
-    expect(screen.getByText('Speed distribution')).toBeInTheDocument();
-    expect(screen.getByText('Trip distance distribution')).toBeInTheDocument();
-    expect(screen.getByText('Hourly driving pattern')).toBeInTheDocument();
-    expect(screen.getByText('Temperature vs efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Daily driving trend')).toBeInTheDocument();
-    expect(screen.getByText('Drive duration distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency trend')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Speed distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Trip distance distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hourly driving pattern' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Temperature vs efficiency' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Daily driving trend' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drive duration distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency trend' })).toBeInTheDocument();
 
     // Three bar charts, two composed, one scatter, one area = seven charts.
     expect(screen.getAllByTestId('chart-bar')).toHaveLength(3);

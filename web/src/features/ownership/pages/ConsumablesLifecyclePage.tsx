@@ -12,8 +12,9 @@ import {
 import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
+import { KVList } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
+import { Accordion, Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -37,6 +38,8 @@ import {
   StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   daysToSeconds,
   formatCurrencyMinor,
@@ -447,13 +450,71 @@ export default function ConsumablesLifecyclePage() {
         {lifecycle.narrative}
       </Text>
 
+      <div className="mt-3">
+        <StatGrid
+          columns={2}
+          stats={[
+            {
+              key: 'replacementCost',
+              label: t('ownership.consumables.form.cost', 'Replacement cost'),
+              value: formatCurrencyMinor(
+                lifecycle.replacement_cost_minor,
+                lifecycle.item.currency,
+                units.unitPrefs.locale,
+              ),
+            },
+            {
+              key: 'wearCost',
+              label: t('ownership.consumables.card.wearCost', 'Part wear cost'),
+              value: lifecycle.cost_per_m_minor != null
+                ? formatCurrencyMinor(
+                    Math.round(lifecycle.cost_per_m_minor * 1000),
+                    lifecycle.item.currency,
+                    units.unitPrefs.locale,
+                  )
+                : '—',
+              hint: t('ownership.consumables.econ.blendedHint', 'per 1 000 metres driven'),
+            },
+          ]}
+        />
+      </div>
+
       {(lifecycle.events ?? []).length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1">
-          {(lifecycle.events ?? []).slice(0, 6).map((entry) => (
-            <Badge key={entry.id} variant="neutral">
-              {EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}
-            </Badge>
-          ))}
+        <div className="mt-3 space-y-3">
+          <div className="flex flex-wrap gap-1">
+            {(lifecycle.events ?? []).slice(0, 6).map((entry) => (
+              <Badge key={entry.id} variant="neutral">
+                {EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}
+              </Badge>
+            ))}
+          </div>
+          <Accordion title={t('ownership.consumables.card.history', 'Service history ({{count}} events)', {
+            count: (lifecycle.events ?? []).length,
+          })}>
+            <div className="space-y-4">
+              {(lifecycle.events ?? []).map((entry) => (
+                <div key={entry.id} className="min-w-0 space-y-2">
+                  <Text as="p" variant="label">
+                    {EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}
+                  </Text>
+                  <KVList layout="responsive" items={[
+                    {
+                      label: t('ownership.consumables.event.odometer', 'Odometer'),
+                      value: entry.odometer_m != null ? units.formatDistance(entry.odometer_m) : '—',
+                    },
+                    {
+                      label: t('ownership.consumables.event.cost', 'Cost'),
+                      value: formatCurrencyMinor(entry.cost_minor, lifecycle.item.currency, units.unitPrefs.locale),
+                    },
+                    {
+                      label: t('ownership.consumables.event.note', 'Note'),
+                      value: entry.note || '—',
+                    },
+                  ]} />
+                </div>
+              ))}
+            </div>
+          </Accordion>
         </div>
       ) : null}
     </div>
@@ -480,50 +541,52 @@ export default function ConsumablesLifecyclePage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.consumables.summary.title', 'Fleet wear posture')}
-          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
-          <StatGrid
-            stats={[
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.consumables.brief.title', 'Projected wear and replacement costs')}
+            description={t('ownership.consumables.notice.body', 'The wear multiplier is derived from your own drives, clamped to a defensible range. It is a projection, not a measurement of physical wear — always inspect before relying on it for a safety-critical part.')}
+            scope={t('ownership.consumables.brief.scope', 'Selected vehicle and recorded parts; costs and replacement dates are projections')}
+            source={reportQuery} enabled={vehicleId != null}
+            observedAt={report?.as_of}
+            metrics={[
               {
-                key: 'due',
+                occurrenceId: 'due', metricId: 'count',
                 label: t('ownership.consumables.stat.due', 'Due soon'),
-                value: fmtInt(report?.due_soon_count ?? 0),
+                rawValue: report?.due_soon_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.due_soon_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                key: 'overdue',
+                occurrenceId: 'overdue', metricId: 'count',
                 label: t('ownership.consumables.stat.overdue', 'Overdue'),
-                value: fmtInt(report?.overdue_count ?? 0),
+                rawValue: report?.overdue_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.overdue_count ?? 0) > 0 ? 'critical' : 'default',
               },
               {
-                key: 'next',
+                occurrenceId: 'next', metricId: 'text',
                 label: t('ownership.consumables.stat.next', 'Next replacement'),
-                value: report?.next_replace_at ? formatDateTime(report.next_replace_at) : '—',
+                rawValue: report?.next_replace_at ? formatDateTime(report.next_replace_at) : null,
               },
               {
-                key: 'twelve',
+                occurrenceId: 'twelve', metricId: 'currency',
                 label: t('ownership.consumables.stat.twelve', 'Next 12 months'),
-                value: formatCurrencyMinor(
-                  report?.twelve_month_cost_minor,
-                  currency,
-                  units.unitPrefs.locale,
-                ),
+                rawValue: report?.twelve_month_cost_minor,
+                display: specialistDisplay((raw) => formatCurrencyMinor(raw, currency, units.unitPrefs.locale)),
               },
               {
-                key: 'lifetime',
+                occurrenceId: 'lifetime', metricId: 'currency',
                 label: t('ownership.consumables.stat.lifetime', 'Spent to date'),
-                value: formatCurrencyMinor(
-                  report?.lifetime_spend_minor,
-                  currency,
-                  units.unitPrefs.locale,
-                ),
+                rawValue: report?.lifetime_spend_minor,
+                display: specialistDisplay((raw) => formatCurrencyMinor(raw, currency, units.unitPrefs.locale)),
               },
               {
-                key: 'stress',
+                occurrenceId: 'stress', metricId: 'multiplier',
                 label: t('ownership.consumables.stat.stress', 'Average duty stress'),
-                value: `×${fmtNumber(report?.fleet_stress_average ?? 1)}`,
+                rawValue: report?.fleet_stress_average,
+                display: specialistDisplay((raw) => `×${fmtNumber(raw)}`),
                 tone: (report?.fleet_stress_average ?? 1) > 1.2 ? 'warning' : 'default',
-                hint: t('ownership.consumables.stat.stressHint', '1.00 is the reference profile'),
+                context: t('ownership.consumables.stat.stressHint', '1.00 is the reference profile'),
               },
             ]}
           />
@@ -787,32 +850,32 @@ export default function ConsumablesLifecyclePage() {
 
       <FadeIn delay={0.2}>
         <OwnershipPanel title={t('ownership.consumables.economics.title', 'Wear economics')}
-          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
-          <StatGrid
-            columns={3}
-            stats={[
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.consumables.economicsBrief.title', 'Blended wear cost and recorded distance')}
+            description={t('ownership.consumables.economicsBrief.description', 'Blended wear cost retains the recorded currency per 1 000 metres, independently of the odometer display unit.')}
+            scope={t('ownership.consumables.brief.scope', 'Selected vehicle and recorded parts; costs and replacement dates are projections')}
+            source={reportQuery} enabled={vehicleId != null}
+            observedAt={report?.as_of}
+            metrics={[
               {
-                key: 'blended',
+                occurrenceId: 'blended', metricId: 'rate',
                 label: t('ownership.consumables.econ.blended', 'Blended wear cost'),
-                value:
-                  report?.blended_cost_per_m_minor != null
-                    ? formatCurrencyMinor(
-                        Math.round(report.blended_cost_per_m_minor * 1000),
-                        currency,
-                        units.unitPrefs.locale,
-                      )
-                    : '—',
-                hint: t('ownership.consumables.econ.blendedHint', 'per 1 000 metres driven'),
+                rawValue: report?.blended_cost_per_m_minor,
+                display: specialistDisplay((raw) => formatCurrencyMinor(Math.round(raw * 1000), currency, units.unitPrefs.locale)),
+                context: t('ownership.consumables.econ.blendedHint', 'per 1 000 metres driven'),
               },
               {
-                key: 'odometer',
+                occurrenceId: 'odometer', metricId: 'distance',
                 label: t('ownership.consumables.econ.odometer', 'Odometer'),
-                value: report?.odometer_m != null ? units.formatDistance(report.odometer_m) : '—',
+                rawValue: report?.odometer_m,
+                display: specialistDisplay(units.formatDistance),
               },
               {
-                key: 'parts',
+                occurrenceId: 'parts', metricId: 'count',
                 label: t('ownership.consumables.econ.parts', 'Parts tracked'),
-                value: fmtInt(lifecycles.length),
+                rawValue: report ? lifecycles.length : null,
+                display: specialistDisplay(fmtInt),
               },
             ]}
           />

@@ -5,19 +5,11 @@ import { cn } from '@/lib/cn';
 import {
   Navigation,
   MapPin,
-  Home,
-  Briefcase,
-  Satellite,
-  Compass,
-  Gauge,
-  Clock,
-  BatteryCharging,
   Route,
   Zap,
   AlertTriangle,
   RefreshCw,
   Activity,
-  TrafficCone,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
@@ -32,7 +24,8 @@ import {
   Caption,
   type Column,
 } from '@/components/ui';
-import { MetricCard, TimeStamp } from '@/components/data-display';
+import { TimeStamp } from '@/components/data-display';
+import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import {
   Skeleton,
   EmptyState,
@@ -94,54 +87,20 @@ function headingToCardinal(deg: number | null | undefined): string {
 /*  Sub-component: Location Status Card                                */
 /* ------------------------------------------------------------------ */
 
-interface LocationStatusCardProps {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  active: boolean;
-}
-
-function LocationStatusCard({ icon, label, value, active }: LocationStatusCardProps) {
-  return (
-    <GlassPanel
-      className={cn('flex items-center gap-3 p-4', active && 'ring-1 ring-emerald-500/40')}
-      glow={active ? 'green' : 'none'}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-          active
-            ? 'bg-emerald-500/20 text-emerald-300'
-            : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
-        )}
-      >
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <Caption className="block break-words">{label}</Caption>
-        <Text variant="body" as="span" className="block break-words font-semibold">
-          {value}
-        </Text>
-      </span>
-      <Badge variant={active ? 'success' : 'neutral'} size="sm">
-        {active ? '✓' : '—'}
-      </Badge>
-    </GlassPanel>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /*  Sub-component: Traffic Delay Badge                                 */
 /* ------------------------------------------------------------------ */
 
 interface TrafficDelayBadgeProps {
-  seconds: number;
+  seconds: number | null | undefined;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
 function TrafficDelayBadge({ seconds, t }: TrafficDelayBadgeProps) {
   const { formatDuration } = useUnits();
+  if (seconds == null || !Number.isFinite(seconds)) {
+    return <Badge variant="neutral" size="sm">{t('nav.unknown', 'Unknown')}</Badge>;
+  }
   const variant: 'success' | 'warning' | 'danger' =
     seconds < 300 ? 'success' : seconds <= 900 ? 'warning' : 'danger';
 
@@ -179,7 +138,7 @@ function RouteField({ label, children }: RouteFieldProps) {
 interface Waypoint {
   name: string;
   type: 'supercharger' | 'destination' | 'waypoint';
-  distance: number;
+  distance: number | null;
 }
 
 function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
@@ -189,7 +148,7 @@ function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
     {
       name: destName,
       type: 'destination',
-      distance: latest.miles_to_arrival ?? 0,
+      distance: latest.miles_to_arrival ?? null,
     },
   ];
 }
@@ -274,30 +233,30 @@ export default function NavigationRoutePage() {
         .map((s) => ({
           time: formatDateTime(s.created_at),
           /* speed_mph is m/s SI; convert to user pref for chart axis. */
-          speed: convertSpeedFromSI(s.speed_mph ?? 0, speedUnit),
+          speed: s.speed_mph == null ? null : convertSpeedFromSI(s.speed_mph, speedUnit),
           /* miles_to_arrival is meters SI; convert to user pref. */
-          miles: convertDistanceFromSI(s.miles_to_arrival ?? 0, distanceUnit),
+          miles: s.miles_to_arrival == null ? null : convertDistanceFromSI(s.miles_to_arrival, distanceUnit),
         })),
     [history, speedUnit, distanceUnit],
   );
 
-  /* ---- avg speed (display units) ---- */
+  /* ---- average measured speed in SI ---- */
   const avgSpeed = useMemo(() => {
-    if (!history?.length) return 0;
+    if (!history?.length) return null;
     /* speed_mph is m/s SI; average in SI then convert at the boundary. */
     const speedsMps = history
       .map((s) => s.speed_mph)
       .filter((v): v is number => v != null && v > 0);
-    if (!speedsMps.length) return 0;
+    if (!speedsMps.length) return history.some((s) => s.speed_mph != null) ? 0 : null;
     const avgMps = speedsMps.reduce((a, b) => a + b, 0) / speedsMps.length;
-    return convertSpeedFromSI(avgMps, speedUnit);
-  }, [history, speedUnit]);
+    return avgMps;
+  }, [history]);
 
   /* ---- recent destinations (unique, from history with active routes) ---- */
   const recentDestinations = useMemo(() => {
     if (!history?.length) return [];
     const seen = new Set<string>();
-    const result: { time: string; destination: string; distance: number; eta: number }[] = [];
+    const result: { time: string; destination: string; distance: number | null; eta: number | null }[] = [];
     for (const s of history) {
       const name = s.destination_name;
       if (!name || seen.has(name)) continue;
@@ -306,8 +265,8 @@ export default function NavigationRoutePage() {
         time: formatDateTime(s.created_at),
         destination: name,
         /* miles_to_arrival is meters SI; convert to user pref. */
-        distance: convertDistanceFromSI(s.miles_to_arrival ?? 0, distanceUnit),
-        eta: s.minutes_to_arrival ?? 0,
+        distance: s.miles_to_arrival == null ? null : convertDistanceFromSI(s.miles_to_arrival, distanceUnit),
+        eta: s.minutes_to_arrival ?? null,
       });
     }
     return result.slice(0, 20);
@@ -320,9 +279,9 @@ export default function NavigationRoutePage() {
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .map((s) => ({
         time: formatDateTime(s.created_at),
-        home: s.located_at_home ? 1 : 0,
-        work: s.located_at_work ? 1 : 0,
-        homelink: s.homelink_nearby ? 1 : 0,
+        home: s.located_at_home == null ? null : s.located_at_home ? 1 : 0,
+        work: s.located_at_work == null ? null : s.located_at_work ? 1 : 0,
+        homelink: s.homelink_nearby == null ? null : s.homelink_nearby ? 1 : 0,
       }));
   }, [history]);
 
@@ -331,8 +290,8 @@ export default function NavigationRoutePage() {
     () => [
       { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <Caption className="whitespace-nowrap">{row.time}</Caption> },
       { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <Text variant="body">{row.destination}</Text> },
-      { key: 'distance', align: 'right', header: t('nav.col.distance', 'Distance'), render: (row) => <Caption>{fmtNumber(row.distance)} {distanceUnit}</Caption> },
-      { key: 'eta', align: 'right', header: t('nav.col.eta', 'ETA'), render: (row) => <Caption>{fmtNumber(row.eta)} {t('nav.minutes', 'min')}</Caption> },
+      { key: 'distance', align: 'right', header: t('nav.col.distance', 'Distance'), render: (row) => <Caption>{row.distance == null ? '—' : `${fmtNumber(row.distance)} ${distanceUnit}`}</Caption> },
+      { key: 'eta', align: 'right', header: t('nav.col.eta', 'ETA'), render: (row) => <Caption>{row.eta == null ? '—' : `${fmtNumber(row.eta)} ${t('nav.minutes', 'min')}`}</Caption> },
     ],
     [t, distanceUnit, fmtNumber],
   );
@@ -403,7 +362,7 @@ export default function NavigationRoutePage() {
         header: t('nav.col.destination', 'Destination'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <Text color="primary" className="block max-w-[150px] truncate">
+          <Text color="primary" className="block break-words">
             {row.destination_name ?? '—'}
           </Text>
         ),
@@ -447,7 +406,7 @@ export default function NavigationRoutePage() {
             }
             size="sm"
           >
-            {row.type}
+            {t(`nav.wp.kind.${row.type}`, row.type === 'supercharger' ? 'Supercharger' : row.type === 'destination' ? 'Destination' : 'Waypoint')}
           </Badge>
         ),
       },
@@ -460,7 +419,7 @@ export default function NavigationRoutePage() {
         render: (row: Waypoint) => (
           <Text mono color="muted">
             {/* row.distance is meters SI from buildWaypoints; convert to user pref. */}
-            {fmtNumber(convertDistanceFromSI(row.distance, distanceUnit))} {distanceUnit}
+            {row.distance == null ? '—' : `${fmtNumber(convertDistanceFromSI(row.distance, distanceUnit))} ${distanceUnit}`}
           </Text>
         ),
       },
@@ -520,13 +479,37 @@ export default function NavigationRoutePage() {
   }, [refetchLatest, refetchHistory]);
 
   /* ---- traffic-delay accent (dynamic, computed) ---- */
-  const trafficDelaySec = latest?.route_traffic_delay_s ?? 0;
+  const trafficDelaySec = latest?.route_traffic_delay_s;
   const trafficDelayColor =
-    trafficDelaySec === 0
+    trafficDelaySec == null
+      ? 'text-[var(--text-muted)]'
+      : trafficDelaySec === 0
       ? 'text-emerald-300'
       : trafficDelaySec <= 300
         ? 'text-amber-300'
         : 'text-rose-300';
+  const chargingState = deriveDataState(chargingQuery, { provenance: 'live' });
+  const routeScope = t('nav.brief.scope', 'Selected vehicle · current route snapshot, latest 200 location snapshots, and independent arrival-energy telemetry; no common source window.');
+  const routeMetrics = [
+    { metricId: 'distance', occurrenceId: 'navigation-distance', rawValue: hasActiveRoute ? latest?.miles_to_arrival : null, label: t('nav.metric.distance', 'Distance'), description: t('nav.brief.distance', 'Remaining route distance, reported in meters.'), display: { formatter: (raw: number) => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) } },
+    { metricId: 'duration', occurrenceId: 'navigation-eta', rawValue: hasActiveRoute && latest?.minutes_to_arrival != null ? latest.minutes_to_arrival * 60 : null, label: t('nav.metric.eta', 'ETA'), description: t('nav.brief.eta', 'Source ETA is in minutes; bridged as seconds and displayed in the original minute denomination.'), display: { formatter: (raw: number) => ({ value: fmtNumber(raw / 60), unit: t('nav.minutes', 'min') }) } },
+    { metricId: 'duration', occurrenceId: 'navigation-delay', rawValue: hasActiveRoute ? latest?.route_traffic_delay_s : null, label: t('nav.metric.trafficDelay', 'Traffic delay'), description: t('nav.brief.delay', 'Current route traffic delay in seconds; unknown differs from measured no delay.'), display: { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) } },
+    { metricId: 'speed', occurrenceId: 'navigation-average', rawValue: avgSpeed, label: t('nav.metric.avgSpeed', 'Avg speed'), description: t('nav.brief.average', 'Mean of positive measured speeds in the latest 200 snapshots; measured stationary history yields zero, unmeasured history stays unknown.'), display: { formatter: (raw: number) => ({ value: fmtNumber(convertSpeedFromSI(raw, speedUnit)), unit: speedUnit }) } },
+    { metricId: 'percent', occurrenceId: 'navigation-arrival', rawValue: chargingTelemetry?.expected_energy_pct_at_arrival, label: t('nav.metric.energyAtArrival', 'Energy at arrival'), description: t('nav.brief.arrival', 'Expected arrival percentage comes from independent charging telemetry, not a calculation from the route history.'), display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+  ] as const;
+  const fix = normalizeGpsState(latest?.gps_state);
+  const coordinateCaption = hasValidLocation
+    ? `${fmtScientificNumber(lat!, 4)}, ${fmtScientificNumber(lon!, 4)}`
+    : t('nav.locationUnavailable', 'Location unavailable');
+  const presenceScope = t('nav.brief.presenceScope', 'Selected vehicle · latest location snapshot. False is a reported away state; missing presence is unknown.');
+  const presenceMetrics = [
+    { metricId: 'number', occurrenceId: 'navigation-latitude', rawValue: hasValidLocation ? lat : null, label: t('nav.col.latitude', 'Lat'), description: t('nav.currentLocation', 'Current location'), context: coordinateCaption, display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
+    { metricId: 'number', occurrenceId: 'navigation-longitude', rawValue: hasValidLocation ? lon : null, label: t('nav.col.longitude', 'Lon'), description: t('nav.currentLocation', 'Current location'), display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
+    { metricId: 'status', occurrenceId: 'navigation-gps', rawValue: latest?.gps_state != null ? t(`nav.gpsState.${fix}`, { defaultValue: fix }) : null, label: t('nav.gpsFixQuality', 'GPS fix quality'), description: presenceScope },
+    { metricId: 'number', occurrenceId: 'navigation-heading', rawValue: latest?.heading, missingReason: t('nav.unknown', 'Unknown'), label: t('nav.heading', 'Heading'), description: t('nav.brief.heading', 'Cardinal direction and rounded degrees retain the reported heading.'), display: { formatter: (raw: number) => ({ value: t('nav.headingValue', '{{cardinal}} ({{degrees}}°)', { cardinal: headingToCardinal(raw), degrees: Math.round(raw) }), unit: '' }) } },
+    { metricId: 'status', occurrenceId: 'navigation-home', rawValue: latest?.located_at_home === true ? t('nav.atHome', 'At home') : latest?.located_at_home === false ? latest?.homelink_nearby ? t('nav.homelinkNearby', 'HomeLink nearby') : t('nav.awayFromHome', 'Away') : null, label: t('nav.homeStatus', 'Home status'), description: presenceScope },
+    { metricId: 'status', occurrenceId: 'navigation-work', rawValue: latest?.located_at_work === true ? t('nav.atWork', 'At work') : latest?.located_at_work === false ? t('nav.notAtWork', 'Away') : null, label: t('nav.workStatus', 'Work status'), description: presenceScope },
+  ] as const;
 
   /* ================================================================ */
   /*  Render                                                           */
@@ -571,57 +554,14 @@ export default function NavigationRoutePage() {
           <>
             {/* ─────── 1. KPI band — Route Metrics ─────── */}
             <FadeIn>
-              <section
-                aria-label={t('nav.metricsAria', 'Route metrics')}
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
-              >
-                <MetricCard
-                  label={t('nav.metric.distance', 'Distance')}
-                  value={
-                    hasActiveRoute
-                      ? `${fmtNumber(convertDistanceFromSI(latest?.miles_to_arrival ?? 0, distanceUnit))} ${distanceUnit}`
-                      : '—'
-                  }
-                  icon={<Route className="h-5 w-5" />}
-                  color="cyan"
-                />
-                <MetricCard
-                  label={t('nav.metric.eta', 'ETA')}
-                  value={
-                    hasActiveRoute
-                      ? `${fmtNumber(latest?.minutes_to_arrival ?? 0)} ${t('nav.minutes', 'min')}`
-                      : '—'
-                  }
-                  icon={<Clock className="h-5 w-5" />}
-                  color="purple"
-                />
-                <MetricCard
-                  label={t('nav.metric.trafficDelay', 'Traffic delay')}
-                  value={
-                    hasActiveRoute
-                      ? formatDuration(latest?.route_traffic_delay_s ?? 0)
-                      : '—'
-                  }
-                  icon={<TrafficCone className="h-5 w-5" />}
-                  color="amber"
-                />
-                <MetricCard
-                  label={t('nav.metric.avgSpeed', 'Avg speed')}
-                  value={`${fmtNumber(avgSpeed)} ${speedUnit}`}
-                  icon={<Gauge className="h-5 w-5" />}
-                  color="green"
-                />
-                <MetricCard
-                  label={t('nav.metric.energyAtArrival', 'Energy at arrival')}
-                  value={
-                    chargingTelemetry?.expected_energy_pct_at_arrival != null
-                      ? `${fmtNumber(chargingTelemetry.expected_energy_pct_at_arrival)}%`
-                      : '—'
-                  }
-                  icon={<BatteryCharging className="h-5 w-5" />}
-                  color="green"
-                />
-              </section>
+              <MapsOperationalBrief
+                title={t('nav.metricsAria', 'Route metrics')}
+                description={t('nav.brief.description', 'Route distance, ETA and delay remain separate from history-derived speed and projected arrival energy.')}
+                scope={routeScope}
+                metrics={routeMetrics}
+                sources={[{ label: t('nav.resource', 'Navigation'), state: latestState }, { label: t('nav.resourceHistory', 'Location history'), state: historyState }, { label: t('nav.metric.energyAtArrival', 'Energy at arrival'), state: chargingState }]}
+                loading={latestLoading && !historyState.hasData && !chargingState.hasData}
+              />
             </FadeIn>
 
             {/* ─────── 2. Navigation Status hero ─────── */}
@@ -665,16 +605,15 @@ export default function NavigationRoutePage() {
                         {latest.destination_name ?? '—'}
                       </RouteField>
                       <RouteField label={t('nav.eta', 'ETA')}>
-                        {fmtNumber(latest.minutes_to_arrival ?? 0)} {t('nav.minutes', 'min')}
+                        {latest.minutes_to_arrival == null ? '—' : `${fmtNumber(latest.minutes_to_arrival)} ${t('nav.minutes', 'min')}`}
                       </RouteField>
                       <RouteField label={t('nav.distanceRemaining', 'Distance remaining')}>
                         {/* miles_to_arrival is meters SI; convert to user pref. */}
-                        {fmtNumber(convertDistanceFromSI(latest.miles_to_arrival ?? 0, distanceUnit))}{' '}
-                        {distanceUnit}
+                        {latest.miles_to_arrival == null ? '—' : `${fmtNumber(convertDistanceFromSI(latest.miles_to_arrival, distanceUnit))} ${distanceUnit}`}
                       </RouteField>
                       <RouteField label={t('nav.trafficDelay', 'Traffic delay')}>
                         <TrafficDelayBadge
-                          seconds={latest.route_traffic_delay_s ?? 0}
+                          seconds={latest.route_traffic_delay_s}
                           t={t}
                         />
                       </RouteField>
@@ -700,72 +639,14 @@ export default function NavigationRoutePage() {
 
             {/* ─────── 3. Location Status Cards ─────── */}
             <FadeIn delay={0.1}>
-              <section
-                aria-label={t('nav.presenceAria', 'Location status')}
-                className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5"
-              >
-                <LocationStatusCard
-                  icon={<MapPin className="h-5 w-5" />}
-                  label={t('nav.currentLocation', 'Current location')}
-                  value={
-                    hasValidLocation
-                      ? `${fmtScientificNumber(lat!, 4)}, ${fmtScientificNumber(lon!, 4)}`
-                      : t('nav.locationUnavailable', 'Location unavailable')
-                  }
-                  active={hasValidLocation}
-                />
-                {(() => {
-                  const fix = normalizeGpsState(latest?.gps_state);
-                  return (
-                    <LocationStatusCard
-                      icon={<Satellite className="h-5 w-5" />}
-                      label={t('nav.gpsFixQuality', 'GPS fix quality')}
-                      value={t(`nav.gpsState.${fix}`, { defaultValue: fix })}
-                      active={fix === 'locked'}
-                    />
-                  );
-                })()}
-                <LocationStatusCard
-                  icon={<Compass className="h-5 w-5" />}
-                  label={t('nav.heading', 'Heading')}
-                  value={
-                    latest?.heading != null
-                      ? t('nav.headingValue', {
-                          defaultValue: '{{cardinal}} ({{degrees}}°)',
-                          cardinal: headingToCardinal(latest.heading),
-                          degrees: Math.round(latest.heading),
-                        })
-                      : t('nav.unknown', 'Unknown')
-                  }
-                  active={latest?.heading != null}
-                />
-                <LocationStatusCard
-                  icon={<Home className="h-5 w-5" />}
-                  label={t('nav.homeStatus', 'Home status')}
-                  value={
-                    latest?.located_at_home === true
-                      ? t('nav.atHome', 'At home')
-                      : latest?.located_at_home === false
-                        ? latest?.homelink_nearby
-                          ? t('nav.homelinkNearby', 'HomeLink nearby')
-                          : t('nav.awayFromHome', 'Away')
-                        : t('nav.unknown', 'Unknown')
-                  }
-                  active={latest?.located_at_home === true}
-                />
-                <LocationStatusCard
-                  icon={<Briefcase className="h-5 w-5" />}
-                  label={t('nav.workStatus', 'Work status')}
-                  value={
-                    latest?.located_at_work === true
-                      ? t('nav.atWork', 'At work')
-                      : latest?.located_at_work === false
-                        ? t('nav.notAtWork', 'Away')
-                        : t('nav.unknown', 'Unknown')
-                  }
-                  active={latest?.located_at_work === true}
-                />
-              </section>
+              <MapsOperationalBrief
+                title={t('nav.presenceAria', 'Location status')}
+                description={t('nav.brief.presenceDescription', 'GPS, heading and reported home/work presence retain their own known and missing states.')}
+                scope={presenceScope}
+                metrics={presenceMetrics}
+                sources={[{ label: t('nav.resource', 'Navigation'), state: latestState }]}
+                loading={latestLoading}
+              />
             </FadeIn>
 
             {/* ─────── 4. Charts bento — Speed Profile + Presence ─────── */}
@@ -930,10 +811,10 @@ export default function NavigationRoutePage() {
                   ) : (
                     <div className="flex flex-wrap items-center gap-3">
                       <Text as="span" size="3xl" weight="bold" className={cn('tabular-nums', trafficDelayColor)}>
-                        {formatDuration(latest?.route_traffic_delay_s ?? 0)}
+                        {latest?.route_traffic_delay_s == null ? '—' : formatDuration(latest.route_traffic_delay_s)}
                       </Text>
                       <TrafficDelayBadge
-                        seconds={latest?.route_traffic_delay_s ?? 0}
+                        seconds={latest?.route_traffic_delay_s}
                         t={t}
                       />
                     </div>

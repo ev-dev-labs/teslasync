@@ -45,7 +45,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
       )}
       icon={<BatteryMedium className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
       state={state}
-      dependency="both"
+      dependency={current.source === 'live' ? 'live' : 'both'}
       dataTestId="charge-advisor-current"
     >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">

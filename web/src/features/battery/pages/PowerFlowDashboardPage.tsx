@@ -8,7 +8,8 @@ import {
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Badge, Button, Caption } from '@/components/ui';
 
-import { StatStrip, KVList, Energy, type StatMetric } from '@/components/data-display';
+import { KVList, Energy, type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -171,7 +172,8 @@ export default function PowerFlowDashboardPage() {
   const soc = live?.percentage_charged ?? null;
   const gridStatus = live?.grid_status ?? null;
 
-  const kpi = (w: number | null) => (liveIsError ? '—' : fmtWatts(w));
+  const kpi = (w: number | null) => (liveIsError ? null : w);
+  const powerDisplay = { formatter: (raw: number) => ({ value: fmtWatts(raw), unit: '' }) };
   const batteryDir =
     liveIsError || batteryW == null || batteryW === 0
       ? undefined
@@ -188,16 +190,16 @@ export default function PowerFlowDashboardPage() {
   const onRetryLive = () => { void refetchLive(); };
   const onRetryHistory = () => { void refetchHistory(); };
   const powerMetrics: StatMetric[] = [
-    { metricId: 'text', occurrenceId: 'power-flow-solar',
+    { metricId: 'power', display: powerDisplay, occurrenceId: 'power-flow-solar',
       label: t('powerFlow.solarPower', 'Solar Production'), rawValue: kpi(solarW),
       context: <Sun className="h-5 w-5 text-amber-300" aria-hidden="true" /> },
-    { metricId: 'text', occurrenceId: 'power-flow-battery',
+    { metricId: 'power', display: powerDisplay, occurrenceId: 'power-flow-battery',
       label: t('powerFlow.batteryPower', 'Battery'), rawValue: kpi(batteryW),
       context: <><Battery className="h-5 w-5 text-emerald-300" aria-hidden="true" />{batteryDir}</> },
-    { metricId: 'text', occurrenceId: 'power-flow-load',
+    { metricId: 'power', display: powerDisplay, occurrenceId: 'power-flow-load',
       label: t('powerFlow.homeConsumption', 'Home Consumption'), rawValue: kpi(loadW),
       context: <Home className="h-5 w-5 text-indigo-300" aria-hidden="true" /> },
-    { metricId: 'text', occurrenceId: 'power-flow-grid',
+    { metricId: 'power', display: powerDisplay, occurrenceId: 'power-flow-grid',
       label: t('powerFlow.gridPower', 'Grid'), rawValue: kpi(gridW),
       context: <><Zap className="h-5 w-5 text-purple-300" aria-hidden="true" />{gridDir}</> },
   ];
@@ -272,8 +274,8 @@ export default function PowerFlowDashboardPage() {
 
       {/* 2 — Instantaneous power KPI band */}
       <FadeIn delay={0.05}>
-        <section aria-label={t('powerFlow.currentPower', 'Current power')}>
-        <StatStrip title={t('powerFlow.currentPower', 'Current power')} metrics={powerMetrics}
+        <section>
+        <BatteryEvidenceBrief title={t('powerFlow.currentPower', 'Current power')} metrics={powerMetrics}
           loading={liveLoading} retained={liveState.status === 'stale'}
           period={{ kind: 'snapshot', label: live ? formatDateTime(live.timestamp) : t('powerFlow.statusUnavailable', 'Live status unavailable — refresh to fetch'),
             observedAt: live?.timestamp ?? null,
@@ -372,7 +374,9 @@ export default function PowerFlowDashboardPage() {
                     label: t('powerFlow.stormModeLabel', 'Storm Mode'),
                     value: (
                       <Badge variant={live.storm_mode_active ? 'warning' : 'neutral'} size="sm">
-                        {live.storm_mode_active ? t('powerFlow.on', 'On') : t('powerFlow.off', 'Off')}
+                        {live.storm_mode_active == null
+                          ? t('powerFlow.unknown', 'Unknown')
+                          : live.storm_mode_active ? t('powerFlow.on', 'On') : t('powerFlow.off', 'Off')}
                       </Badge>
                     ),
                   },
@@ -380,7 +384,9 @@ export default function PowerFlowDashboardPage() {
                     label: t('powerFlow.backupCapableLabel', 'Backup Capable'),
                     value: (
                       <Badge variant={live.backup_capable ? 'info' : 'neutral'} size="sm">
-                        {live.backup_capable ? t('powerFlow.yes', 'Yes') : t('powerFlow.no', 'No')}
+                        {live.backup_capable == null
+                          ? t('powerFlow.unknown', 'Unknown')
+                          : live.backup_capable ? t('powerFlow.yes', 'Yes') : t('powerFlow.no', 'No')}
                       </Badge>
                     ),
                   },

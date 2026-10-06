@@ -35,6 +35,7 @@ export function TripOverviewPanel({ trip, isLoading, isError, error, onRetry }: 
         />
       ) : (
         <KVList
+          layout="responsive"
           items={[
             { label: t('trips.detail.tripId', 'Trip ID'), value: String(trip.id) },
             // Treat blank / whitespace-only names as "no name" so the row shows

@@ -4,6 +4,7 @@ import { BookOpen } from 'lucide-react';
 import { Input, Badge, Caption, Subhead, Text } from '@/components/ui';
 import { combineDataStates, deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import { useSignalCatalog, useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
@@ -11,6 +12,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
 export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
@@ -113,6 +115,19 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             onChange={(e) => setSearch(e.target.value)}
             className="min-h-[44px]"
           />
+          {observations == null || observationState.refreshError || observationState.isRefreshBlocked ? (
+            <SourceContent
+              state={sourceBoundaryState(observationState, observations != null)}
+              label={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}
+              emptyMessage={t('widget.signalCatalog.observationsUnavailable', 'Signal observations unavailable')}
+              errorMessage={t('widget.signalCatalog.observationsUnavailable', 'Signal observations unavailable')}
+              error={observationState.fatalError}
+              retainedMessage={t('widget.signalCatalog.observationsRetained', 'Previously loaded signal observations remain visible while this source recovers.')}
+              errorRecovery={{ onRetry: () => { void observationQuery.refetch(); } }}
+            >
+              {null}
+            </SourceContent>
+          ) : null}
 
           {filtered.length === 0 ? (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -128,7 +143,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                 <div key={category}>
                   <Subhead className="mb-1 sticky top-0 bg-[var(--surface-2)] py-1 px-1 rounded-shape-sm">
                     {category}
-                    <span className="ml-1 text-[var(--text-muted)]">({signals.length})</span>
+                    <span className="ms-1 text-[var(--text-muted)]">({signals.length})</span>
                   </Subhead>
                   <div className="space-y-0.5">
                     {signals.map((sig, i) => {
@@ -136,18 +151,21 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                       return (
                         <div
                           key={name || `${category}-${i}`}
-                          className="flex items-center gap-2 min-h-11 px-1 rounded-shape-sm hover:bg-[var(--surface-2)] transition-colors"
+                          className="flex min-w-0 flex-wrap items-start gap-2 min-h-11 px-1 rounded-shape-sm hover:bg-[var(--surface-2)] transition-colors"
                           title={sig.description ?? undefined}
                         >
-                          <Text variant="bodySm" className="font-mono truncate flex-1 min-w-0">
+                          <div className="flex-1 min-w-0">
+                          <Text variant="bodySm" mono className="block [overflow-wrap:anywhere]">
                             {name || '—'}
                           </Text>
+                          {sig.description && <Text as="p" variant="caption" className="[overflow-wrap:anywhere]">{sig.description}</Text>}
+                          </div>
                           {sig.unit && (
                             <Badge variant="neutral" className="text-2xs shrink-0">
                               {sig.unit}
                             </Badge>
                           )}
-                          <Caption className="tabular-nums shrink-0 min-w-9 text-right" title={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}>
+                          <Caption className="tabular-nums shrink-0 min-w-9 text-end" title={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}>
                             {observations == null ? '—' : fmtInt(observationCounts.get(name) ?? 0)}
                           </Caption>
                         </div>

@@ -114,6 +114,22 @@ describe('SchemaCatalogCard — header & layout', () => {
     // "{{count}} cols" fallback interpolated to the real column count.
     expect(screen.getByText('3 cols')).toBeInTheDocument();
   });
+
+  it('keeps long table and column identities visible without hover-only disclosure', () => {
+    const name = 'historical_signal_evidence_catalog_'.repeat(5);
+    const columnName = 'producer_timestamp_and_normalized_value_'.repeat(4);
+    const { container } = renderCard(makeTable({
+      name,
+      columns: [makeColumn({ name: columnName, type: 'double precision', description: 'complete SI evidence' })],
+    }));
+    const heading = screen.getByRole('heading', { level: 3, name });
+    expect(heading).toHaveClass('[overflow-wrap:anywhere]');
+    expect(heading).not.toHaveClass('truncate');
+    expect(screen.getByText(columnName)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.getByRole('table', { name })).toBeInTheDocument();
+    expect(screen.getByText('complete SI evidence')).toBeInTheDocument();
+    expect(container.querySelector('[data-print-card]')).toHaveClass('min-w-0', 'max-w-full');
+  });
 });
 
 // ── Column rows ──────────────────────────────────────────────────────────────────

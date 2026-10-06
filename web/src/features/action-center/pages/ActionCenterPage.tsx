@@ -198,6 +198,14 @@ export default function ActionCenterPage() {
         <ActionCenterSummary
           summary={query.data?.summary ?? null}
           loading={!actionCenterState.hasData && query.isLoading}
+          status={actionCenterState.status}
+          provenance={actionCenterState.provenance}
+          generatedAt={query.data?.generated_at ?? null}
+          vehicleName={filter.vehicle_id == null
+            ? null
+            : vehicles.find((vehicle) => vehicle.id === filter.vehicle_id)?.display_name
+              ?? t('actionCenter.summary.vehicleId', 'Vehicle {{id}}', { id: filter.vehicle_id })}
+          providers={query.data?.provider_status ?? []}
         />
       </FadeIn>
       <FadeIn delay={0.04}>

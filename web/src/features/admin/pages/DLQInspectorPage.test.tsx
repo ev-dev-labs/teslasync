@@ -26,7 +26,7 @@
  *      placeholders, shows a recoverable QueryError, and recovers on retry.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -109,6 +109,7 @@ vi.mock('@/api/client', async () => {
 });
 
 import { request, ApiError } from '@/api/client';
+import { formatBytes } from '@/lib/numberFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
 import DLQInspectorPage from './DLQInspectorPage';
 import type {
@@ -240,7 +241,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   });
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -249,6 +250,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...view, client };
 }
 
 /** Inspect entry A (replayable) by locating its row via the VIN cell. */
@@ -275,6 +277,24 @@ beforeEach(() => {
 });
 
 describe('DLQInspectorPage — bento surface', () => {
+  it('uses the shared OperationalBrief with six numeric/source metrics, full captions and independent queue scope', async () => {
+    wire();
+    renderPage();
+    await screen.findByText(ENTRY_A_VIN);
+    const strip = screen.getByTestId('dlq-operational-brief');
+    expect(strip).toHaveAttribute('data-operational-brief');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    const payload = strip.querySelector('[data-operational-metric="payload"]');
+    expect(payload).toHaveTextContent(formatBytes(2948));
+    for (const caption of ['in dead-letter queue', 'parsed with source topic', 'no replay target',
+      'unique failure causes', 'raw bytes queued', 'DLQ_REPLAY_ENABLED env']) {
+      expect(strip).toHaveTextContent(caption);
+    }
+    expect(screen.getByText('Recent replay activity')).toBeInTheDocument();
+    expect(screen.getByText('Failure reasons')).toBeInTheDocument();
+  });
+
   it('renders the KPI band, entries table, reason breakdown, and audit log from the list payload', async () => {
     wire();
     renderPage();
@@ -313,6 +333,23 @@ describe('DLQInspectorPage — bento surface', () => {
 });
 
 describe('DLQInspectorPage — entry drawer', () => {
+  it('opens operational review details without selecting or replaying a DLQ entry', async () => {
+    wire();
+    renderPage();
+    await screen.findByText(ENTRY_A_VIN);
+    fireEvent.click(within(screen.getByTestId('dlq-operational-brief'))
+      .getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Dead-letter queue summary details' });
+    expect(within(drawer).getByText('parsed with source topic')).toBeInTheDocument();
+    expect(within(drawer).getByText('raw bytes queued')).toBeInTheDocument();
+    expect(within(drawer).getByText(formatBytes(2948))).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /DLQ entry #1/ })).not.toBeInTheDocument();
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
+    const close = within(drawer).getAllByRole('button', { name: 'Close' });
+    fireEvent.click(close[close.length - 1]);
+    expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+  });
+
   it('opens the drawer, lazy-loads the full entry, and decodes the base64 inner payload', async () => {
     wire();
     renderPage();
@@ -416,5 +453,38 @@ describe('DLQInspectorPage — list error handling', () => {
 
     expect(await screen.findByText(ENTRY_A_VIN)).toBeInTheDocument();
     expect(screen.getAllByText('unknown_enum').length).toBeGreaterThan(0);
+  });
+
+  it('retains entries, failure reasons, replay mode and independent audit rows after failed background reads', async () => {
+    wire();
+    const { client } = renderPage();
+    await screen.findByText(ENTRY_A_VIN);
+    await screen.findByText('admin@example.com');
+    wire({
+      list: () => Promise.reject(new ApiError('list refresh failed', 500)),
+      audit: () => Promise.reject(new ApiError('audit refresh failed', 500)),
+    });
+    await act(async () => { await client.refetchQueries({ type: 'active' }); });
+    expect(screen.getByText(ENTRY_A_VIN)).toBeInTheDocument();
+    expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    expect(screen.getAllByText('kind_mismatch').length).toBeGreaterThan(0);
+    expect(screen.getByText('Enabled')).toBeInTheDocument();
+    expect(screen.queryByText('DLQ replay is disabled')).toBeNull();
+    expect(screen.queryByText('Server error')).toBeNull();
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(screen.getByTestId('dlq-summary')).toHaveAttribute('data-retained', 'true');
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
+  });
+
+  it('preserves the selected entry identity in the replay confirmation and cancellation never publishes', async () => {
+    wire();
+    renderPage();
+    await openReplayConfirm();
+    expect(screen.getByText(/republish entry #1 to its source topic/)).toBeInTheDocument();
+    const confirmation = screen.getByRole('dialog', { name: 'Replay DLQ entry?' });
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Replay DLQ entry?' })).toBeNull());
+    expect(screen.getByRole('dialog', { name: /DLQ entry #1/ })).toBeInTheDocument();
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
   });
 });

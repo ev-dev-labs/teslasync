@@ -214,8 +214,8 @@ function kpiRegion() {
 // Read a MetricCard's value by its label so numeric assertions never collide.
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
-  return card.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = labelEl.closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -279,6 +279,15 @@ describe('rankChipClass', () => {
 /* ─────────────────────────── Component tests ─────────────────────────── */
 
 describe('LocationsPage — shell & request contract', () => {
+  it('retains loaded-page scope and opens the original-duration evidence in the real summary drawer', async () => {
+    renderPage();
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('46'));
+    expect(within(kpiRegion()).getAllByText(/not server-wide totals/).length).toBeGreaterThan(0);
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Location summary details' });
+    expect(within(drawer).getByText('Home, Seattle')).toBeInTheDocument();
+    expect(within(drawer).getByText('Loaded-page total duration divided by loaded-page visits; zero when the successful page contains no visits.')).toBeInTheDocument();
+  });
   it('renders the title/subtitle and requests SI locations with snake_case params (no /api/v1)', async () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Visited locations' })).toBeInTheDocument();
@@ -465,8 +474,9 @@ describe('LocationsPage — loading & error states', () => {
 
     expect(screen.getByTestId('lb-loading-Visits')).toBeInTheDocument();
     expect(screen.getByTestId('lb-loading-Hours')).toBeInTheDocument();
-    // KPI cards are replaced by skeletons — no metric labels yet.
-    expect(within(kpiRegion()).queryByText('Unique places')).not.toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Unique places')).toBeInTheDocument();
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 

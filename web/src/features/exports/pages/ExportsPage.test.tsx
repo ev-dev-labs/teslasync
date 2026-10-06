@@ -2,8 +2,8 @@
  * ExportsPage — behaviour + hardening coverage.
  *
  * ExportsPage exposes a single default export (the exports command view). This
- * suite drives it through every meaningful branch by mocking only its two data
- * hooks (`useExportJobs` / `useBulkExportsDelete`) and the opt-in AI advisor.
+ * suite controls its two data hooks (`useExportJobs` / `useBulkExportsDelete`),
+ * the opt-in AI advisor, and external CSV/JSON download actions.
  * The derived-stats library (`../components/exportStats`), the shared
  * `<DataTable>`, the promise-based confirm dialog (`useConfirm` +
  * `<ConfirmDialog>`), the number/date formatters, and the download-URL builder
@@ -32,13 +32,22 @@
  *   - refresh: the header refresh control re-invokes the query's refetch.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { ApiError } from '@/lib/resilience';
-import type { ExportJobSummary } from '@/api/hooks/useExports';
+import type { ExportBulkResult, ExportJobSummary } from '@/api/hooks/useExports';
+import { downloadCSV, downloadJSON } from '@/lib/csvExport';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { decimal_precision: 2, locale: 'en-US', unit_of_length: 'km',
+      unit_of_temp: 'C', unit_of_pressure: 'bar', currency_symbol: '$' },
+    settingsUnavailable: false,
+  }),
+}));
 
 // ── i18n stub: resolve the fallback string (2nd arg) and interpolate {{var}}. ──
 vi.mock('react-i18next', () => {
@@ -73,12 +82,15 @@ vi.mock('react-i18next', () => {
 
 // ── framer-motion: strip animation props, keep motion.* + useReducedMotion. ──
 vi.mock('framer-motion', () => {
+  type MotionProps = { children?: ReactNode } & Record<string, unknown>;
+  const elements = new Map<PropertyKey, (props: MotionProps) => ReactNode>();
   const motionProxy: Record<string, unknown> = new Proxy(
     {},
     {
-      get:
-        () =>
-        ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+      get: (_target, tag) => {
+        const cached = elements.get(tag);
+        if (cached) return cached;
+        const Component = ({ children, ...rest }: MotionProps) => {
           const safe: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(rest)) {
             if (
@@ -98,7 +110,10 @@ vi.mock('framer-motion', () => {
             safe[k] = v;
           }
           return <div {...(safe as Record<string, unknown>)}>{children}</div>;
-        },
+        };
+        elements.set(tag, Component);
+        return Component;
+      },
     },
   );
   return {
@@ -112,6 +127,12 @@ vi.mock('framer-motion', () => {
 //    sentinel so this suite stays focused on the page's own orchestration. ──
 vi.mock('@/components/ai/AIPiiRedactionSharedExports', () => ({
   AIPiiRedactionSharedExports: () => <div data-testid="ai-advisor-stub" />,
+}));
+
+vi.mock('@/lib/csvExport', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/csvExport')>(),
+  downloadCSV: vi.fn(),
+  downloadJSON: vi.fn(),
 }));
 
 // ── Data hooks, driven per test. `exportDownloadUrl` + the stats helpers stay
@@ -133,8 +154,19 @@ import ExportsPage from './ExportsPage';
 const mockJobs = useExportJobs as unknown as ReturnType<typeof vi.fn>;
 const mockBulkDelete = useBulkExportsDelete as unknown as ReturnType<typeof vi.fn>;
 
- 
-function makeQuery(over: Record<string, unknown> = {}): any {
+interface QueryStub {
+  data: ExportJobSummary[] | undefined;
+  error: Error | null;
+  isLoading: boolean;
+  isFetching: boolean;
+  isStale: boolean;
+  isError: boolean;
+  fetchStatus: 'idle' | 'fetching' | 'paused';
+  dataUpdatedAt: number;
+  refetch: ReturnType<typeof vi.fn>;
+}
+
+function makeQuery(over: Partial<QueryStub> = {}): QueryStub {
   return {
     data: undefined,
     error: null,
@@ -142,6 +174,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
     isFetching: false,
     isStale: false,
     isError: false,
+    fetchStatus: 'idle',
     dataUpdatedAt: Date.now(),
     refetch: vi.fn(),
     ...over,
@@ -195,13 +228,16 @@ function renderPage() {
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Export summary' });
 
-/** Read the canonical stat's value without relying on typography siblings. */
+/** Read the actual Brief value without relying on typography siblings. */
 function kpiValue(label: string): string {
   const span = within(kpiRegion()).getByText(label);
-  return span.closest('[data-stat]')?.querySelector('[data-stat-value]')?.textContent ?? '';
+  return span.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
+  vi.mocked(downloadCSV).mockReset();
+  vi.mocked(downloadJSON).mockReset();
   mockJobs.mockReset();
   mockBulkDelete.mockReset();
   mutateAsyncSpy = vi.fn().mockResolvedValue({ deleted: 1, failed: [] });
@@ -224,8 +260,10 @@ describe('ExportsPage — loading', () => {
     // …but the data surfaces are withheld while loading.
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByText('No exports yet')).toBeNull();
-    // KPI cards are replaced by skeletons (no card label rendered).
-    expect(screen.queryByText('Total exports')).toBeNull();
+    // Summary labels remain visible, but no measured values flash.
+    expect(screen.getByText('Total exports')).toBeInTheDocument();
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 });
@@ -265,6 +303,29 @@ describe('ExportsPage — empty', () => {
 });
 
 describe('ExportsPage — populated', () => {
+  it('reviews all summary captions without changing table rows, selection or any job', async () => {
+    const snapshot = structuredClone(JOBS);
+    renderPage();
+    fireEvent.click(within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ })[0]);
+    const trigger = within(kpiRegion()).getByRole('button', { name: 'Review details' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const drawer = await screen.findByRole('dialog', { name: 'Export summary details' });
+    expect(within(drawer).getByText('Every job in the returned list, including expired jobs and unrecognized statuses.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Jobs marked ready in the returned list; their download actions remain in the jobs table.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Queued and processing jobs combined; this is not a completion estimate.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Jobs marked failed in the returned list, not a failure rate or a date-bounded total.')).toBeInTheDocument();
+    expect(within(drawer).getByText('5.00 MB')).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(6);
+    expect(screen.getByRole('link', { name: 'Download export job-ready-1' })).toHaveAttribute('href', '/api/v1/export/jobs/job-ready-1/download');
+    expect(JOBS).toEqual(snapshot);
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+
   it('derives honest KPI tiles from the fixture', () => {
     renderPage();
     expect(kpiValue('Total exports')).toBe('6');
@@ -398,21 +459,42 @@ describe('ExportsPage — refresh', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
     expect(screen.queryByText('Server error')).not.toBeInTheDocument();
     expect(screen.getByText('Storage used')).toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Retained export jobs')).toBeInTheDocument();
+    expect(kpiRegion().querySelector('[data-operational-metric="storage"]')).toHaveAttribute('data-value-state', 'value');
+    expect(within(kpiRegion()).getByText(/Last successful load:/)).toBeInTheDocument();
   });
 
   it('does not substitute zero totals when the initial source failed', () => {
     mockJobs.mockReturnValue(makeQuery({ data: undefined, error: new Error('offline'), isError: true }));
     renderPage();
     const region = kpiRegion();
-    const total = within(region).getByText('Total exports').closest('[data-stat]');
-    expect(total).toHaveAttribute('data-state', 'missing');
+    const total = within(region).getByText('Total exports').closest('[data-operational-metric]');
+    expect(total).toHaveAttribute('data-value-state', 'missing');
     expect(kpiValue('Total exports')).toBe('—');
+    expect(within(kpiRegion()).getByText('Export-job source failed')).toBeInTheDocument();
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
   });
 
+  it('keeps retained raw counts, byte units, downloads and the real drawer when refresh is paused', async () => {
+    mockJobs.mockReturnValue(makeQuery({ data: JOBS, fetchStatus: 'paused' }));
+    renderPage();
+    expect(within(kpiRegion()).getByText('Retained jobs · refresh paused')).toBeInTheDocument();
+    expect(kpiValue('Total exports')).toBe('6');
+    expect(kpiValue('Total size')).toBe('5.00 MB');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Retained jobs · refresh paused')).toBeInTheDocument();
+    expect(within(drawer).getByText('5.00 MB')).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'Download export job-ready-1' })).toBeInTheDocument();
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+
   it.each([
-    { fetchStatus: 'paused', message: 'The export-job query is paused; no empty result is inferred.' },
-    { fetchStatus: 'idle', message: 'Export-job availability has not resolved yet.' },
+    { fetchStatus: 'paused' as const, message: 'The export-job query is paused; no empty result is inferred.' },
+    { fetchStatus: 'idle' as const, message: 'Export-job availability has not resolved yet.' },
   ])('does not infer empty exports or zero totals from an initial $fetchStatus source', ({ fetchStatus, message }) => {
     mockJobs.mockReturnValue(makeQuery({ fetchStatus }));
     renderPage();
@@ -421,5 +503,213 @@ describe('ExportsPage — refresh', () => {
     expect(screen.queryByText('No exports yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
+    expect(within(kpiRegion()).getByText(fetchStatus === 'paused'
+      ? 'Export-job source paused' : 'Export-job source unresolved')).toBeInTheDocument();
+  });
+
+  describe('ExportsPage — recovery interactions', () => {
+    it('recovers through retry, pending and ready states without flashing empty jobs or running a mutation', () => {
+      const refetch = vi.fn();
+      mockJobs.mockReturnValue(makeQuery({
+        error: new ApiError('unavailable', 503), isError: true, refetch,
+      }));
+      const view = renderPage();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+      expect(refetch).toHaveBeenCalledOnce();
+
+      mockJobs.mockReturnValue(makeQuery({
+        isLoading: true, isFetching: true, fetchStatus: 'fetching', refetch,
+      }));
+      view.rerenderPage();
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(screen.queryByText('No exports yet')).not.toBeInTheDocument();
+      expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
+
+      mockJobs.mockReturnValue(makeQuery({ data: JOBS, refetch }));
+      view.rerenderPage();
+      expect(screen.getByRole('table', { name: 'exports:jobs' })).toBeInTheDocument();
+      expect(kpiValue('Total exports')).toBe('6');
+      expect(screen.queryByText('Service unavailable')).not.toBeInTheDocument();
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps permission guidance separate from empty exports and recovers after access is restored', () => {
+      const refetch = vi.fn();
+      mockJobs.mockReturnValue(makeQuery({
+        error: new ApiError('forbidden', 403), isError: true, refetch,
+      }));
+      const view = renderPage();
+      expect(screen.getAllByText('Permission denied')).toHaveLength(2);
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+      expect(screen.queryByText('No exports yet')).not.toBeInTheDocument();
+      expect(kpiValue('Total exports')).toBe('—');
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' }).at(-1)!);
+      expect(refetch).toHaveBeenCalledOnce();
+      mockJobs.mockReturnValue(makeQuery({ data: JOBS, refetch }));
+      view.rerenderPage();
+      expect(screen.queryByText('Permission denied')).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Download export job-ready-1' }))
+        .toHaveAttribute('href', '/api/v1/export/jobs/job-ready-1/download');
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+    });
+
+    it('preserves exact selected members after a denied deletion and requires a fresh confirmation for retry', async () => {
+      mutateAsyncSpy
+        .mockRejectedValueOnce(new ApiError('forbidden', 403))
+        .mockResolvedValueOnce({ deleted: 2, failed: [] });
+      renderPage();
+      const checkboxes = within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ });
+      fireEvent.click(checkboxes[0]);
+      fireEvent.click(checkboxes[1]);
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+      fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(mutateAsyncSpy).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.getByText('2 selected')).toBeInTheDocument();
+      expect(checkboxes[0]).toBeChecked();
+      expect(checkboxes[1]).toBeChecked();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      const retryDialog = await screen.findByRole('dialog');
+      expect(within(retryDialog).getByText(
+        'Selected jobs and their downloadable artifacts will be permanently removed.',
+      )).toBeInTheDocument();
+      expect(mutateAsyncSpy).toHaveBeenCalledTimes(1);
+      fireEvent.click(within(retryDialog).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(screen.queryByText('2 selected')).not.toBeInTheDocument());
+      expect(mutateAsyncSpy.mock.calls).toEqual([
+        [['job-ready-1', 'job-ready-2']],
+        [['job-ready-1', 'job-ready-2']],
+      ]);
+    });
+
+    it('keeps the selected rows and disables repeated deletion while the confirmed request is pending', async () => {
+      let resolveDelete: ((result: ExportBulkResult) => void) | undefined;
+      mutateAsyncSpy.mockImplementation(() => new Promise<ExportBulkResult>((resolve) => {
+        resolveDelete = resolve;
+      }));
+      const view = renderPage();
+      fireEvent.click(within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(mutateAsyncSpy).toHaveBeenCalledOnce());
+
+      mockBulkDelete.mockReturnValue({ mutateAsync: mutateAsyncSpy, isPending: true });
+      view.rerenderPage();
+      const deleteButton = screen.getByRole('button', { name: 'Delete' });
+      expect(deleteButton).toBeDisabled();
+      expect(deleteButton).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByText('1 selected')).toBeInTheDocument();
+      fireEvent.click(deleteButton);
+      expect(mutateAsyncSpy).toHaveBeenCalledOnce();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      await act(async () => {
+        if (!resolveDelete) throw new Error('Confirmed delete did not start');
+        resolveDelete({ deleted: 1, failed: [] });
+      });
+      mockBulkDelete.mockReturnValue({ mutateAsync: mutateAsyncSpy, isPending: false });
+      view.rerenderPage();
+      expect(screen.queryByText('1 selected')).not.toBeInTheDocument();
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    it('treats Escape as cancellation, keeps selection and reopens confirmation without mutating', async () => {
+      renderPage();
+      fireEvent.click(within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      await screen.findByRole('dialog');
+      fireEvent.keyDown(window, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.getByText('1 selected')).toBeInTheDocument();
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ExportsPage — complete loaded exports and settings', () => {
+    it('exports every matching loaded row rather than only the first page, and selection exports only the chosen members', async () => {
+      const jobs = Array.from({ length: 31 }, (_, index) => job({
+        id: `job-${index}`, type: `export-${index}`, status: 'ready', file_size: index * 1024,
+      }));
+      const snapshot = structuredClone(jobs);
+      mockJobs.mockReturnValue(makeQuery({ data: jobs }));
+      renderPage();
+      const checkboxes = within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ });
+      expect(checkboxes).toHaveLength(25);
+      fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+      await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+      expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual(jobs.map((row) => ({
+        type: row.type, format: 'csv', file_size: row.file_size,
+        created_at: row.created_at, status: 'ready', actions: 'Download',
+      })));
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).not.toBeDisabled());
+      fireEvent.click(checkboxes[0]);
+      fireEvent.click(checkboxes[1]);
+      fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+      expect(screen.getByRole('radio', { name: 'Selected (2)' })).toHaveAttribute('aria-checked', 'true');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+      await waitFor(() => expect(downloadJSON).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(downloadJSON).mock.calls[1][1]).toEqual([
+        { type: 'export-0', format: 'csv', file_size: 0, created_at: jobs[0].created_at, status: 'ready', actions: 'Download' },
+        { type: 'export-1', format: 'csv', file_size: 1024, created_at: jobs[1].created_at, status: 'ready', actions: 'Download' },
+      ]);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).not.toBeDisabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Visible (31)' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
+      await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce());
+      const csv = vi.mocked(downloadCSV).mock.calls[0][1];
+      expect(csv.split('\r\n')).toHaveLength(32);
+      expect(csv.split('\r\n')[0]).toBe('Type,Format,Size,Created,Status,Actions');
+      jobs.forEach((row) => expect(csv).toContain(`${row.type},csv,`));
+      expect(jobs).toEqual(snapshot);
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps actual column choices under exports:jobs across refresh failure and remount, including exported column order', async () => {
+      const view = renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+      const menu = screen.getByRole('menu', { name: 'Reorder or hide columns' });
+      fireEvent.click(within(menu).getByRole('checkbox', { name: 'Show or hide Format' }));
+      fireEvent.click(within(menu).getByRole('button', { name: 'Move Type down' }));
+      fireEvent.click(within(menu).getByRole('button', { name: 'Move Size up' }));
+      fireEvent.keyDown(document, { key: 'Escape' });
+      const saved = window.localStorage.getItem('teslasync.table.exports:jobs.columns');
+      expect(JSON.parse(saved ?? 'null')).toEqual({
+        order: ['format', 'file_size', 'type', 'created_at', 'status', 'actions'],
+        hidden: ['format'],
+      });
+      expect(within(screen.getByRole('table')).queryByRole('columnheader', { name: /Format/ }))
+        .not.toBeInTheDocument();
+
+      mockJobs.mockReturnValue(makeQuery({ data: JOBS, error: new Error('refresh failed'), isError: true }));
+      view.rerenderPage();
+      expect(window.localStorage.getItem('teslasync.table.exports:jobs.columns')).toBe(saved);
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+      await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+      const exported = vi.mocked(downloadJSON).mock.calls[0][1] as Record<string, unknown>[];
+      expect(exported).toHaveLength(JOBS.length);
+      expect(Object.keys(exported[0])).toEqual(['file_size', 'type', 'created_at', 'status', 'actions']);
+      expect(exported.every((row) => !('format' in row))).toBe(true);
+      view.unmount();
+      renderPage();
+      expect(within(screen.getByRole('table')).queryByRole('columnheader', { name: /Format/ }))
+        .not.toBeInTheDocument();
+      expect(window.localStorage.getItem('teslasync.table.exports:jobs.columns')).toBe(saved);
+    });
   });
 });

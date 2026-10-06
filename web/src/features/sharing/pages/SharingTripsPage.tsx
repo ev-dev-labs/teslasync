@@ -29,11 +29,11 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Route as RouteIcon, Share2, Zap, Car, RefreshCw } from 'lucide-react'
+import { Route as RouteIcon, RefreshCw } from 'lucide-react'
 
 import { LayoutCard, PageLayout } from '@/components/layout'
 import { GlassPanel, Button, Text } from '@/components/ui'
-import { MetricCard } from '@/components/data-display'
+import { SharingTripsBrief } from '../components/operationalbrief-all/SharingTripsBrief'
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 
 import { FadeIn } from '@/components/motion'
@@ -43,7 +43,7 @@ import { useUnits } from '@/hooks/useUnits'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
 
-import { AITripPostcardShareCardImageGeneration } from '@/components/ai/AITripPostcardShareCardImageGeneration'
+import { AITripPostcardShareCardImageGeneration } from '@/components/ai'
 import {
   TripShareRow,
   SelectedTripPreview,
@@ -52,7 +52,7 @@ import {
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function SharingTripsPage() {
-  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   usePageTitle(t('sharing.trips.title', 'Share a trip'))
 
@@ -125,40 +125,19 @@ export default function SharingTripsPage() {
         ) : (
           <section
             aria-label={t('sharing.trips.kpis', 'Trip totals')}
-            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
           >
-            {coldLoading ? (
-              [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[74px] rounded-xl" />)
-            ) : unresolvedMessage ? (
-              <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
-            ) : (
-              <>
-                <MetricCard
-                  label={t('sharing.trips.kpi.shareable', 'Shareable trips')}
-                  value={fmtInt(kpis.count)}
-                  icon={<Share2 className="h-5 w-5" />}
-                  color="cyan"
-                />
-                <MetricCard
-                  label={t('sharing.trips.kpi.distance', 'Total distance')}
-                  value={formatDistance(kpis.totalDistanceM)}
-                  icon={<RouteIcon className="h-5 w-5" />}
-                  color="green"
-                />
-                <MetricCard
-                  label={t('sharing.trips.kpi.energy', 'Total energy')}
-                  value={formatEnergy(kpis.totalEnergyWh)}
-                  icon={<Zap className="h-5 w-5" />}
-                  color="amber"
-                />
-                <MetricCard
-                  label={t('sharing.trips.kpi.drives', 'Total drives')}
-                  value={fmtInt(kpis.totalDrives)}
-                  icon={<Car className="h-5 w-5" />}
-                  color="purple"
-                />
-              </>
-            )}
+            <SharingTripsBrief
+              kpis={kpis}
+              hasData={sourceState.hasData}
+              loading={coldLoading}
+              retained={!!sourceState.refreshError}
+              paused={tripsQuery.fetchStatus === 'paused'}
+              refreshing={tripsQuery.isFetching}
+              unresolvedMessage={unresolvedMessage}
+              vehicleId={vehicleId}
+              formatDistance={formatDistance}
+              formatEnergy={formatEnergy}
+            />
           </section>
         )}
       </FadeIn>

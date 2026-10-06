@@ -280,6 +280,7 @@ function q<T>(data: T, over: Record<string, unknown> = {}) {
 
 // mutable per-test state driving the inline useQuery + refresh spies
 let inline: Record<string, unknown>
+let inlineOverrides: Record<string, Record<string, unknown>>
 let refetchHealth: ReturnType<typeof vi.fn>
 let liveReconnect: ReturnType<typeof vi.fn>
 let invalidateQueries: ReturnType<typeof vi.fn>
@@ -317,6 +318,7 @@ beforeEach(() => {
     'backup-stats': backupStats(),
     workers: workersHealth(),
   }
+  inlineOverrides = {}
   mockUseQuery.mockImplementation(
     (opts: unknown) =>
       ({
@@ -325,6 +327,7 @@ beforeEach(() => {
         isFetching: false,
         error: null,
         refetch: vi.fn(),
+        ...inlineOverrides[String((opts as { queryKey: unknown[] }).queryKey[1])],
          
       }) as any,
   )
@@ -605,14 +608,15 @@ describe('SystemStatusPage — missing data placeholders', () => {
     expect(screen.getByText('Awaiting first check')).toBeInTheDocument()
     const r = healthRegion()
     expect(r.getByText('no data')).toBeInTheDocument() // services
-    expect(r.getByText('connected')).toBeInTheDocument() // database (no latency/size)
+    expect(r.queryByText('connected')).not.toBeInTheDocument() // absent database source is not connected
     expect(r.getByText('No vehicle telemetry to assess')).toBeInTheDocument()
-    expect(r.getByText('unknown')).toBeInTheDocument() // workers
-    expect(r.getByText('Not connected')).toBeInTheDocument() // tesla auth
+    expect(r.getAllByText('unknown')).toHaveLength(3) // database, workers and Tesla auth
+    expect(r.queryByText('Not connected')).not.toBeInTheDocument()
 
     // Errors + system-info honest fallbacks.
     expect(document.querySelector('#errors')).toBeNull()
-    expect(screen.getByText('Loading system info…')).toBeInTheDocument()
+    expect(within(document.getElementById('system')!).getByText('System info is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText('Loading system info…')).not.toBeInTheDocument()
     // Infrastructure details are available in the operator disclosure.
     expect(document.querySelector('#operator-details #resources')).not.toBeNull()
     // Nothing actionable → empty action list.
@@ -630,6 +634,39 @@ describe('SystemStatusPage — missing data placeholders', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
     expect(healthRegion().getByText('no data')).toBeInTheDocument()
+  })
+})
+
+describe('SystemStatusPage — continuation source preservation', () => {
+  it('keeps scalar Telemetry, independent sources and body recovery outside the refresh control', () => {
+    inlineOverrides['backup-stats'] = { error: new Error('statistics refresh failed') }
+    mockAuthStatus.mockReturnValue(
+      q(undefined, { error: new Error('auth source unavailable') }) as ReturnType<typeof useAuthStatus>,
+    )
+    renderPage()
+    expect(healthRegion().getByText('Telemetry')).toBeInTheDocument()
+    expect(screen.getByTestId('telemetry-card')).toHaveTextContent('positions:1000')
+    expect(resourcesRegion().getByText('101,069')).toBeInTheDocument()
+    expect(screen.getByText('App version')).toBeInTheDocument()
+    expect(screen.getByText('1.2.3')).toBeInTheDocument()
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    const refresh = screen.getByRole('button', { name: 'Refresh (r)' })
+    expect(refresh).toHaveAttribute('title', 'Press r to refresh')
+    expect(within(refresh).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(within(refresh).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('keeps extended runtime evidence when version info is unavailable rather than claiming it is loading', () => {
+    inline.version = undefined
+    inlineOverrides.version = { error: new Error('version unavailable') }
+    renderPage()
+    expect(screen.getByText('System info is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText('Loading system info…')).not.toBeInTheDocument()
+    const system = document.getElementById('system')!
+    expect(within(system).getByText('Goroutines')).toBeInTheDocument()
+    expect(within(system).getByText('150')).toBeInTheDocument()
+    expect(within(system).getByText('App version').nextElementSibling).toHaveTextContent('—')
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
   })
 })
 

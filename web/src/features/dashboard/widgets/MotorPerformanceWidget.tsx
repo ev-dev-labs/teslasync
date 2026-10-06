@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { BipolarBar } from '@/components/charts';
+import { Caption, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -11,7 +12,6 @@ import { knownNumber } from '@/api/dataState';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -69,6 +69,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
   const longitudinalG = data && 'longitudinal_accel' in data ? knownNumber(data.longitudinal_accel) : null;
 
   const gaugeColor = useMemo(() => torqueColor(Math.abs(torque ?? 0)), [torque]);
+  const torqueOutsideScale = torque != null && (torque < -TORQUE_REGEN_MAX || torque > TORQUE_MAX);
 
   const shellProps = {
     loading: isLoading,
@@ -87,18 +88,18 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
       <WidgetShell title={t('widget.motorPerformance.title', 'Motor performance')} {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
             <>
-              <span className={dashboardTokens.metricLabel}>
+              <Caption>
                 {t('widget.motorPerformance.gear', 'Gear')}
-              </span>
-              <span className={dashboardTokens.secondaryMetric}>{gear}</span>
-              <span className={dashboardTokens.metricLabel}>
+              </Caption>
+              <Text variant="metricValue" className="[overflow-wrap:anywhere]">{gear}</Text>
+              <Caption>
                 {t('widget.motorPerformance.torque', 'Torque')}
-              </span>
-              <span className={dashboardTokens.secondaryMetric}>
+              </Caption>
+              <Text variant="metricValue" className="[overflow-wrap:anywhere]">
                 {torque == null ? '—' : fmtNumber(torque)} {torque != null && t('widget.motorPerformance.nm', 'Nm')}
-              </span>
+              </Text>
             </>
-          {!data && <p className={dashboardTokens.metricLabel}>{t('widget.motorPerformance.noData', 'No motor data')}</p>}
+          {!data && <Caption>{t('widget.motorPerformance.noData', 'No motor data')}</Caption>}
         </div>
       </WidgetShell>
     );
@@ -111,7 +112,25 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
       {...shellProps}
     >
         <div className="flex min-w-0 flex-col gap-3">
-          {torque != null ? <BipolarBar
+          {torqueOutsideScale ? (
+            <div className="min-w-0 space-y-1">
+              <WidgetBigNumber
+                value={fmtNumber(torque)}
+                label={t('widget.motorPerformance.torque', 'Torque')}
+                unit={t('widget.motorPerformance.nm', 'Nm')}
+                animated={false}
+              />
+              <Caption className="block [overflow-wrap:anywhere]">
+                {t('widget.motorPerformance.outsideScale', 'Reading outside displayed scale ({{min}} to {{max}} {{unit}})', {
+                  min: fmtNumber(-TORQUE_REGEN_MAX), max: fmtNumber(TORQUE_MAX), unit: t('widget.motorPerformance.nm', 'Nm'),
+                })}
+              </Caption>
+              <div className="flex flex-wrap justify-between gap-2">
+                <Caption>{t('widget.motorPerformance.regen', 'Regen')}</Caption>
+                <Caption>{t('widget.motorPerformance.drive', 'Drive')}</Caption>
+              </div>
+            </div>
+          ) : <BipolarBar
             value={torque}
             max={TORQUE_MAX}
             min={TORQUE_REGEN_MAX}
@@ -121,7 +140,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
             negativeColor={gaugeColor}
             negativeLabel={t('widget.motorPerformance.regen', 'Regen')}
             positiveLabel={t('widget.motorPerformance.drive', 'Drive')}
-          /> : <WidgetBigNumber value={null} label={t('widget.motorPerformance.torque', 'Torque')} />}
+          />}
           <WidgetStatGrid cols={2} stats={[
             {
               label: t('widget.motorPerformance.statorTemp', 'Stator temp'),
@@ -143,7 +162,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
               unit: longitudinalG != null ? 'g' : undefined,
             },
           ]} />
-          {!data && <p className={dashboardTokens.metricLabel}>{t('widget.motorPerformance.noData', 'No motor data')}</p>}
+          {!data && <Caption>{t('widget.motorPerformance.noData', 'No motor data')}</Caption>}
         </div>
     </WidgetShell>
   );

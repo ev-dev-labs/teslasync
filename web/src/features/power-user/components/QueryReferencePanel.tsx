@@ -57,9 +57,9 @@ export function QueryReferencePanel() {
   );
 
   return (
-    <GlassPanel className="space-y-3 p-4 sm:p-5">
-      <PanelTitle className="flex items-center gap-2">
-        <FileCode className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+    <GlassPanel className="min-w-0 max-w-full space-y-3 p-4 sm:p-5">
+      <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
+        <FileCode className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
         {t('powerSql.info.title', 'Working with queries')}
       </PanelTitle>
       <InlineCallout variant="info" icon={<Info className="h-4 w-4" />}>

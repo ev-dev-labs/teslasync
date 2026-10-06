@@ -243,6 +243,18 @@ describe('normalizeHeading', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('LocationMapWidget', () => {
+  it('keeps last-known, heading and coordinates in the logical-edge wrapping status overlay', () => {
+    vehicleStateMock.mockReturnValue(makeStateQuery(makeState({ latitude: 51.48, longitude: 0, heading: -90 }), false));
+    renderWidget(<LocationMapWidget size={SIZE_EXPANDED} />);
+    const overlay = screen.getByRole('group', { name: 'Vehicle location status' });
+    expect(overlay).toHaveClass('start-2', 'end-2', 'min-w-0');
+    expect(screen.getByText('Last known position')).toBeInTheDocument();
+    expect(screen.getByText('Heading: 270.00°')).toBeInTheDocument();
+    expect(screen.getByText('51.48, 0.00')).toBeInTheDocument();
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '270');
+    expect(overlay.querySelector('.truncate')).toBeNull();
+  });
+
   it('renders the map + marker at the vehicle position (medium, live)', () => {
     renderWidget(<LocationMapWidget size={SIZE_MEDIUM} />);
 

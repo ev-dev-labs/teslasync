@@ -36,7 +36,7 @@ import {
 import { PageLayout } from '@/components/layout'
 import { GlassPanel, IconBox, PanelTitle, SectionTitle, Text } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { AIRAGHelp } from '@/components/ai/AIRAGHelp'
+import { AIRAGHelp } from '@/components/ai'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import type { NeonColor } from '@/lib/tokens'
 import { HelpLinkCard, type HelpLink } from '../components/HelpLinkCard'

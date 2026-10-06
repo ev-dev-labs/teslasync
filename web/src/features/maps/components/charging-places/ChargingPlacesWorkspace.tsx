@@ -211,9 +211,10 @@ export function ChargingPlacesWorkspace({
           errorMessage={t('chargingPlaces.workspace.placesLoadFailed', 'The place directory could not be loaded.')}
         >
         <PlacesTable
-          places={visiblePlaces}
+          places={placesState.hasData ? visiblePlaces : undefined}
           filterData={placesQuery.data}
           currentRates={currentRatesQuery.data}
+          ratesLoading={currentRatesQuery.isLoading}
           isLoading={placesQuery.isLoading && !placesState.hasData}
           error={placesState.fatalError}
           onRetry={refreshAll}

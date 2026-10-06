@@ -449,9 +449,8 @@ describe('ProjectedRangeWidget — query states', () => {
       makeQuery({ data: {} as ProjectedRangeData }),
     );
 
-    let container!: HTMLElement;
     expect(() => {
-      container = renderWidget({ cols: 2, rows: 2 }).container;
+      renderWidget({ cols: 2, rows: 2 });
     }).not.toThrow();
 
     // Titled shell still renders; the range degrades to a dash and the badge drops.
@@ -461,7 +460,8 @@ describe('ProjectedRangeWidget — query states', () => {
     // Progressbar is present but indeterminate.
     const bar = screen.getByRole('progressbar');
     expect(bar).not.toHaveAttribute('aria-valuenow');
-    expect(barFill(container).style.width).toBe('0%');
+    expect(bar.querySelector('[data-metric-fill]')).toBeNull();
+    expect(bar).toHaveAttribute('aria-label', 'Projected range vs EPA rated');
   });
 });
 

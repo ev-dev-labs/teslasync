@@ -7,7 +7,8 @@ import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, GlassPanel, Text } from '@/components/ui';
+import { Badge, Button, Text } from '@/components/ui';
+import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -99,14 +100,19 @@ export default function PhysicsLedgerPage() {
       {ledger ? (
         <div className="space-y-6">
           <FadeIn>
-            <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-summary">
-              <Text as="p" size="sm" color="secondary">
-                {ledger.honesty}
-              </Text>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="neutral" size="sm">
-                  {t('physicsLedger.kind', 'Window')}: {ledger.kind}
-                </Badge>
+            <VehicleEvidenceBrief id="ledger-summary"
+              title={t('physicsLedger.briefTitle', 'Returned ledger evidence')}
+              description={ledger.honesty}
+              status={state.status}
+              provenance={t('physicsLedger.briefSource', 'Bounded physics ledger')}
+              scope={t('physicsLedger.briefWindow', '{{start}} → {{end}}', {
+                start: formatDateTime(window.start), end: formatDateTime(window.end),
+              })}
+              freshness={<DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />}
+              metrics={[{
+                metricId: 'status', occurrenceId: 'ledger-kind',
+                label: t('physicsLedger.kind', 'Window'), rawValue: ledger.kind,
+                context: <div className="flex flex-wrap gap-2">
                 {ledger.truncated ? (
                   <Badge variant="danger" size="sm">
                     {t('physicsLedger.truncated', 'Sample cap hit — oldest prefix solved')}
@@ -122,8 +128,8 @@ export default function PhysicsLedgerPage() {
                     {t('physicsLedger.missingSignals', 'Missing signals')}: {(ledger.missing_signals ?? []).join(', ')}
                   </Badge>
                 ) : null}
-              </div>
-            </GlassPanel>
+                </div>,
+              }]} />
           </FadeIn>
           <DynamicsPanel ledger={ledger} />
           <DriveLedgerPanel ledger={ledger.drive} />

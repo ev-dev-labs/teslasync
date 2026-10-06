@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, Calendar, Target, Route } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
+import { Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useMileageStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -9,9 +10,11 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Next 10 000-display-unit milestone, strictly above the current total. */
@@ -52,39 +55,45 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     ? Math.max(1, Math.round(remaining / dailyAvgDisplay / 30))
     : 0;
 
-  const stats = useMemo((): StatGridItem[] => {
+  const stats = useMemo((): StatMetric[] => {
     if (!data) return [];
     return [
       {
+        metricId: 'distance',
         label: t('widget.mileageStats.dailyAvg', 'Daily avg'),
-        value: dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay),
-        unit: distanceUnit,
-        icon: <Route className="h-3.5 w-3.5" />,
+        rawValue: monthly == null ? null : monthly / 30 * 1000,
+        description: t('widget.mileageStats.summary.dailyHelp', 'Last 30-day distance divided by 30; not today’s measured distance.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
       },
       {
+        metricId: 'distance',
         label: t('widget.mileageStats.weeklyAvg', 'Weekly avg'),
-        value: dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay * 7),
-        unit: distanceUnit,
-        icon: <Calendar className="h-3.5 w-3.5" />,
+        rawValue: monthly == null ? null : monthly / 30 * 1000 * 7,
+        description: t('widget.mileageStats.summary.weeklyHelp', 'Seven times the 30-day-derived daily average; not an independent seven-day query.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
       },
       {
+        metricId: 'distance',
         label: t('widget.mileageStats.monthlyAvg', 'Monthly avg'),
-        value: dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay * 30),
-        unit: distanceUnit,
-        icon: <TrendingUp className="h-3.5 w-3.5" />,
+        rawValue: monthly == null ? null : monthly * 1000,
+        description: t('widget.mileageStats.summary.monthlyHelp', 'Thirty times the derived daily average, preserving the rolling 30-day distance.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
       },
       {
+        metricId: 'distance',
         label: t('widget.mileageStats.nextMilestone', 'Next milestone'),
-        value: milestone == null ? null : fmtNumber(milestone),
-        unit: distanceUnit,
-        trend: 'up' as const,
-        trendValue: monthsToMilestone > 0
-          ? t('widget.mileageStats.inMonths', '~{{months}} mo', { months: monthsToMilestone })
-          : '—',
-        icon: <Target className="h-3.5 w-3.5" />,
+        rawValue: milestone == null ? null : convertDistanceToSI(milestone, distanceUnit),
+        description: t('widget.mileageStats.summary.milestoneHelp', 'Next 10,000-display-unit lifetime milestone. Estimated months retain the existing 30-day average and rounding rule.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+        comparisonContent: <Caption className="flex items-center gap-1">
+          <TrendingUp className="h-3 w-3" aria-hidden="true" />
+          {monthsToMilestone > 0
+            ? t('widget.mileageStats.inMonths', '~{{months}} mo', { months: monthsToMilestone })
+            : '—'}
+        </Caption>,
       },
     ];
-  }, [data, dailyAvgDisplay, distanceUnit, milestone, monthsToMilestone, t, fmtNumber]);
+  }, [data, monthly, distanceUnit, milestone, monthsToMilestone, t, fmtNumber]);
 
   const shellProps = {
     title: t('widget.mileageStats.title', 'Mileage stats'),
@@ -121,7 +130,15 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
       {...shellProps}
     >
       {hasData ? (
-        <WidgetStatGrid stats={stats} cols={2} />
+        <DashboardSourceBrief
+          metrics={stats}
+          state={trust}
+          eyebrow={t('widget.mileageStats.summary.eyebrow', 'Mileage history')}
+          title={t('widget.mileageStats.summary.title', 'Mileage operating summary')}
+          description={t('widget.mileageStats.summary.description', 'Rolling 30-day distance supplies the daily, weekly and monthly averages; lifetime distance supplies the milestone. Exact source bounds and completeness are not supplied.')}
+          scope={t('widget.mileageStats.summary.scope', 'Vehicle {{id}} · rolling 30 days / lifetime', { id })}
+          testId="mileage-stats-operational-brief"
+        />
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}

@@ -1,7 +1,8 @@
 import { HeartPulse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { CareScore } from '../../lib/batteryCare';
@@ -89,9 +90,9 @@ export function CareSummary({ care, state }: { care: CareScore; state: CareSecti
       loadingHeight={112}
     >
       <section aria-label={t('batteryCare.kpis', 'Battery care summary metrics')}>
-        <StatStrip
+        <BatteryEvidenceBrief
         id="battery-care-summary"
-        variant="embedded"
+        title={t('batteryCare.summary.title', 'Observed care summary')}
         metrics={metrics}
         period={period}
         retained={state.sources.some(source => source.state.status === 'stale')}

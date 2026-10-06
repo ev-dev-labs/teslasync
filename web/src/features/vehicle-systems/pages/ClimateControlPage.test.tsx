@@ -272,23 +272,32 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/climate-control']}>
         <ClimateControlPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-/** Scope a MetricCard by its (unique) label. */
+/** Scope the visible canonical label, not its duplicate tooltip description. */
 function card(label: string): HTMLElement {
-  const wrapper = screen.getByText(label).closest('[data-role="metric-card"]');
-  if (!wrapper) throw new Error(`MetricCard wrapper not found for "${label}"`);
+  const wrapper = screen.getByText(label, { selector: '[data-stat-label]' })
+    .closest('[data-stat]');
+  if (!wrapper) throw new Error(`Canonical stat wrapper not found for "${label}"`);
   return wrapper as HTMLElement;
+}
+
+function group(id: string): HTMLElement {
+  const wrapper = document.querySelector<HTMLElement>(`[data-climate-group="${id}"]`);
+  if (!wrapper) throw new Error(`Climate group not found: ${id}`);
+  return wrapper;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   unitState.temp = 'C';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
 });
 
 it('keeps temperature-delta classification raw while locale and precision change live', () => {
@@ -297,14 +306,14 @@ it('keeps temperature-delta classification raw while locale and precision change
   const latest = climate({ insideTemp: 22.2345, driverTempSetting: 21 });
   install({ latest, history: HISTORY });
   const view = renderPage();
-  expect(screen.getByText('+1.23')).toBeInTheDocument();
+  expect(within(card('Temp delta')).getByText('+1.23°C')).toBeInTheDocument();
   expect(screen.getByText('Above target')).toBeInTheDocument();
   try {
     act(() => setGlobalLocale('de-DE'));
-    expect(screen.getByText('+1,23')).toBeInTheDocument();
+    expect(within(card('Temp delta')).getByText('+1,23°C')).toBeInTheDocument();
     expect(screen.getByText('Above target')).toBeInTheDocument();
     act(() => setGlobalPrecision(0));
-    expect(screen.getByText('+1')).toBeInTheDocument();
+    expect(within(card('Temp delta')).getByText('+1°C')).toBeInTheDocument();
     expect(screen.getByText('Above target')).toBeInTheDocument();
     expect(screen.queryByText('Near target')).not.toBeInTheDocument();
     expect(latest.insideTemp).toBe(22.2345);
@@ -362,7 +371,8 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
   it('shows the active HVAC banner with keeper / defrost / battery-heater / power chips', () => {
     renderPage();
 
-    expect(screen.getByText('HVAC system')).toBeInTheDocument();
+    expect(within(group('climate-status')).getByRole('heading', { name: 'HVAC system' }))
+      .toBeInTheDocument();
     // keeper appears in the banner chip AND the climate-systems card.
     expect(screen.getAllByText('Dog mode').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Defrost')).toBeInTheDocument();
@@ -386,7 +396,7 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
 
   it('renders seat-heater levels, cooling ventilation and auto-climate chips', () => {
     renderPage();
-    const region = screen.getByRole('region', { name: 'Comfort & efficiency' });
+    const region = group('climate-seats');
 
     // Front-left seat heater at level 3 → "High (3/3)".
     expect(within(region).getByText('High (3/3)')).toBeInTheDocument();
@@ -401,12 +411,12 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
 
   it('derives comfort score/delta and history-driven efficiency stats', () => {
     renderPage();
-    const overview = screen.getByRole('region', { name: 'Climate overview' });
-    const efficiency = screen.getByRole('region', { name: 'Comfort & efficiency' });
+    const overview = group('climate-comfort');
+    const efficiency = group('climate-efficiency');
 
     // inside 22, set 21 → |Δ|=1 → score 90, delta +1, near target, excellent.
     expect(within(overview).getByText('90.00')).toBeInTheDocument();
-    expect(within(overview).getByText('+1.00')).toBeInTheDocument();
+    expect(within(overview).getByText('+1.00°C')).toBeInTheDocument();
     expect(within(overview).getByText('Near target')).toBeInTheDocument();
     expect(within(overview).getByText('Excellent')).toBeInTheDocument();
 
@@ -461,11 +471,13 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Climate systems' })).toBeInTheDocument();
-    // Nullish values collapse to explicit off/zero placeholders — no crash.
-    expect(within(card('HVAC power')).getByText('Off')).toBeInTheDocument();
-    expect(within(card('Fan speed')).getByText('0')).toBeInTheDocument();
+    // Missing measurements are unknown, not observed off/zero values.
+    expect(within(card('HVAC power')).getByText('—')).toBeInTheDocument();
+    expect(within(card('Fan speed')).getByText('—')).toBeInTheDocument();
+    expect(within(card('HVAC power')).queryByText('Off')).not.toBeInTheDocument();
+    expect(within(card('Fan speed')).queryByText('0')).not.toBeInTheDocument();
     // Gauges + charts + table show their own empty states.
-    const overview = screen.getByRole('region', { name: 'Climate overview' });
+    const overview = group('climate-temperature');
     expect(within(overview).getByText('Inside temp')).toBeInTheDocument();
     expect(screen.getByText('No temperature history has been recorded.')).toBeInTheDocument();
     expect(screen.getByText(/Cabin, ambient, and set-point trends/)).toBeInTheDocument();
@@ -478,14 +490,38 @@ describe('ClimateControlPage — loading, empty & error states', () => {
   });
 
   it('surfaces a query-error banner without gating the rest of the page', () => {
-    install({ latest: undefined, latestOpts: { error: new Error('boom'), isError: true } });
+    const retry = vi.fn();
+    install({
+      latest: undefined,
+      latestOpts: { error: new Error('boom'), isError: true, refetch: retry },
+      history: HISTORY,
+    });
     renderPage();
 
-    const banner = screen.getByText(/Failed to load climate data/);
+    const systems = within(group('climate-systems'));
+    const banner = systems.getByText(/Failed to load climate data/);
     expect(banner).toBeInTheDocument();
-    expect(banner.textContent).toContain('boom');
-    // The deterministic bands still render beneath the error banner.
+    expect(systems.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(systems.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    // Only the failed source is replaced; independent history remains visible.
+    expect(systems.queryByText('HVAC power', { selector: '[data-stat-label]' }))
+      .not.toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(within(card('Avg fan speed')).getByText('5.00')).toBeInTheDocument();
+  });
+
+  it('preserves measured zero and false values rather than replacing them with unknown', () => {
+    install({
+      latest: climate({ hvacPower: false, isAcOn: false, fanSpeed: 0, passengerTempSetting: 0 }),
+      history: HISTORY,
+    });
+    renderPage();
+
     expect(within(card('HVAC power')).getByText('Off')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('State: Off')).toBeInTheDocument();
+    expect(within(card('Fan speed')).getByText('0')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('0.00°C')).toBeInTheDocument();
   });
 });
 

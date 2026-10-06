@@ -224,7 +224,10 @@ export default function SignalLogViewerPage() {
           </FadeIn>
 
           {/* 2 — KPI band: derived counters, full-width responsive grid */}
-          <SignalLogKpiBand summary={summary} loading={isLoading} unavailable={hasQueried && signalLogState.fatalError != null} />
+          <SignalLogKpiBand summary={summary} loading={isLoading}
+            hasQueried={hasQueried} unavailable={hasQueried && signalLogState.fatalError != null}
+            retained={signalLogState.hasData && (signalLogState.isRefreshing || signalLogState.status === 'stale' || signalLogState.refreshError != null)}
+            scope={submittedQuery ? `${submittedQuery.from} → ${submittedQuery.to}` : t('telemetryBrief.notSubmitted', 'No query submitted')} />
 
           <TransportAgreementPanel
             vehicleId={submittedQuery?.vehicleId ?? 0}

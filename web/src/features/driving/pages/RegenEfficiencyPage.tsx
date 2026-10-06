@@ -13,16 +13,16 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 
 import {
-  CoverageMethodology,
   MonthlyRecoveryTrend,
   RankedDriveEvidence,
   RecoveryContext,
-  RecoveryOverview,
   RecoveryRatioDistribution,
   RegenCardSlot,
-  RegenKpiBand,
   toRegenSectionState,
 } from '../components/regen-efficiency-modernization';
+import { RegenSummaryBrief } from '../components/operationalbrief-n-z/RegenSummaryBrief';
+import { RegenOverviewBrief } from '../components/operationalbrief-n-z/RegenOverviewBrief';
+import { RegenCoverageBrief } from '../components/operationalbrief-n-z/RegenCoverageBrief';
 import {
   REGEN_HISTORY_LIMIT,
   buildRegenEfficiencyModel,
@@ -63,6 +63,10 @@ export default function RegenEfficiencyPage() {
 
   const aggregateState = toRegenSectionState(aggregateDataState, aggregateQuery);
   const detailState = toRegenSectionState(detailDataState, drivesQuery);
+  const summaryScope = startInstant && endInstantExclusive
+    ? `${startInstant} — ${endInstantExclusive} (${timezone})`
+    : t('regen.brief.allReturned', 'Selected all-time scope; detailed rows remain capped.');
+  const retained = aggregateDataState.refreshError != null || detailDataState.refreshError != null;
 
   return (
     <PageLayout
@@ -83,21 +87,24 @@ export default function RegenEfficiencyPage() {
         label={t('regen.overview.sampleTitle', 'Detailed returned sample')}
       />
       <FadeIn>
-        <RegenKpiBand
+        <RegenSummaryBrief
           aggregate={aggregateQuery.data}
           model={model}
           aggregateState={aggregateState}
           detailState={detailState}
-          retained={aggregateDataState.refreshError != null || detailDataState.refreshError != null}
+          retained={retained}
+          scope={summaryScope}
         />
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <RecoveryOverview
+        <RegenOverviewBrief
           aggregate={aggregateQuery.data}
           model={model}
           aggregateState={aggregateState}
           detailState={detailState}
+          scope={summaryScope}
+          retained={retained}
         />
       </FadeIn>
 
@@ -140,11 +147,13 @@ export default function RegenEfficiencyPage() {
       </FadeIn>
 
       <FadeIn delay={0.3}>
-        <CoverageMethodology
+        <RegenCoverageBrief
           aggregate={aggregateQuery.data}
           model={model}
           aggregateState={aggregateState}
           detailState={detailState}
+          scope={summaryScope}
+          retained={retained}
         />
       </FadeIn>
     </PageLayout>

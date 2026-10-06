@@ -79,6 +79,10 @@ vi.mock('react-i18next', async () => {
 })
 
 import StatusApiDocsPage from './StatusApiDocsPage'
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 /** The documented contract, in render order. The page derives its counts. */
 const DOCUMENTED_PATHS = [

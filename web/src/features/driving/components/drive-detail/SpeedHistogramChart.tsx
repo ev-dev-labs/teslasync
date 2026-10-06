@@ -2,11 +2,13 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartTooltip,
+  ChartTooltip,
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
+import { ChartCard } from '@/components/layout';
+import { Text } from '@/components/ui';
 import type { SpeedHistogramBucket } from './types';
 
 interface SpeedHistogramChartProps {
@@ -29,7 +31,7 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
 
   return (
     <FadeIn className="h-full">
-      <ChartContainer
+      <ChartCard
         title={t('driveDetail.speedHistogram', 'Speed histogram')}
         ariaLabel={t('driveDetail.speedHistogram.aria', 'Speed-bucket distribution histogram')}
         data={tableData}
@@ -38,7 +40,9 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
           { key: 'pct', label: t('driveDetail.report.sampleShare', '% of speed samples') },
         ]}
         height={220}
-        className="h-full"
+        mobileHeight={220}
+        toolbar
+        exportable
       >
         {buckets.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -53,10 +57,10 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
         ) : (
           <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
             <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
-            <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+            <Text variant="caption">{t('driveDetail.noChartData', 'No telemetry data available')}</Text>
           </div>
         )}
-      </ChartContainer>
+      </ChartCard>
     </FadeIn>
   );
 }

@@ -169,6 +169,21 @@ afterEach(() => {
 });
 
 describe('SuperchargerHistoryWidget — full view', () => {
+  it('reviews actual raw-source totals independently of the ranked ten-row presentation', async () => {
+    mockedRequest.mockResolvedValue(makeResponse([
+      makeEntry({ site_location_name: 'Retained location', usage_wh: 10_000 }),
+    ]));
+    renderWidget(FULL);
+    expect(await screen.findByText('Retained location')).toBeInTheDocument();
+    const brief = screen.getByTestId('supercharger-history-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('60.00 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText('$17.50')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not the sum of the top-ten presentation rows/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/exact instants and timezone are not supplied/)).toBeInTheDocument();
+  });
   it('renders a ranked, kWh-formatted session list with cost badges and a totals row', async () => {
     mockedRequest.mockResolvedValue(
       makeResponse(

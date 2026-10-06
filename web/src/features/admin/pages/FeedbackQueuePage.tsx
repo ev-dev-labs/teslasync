@@ -15,10 +15,10 @@ import {
 import { PageLayout } from '@/components/layout'
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
-import { UserCell } from '@/components/data-display'
+import { UserCell, type StatMetric } from '@/components/data-display'
+import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary'
 import { Icons } from '@/lib/icons'
 import { isFiniteNumber } from '@/lib/numberFormat'
-import { type NeonColor } from '@/lib/tokens'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useDataState } from '@/hooks/useDataState'
@@ -33,7 +33,6 @@ import {
   CategoryBadge,
   CategoryMix,
   FeedbackExpansion,
-  FeedbackStatTile,
   StatusBadge,
   StatusDistribution,
 } from '../components/feedback-queue'
@@ -153,14 +152,14 @@ export default function FeedbackQueuePage() {
   const bridgeRepo = data?.github_repo ?? ''
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const statTiles = useMemo(
+  const statTiles = useMemo<StatMetric[]>(
     () => [
-      { key: 'total', label: t('feedback.queue.kpi.total', 'Total feedback'), icon: <Icons.fileText className="h-5 w-5" />, color: 'cyan' as NeonColor, value: statusTotal, loading: statusLoading },
-      { key: 'new', label: t('feedback.queue.status.new', 'New'), icon: <Icons.sparkles className="h-5 w-5" />, color: 'amber' as NeonColor, value: counts.new, loading: newQ.isLoading && !newState.hasData },
-      { key: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), icon: <Icons.success className="h-5 w-5" />, color: 'green' as NeonColor, value: counts.triaged, loading: triagedQ.isLoading && !triagedState.hasData },
-      { key: 'closed', label: t('feedback.queue.status.closed', 'Closed'), icon: <Icons.archive className="h-5 w-5" />, color: 'blue' as NeonColor, value: counts.closed, loading: closedQ.isLoading && !closedState.hasData },
-      { key: 'bug', label: t('feedback.category.bug', 'Bug report'), icon: <Icons.bug className="h-5 w-5" />, color: 'red' as NeonColor, value: counts.bug, loading: bugQ.isLoading && !bugState.hasData },
-      { key: 'feature', label: t('feedback.category.feature', 'Feature request'), icon: <Icons.lightbulb className="h-5 w-5" />, color: 'purple' as NeonColor, value: counts.feature, loading: featureQ.isLoading && !featureState.hasData },
+      { metricId: 'count', occurrenceId: 'total', label: t('feedback.queue.kpi.total', 'Total feedback'), rawValue: statusTotal },
+      { metricId: 'count', occurrenceId: 'new', label: t('feedback.queue.status.new', 'New'), rawValue: counts.new },
+      { metricId: 'count', occurrenceId: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), rawValue: counts.triaged },
+      { metricId: 'count', occurrenceId: 'closed', label: t('feedback.queue.status.closed', 'Closed'), rawValue: counts.closed },
+      { metricId: 'count', occurrenceId: 'bug', label: t('feedback.category.bug', 'Bug report'), rawValue: counts.bug },
+      { metricId: 'count', occurrenceId: 'feature', label: t('feedback.category.feature', 'Feature request'), rawValue: counts.feature },
     ],
     [t, statusTotal, statusLoading, counts.new, counts.triaged, counts.closed, counts.bug, counts.feature, newQ.isLoading, triagedQ.isLoading, closedQ.isLoading, bugQ.isLoading, featureQ.isLoading, newState.hasData, triagedState.hasData, closedState.hasData, bugState.hasData, featureState.hasData],
   )
@@ -327,22 +326,15 @@ export default function FeedbackQueuePage() {
     >
       {/* 1 — KPI band: whole-queue counts, reflows 2 → 3 → 6 columns */}
       <FadeIn>
-        <section
-          aria-label={t('feedback.queue.kpis', 'Queue overview')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
-        >
-          {statTiles.map((tile) => (
-            <FeedbackStatTile
-              key={tile.key}
-              label={tile.label}
-              icon={tile.icon}
-              color={tile.color}
-              value={tile.value}
-              loading={tile.loading}
-              unknown={!isFiniteNumber(tile.value) && !tile.loading}
-            />
-          ))}
-        </section>
+        <AdminSummary metrics={statTiles} testId="feedback-queue-summary"
+          eyebrow={t('feedback.queue.title', 'Feedback queue')} title={t('feedback.queue.kpis', 'Queue overview')}
+          description={t('feedback.queue.summary.source', 'Whole-queue counts come from independent status and category queries, unaffected by the table filters. Total feedback sums new, triaged and closed counts only when all three are available.')}
+          scope={t('feedback.queue.summary.scope', 'Independent queue facet snapshots; no shared observation time or date bounds are reported.')}
+          sourceStatus={[newState, triagedState, closedState, bugState, featureState].some(source => source.status === 'stale')
+            ? 'stale' : [newState, triagedState, closedState, bugState, featureState].some(source => source.isRefreshing) ? 'refreshing'
+              : [newState, triagedState, closedState, bugState, featureState].every(source => source.hasData) ? 'ready' : 'partial'}
+          loading={statTiles.every(metric => metric.rawValue == null) &&
+            (statusLoading || (bugQ.isLoading && !bugState.hasData) || (featureQ.isLoading && !featureState.hasData))} />
       </FadeIn>
 
       {/* 2 — Insights bento: triage progress (hero) + category mix / bridge */}

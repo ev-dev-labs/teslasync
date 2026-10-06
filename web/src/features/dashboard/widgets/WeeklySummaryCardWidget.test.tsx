@@ -54,6 +54,7 @@ vi.mock('@/hooks/useUnits', () => ({
 // Deterministic currency formatting — the widget only calls formatCurrency().
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({
+    currencySymbol: '$',
     formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
   }),
 }));
@@ -162,8 +163,8 @@ function renderWidget(opts: RenderOpts = {}) {
 
 /** The StatCard whose label is `label`, resolved via its shared `.flex` card. */
 function cardOf(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('div.flex.flex-col');
-  if (!el) throw new Error(`StatCard for "${label}" not found`);
+  const el = screen.getByText(label).closest('[data-operational-metric]');
+  if (!el) throw new Error(`Operational metric for "${label}" not found`);
   return el as HTMLElement;
 }
 
@@ -217,11 +218,9 @@ describe('WeeklySummaryCardWidget — unit conversion', () => {
     renderWidget({ size: TALL, distanceUnit: 'km', query: makeQuery({ data: makeDigest() }) });
 
     // 200 km → "200.0" km, 200 Wh/km → "200" Wh/km, 40 kWh → "40.0".
-    expect(within(cardOf('Distance')).getByText('200.00')).toBeInTheDocument();
-    expect(within(cardOf('Distance')).getByText('km')).toBeInTheDocument();
-    expect(within(cardOf('Energy')).getByText('40.00')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('200.00')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('Wh/km')).toBeInTheDocument();
+    expect(within(cardOf('Distance')).getByText('200.00 km')).toBeInTheDocument();
+    expect(within(cardOf('Energy')).getByText('40.00 kWh')).toBeInTheDocument();
+    expect(within(cardOf('Efficiency')).getByText('200.00 Wh/km')).toBeInTheDocument();
 
     // Regression guards: the old code divided miles by 1609.344 → "0.1", and
     // multiplied Wh/km by 1.609 even in km mode → "322". Neither may appear.
@@ -233,10 +232,8 @@ describe('WeeklySummaryCardWidget — unit conversion', () => {
     renderWidget({ size: TALL, distanceUnit: 'mi', query: makeQuery({ data: makeDigest() }) });
 
     // 200 km → 124.274 mi → "124.3"; 200 Wh/km → 321.87 Wh/mi → "322".
-    expect(within(cardOf('Distance')).getByText('124.27')).toBeInTheDocument();
-    expect(within(cardOf('Distance')).getByText('mi')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('321.87')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('Wh/mi')).toBeInTheDocument();
+    expect(within(cardOf('Distance')).getByText('124.27 mi')).toBeInTheDocument();
+    expect(within(cardOf('Efficiency')).getByText('321.87 Wh/mi')).toBeInTheDocument();
 
     // Regression guards: pre-fix distance collapsed to "0.1"; pre-fix efficiency
     // double-converted 200*1.609*1.609 ≈ 518.
@@ -272,15 +269,14 @@ describe('WeeklySummaryCardWidget — layouts', () => {
     expect(within(cardOf('Cost')).getByText('$5.60')).toBeInTheDocument();
   });
 
-  it('narrow (2x1) shows only Distance + Energy cards plus an inline cost/efficiency row', () => {
+  it('narrow (2x1) retains Distance, Energy and the original cost/efficiency scalars in one compact brief', () => {
     renderWidget({ size: NARROW, distanceUnit: 'km' });
 
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Energy')).toBeInTheDocument();
-    // Cost / Efficiency are NOT promoted to StatCards at this size…
-    expect(screen.queryByText('Cost')).toBeNull();
-    expect(screen.queryByText('Efficiency')).toBeNull();
-    // …they appear in the compact inline row instead.
+    expect(screen.getByText('Cost')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(screen.getByText('$5.60')).toBeInTheDocument();
     expect(screen.getByText('200.00 Wh/km')).toBeInTheDocument();
   });
@@ -291,6 +287,18 @@ describe('WeeklySummaryCardWidget — layouts', () => {
     expect(screen.getByText('Cost')).toBeInTheDocument();
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
     expect(within(cardOf('Cost')).getByText('$5.60')).toBeInTheDocument();
+  });
+
+  it('reviews all quantities while preserving the existing weekly comparison rules', () => {
+    renderWidget({ size: TALL });
+    const brief = screen.getByTestId('weekly-summary-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('200.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('$5.60')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/zero-baseline, sub-1% and lower-is-better behavior/)).toHaveLength(4);
+    expect(within(drawer).getAllByText(/zero baselines do not imply no change/).length).toBeGreaterThan(0);
   });
 });
 
@@ -323,7 +331,8 @@ describe('WeeklySummaryCardWidget — lifecycle', () => {
 
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No weekly data')).toBeInTheDocument();
-    expect(screen.queryByText('Distance')).toBeNull();
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
   });
 
   it('shows an accessible empty state (compact view) when no digest has landed', () => {

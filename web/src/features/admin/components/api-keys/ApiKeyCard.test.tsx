@@ -68,6 +68,31 @@ afterEach(() => {
 });
 
 describe('ApiKeyCard', () => {
+  it('keeps lifecycle metadata and both permission-gated actions inside the same repaired card without revealing a secret', () => {
+    const key = { ...makeKey({ subject: 'operator@example.invalid' }), secret: 'never-render-this-secret' };
+    const onRevoke = vi.fn();
+    const onDelete = vi.fn();
+    const { container } = render(
+      <ApiKeyCard apiKey={key} onRevoke={onRevoke} onDelete={onDelete}
+        actionsDisabled actionsDisabledReason="Read-only session" />,
+    );
+    const card = container.querySelector('[data-print-card]');
+    expect(card).toHaveTextContent('Signed in as operator@example.invalid');
+    expect(card).toHaveTextContent(`Created ${formatDate(key.createdAt)}`);
+    expect(card).toHaveTextContent(`Last used ${formatDate(key.lastUsedAt!)}`);
+    expect(card).not.toHaveTextContent(key.secret);
+    const revoke = screen.getByRole('button', { name: 'Revoke key CI Bot' });
+    const remove = screen.getByRole('button', { name: 'Delete key CI Bot' });
+    expect(card).toContainElement(revoke);
+    expect(card).toContainElement(remove);
+    expect(revoke).toBeDisabled();
+    expect(remove).toBeDisabled();
+    expect(remove).toHaveAttribute('title', 'Read-only session');
+    fireEvent.click(revoke);
+    fireEvent.click(remove);
+    expect(onRevoke).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
   it('renders identity: name, key prefix, permission label, and created date', () => {
     const key = makeKey();
     const { container } = render(

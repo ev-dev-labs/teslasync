@@ -20,7 +20,7 @@
  * and driven per-test.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -128,10 +128,10 @@ function lastAuditParams(): any {
   return calls[calls.length - 1]?.[0];
 }
 
-// Read the value <p> that sits immediately after a MetricCard's label span.
+// Read the canonical tile value without depending on typography wrappers.
 function metricValue(label: string): string {
   const labelSpan = screen.getByText(label);
-  const valueEl = labelSpan.closest('p')?.nextElementSibling;
+  const valueEl = labelSpan.closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
   return valueEl?.textContent ?? '';
 }
 
@@ -231,6 +231,38 @@ describe('AuditLogPage — populated view', () => {
 });
 
 describe('AuditLogPage — degraded data sources', () => {
+  it('preserves independent catalog loading, failed refresh counts and unknown versus measured zero', () => {
+    mockUseAuditLog.mockReturnValue(makeQuery({ data: { rows: [], limit: 100 } }));
+    const categories = makeQuery({ data: { categories: ['auth', 'config'] },
+      error: new ApiError('catalog refresh failed', 500) });
+    mockUseAuditCategories.mockReturnValue(categories);
+    mockUseAuditActions.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
+    const { container } = renderPage();
+    const strip = screen.getByTestId('admin-audit-summary');
+    expect(strip).toHaveTextContent('Retained source data');
+    expect(strip).toHaveTextContent('Showing retained measurements');
+    expect(metricValue('Entries shown')).toBe('0');
+    expect(metricValue('Categories')).toBe('2');
+    expect(metricValue('Action types')).toBe('—');
+    expect(within(strip).getByText('Loading measurements')).toBeInTheDocument();
+    const categoryTile = container.querySelectorAll('[data-operational-metric]')[4]!;
+    const actionTile = container.querySelectorAll('[data-operational-metric]')[5]!;
+    expect(categoryTile).toHaveAttribute('data-value-state', 'value');
+    expect(actionTile).toHaveAttribute('data-value-state', 'missing');
+    fireEvent.click(within(categoryTile as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(categories.refetch).toHaveBeenCalledOnce();
+    expect(screen.getByRole('heading', { name: 'Entries' })).toBeInTheDocument();
+  });
+
+  it('does not turn null or missing catalog arrays into measured zero counts', () => {
+    mockUseAuditCategories.mockReturnValue(makeQuery({ data: { categories: null } }));
+    mockUseAuditActions.mockReturnValue(makeQuery({ data: {} }));
+    renderPage();
+    expect(metricValue('Categories')).toBe('—');
+    expect(metricValue('Action types')).toBe('—');
+    expect(metricValue('Entries shown')).toBe('2');
+  });
+
   it('shows the subsystem-unavailable banner and blanks KPIs to "—" on a 503 (no lying zeros)', () => {
     mockUseAuditLog.mockReturnValue(
       makeQuery({
@@ -436,8 +468,8 @@ describe('AuditLogPage — hash-chain verification', () => {
       makeQuery({ error: new Error('chain verify failed') }),
     );
     const { unmount } = renderPage();
-    expect(screen.getByText('Verification failed')).toBeInTheDocument();
-    expect(screen.getByText('chain verify failed')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.getByText('Verification failed: chain verify failed')).toBeInTheDocument();
     unmount();
 
     // Fetching state.

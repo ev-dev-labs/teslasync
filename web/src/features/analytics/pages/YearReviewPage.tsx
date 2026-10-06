@@ -5,15 +5,19 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { OperationalBrief, type StatMetric } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { AIYearReviewNarration } from '@/components/ai/AIYearReviewNarration';
+import { AIYearReviewNarration } from '@/components/ai';
 
 import {
-  YearMonthlyActivity, YearChargingMix, YearSavings, YearEnvironment,
-  YearPatterns, YearDriveRecord, YearFunFacts, YearRecap,
+  YearMonthlyActivity, YearChargingMix,
+  YearDriveRecord, YearFunFacts, YearRecap,
 } from '../components/year-review-modernization';
+import { YearSavingsBrief as YearSavings } from '../components/operationalbrief-n-z/YearSavingsBrief';
+import { YearEnvironmentBrief as YearEnvironment } from '../components/operationalbrief-n-z/YearEnvironmentBrief';
+import { YearPatternsBrief as YearPatterns } from '../components/operationalbrief-n-z/YearPatternsBrief';
 
 import { useYearReview } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -89,18 +93,18 @@ export default function YearReviewPage() {
     currency: { kind: 'symbol' as const, value: currencySymbol } };
 
   const highlightMetrics: StatMetric[] = [
-    { metricId: 'distance', rawValue: data ? (data.total_distance_km ?? 0) * 1000 : null,
+    { metricId: 'distance', rawValue: data?.total_distance_km == null ? null : data.total_distance_km * 1000,
       label: t('yearReview.distance', 'Distance'), display: { precision: unitPrefs.precision ?? 1 } },
-    { metricId: 'count', rawValue: data ? data.total_drives ?? 0 : null, label: t('yearReview.drives', 'Drives') },
-    { metricId: 'energy', rawValue: data ? (data.total_energy_kwh ?? 0) * 1000 : null,
+    { metricId: 'count', rawValue: data?.total_drives, label: t('yearReview.drives', 'Drives') },
+    { metricId: 'energy', rawValue: data?.total_energy_kwh == null ? null : data.total_energy_kwh * 1000,
       label: t('yearReview.energy', 'Energy'), display: { precision: unitPrefs.precision ?? 2 } },
-    { metricId: 'count', rawValue: data ? data.total_charge_sessions ?? 0 : null, label: t('yearReview.charges', 'Charges') },
-    { metricId: 'currency', rawValue: data ? data.gas_savings ?? 0 : null, label: t('yearReview.youSaved', 'You saved') },
-    // Mass is not in the glossary. Keep the kg compatibility display as text.
-    { metricId: 'text', rawValue: data ? `${fmtNumber(data.co2_offset_kg ?? 0)} kg` : null, label: t('yearReview.co2Offset', 'CO₂ offset') },
+    { metricId: 'count', rawValue: data?.total_charge_sessions, label: t('yearReview.charges', 'Charges') },
+    { metricId: 'currency', rawValue: data?.gas_savings, label: t('yearReview.youSaved', 'You saved') },
+    { metricId: 'mass', rawValue: data?.co2_offset_kg, label: t('yearReview.co2Offset', 'CO₂ offset'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) } },
   ];
   const rawSpeedKmh = data?.fastest_speed_kmh;
-  const topSpeedMps = typeof rawSpeedKmh === 'number' && Number.isFinite(rawSpeedKmh)
+  const topSpeedMps = typeof rawSpeedKmh === 'number'
     ? (rawSpeedKmh * 1000) / 3600 : null;
   const extremeMetrics: StatMetric[] = [
     { metricId: 'speed', rawValue: topSpeedMps, label: t('yearReview.topSpeed', 'Top speed'),
@@ -110,6 +114,21 @@ export default function YearReviewPage() {
     { metricId: 'temperature', rawValue: data?.coldest_drive_temp_c, label: t('yearReview.coldestDrive', 'Coldest drive'),
       display: { precision: unitPrefs.precision ?? 1 } },
   ];
+  const highlightOperationalMetrics = useOperationalMetrics(highlightMetrics, preferences);
+  const extremeOperationalMetrics = useOperationalMetrics(extremeMetrics, preferences);
+  const briefStatus = sectionLoading ? t('yearReview.brief.loading', 'Loading year evidence')
+    : isError ? data ? t('yearReview.brief.retained', 'Retained year evidence') : t('yearReview.brief.unavailable', 'Year evidence unavailable')
+    : data ? t('yearReview.brief.available', 'Recorded year evidence') : t('yearReview.brief.selection', 'Vehicle selection required');
+  const briefMetadata = {
+    compact: true,
+    eyebrow: t('yearReview.title', 'Year in review'),
+    description: t('yearReview.brief.description', 'Calendar-year totals and records from the year-review response. Observation coverage is not reported.'),
+    statusLabel: briefStatus,
+    statusTone: isError ? 'warning' as const : 'neutral' as const,
+    scope: String(year),
+    provenance: t('yearReview.title', 'Year in review'),
+    loading: sectionLoading,
+  };
 
   const yearControls = (
     <div className="flex flex-wrap items-center gap-2">
@@ -153,9 +172,9 @@ export default function YearReviewPage() {
       {/* 1 — KPI band */}
       <FadeIn>
         <Section id="year-review-highlights" title={t('yearReview.highlights', 'Year highlights')}>
-          <StatStrip id="year-review-highlights-stats" period={period} metrics={highlightMetrics}
-            preferences={preferences} loading={sectionLoading} retained={Boolean(data && isError)}
-            footer={!data && !sectionLoading ? gate(panelSkeleton, () => null) : undefined} />
+          <OperationalBrief {...briefMetadata} testId="year-review-highlights-stats"
+            title={t('yearReview.brief.highlights', 'Calendar-year highlights')} metrics={highlightOperationalMetrics} />
+          {!data && !sectionLoading && gate(panelSkeleton, () => null)}
         </Section>
       </FadeIn>
 
@@ -179,13 +198,13 @@ export default function YearReviewPage() {
         <Section id="year-review-impact" title={t('yearReview.impact', 'Impact')}>
           <CardGrid label={t('yearReview.impact', 'Impact')} items={[
             { id: 'savings', size: 'third', content: <LayoutCard title={t('yearReview.youSaved', 'You saved')}>
-              {gate(panelSkeleton, d => <YearSavings data={d} period={period} />)}
+              {gate(panelSkeleton, d => <YearSavings data={d} period={period} retained={Boolean(data && isError)} />)}
             </LayoutCard> },
             { id: 'environment', size: 'third', content: <LayoutCard title={t('yearReview.co2Offset', 'CO₂ offset')}>
-              {gate(panelSkeleton, d => <YearEnvironment data={d} period={period} />)}
+              {gate(panelSkeleton, d => <YearEnvironment data={d} period={period} retained={Boolean(data && isError)} />)}
             </LayoutCard> },
             { id: 'patterns', size: 'third', content: <LayoutCard title={t('yearReview.drivingPatterns', 'Your driving patterns')}>
-              {gate(panelSkeleton, d => <YearPatterns data={d} period={period} />)}
+              {gate(panelSkeleton, d => <YearPatterns data={d} period={period} retained={Boolean(data && isError)} />)}
             </LayoutCard> },
           ]} />
         </Section>
@@ -208,9 +227,9 @@ export default function YearReviewPage() {
               {gate(panelSkeleton, d => <YearDriveRecord drive={d.least_efficient_drive} id="year-review-least-efficient" period={period} />)}
             </LayoutCard> },
           ]} />
-          <StatStrip id="year-review-extremes" period={period} metrics={extremeMetrics}
-            preferences={preferences} loading={sectionLoading} retained={Boolean(data && isError)}
-            footer={!data && !sectionLoading ? gate(panelSkeleton, () => null) : undefined} />
+          <OperationalBrief {...briefMetadata} testId="year-review-extremes"
+            title={t('yearReview.brief.extremes', 'Year extremes')} metrics={extremeOperationalMetrics} />
+          {!data && !sectionLoading && gate(panelSkeleton, () => null)}
         </Section>
       </FadeIn>
 

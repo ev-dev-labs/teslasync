@@ -689,6 +689,7 @@ export default function BatteryCellsPage() {
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-cells-spread-trend' }}
           loading={isLoading}
           empty={!isLoading && !isError && voltageSpreadTrend.length === 0}
+          emptyMessage={t('battery.cells.chart.noSpreadTrend', 'Not enough history for spread trend')}
           error={error}
           onRetry={() => { void refetch(); }}
         >

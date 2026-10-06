@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { StatStrip, type StatMetric } from '@/components/data-display';
-import { LayoutCard } from '@/components/layout';
+import { type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
@@ -41,49 +41,55 @@ export function HvacCyclingEvidenceKpiLedger({
 
   const metrics: StatMetric[] = [
     {
-      metricId: 'text', occurrenceId: 'returned-rows',
+      metricId: 'count', occurrenceId: 'returned-rows',
       label: t('hvacCycling.kpis.returned', 'Returned rows'),
-      rawValue: resolved ? fmtInt(summary.rows.returnedRows) : null,
+      rawValue: resolved ? summary.rows.returnedRows : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       context: <><Database aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
         ? t('hvacCycling.kpis.returnedHint', 'raw endpoint rows') : unavailable}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'known-state-samples',
+      metricId: 'count', occurrenceId: 'known-state-samples',
       label: t('hvacCycling.kpis.known', 'Known-state samples'),
-      rawValue: resolved ? fmtInt(summary.rows.validKnownStateRows) : null,
+      rawValue: resolved ? summary.rows.validKnownStateRows : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       context: <><Activity aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
         ? t('hvacCycling.kpis.knownHint', '{{count}} unique timestamps', {
             count: summary.rows.uniqueTimestampRows,
           }) : unavailable}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'observed-intervals',
+      metricId: 'count', occurrenceId: 'observed-intervals',
       label: t('hvacCycling.kpis.intervals', 'Observed intervals'),
-      rawValue: resolved ? fmtInt(summary.intervals.observedIntervals) : null,
+      rawValue: resolved ? summary.intervals.observedIntervals : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       context: <><Binary aria-hidden="true" className="h-5 w-5 text-purple-300" />{resolved
         ? t('hvacCycling.kpis.intervalsHint', '{{count}} candidate pairs', {
             count: summary.intervals.candidateAdjacentPairs,
           }) : unavailable}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'observed-duration',
+      metricId: 'duration', occurrenceId: 'observed-duration',
       label: t('hvacCycling.kpis.observed', 'Observed duration'),
-      rawValue: resolved ? formatDuration(summary.observedS) : null,
+      rawValue: resolved ? summary.observedS : null,
+      display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) },
       context: <><Clock3 aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
         ? t('hvacCycling.kpis.observedHint', 'gap-qualified on + off time') : unavailable}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'on-duty',
+      metricId: 'percent', occurrenceId: 'on-duty',
       label: t('hvacCycling.kpis.duty', 'Observed on duty'),
-      rawValue: resolved && summary.dutyCycle != null ? fmtPercent(summary.dutyCycle * 100) : null,
+      rawValue: resolved && summary.dutyCycle != null ? summary.dutyCycle * 100 : null,
+      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: <><Gauge aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
         ? t('hvacCycling.kpis.dutyHint', 'duration-weighted denominator') : unavailable}</>,
     },
     {
-      metricId: 'text', occurrenceId: 'short-cycle-rate',
+      metricId: 'percent', occurrenceId: 'short-cycle-rate',
       label: t('hvacCycling.kpis.shortRate', 'Qualified short-cycle rate'),
       rawValue: resolved && summary.qualifiedShortCycleRate != null
-        ? fmtPercent(summary.qualifiedShortCycleRate * 100) : null,
+        ? summary.qualifiedShortCycleRate * 100 : null,
+      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: <><RotateCw aria-hidden="true" className="h-5 w-5 text-amber-300" />{resolved
         ? t('hvacCycling.kpis.shortRateHint', '{{count}} complete active runs', {
             count: summary.completeOnRunCount,
@@ -99,13 +105,13 @@ export function HvacCyclingEvidenceKpiLedger({
         'HVAC cycling evidence ledger',
       )}
     >
-      <LayoutCard title={t('hvacCycling.kpis.title', 'Evidence KPI ledger')}>
-        <StatStrip id="hvac-cycling-evidence" variant="embedded" metrics={metrics}
+        <VehicleOperationalBrief id="hvac-cycling-evidence" metrics={metrics}
+          title={t('hvacCycling.kpis.title', 'Evidence KPI ledger')}
+          loading={state.isLoading} available={resolved}
           period={{ kind: 'unknown', label: t('hvacCycling.kpis.returnedHint', 'raw endpoint rows') }}
           retained={Boolean(state.refreshError) || (resolved && Boolean(state.isPaused))}
         />
         <HvacCyclingQueryStatus summary={summary} state={state} />
-      </LayoutCard>
     </section>
   );
 }

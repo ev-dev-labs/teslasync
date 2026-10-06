@@ -119,6 +119,11 @@ vi.mock('@/components/charts', () => {
 
 import { SpeedHistogramChart } from './SpeedHistogramChart';
 
+vi.mock('@/components/layout', async () => {
+  const charts = await import('@/components/charts');
+  return { ChartCard: charts.ChartContainer };
+});
+
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const BUCKETS: SpeedHistogramBucket[] = [

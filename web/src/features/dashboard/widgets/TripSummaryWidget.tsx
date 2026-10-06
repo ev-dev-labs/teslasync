@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigation, MapPin, Clock, Zap, Route } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, Subhead, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useTrips } from '@/api/hooks/useTrips';
 import { knownNumber } from '@/api/dataState';
@@ -12,7 +12,6 @@ import { formatDurationRange } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -76,15 +75,15 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                 <Badge className="text-2xs">
                   {t('widget.lastTrip', 'Last trip')}
                 </Badge>
-                <span className={dashboardTokens.unit}>
+                <Caption>
                   {formatDate(lastTrip.start_date)}
-                </span>
+                </Caption>
               </div>
 
               {/* Start → End */}
-              <p className={dashboardTokens.title}>
+              <Text as="p" variant="bodySm" className="font-semibold [overflow-wrap:anywhere]">
                 {tripName(lastTrip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
-              </p>
+              </Text>
 
               {/* Stats grid */}
               <WidgetStatGrid cols={isCompact ? 2 : 4} stats={[
@@ -99,39 +98,39 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
           {/* Recent trips list */}
           {recentTrips.length > 1 && (
             <div className="min-w-0 space-y-1.5">
-              <h4 className={dashboardTokens.metricLabel}>
+              <Subhead>
                 {t('widget.recentTrips', 'Recent trips')}
-              </h4>
+              </Subhead>
               {recentTrips.slice(1).map((trip) => (
                 <div
                   key={trip.id}
                   className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] py-2"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className={dashboardTokens.metricLabel}>
+                    <Text as="p" variant="bodySm" className="[overflow-wrap:anywhere]">
                       {tripName(trip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
-                    </p>
-                    <p className={dashboardTokens.unit}>
+                    </Text>
+                    <Caption className="block">
                       {formatDate(trip.start_date)}
-                    </p>
+                    </Caption>
                   </div>
                   {!isCompact && (
                     <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-                      <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+                      <Text variant="bodySm" className="tabular-nums">
                         {displayDist(trip.total_distance_m)}
-                      </span>
-                      <span className="text-2xs text-[var(--text-muted)] tabular-nums">
+                      </Text>
+                      <Caption className="tabular-nums">
                         {formatDurationRange(trip.start_date, trip.end_date)}
-                      </span>
+                      </Caption>
                       <Badge className="text-2xs">
                         {count(trip.drive_count)} {t('widget.drivesShort', 'drv')}
                       </Badge>
                     </div>
                   )}
                   {isCompact && (
-                    <span className="text-xs text-[var(--text-secondary)] tabular-nums flex-shrink-0 ml-2">
+                    <Text variant="bodySm" className="tabular-nums min-w-0 ms-2">
                       {displayDist(trip.total_distance_m)}
-                    </span>
+                    </Text>
                   )}
                 </div>
               ))}

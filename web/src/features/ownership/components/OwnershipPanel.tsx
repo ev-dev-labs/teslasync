@@ -17,6 +17,7 @@ interface OwnershipPanelProps {
   source?: DataStateSource<unknown>;
   sourceEnabled?: boolean;
   editing?: boolean;
+  preserveSummary?: boolean;
 }
 
 /** Domain adapter: callers retain policy, formatting and editor state. */
@@ -31,18 +32,24 @@ export function OwnershipPanel({
   source,
   sourceEnabled = true,
   editing = false,
+  preserveSummary = false,
 }: OwnershipPanelProps) {
   const { t } = useTranslation();
   const dataState = useDataState(source ?? {});
   const message = emptyMessage ?? t('ownership.source.empty', 'No supported data is available yet.');
   const state = !source || !sourceEnabled
     ? empty ? 'empty' : 'ready'
-    : dataState.fatalError ? 'error'
+    // An unsaved editor does not depend on the register's first successful read.
+    : editing && !dataState.hasData ? 'ready'
+      : dataState.fatalError ? 'error'
       : !dataState.hasData && source.isLoading ? 'loading'
         : dataState.status === 'stale' ? 'retained'
           : empty && !editing ? 'empty' : 'ready';
-  const emptyContent = <EmptyState /* no-action: callers own domain prerequisites; source retry is supplied separately. */
-    icon={<Info className="h-6 w-6" aria-hidden="true" />} message={message} />;
+  const emptyContent = <>
+    <EmptyState /* no-action: callers own domain prerequisites; source retry is supplied separately. */
+      icon={<Info className="h-6 w-6" aria-hidden="true" />} message={message} />
+    {preserveSummary && children}
+  </>;
   const content = (
     <SourceContent
       state={state}
@@ -52,15 +59,16 @@ export function OwnershipPanel({
       error={dataState.fatalError}
       errorRecovery={dataState.retry ? { onRetry: dataState.retry } : undefined}
       emptyContent={emptyContent}
+      loadingContent={preserveSummary ? children : undefined}
     >
-      {editing && (state === 'loading' || state === 'error') ? null : empty && !editing ? emptyContent : children}
+      {empty && !editing ? emptyContent : children}
     </SourceContent>
   );
   return (
     <LayoutCard title={title} description={description} actions={actions}>
       <div className={className ?? 'min-w-0 space-y-4'}>
         {content}
-        {editing && (state === 'loading' || state === 'error') ? children : null}
+        {preserveSummary && state === 'error' && children}
       </div>
     </LayoutCard>
   );

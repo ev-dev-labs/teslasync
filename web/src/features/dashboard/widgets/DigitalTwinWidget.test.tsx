@@ -78,7 +78,9 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (_key: string, fallback?: string) => fallback ?? _key,
+      t: (_key: string, fallback?: string, options?: Record<string, unknown>) =>
+        (fallback ?? _key).replace(/{{(\w+)}}/g, (match, name: string) =>
+          options?.[name] == null ? match : String(options[name])),
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -348,7 +350,11 @@ describe('DigitalTwinWidget — independent source failures', () => {
 
       expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
       expect(screen.getByTestId('vehicle-twin')).toBeInTheDocument();
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const failure = screen.getByRole('alert');
+      expect(within(failure).getByText(`${source === 'state' ? 'Vehicle' : source === 'security' ? 'Security' : 'Charging'} state unavailable`)).toBeInTheDocument();
+      fireEvent.click(within(failure).getByRole('button', { name: 'Retry' }));
+      expect(queries[source].refetch).toHaveBeenCalledOnce();
+      queries[source].refetch.mockClear();
       expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
       expect(twinPropsSpy).toHaveBeenLastCalledWith(expect.objectContaining({
         vehicleId: 7,

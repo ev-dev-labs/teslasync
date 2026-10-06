@@ -40,10 +40,10 @@ import { ChatWelcome } from '../components/chatbot/ChatWelcome';
 // Chatbot LLM surface
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
 // in off mode (ADR-015 §I5 + §I6).
-import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
+import { AIChatbotIndicator } from '@/components/ai';
 // Optional browser STT/TTS panel
 // mounted above the conversation; absent in off mode via withAiFeature.
-import { AIVoiceMode } from '@/components/ai/AIVoiceMode';
+import { AIVoiceMode } from '@/components/ai';
 
 // History sidebar visibility persists across reloads via localStorage so
 // that a desktop user who opens the History panel finds it still open

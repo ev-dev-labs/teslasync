@@ -146,17 +146,31 @@ function renderWidget(size: WidgetSize, opts: { vehicleId?: number } = {}) {
 
 /** Read the bold value rendered inside the StatCard with the given label. */
 function statValue(label: string): string {
-  const card = screen.getByText(label).closest('[data-print-card]');
-  if (!card) throw new Error(`StatCard "${label}" not found`);
-  return card.querySelector('.text-2xl')?.textContent ?? '';
+  const card = screen.getByText(label).closest('[data-operational-metric]');
+  if (!card) throw new Error(`Operational metric "${label}" not found`);
+  return card.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
-/** The `.min-h-[28px]` row that wraps a single stale/gap signal (name + time). */
+/** The semantic definition-list row pairs each complete signal name and age. */
 function gapRowOf(name: string): HTMLElement {
-  const el = screen.getByText(name).closest('.min-h-\\[28px\\]');
+  const el = screen.getByText(name).closest('dt')?.parentElement;
   if (!el) throw new Error(`gap row for "${name}" not found`);
   return el as HTMLElement;
 }
+
+it('reviews actual signal quantities, selected-vehicle scope and the unchanged gap threshold', () => {
+  MOCK_SIGNALS = { data: ['Fresh', 'Missing'] };
+  MOCK_GAPS = { data: { Fresh: { timestamp: ago(30 * S) }, Missing: { timestamp: null } } };
+  renderWidget(WIDE, { vehicleId: 42 });
+  const brief = screen.getByTestId('signal-health-operational-brief');
+  expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getByText('30s ago')).toBeInTheDocument();
+  expect(within(drawer).getByText(/Vehicle 42/)).toBeInTheDocument();
+  expect(within(drawer).getAllByText(/does not certify distributed live-state freshness/).length).toBeGreaterThan(0);
+  expect(within(drawer).getByText(/missing or unparseable timestamps/)).toBeInTheDocument();
+});
 
 beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(NOW);

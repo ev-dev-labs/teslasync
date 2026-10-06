@@ -4,15 +4,17 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, Clock, BatteryFull, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Timeline } from '@/components/data-display';
+import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
-import { deriveDataState, knownNumber } from '@/api/dataState';
+import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
+import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
 export interface ScheduleSignals {
   mode: string | null;
@@ -110,17 +112,29 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
 
   const hasScheduleData =
     schedule.mode != null || schedule.startTime != null || schedule.departureTime != null || schedule.chargeLimit != null || schedule.pending;
-  const dataState = liveSignals ? deriveDataState({
+  const scheduleState = deriveDataState({
     ...signalsQuery,
-    isError: signalsError || (isTall && stateQuery.isError),
-    error: signalsQuery.error ?? (isTall ? stateQuery.error : null),
-  }, { provenance: 'live' }) : undefined;
-  const blockingError = !liveSignals && signalsError ? String(signalsQuery.error ?? 'Request failed') : null;
-
+    data: liveSignals ?? (!id || (!signalsLoading && !signalsError && !signalsQuery.error) ? null : undefined),
+  }, { provenance: 'live' });
+  const vehicleState = deriveDataState({
+    ...stateQuery,
+    data: stateData ?? (!id || (!stateLoading && !stateQuery.isError && !stateQuery.error) ? null : undefined),
+  }, { provenance: stateData?.live ? 'live' : 'cached' });
   const handleRefresh = useCallback(() => {
     void refetchSignals();
     void stateQuery.refetch?.();
   }, [refetchSignals, stateQuery]);
+
+  const hasData = scheduleState.hasData || vehicleState.hasData;
+  const dataState = !isCompact && isTall
+    ? {
+        ...combineDataStates([scheduleState, vehicleState]),
+        data: hasData ? { schedule: scheduleState.data, vehicle: vehicleState.data } : undefined,
+        hasData,
+        retry: handleRefresh,
+      }
+    : scheduleState;
+  const blockingError = dataState.fatalError?.message ?? null;
 
   const emptyState = (
     <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -166,6 +180,13 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
     return items;
   }, [schedule, t, formatScheduleTime]);
 
+  const vehicleDetails = (
+    <WidgetStatGrid cols={2} stats={[
+      { label: t('widget.chargingSchedule.currentLevel', 'Current level'), value: knownNumber(state?.battery_level) == null ? null : `${state?.battery_level}%` },
+      { label: t('widget.chargingSchedule.status', 'Status'), value: state?.is_charging === true ? t('widget.charging', 'Charging') : state?.is_charging === false ? t('widget.notCharging', 'Not charging') : null },
+    ]} />
+  );
+
   if (isCompact) {
     return (
       <WidgetShell
@@ -206,8 +227,17 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
       isError={signalsError}
       onRefresh={handleRefresh}
     >
-      {hasScheduleData ? (
         <div className="h-full flex flex-col gap-3">
+          <SourceContent
+            state={sourceBoundaryState(scheduleState, hasScheduleData)}
+            label={t('widget.chargingSchedule.title', 'Charging schedule')}
+            emptyMessage={t('widget.chargingSchedule.noData', 'No schedule data')}
+            emptyContent={emptyState}
+            errorMessage={t('widget.chargingSchedule.scheduleUnavailable', 'Charging schedule unavailable')}
+            error={scheduleState.fatalError}
+            retainedMessage={t('widget.chargingSchedule.scheduleRetained', 'Previously loaded charging schedule remains visible while this source recovers.')}
+            errorRecovery={{ onRetry: () => { void refetchSignals(); } }}
+          >
           {/* Mode badge */}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Badge variant={modeBadgeVariant(schedule.mode)} size="sm" dot>
@@ -228,20 +258,26 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
               {t('widget.chargingSchedule.noTimes', 'No scheduled times set')}
             </div>
           )}
+          </SourceContent>
 
           {/* Extra detail row when tall */}
           {isTall && (
             <div className="mt-auto border-t border-[var(--border-subtle)] pt-2">
-              <WidgetStatGrid cols={2} stats={[
-                { label: t('widget.chargingSchedule.currentLevel', 'Current level'), value: knownNumber(state?.battery_level) == null ? null : `${state?.battery_level}%` },
-                { label: t('widget.chargingSchedule.status', 'Status'), value: state?.is_charging === true ? t('widget.charging', 'Charging') : state?.is_charging === false ? t('widget.notCharging', 'Not charging') : null },
-              ]} />
+              <SourceContent
+                state={sourceBoundaryState(vehicleState, state != null)}
+                label={t('widget.chargingSchedule.currentLevel', 'Current level')}
+                emptyMessage={t('widget.chargingSchedule.vehicleUnavailable', 'Vehicle charging state unavailable')}
+                emptyContent={vehicleDetails}
+                errorMessage={t('widget.chargingSchedule.vehicleUnavailable', 'Vehicle charging state unavailable')}
+                error={vehicleState.fatalError}
+                retainedMessage={t('widget.chargingSchedule.vehicleRetained', 'Previously loaded vehicle charging state remains visible while this source recovers.')}
+                errorRecovery={{ onRetry: () => { void stateQuery.refetch(); } }}
+              >
+              {vehicleDetails}
+              </SourceContent>
             </div>
           )}
         </div>
-      ) : (
-        emptyState
-      )}
     </WidgetShell>
   );
 }

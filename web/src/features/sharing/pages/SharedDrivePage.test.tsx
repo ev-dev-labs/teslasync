@@ -40,9 +40,11 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { SharedDriveData, SharedDriveDataV1, SharedSessionData } from '@/types/sharing'
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
+import { ApiError } from '@/lib/resilience'
 
 /* ── Hoisted mutable state shared with the (hoisted) vi.mock factories ────── */
 const h = vi.hoisted(() => ({
+  sharedHook: vi.fn(),
   query: {
     current: { data: undefined as unknown, isLoading: false, error: null as Error | null },
   },
@@ -57,6 +59,7 @@ const h = vi.hoisted(() => ({
   charts: {
     areaData: [] as Array<Record<string, number>>,
     lineData: [] as Array<Record<string, number>>,
+    composedData: [] as Array<Record<string, number>>,
   },
 }))
 
@@ -147,7 +150,13 @@ vi.mock('@/hooks/useSettings', async () => {
 /* ── Controllable public-share query ─────────────────────────────────────── */
 vi.mock('@/api/hooks/useSharing', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useSharing')>('@/api/hooks/useSharing')
-  return { ...actual, useSharedDrive: () => h.query.current }
+  return {
+    ...actual,
+    useSharedDrive: (token: string) => {
+      h.sharedHook(token)
+      return h.query.current
+    },
+  }
 })
 
 /* ── Inert leaflet barrel — capture props, never touch canvas/leaflet ────── */
@@ -207,9 +216,10 @@ vi.mock('@/components/charts', () => ({
     h.charts.lineData = data
     return <div data-testid="line-chart" data-count={data.length} />
   },
-  ComposedChart: ({ data }: { data: Array<Record<string, number>> }) => (
-    <div data-testid="composed-chart" data-count={data.length} />
-  ),
+  ComposedChart: ({ data }: { data: Array<Record<string, number>> }) => {
+    h.charts.composedData = data
+    return <div data-testid="composed-chart" data-count={data.length} />
+  },
   Area: () => null,
   Line: () => null,
   XAxis: () => null,
@@ -325,13 +335,15 @@ function setData(
 }
 
 function renderPage(token = 'abc123') {
-  return render(
+  const tree = () => (
     <MemoryRouter initialEntries={[`/s/${token}`]}>
       <Routes>
         <Route path="/s/:token" element={<SharedDrivePage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  const result = render(tree())
+  return { ...result, rerenderPage: () => result.rerender(tree()) }
 }
 
 beforeEach(() => {
@@ -346,6 +358,8 @@ beforeEach(() => {
   h.maps.tileStyles = []
   h.charts.areaData = []
   h.charts.lineData = []
+  h.charts.composedData = []
+  h.sharedHook.mockClear()
 })
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
@@ -519,6 +533,35 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Morning Commute' })).toBeInTheDocument()
     expect(screen.queryByText('A scenic drive')).toBeNull()
   })
+
+  it('preserves every returned map, elevation and speed point, including terminal values', () => {
+    const payload = makeV2({
+      map_points: Array.from({ length: 41 }, (_, index) => ({
+        lat: 47 + index / 100, lng: -122 + index / 100,
+      })),
+      elevation_profile: Array.from({ length: 41 }, (_, index) => ({
+        distance_m: index * 100, elevation_m: 100 + index,
+      })),
+      speed_profile: Array.from({ length: 41 }, (_, index) => ({
+        distance_m: index * 100, speed_mps: index,
+      })),
+    })
+    const snapshot = structuredClone(payload)
+    setData(payload)
+    renderPage()
+    expect(screen.getByTestId('map-polyline')).toHaveAttribute('data-count', '41')
+    expect(h.maps.polylines.at(-1)).toEqual(payload.map_points?.map((point) => [point.lat, point.lng]))
+    expect(h.charts.areaData).toEqual(payload.elevation_profile?.map((point) => ({
+      distance: point.distance_m / 1000, elevation: point.elevation_m,
+    })))
+    expect(h.charts.lineData).toHaveLength(41)
+    payload.speed_profile?.forEach((point, index) => {
+      expect(h.charts.lineData[index].distance).toBeCloseTo(point.distance_m / 1000)
+      expect(h.charts.lineData[index].speed).toBeCloseTo(point.speed_mps * 3.6)
+    })
+    expect(h.charts.lineData.at(-1)).toEqual({ distance: 4, speed: 144 })
+    expect(payload).toEqual(snapshot)
+  })
 })
 
 describe('SharedDrivePage — imperial boundary', () => {
@@ -667,5 +710,74 @@ describe('SharedDrivePage — session share branch', () => {
     // Drive chrome stays out: no map, no drive header.
     expect(screen.queryByTestId('map-container')).toBeNull()
     expect(screen.queryByText('Shared drive report')).toBeNull()
+  })
+
+  it('passes every shared power and battery curve value through the actual session report without sampling or mutation', () => {
+    const payload = sessionPayload()
+    payload.session.curve = Array.from({ length: 37 }, (_, index) => ({
+      t_s: index * 60, power_kw: 250 - index, battery_pct: 20 + index, energy_kwh: index,
+    }))
+    const snapshot = structuredClone(payload)
+    Object.freeze(payload.session.curve)
+    Object.freeze(payload.session)
+    setData(payload)
+    renderPage()
+    expect(screen.getByTestId('composed-chart')).toHaveAttribute('data-count', '37')
+    expect(h.charts.composedData).toEqual(Array.from({ length: 37 }, (_, index) => ({
+      minutes: index, power: 250 - index, soc: 20 + index,
+    })))
+    expect(screen.getByText('Shared charging report')).toBeInTheDocument()
+    expect(screen.queryByTestId('map-container')).not.toBeInTheDocument()
+    expect(payload).toEqual(snapshot)
+  })
+
+  it.each(['drive', 'session'] as const)(
+    'withholds a cached %s report after token permission failure and restores only a successful response',
+    (kind) => {
+      const payload = kind === 'drive' ? makeV2() : sessionPayload()
+      const snapshot = structuredClone(payload)
+      setData(payload)
+      const view = renderPage('public-token-only')
+      expect(screen.getByRole('heading', { name: payload.title, level: 1 })).toBeInTheDocument()
+      expect(h.sharedHook).toHaveBeenLastCalledWith('public-token-only')
+
+      setData(payload, { error: new ApiError('revoked token', 403) })
+      view.rerenderPage()
+      expect(screen.getByRole('heading', { name: 'Share link unavailable' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: payload.title })).not.toBeInTheDocument()
+      expect(screen.queryByText('Seattle → Tacoma')).not.toBeInTheDocument()
+      expect(screen.queryByText('Baker, CA')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('map-container')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('composed-chart')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Go to TeslaSync' })).toHaveAttribute('href', '/')
+
+      setData(payload)
+      view.rerenderPage()
+      expect(screen.getByRole('heading', { name: payload.title, level: 1 })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Share link unavailable' })).not.toBeInTheDocument()
+      expect(h.sharedHook).toHaveBeenLastCalledWith('public-token-only')
+      expect(payload).toEqual(snapshot)
+    },
+  )
+
+  it('keeps loading chrome guest-only until the selected public token resolves to a session', () => {
+    setData(undefined, { isLoading: true })
+    const view = renderPage('session-token')
+    expect(screen.getByRole('status', { name: 'Loading shared drive report…' }))
+      .toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('Baker, CA')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+
+    setData(sessionPayload())
+    view.rerenderPage()
+    expect(screen.getByText('Shared charging report')).toBeInTheDocument()
+    expect(screen.getByText('Baker, CA')).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Loading shared drive report…' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Shared drive report')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
+    expect(h.sharedHook.mock.calls.every(([token]) => token === 'session-token')).toBe(true)
   })
 })

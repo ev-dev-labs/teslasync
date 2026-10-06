@@ -8,7 +8,6 @@ import type {
 import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import {
-  Badge,
   Caption,
   Text
 } from '@/components/ui';
@@ -18,6 +17,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { ScienceSummaryBrief } from './operationalbrief-all/ScienceSummaryBrief';
 
 export function TiresPanel({ window }: { window: ScienceWindow }) {
   const { fmtNumber } = useNumberFormatting();
@@ -26,11 +27,52 @@ export function TiresPanel({ window }: { window: ScienceWindow }) {
   const state = useDataState(query, { provenance: 'historical' });
   const data: ScienceTires | undefined = state.data;
   const { formatPressure, formatEnergy, formatDistance } = useUnits();
+  const reported = data && !data.unknown ? data : undefined;
+  const sensitivity = (
+    <>
+      {t('science.tires.modelBand', 'Model sensitivity, not a confidence interval')}:{' '}
+      {data?.extra_model_low != null ? formatEnergy(data.extra_model_low) : unknown(t)}…
+      {data?.extra_model_high != null ? formatEnergy(data.extra_model_high) : unknown(t)}
+      {data?.distance_m != null ? ` · ${formatDistance(data.distance_m)}` : ''}
+      {data?.recommended_kpa != null ? ` · ${t('science.tires.placard', 'placard')} ${formatPressure(data.recommended_kpa)}` : ''}
+    </>
+  );
+  const metrics: StatMetric[] = [
+    { metricId: 'pressure', occurrenceId: 'front-left', label: t('science.tires.fl', 'Front left'), rawValue: reported?.fl_kpa, description: data?.honesty ?? t('science.unknown', 'unknown') },
+    { metricId: 'pressure', occurrenceId: 'front-right', label: t('science.tires.fr', 'Front right'), rawValue: reported?.fr_kpa, description: data?.honesty ?? t('science.unknown', 'unknown') },
+    { metricId: 'pressure', occurrenceId: 'rear-left', label: t('science.tires.rl', 'Rear left'), rawValue: reported?.rl_kpa, description: data?.honesty ?? t('science.unknown', 'unknown') },
+    { metricId: 'pressure', occurrenceId: 'rear-right', label: t('science.tires.rr', 'Rear right'), rawValue: reported?.rr_kpa, description: data?.honesty ?? t('science.unknown', 'unknown') },
+    {
+      metricId: 'pressure', occurrenceId: 'imbalance',
+      label: t('science.tires.imbalance', 'Imbalance'), rawValue: reported?.imbalance_kpa,
+      description: t('science.brief.pressureImbalance', 'Reported corner-pressure imbalance in the selected source window.'),
+    },
+    {
+      metricId: 'percent', occurrenceId: 'underinflation',
+      label: t('science.tires.underinflation', 'Underinflation'),
+      rawValue: reported?.underinflation_frac != null ? reported.underinflation_frac * 100 : null,
+      description: t('science.brief.underinflation', 'Source underinflation fraction relative to the assumed placard pressure.'),
+      display: { formatter: (raw) => ({ value: `${fmtNumber(raw)} %`, unit: '' }) },
+    },
+    {
+      metricId: 'energy', occurrenceId: 'extra-rolling',
+      label: t('science.tires.extra', 'Extra rolling'), rawValue: reported?.extra_wh,
+      description: t('science.overview.tiresMeaning', 'Extra rolling energy is model sensitivity, not measured loss.'),
+      context: data && !data.unknown ? sensitivity : t('science.tires.empty', 'No TPMS corners reported in this window. Yaw, steer, and slip are not available from Tesla signals.'),
+    },
+  ];
 
   return (
     <section data-testid="science-tires" className="min-w-0">
       <LayoutCard title={t('science.tires.title', 'Tire / contact mechanics')}>
       <StaleRefreshWarning state={state} />
+      <ScienceSummaryBrief
+        title={t('science.tires.title', 'Tire / contact mechanics')}
+        description={data?.honesty ?? t('science.overview.tiresMeaning', 'Extra rolling energy is model sensitivity, not measured loss.')}
+        metrics={metrics} states={[state]} window={window} report={data}
+        limited={!data || data.unknown}
+        testId="science-tires-brief"
+      />
       <SourceContent
         state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.tires.title', 'Tire / contact mechanics')}
@@ -48,40 +90,8 @@ export function TiresPanel({ window }: { window: ScienceWindow }) {
             <Text as="p" size="sm" color="secondary">{t('science.tires.empty', 'No TPMS corners reported in this window. Yaw, steer, and slip are not available from Tesla signals.')}</Text>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  [t('science.tires.fl', 'Front left'), data.fl_kpa],
-                  [t('science.tires.fr', 'Front right'), data.fr_kpa],
-                  [t('science.tires.rl', 'Rear left'), data.rl_kpa],
-                  [t('science.tires.rr', 'Rear right'), data.rr_kpa],
-                ].map(([label, v]) => (
-                  <div key={String(label)}>
-                    <Caption>{label}</Caption>
-                    <Text as="p" size="sm" className="tabular-nums">
-                      {typeof v === 'number' ? formatPressure(v) : unknown(t)}
-                    </Text>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="neutral" size="sm">
-                  {t('science.tires.imbalance', 'Imbalance')}:{' '}
-                  {data.imbalance_kpa != null ? formatPressure(data.imbalance_kpa) : unknown(t)}
-                </Badge>
-                <Badge variant="neutral" size="sm">
-                  {t('science.tires.underinflation', 'Underinflation')}:{' '}
-                  {data.underinflation_frac != null ? `${fmtNumber(data.underinflation_frac * 100)} %` : unknown(t)}
-                </Badge>
-                <Badge variant={data.extra_wh != null ? 'info' : 'neutral'} size="sm">
-                  {t('science.tires.extra', 'Extra rolling')}:{' '}
-                  {data.extra_wh != null ? formatEnergy(data.extra_wh) : unknown(t)}
-                </Badge>
-              </div>
               <Caption>
-                {t('science.tires.modelBand', 'Model sensitivity, not a confidence interval')}:{' '}
-                {formatEnergy(data.extra_model_low)}…{formatEnergy(data.extra_model_high)}
-                {data.distance_m != null ? ` · ${formatDistance(data.distance_m)}` : ''}
-                {data.recommended_kpa != null ? ` · ${t('science.tires.placard', 'placard')} ${formatPressure(data.recommended_kpa)}` : ''}
+                {sensitivity}
               </Caption>
             </>
           )}

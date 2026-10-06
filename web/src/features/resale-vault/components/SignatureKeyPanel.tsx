@@ -94,6 +94,7 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
                         wrapLabel
                         size="sm"
                         variant="danger"
+                        disabled={isLoading || isMutating}
                         onClick={() => {
                           void revokeKey(key.key_id, 'manual_revocation');
                           setRevokeTarget(null);
@@ -106,7 +107,7 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
                       </Button>
                     </div>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => setRevokeTarget(key.key_id)}>
+                    <Button size="sm" variant="outline" disabled={isLoading || isMutating} onClick={() => setRevokeTarget(key.key_id)}>
                       {t('resaleVault.keys.revoke', 'Revoke')}
                     </Button>
                   )}

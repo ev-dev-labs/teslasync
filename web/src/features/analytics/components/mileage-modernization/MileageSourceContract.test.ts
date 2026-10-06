@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 
-const path = new URL('../../pages/MileagePage.tsx', import.meta.url);
+const path = resolve('src/features/analytics/pages/MileagePage.tsx');
 const source = readFileSync(path, 'utf8');
-const ast = ts.createSourceFile(path.pathname, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const ast = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const printer = ts.createPrinter({ removeComments: true });
 
 function descendants(node: ts.Node): ts.Node[] {

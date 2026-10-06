@@ -162,7 +162,7 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     expect(useVehicle).toHaveBeenCalledWith('7');
     expect(useChargingTelemetryLatest).toHaveBeenCalledWith(7);
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(screen.getAllByRole('figure')).toHaveLength(4);
     for (const owner of ['diagnosis-owner', 'physics-owner', 'ledger-owner'])
       expect(screen.getByTestId(owner)).toHaveTextContent('42');
@@ -183,7 +183,7 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     mockLive(latest);
     const { container } = mount();
     expect(screen.getAllByRole('figure')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3);
     expect(liveValue('Range Added')).toBe('45.00 km');
     fireEvent.click(within(screen.getAllByTestId('stale-refresh-warning')[2]!).getByRole('button', { name: 'Refresh' }));
@@ -193,7 +193,7 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     const failed = query<ChargeTelemetryReading[] | undefined>(undefined, new Error('sample source failed'));
     mockTelemetry(failed);
     const { container } = mount();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(screen.getAllByRole('figure')).toHaveLength(1);
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries).toHaveLength(3);
@@ -211,7 +211,7 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     expect(screen.getByRole('heading', { name: 'Charge Curve' })).toBeInTheDocument();
     expect(screen.queryByTestId('physics-owner')).toBeNull();
     expect(screen.queryByTestId('ledger-owner')).toBeNull();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
   });
   it('distinguishes a live-source fatal failure from authoritative null and keeps history intact', () => {
     const failed = query<ChargingTelemetry | undefined>(undefined, new Error('latest failed'));
@@ -232,7 +232,7 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     mockTelemetry(query([]));
     mockLive(query(null));
     const { container } = mount();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(screen.getByText('(estimated)')).toBeInTheDocument();
     expect(screen.getAllByRole('figure')).toHaveLength(1);
     expect(screen.getByText('No battery level, energy, or range samples were recorded for this session.')).toBeInTheDocument();

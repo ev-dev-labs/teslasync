@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { knownNumber } from '@/api/dataState';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { LayoutCard } from '@/components/layout/layout-reference';
-import { QueryError, Skeleton } from '@/components/feedback';
+import { QueryError } from '@/components/feedback';
 import type { RangeSectionProps } from './RangeSourceSlot';
 
 export function RangeSummary({ source, loading }: RangeSectionProps) {
@@ -22,17 +23,14 @@ export function RangeSummary({ source, loading }: RangeSectionProps) {
     { metricId: 'percent', occurrenceId: 'health', label: t('range.healthFactor', 'Health Factor'), rawValue: health == null ? null : health * 100 },
   ];
   return (
-    <section aria-label={t('range.kpis', 'Range summary metrics')}>
+    <section>
       {source.fatalError ? (
         <LayoutCard title={t('range.kpis', 'Range summary metrics')}>
           <QueryError error={source.fatalError} onRetry={source.retry ?? undefined} />
         </LayoutCard>
-      ) : loading && !source.hasData ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} height={86} rounded />)}
-        </div>
       ) : (
-        <StatStrip id="projected-range-summary" metrics={metrics} retained={source.status === 'stale'}
+        <BatteryEvidenceBrief id="projected-range-summary" title={t('range.kpis', 'Range summary metrics')} metrics={metrics}
+          loading={loading && !source.hasData} retained={source.status === 'stale'}
           period={{ kind: 'snapshot',
             label: t('range.modernization.snapshot', 'Range projection snapshot'),
             observedAt: source.updatedAt == null ? null : new Date(source.updatedAt).toISOString(),

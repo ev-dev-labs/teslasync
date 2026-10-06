@@ -13,6 +13,7 @@ import { downloadJSON, defaultExportFilename } from '@/lib/csvExport';
 import { formatDateTime } from '@/lib/dateFormat';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 
 export default function OutageAutobiographyPage() {
   const { fmtNumber } = useNumberFormatting();
@@ -47,8 +48,34 @@ export default function OutageAutobiographyPage() {
       query={outageQuery}
     >
       <StaleRefreshWarning state={state} label={t('system.outage.title', 'Outage autobiography')} />
+      <SystemSummaryBrief
+        title={t('system.outage.catchUp', 'Catch-up after MQTT or carbon loss')}
+        description={outage?.honesty ?? t('system.outage.subtitle', 'What queued, what replayed with original event time, what stayed unknown.')}
+        scope={outage?.unknown_since
+          ? t('system.outage.unknownSince', 'Unknown since {{when}} — a gap is not a measured zero.', { when: formatDateTime(outage.unknown_since) })
+          : t('system.outage.brief.scope', 'Selected vehicle outage evidence; no fixed reporting window is supplied.')}
+        freshness={outage?.last_telemetry_at ? formatDateTime(outage.last_telemetry_at) : undefined}
+        available={state.hasData} loading={outageQuery.isLoading && !state.hasData} retained={state.hasData && outageQuery.isError}
+        metrics={[{ metricId: 'duration', occurrenceId: 'gap', rawValue: outage?.gap_s,
+          label: t('system.outage.brief.gapLabel', 'Telemetry gap'),
+          context: outage?.gap_s != null ? t('system.outage.gap', 'Gap {{minutes}} min', { minutes: fmtNumber(outage.gap_s / 60) }) : undefined,
+          display: { formatter: (raw) => ({ value: fmtNumber(raw / 60), unit: 'min' }) } }]}
+        textMetrics={[
+          { key: 'mqtt', label: t('system.outage.brief.connection', 'MQTT connection'),
+            value: outage?.mqtt_connected == null ? t('system.outage.mqttUnknown', 'MQTT state unknown')
+              : outage.mqtt_connected ? t('system.outage.mqttUp', 'MQTT connected') : t('system.outage.mqttDown', 'MQTT not connected'),
+            valueState: outage?.mqtt_connected == null ? 'missing' : 'value',
+            tone: outage?.mqtt_connected == null ? 'neutral' : outage.mqtt_connected ? 'success' : 'warning',
+            detail: t('system.outage.subtitle', 'What queued, what replayed with original event time, what stayed unknown.') },
+          { key: 'last-telemetry', label: t('system.outage.brief.lastTelemetry', 'Last telemetry'),
+            value: outage?.last_telemetry_at ? formatDateTime(outage.last_telemetry_at) : '—',
+            valueState: outage?.last_telemetry_at ? 'value' : 'missing',
+            detail: <>{t('system.outage.lastTelemetry', 'Last telemetry: {{when}}', {
+              when: outage?.last_telemetry_at ? formatDateTime(outage.last_telemetry_at) : t('system.outage.never', 'unknown'),
+            })} · {t('system.outage.brief.timestampContext', 'Original event time; a missing timestamp does not imply zero traffic.')}</> },
+        ]}
+      />
         <GlassPanel className="space-y-3 p-4 sm:p-5">
-          <PanelTitle>{t('system.outage.catchUp', 'Catch-up after MQTT or carbon loss')}</PanelTitle>
           <SourceContent
             state={state.fatalError ? 'error' : outageQuery.isLoading && !outage ? 'loading' : !outage ? 'empty' : 'ready'}
             label={t('system.outage.title', 'Outage autobiography')}
@@ -59,37 +86,10 @@ export default function OutageAutobiographyPage() {
           >
           {outage ? <>
           <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={outage.mqtt_connected == null ? 'neutral' : outage.mqtt_connected ? 'success' : 'warning'}
-              size="sm"
-            >
-              {outage.mqtt_connected == null
-                ? t('system.outage.mqttUnknown', 'MQTT state unknown')
-                : outage.mqtt_connected
-                  ? t('system.outage.mqttUp', 'MQTT connected')
-                  : t('system.outage.mqttDown', 'MQTT not connected')}
-            </Badge>
             {outage.replay_preserves_event_time ? (
               <Badge variant="info" size="sm">{t('system.outage.replay', 'Replay keeps event time')}</Badge>
             ) : null}
           </div>
-          <Text as="p" variant="caption">
-            {t('system.outage.lastTelemetry', 'Last telemetry: {{when}}', {
-              when: outage.last_telemetry_at ? formatDateTime(outage.last_telemetry_at) : t('system.outage.never', 'unknown'),
-            })}
-          </Text>
-          {outage.gap_s != null && (
-            <Text as="p" variant="caption">
-              {t('system.outage.gap', 'Gap {{minutes}} min', { minutes: fmtNumber(outage.gap_s / 60) })}
-            </Text>
-          )}
-          {outage.unknown_since && (
-            <Text as="p" variant="caption">
-              {t('system.outage.unknownSince', 'Unknown since {{when}} — a gap is not a measured zero.', {
-                when: formatDateTime(outage.unknown_since),
-              })}
-            </Text>
-          )}
           <ul className="list-disc space-y-1 ps-5">
             {(outage.notes ?? []).map((note) => (
               <li key={note}><Text as="span" variant="caption">{note}</Text></li>

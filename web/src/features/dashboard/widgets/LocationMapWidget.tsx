@@ -2,13 +2,13 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Navigation } from 'lucide-react';
 import { AnimatedMarker } from '@/components/maps';
+import { Text } from '@/components/ui';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 
 /**
  * True only when `(lat, lng)` is a usable GPS fix: both finite, inside the
@@ -72,7 +72,7 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.locationMap.title', 'Vehicle location map')}
-      icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
+      icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />}
       loading={isLoading}
       dataState={dataState}
       noPadding
@@ -99,26 +99,26 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
         {/* Status overlay */}
         {hasCoords && !isCompact && (
           <div
-            className="absolute bottom-2 left-2 z-[1000] flex flex-col gap-1"
+            className="absolute bottom-2 start-2 end-2 z-[1000] flex min-w-0 flex-col items-start gap-1"
             role="group"
             aria-label={t('widget.locationMap.status', 'Vehicle location status')}
           >
             {!isLive && (
-              <span className={`${dashboardTokens.unit} inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-amber-300 backdrop-blur-sm`}>
-                <MapPin className="h-2.5 w-2.5" aria-hidden="true" />
+              <Text variant="caption" className="inline-flex max-w-full items-start gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-amber-300 backdrop-blur-sm [overflow-wrap:anywhere]">
+                <MapPin className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
                 {t('widget.locationMap.lastKnown', 'Last known position')}
-              </span>
+              </Text>
             )}
             {isExpanded && heading != null && (
-              <span className={`${dashboardTokens.unit} inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm`}>
-                <Navigation className="h-2.5 w-2.5" aria-hidden="true" />
+              <Text variant="caption" className="inline-flex max-w-full items-start gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm [overflow-wrap:anywhere]">
+                <Navigation className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
                 {t('widget.locationMap.heading', 'Heading')}: {fmtNumber(heading)}°
-              </span>
+              </Text>
             )}
             {isExpanded && (
-              <span className={`${dashboardTokens.unit} inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm`}>
+              <Text variant="caption" className="inline-flex max-w-full items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm [overflow-wrap:anywhere]">
                 {fmtNumber(lat)}, {fmtNumber(lng)}
-              </span>
+              </Text>
             )}
           </div>
         )}

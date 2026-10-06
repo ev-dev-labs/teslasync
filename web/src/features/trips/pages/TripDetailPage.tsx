@@ -5,7 +5,7 @@ import { PageLayout } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { AIAutoTripNameSuggestion } from '@/components/ai/AIAutoTripNameSuggestion';
+import { AIAutoTripNameSuggestion } from '@/components/ai';
 import { useTrip } from '@/api/hooks/useTrips';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { TripKpiBand } from '@/features/trips/components/TripKpiBand';
@@ -57,7 +57,7 @@ export default function TripDetailPage() {
         </FadeIn>
 
         <FadeIn delay={0.05}>
-          <TripKpiBand trip={trip} isLoading={isLoading} />
+          <TripKpiBand trip={trip} isLoading={isLoading} source={source} />
         </FadeIn>
 
         <FadeIn delay={0.1}>

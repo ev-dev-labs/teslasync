@@ -6,11 +6,18 @@
  * panels even when data is empty.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
+    pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 } }),
+}))
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}))
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
   return {
@@ -113,7 +120,7 @@ beforeEach(() => {
 
 function renderPage() {
   const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 }, mutations: { retry: false } },
   })
   const rendered = render(
     <QueryClientProvider client={qc}>
@@ -189,8 +196,15 @@ describe('FleetSetupPage', () => {
     expect(screen.queryByText('Public key not stored')).toBeNull()
     expect(screen.queryByText(/No stream yet/)).toBeNull()
     expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
-    expect(screen.getByText('Refresh token')).toBeInTheDocument()
+    const accountPanel = document.getElementById('fleet-setup-account')
+    expect(accountPanel).not.toBeNull()
+    const refreshToken = within(accountPanel!).getByRole('button', { name: 'Refresh token' })
+    expect(refreshToken).toBeInTheDocument()
+    expect(refreshToken).toBeEnabled()
     expect(screen.getByRole('link', { name: /Open Fleet API tools/i })).toBeInTheDocument()
+    expect(mockedRequest.mock.calls.some(call => ['POST', 'PUT', 'DELETE'].includes(
+      (call[1] as RequestInit | undefined)?.method ?? 'GET',
+    ))).toBe(false)
   })
 
   it('does not describe failed VIN config and error reads as empty successful responses', async () => {
@@ -227,7 +241,7 @@ describe('FleetSetupPage', () => {
     expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
     expect(screen.getAllByText('aa:bb:cc').length).toBeGreaterThan(0)
     expect(screen.getByText('fmt:2026-04-01T12:00:00Z')).toBeInTheDocument()
-    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.').length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Previously loaded data remains visible while affected sources recover.')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Public key not stored')).toBeNull()
     expect(screen.queryByText('Not connected')).toBeNull()
     expect(screen.getByRole('button', { name: 'Refresh token' })).toBeEnabled()
@@ -258,7 +272,8 @@ describe('FleetSetupPage', () => {
       return {}
     })
     renderPage()
-    expect(await screen.findByText('Not connected')).toBeInTheDocument()
+    const summary = screen.getByRole('region', { name: 'Fleet setup status summary' })
+    expect(await within(summary).findByText('Not connected')).toBeInTheDocument()
     expect(screen.getByText('Connect Tesla first. Subscribe uses the stored Fleet token.')).toBeInTheDocument()
     expect(
       screen.getByText(

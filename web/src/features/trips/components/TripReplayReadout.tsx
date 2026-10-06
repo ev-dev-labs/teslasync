@@ -15,9 +15,9 @@ interface TripReplayReadoutProps {
 export function TripReplayReadout({ label, value, unit, icon, help, className }: TripReplayReadoutProps) {
   return (
     <div className={cn('min-w-0 px-3 py-3 sm:px-4', className)}>
-      <MetricLabel className="mb-2 flex items-center gap-2">
+      <MetricLabel className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
         <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">{icon}</span>
-        <span>{label}</span>
+        <span className="min-w-0 break-words [overflow-wrap:anywhere]">{label}</span>
         {help && <HelpTooltip {...help} />}
       </MetricLabel>
       <MetricValue className="flex flex-wrap items-baseline gap-x-1.5 [overflow-wrap:anywhere]">

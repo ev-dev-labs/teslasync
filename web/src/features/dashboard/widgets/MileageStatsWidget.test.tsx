@@ -45,7 +45,7 @@
  * because the error branch's <QueryError> uses `useNavigate`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { MileageStats } from '@/types/analytics';
 import MileageStatsWidget from './MileageStatsWidget';
@@ -197,12 +197,25 @@ describe('MileageStatsWidget — standard layout (km)', () => {
     expect(screen.getByText('Next milestone')).toBeInTheDocument();
 
     // daily = 900 / 30 = 30 km/day (1 dp) → weekly ×7, monthly ×30.
-    expect(screen.getByText('30.00')).toBeInTheDocument();
-    expect(screen.getByText('210.00')).toBeInTheDocument();
-    expect(screen.getByText('900.00')).toBeInTheDocument();
+    expect(screen.getByText('30.00 km')).toBeInTheDocument();
+    expect(screen.getByText('210.00 km')).toBeInTheDocument();
+    expect(screen.getByText('900.00 km')).toBeInTheDocument();
 
     // Every stat chip carries the km unit.
-    expect(screen.getAllByText('km')).toHaveLength(4);
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+  });
+
+  it('reviews the distinct rolling average and lifetime milestone sources with the retained ETA', () => {
+    useMileageStatsMock.mockReturnValue(makeQuery({ data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }) }));
+    renderWidget();
+    const brief = screen.getByTestId('mileage-stats-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('30.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not an independent seven-day query/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Next 10,000-display-unit lifetime milestone/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/lifetime distance supplies the milestone/).length).toBeGreaterThan(0);
   });
 
   it('rounds the milestone up to the next 10 000 above the lifetime total and shows the ETA', () => {
@@ -214,7 +227,7 @@ describe('MileageStatsWidget — standard layout (km)', () => {
 
     // lifetime 45 000 → next milestone 50 000; remaining 5 000 at 30 km/day
     // ≈ round(5000 / 30 / 30) = 6 months.
-    expect(screen.getByText('50,000.00')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
     expect(screen.getByText('~6 mo')).toBeInTheDocument();
   });
 
@@ -227,9 +240,9 @@ describe('MileageStatsWidget — standard layout (km)', () => {
 
     // 20 000 is itself a milestone, so we must round up to 30 000 (remaining
     // 10 000 at 10 km/day ≈ 33 months) rather than reporting "0 remaining".
-    expect(screen.getByText('30,000.00')).toBeInTheDocument();
+    expect(screen.getByText('30,000.00 km')).toBeInTheDocument();
     expect(screen.getByText('~33 mo')).toBeInTheDocument();
-    expect(screen.getByText('10.00')).toBeInTheDocument();
+    expect(screen.getByText('10.00 km')).toBeInTheDocument();
   });
 });
 
@@ -243,8 +256,8 @@ describe('MileageStatsWidget — unit conversion', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // 30 km/day = 30 000 m / 1609.344 ≈ 18.6 mi/day.
-    expect(screen.getByText('18.64')).toBeInTheDocument();
-    expect(screen.getAllByText('mi')).toHaveLength(4);
+    expect(screen.getByText('18.64 mi')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     // The km value must NOT leak through — proves the conversion ran.
     expect(screen.queryByText('30.00')).not.toBeInTheDocument();
   });
@@ -405,8 +418,8 @@ describe('MileageStatsWidget — graceful degradation on transient error', () =>
 
     // Data is still on screen …
     expect(screen.getByText('Mileage stats')).toBeInTheDocument();
-    expect(screen.getByText('30.00')).toBeInTheDocument();
-    expect(screen.getByText('50,000.00')).toBeInTheDocument();
+    expect(screen.getByText('30.00 km')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();

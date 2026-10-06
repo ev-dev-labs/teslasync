@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Filter, Gauge, RadioTower, Waves } from 'lucide-react';
+import { Filter, Gauge, RadioTower } from 'lucide-react';
 
 import { useSignalHistory, useSignals } from '@/api/hooks/useTelemetry';
 import {
   ChartContainer, ChartTooltip, Line, LineChart, CartesianGrid,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
@@ -73,14 +74,54 @@ export default function SignalDeadbandPage() {
     [analysis],
   );
 
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalDeadband.title', 'Signal deadband')} />;
-  }
-
   const historyHasData = historyQuery.data !== undefined;
   const historyLoading = signalChosen && !historyHasData && historyQuery.isLoading;
   const historyError = signalChosen && historyState.fatalError != null;
   const recommended = analysis?.recommended;
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'number', occurrenceId: 'noise', rawValue: analysis?.noiseThreshold,
+      label: t('signalDeadband.kpis.noise', 'MAD noise band'),
+      display: { formatter: (raw) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) },
+      description: t('signalDeadband.kpis.siUnits', 'canonical SI signal units') },
+    { metricId: 'percent', occurrenceId: 'redundant', rawValue: analysis == null ? null : analysis.redundantEmissionRatio * 100,
+      label: t('signalDeadband.kpis.redundant', 'Redundant emissions'),
+      display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
+      description: t('signalDeadband.kpis.unchanged', '{{value}} exactly unchanged', {
+        value: analysis == null ? '—' : fmtPercent(analysis.unchangedEmissionRatio * 100),
+      }) },
+    { metricId: 'number', occurrenceId: 'threshold', rawValue: recommended?.threshold,
+      label: t('signalDeadband.kpis.threshold', 'Recommended deadband'),
+      display: { formatter: (raw) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) },
+      description: t('signalDeadband.kpis.suppression', '{{value}} noise suppressed', {
+        value: recommended == null ? '—' : fmtPercent(recommended.noiseSuppression * 100),
+      }) },
+    { metricId: 'percent', occurrenceId: 'reduction', rawValue: recommended == null ? null : recommended.reduction * 100,
+      label: t('signalDeadband.kpis.reduction', 'Projected reduction'),
+      display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
+      description: t('signalDeadband.kpis.fidelity', '{{value}} reconstruction fidelity', {
+        value: recommended == null ? '—' : fmtPercent(recommended.fidelity * 100),
+      }) },
+  ];
+  const auditMetrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'samples', rawValue: analysis?.sampleCount,
+      label: t('signalDeadband.audit.samples', 'Numeric samples'),
+      display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
+      description: t('signalDeadband.kpis.siUnits', 'canonical SI signal units') },
+    ...([
+      ['noise', 'signalDeadband.audit.noise', 'Noise suppression', recommended?.noiseSuppression],
+      ['material', 'signalDeadband.audit.material', 'Material retention', recommended?.materialRetention],
+      ['fidelity', 'signalDeadband.audit.fidelity', 'Fidelity', recommended?.fidelity],
+    ] as const).map(([key, labelKey, label, raw]): StatMetric => ({
+      metricId: 'percent', occurrenceId: key, rawValue: raw == null ? null : raw * 100,
+      label: t(labelKey, label),
+      display: { formatter: (value) => ({ value: fmtPercent(value), unit: '' }) },
+      description: t('signalDeadband.curve.subtitle', 'Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas'),
+    })),
+  ];
+
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('signalDeadband.title', 'Signal deadband')} />;
+  }
 
   return (
     <PageLayout
@@ -131,61 +172,15 @@ export default function SignalDeadbandPage() {
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('signalDeadband.kpis.label', 'Deadband metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {historyError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />
-            </GlassPanel>
-          ) : historyLoading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('signalDeadband.kpis.noise', 'MAD noise band')}
-                value={analysis != null ? fmtScientificNumber(analysis.noiseThreshold, 4) : '—'}
-                subtitle={t('signalDeadband.kpis.siUnits', 'canonical SI signal units')}
-                icon={<Waves className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('signalDeadband.kpis.redundant', 'Redundant emissions')}
-                value={analysis != null ? fmtPercent(analysis.redundantEmissionRatio * 100) : '—'}
-                subtitle={t('signalDeadband.kpis.unchanged', '{{value}} exactly unchanged', {
-                  value: analysis != null
-                    ? fmtPercent(analysis.unchangedEmissionRatio * 100)
-                    : '—',
-                })}
-                icon={<Activity className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalDeadband.kpis.threshold', 'Recommended deadband')}
-                value={recommended != null ? fmtScientificNumber(recommended.threshold, 4) : '—'}
-                subtitle={t('signalDeadband.kpis.suppression', '{{value}} noise suppressed', {
-                  value: recommended != null
-                    ? fmtPercent(recommended.noiseSuppression * 100)
-                    : '—',
-                })}
-                icon={<Filter className="h-5 w-5" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('signalDeadband.kpis.reduction', 'Projected reduction')}
-                value={recommended != null ? fmtPercent(recommended.reduction * 100) : '—'}
-                subtitle={t('signalDeadband.kpis.fidelity', '{{value}} reconstruction fidelity', {
-                  value: recommended != null ? fmtPercent(recommended.fidelity * 100) : '—',
-                })}
-                icon={<Gauge className="h-5 w-5" />}
-                color={(recommended?.fidelity ?? 0) >= 0.95 ? 'green' : 'amber'}
-              />
-            </>
-          )}
-        </section>
+        <TelemetrySummaryBrief title={t('signalDeadband.kpis.label', 'Deadband metrics')}
+          metrics={metrics} testId="signal-deadband-summary" loading={historyLoading}
+          unavailable={historyError} unknown={!signalChosen || analysis == null} sourceStatus={historyState.status}
+          retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
+          scope={t('telemetryBrief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal: signal || '—' })}
+          sourceBounds={signal ? [{ signal, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
+          provenance={t('telemetryBrief.historyProvenance', 'Selected signal history; numeric samples only')}
+          description={t('telemetryBrief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+        {historyError && <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
       <FadeIn delay={0.2}>
@@ -256,19 +251,13 @@ export default function SignalDeadbandPage() {
                 : t('signalDeadband.recommendation.empty', 'Choose a signal to audit candidate deadbands.')}
             />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                [t('signalDeadband.audit.samples', 'Numeric samples'), fmtInt(analysis.sampleCount)],
-                [t('signalDeadband.audit.noise', 'Noise suppression'), fmtPercent(recommended!.noiseSuppression * 100)],
-                [t('signalDeadband.audit.material', 'Material retention'), fmtPercent(recommended!.materialRetention * 100)],
-                [t('signalDeadband.audit.fidelity', 'Fidelity'), fmtPercent(recommended!.fidelity * 100)],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                  <Text as="p" variant="caption">{label}</Text>
-                  <Text as="p" variant="body" className="mt-1 font-medium">{value}</Text>
-                </div>
-              ))}
-            </div>
+            <TelemetrySummaryBrief title={t('signalDeadband.recommendation.title', 'Retention audit')}
+              metrics={auditMetrics} testId="signal-deadband-retention-summary" sourceStatus={historyState.status}
+              retained={historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null}
+              scope={t('telemetryBrief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal })}
+              sourceBounds={[{ signal, from: historyQuery.data?.from, to: historyQuery.data?.to }]}
+              provenance={t('telemetryBrief.historyProvenance', 'Selected signal history; numeric samples only')}
+              description={t('signalDeadband.curve.subtitle', 'Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas')} />
           )}
         </GlassPanel>
       </FadeIn>

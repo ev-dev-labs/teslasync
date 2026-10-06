@@ -2,7 +2,7 @@
  * FsdWeeklyWidget — this week vs last week FSD, with null remaining null.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { fsdInsights } from '@/features/driving/components/fsd-insights/__tests__/fixtures';
@@ -70,6 +70,7 @@ function renderWidget(over: Partial<{ vehicleId: number; cols: number }> = {}) {
 beforeEach(() => {
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
   unitsMock.mockReturnValue({
+    unitPrefs: { distance: 'km', locale: 'en-US' },
     formatDistance: (meters: number | null) =>
       meters == null ? '—' : `${fmtNumber(meters / 1000)} km`,
   });
@@ -151,6 +152,19 @@ describe('FsdWeeklyWidget', () => {
     expect(screen.getByText('+3.00 pts')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
     expect(screen.getByRole('link', { name: 'Weekly digest' })).toHaveAttribute('href', '/weekly-digest');
+  });
+
+  it('reviews source-backed FSD metrics and exact exclusive bounds without replacing drill-through links', () => {
+    renderWidget();
+    const brief = screen.getByTestId('fsd-weekly-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    expect(within(brief).getByText(/exclusive · UTC/)).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('16.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('+3.00 pts')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not a percent growth rate/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Weekly digest' })).toBeInTheDocument();
   });
 
   it('renders an em dash instead of zero when FSD was not measured', () => {

@@ -13,6 +13,7 @@ const fleetPageState = vi.hoisted(() => ({
   total: 1,
   driversError: null as Error | null,
   driversUnavailable: false,
+  forecastError: null as Error | null,
 }));
 
 vi.mock('@/hooks/useOperationalMode', () => ({
@@ -21,6 +22,7 @@ vi.mock('@/hooks/useOperationalMode', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
+    i18n: { language: 'en-US' },
     t: (_key: string, fallback: string, values?: Record<string, string>) =>
       Object.entries(values ?? {}).reduce(
         (text, [key, value]) => text.replace(`{{${key}}}`, value),
@@ -34,8 +36,9 @@ const refetch = vi.fn();
 const reset = vi.fn();
 const mutate = vi.fn();
 
-function query<T>(data: T, source?: 'drivers') {
-  const error = source === 'drivers' ? fleetPageState.driversError : null;
+function query<T>(data: T, source?: 'drivers' | 'forecast') {
+  const error = source === 'drivers' ? fleetPageState.driversError
+    : source === 'forecast' ? fleetPageState.forecastError : null;
   return {
     data: source === 'drivers' && fleetPageState.driversUnavailable ? undefined : data,
     isLoading: false,
@@ -58,6 +61,10 @@ vi.mock('@/hooks/useUnits', () => ({
     formatDistance: (value: number | null) => value == null ? '—' : `${value / 1000} km`,
     unitPrefs: { distance: 'km' },
   }),
+}));
+
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
 }));
 
 vi.mock('@/api/hooks/useFleetOps', () => ({
@@ -165,7 +172,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
       lower_utilization_pct: 10,
       upper_utilization_pct: 35,
     }],
-  }),
+  }, 'forecast'),
   useCreateFleetReservation: () => ({
     mutate,
     reset,
@@ -202,6 +209,7 @@ beforeEach(() => {
   fleetPageState.total = 1;
   fleetPageState.driversError = null;
   fleetPageState.driversUnavailable = false;
+  fleetPageState.forecastError = null;
   operationalMode.writeBlockReason = null;
 });
 
@@ -210,7 +218,17 @@ describe('FleetOperationsPage', () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
-    return render(
+    const page = (
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <FleetOperationsPage />
+          </ToastProvider>
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+    const rendered = render(page);
+    return { ...rendered, rerenderPage: () => rendered.rerender(
       <MemoryRouter>
         <QueryClientProvider client={client}>
           <ToastProvider>
@@ -218,8 +236,64 @@ describe('FleetOperationsPage', () => {
           </ToastProvider>
         </QueryClientProvider>
       </MemoryRouter>,
-    );
+    ) };
   }
+
+  it('retains an intentionally empty driver value selection through failed refresh and recovery', () => {
+    const { rerenderPage } = renderPage();
+    const driverCard = screen.getByRole('heading', { name: 'Fleet drivers' }).closest<HTMLElement>('[data-card]');
+    if (!driverCard) throw new Error('Fleet drivers card missing');
+    fireEvent.click(within(driverCard).getByRole('button', { name: 'Driver filter' }));
+    const filter = screen.getByRole('dialog', { name: 'Driver filter' });
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('button', { name: 'Edit Driver A' })).not.toBeInTheDocument();
+
+    fleetPageState.driversError = new Error('Driver roster refresh failed');
+    rerenderPage();
+    expect(screen.getByText('Fleet drivers may be out of date')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit Driver A' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Assignment roster' })).toBeInTheDocument();
+    const retainedFilterButton = within(driverCard).getByRole('button', { name: 'Driver filter' });
+    fireEvent.click(retainedFilterButton);
+    expect(screen.getByRole('checkbox', { name: 'Driver A' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+    fleetPageState.driversError = null;
+    rerenderPage();
+    expect(screen.queryByText('Fleet drivers may be out of date')).not.toBeInTheDocument();
+    expect(within(driverCard).getByRole('button', { name: 'Driver filter' })).toBe(retainedFilterButton);
+    expect(screen.queryByRole('button', { name: 'Edit Driver A' })).not.toBeInTheDocument();
+    fireEvent.click(retainedFilterButton);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Driver A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains the forecast data alternative and export menu when only the forecast refresh fails', () => {
+    const { rerenderPage } = renderPage();
+    const table = screen.getByRole('table', { name: 'Utilization forecast — data table', hidden: true });
+    const rows = within(table).getAllByRole('row', { hidden: true }).map(row => row.textContent);
+    fleetPageState.forecastError = new Error('Forecast refresh failed');
+    rerenderPage();
+    expect(screen.getByRole('table', { name: 'Utilization forecast — data table', hidden: true })).toBe(table);
+    expect(within(table).getAllByRole('row', { hidden: true }).map(row => row.textContent)).toEqual(rows);
+    expect(screen.getByText('Utilization forecast may be out of date')).toBeInTheDocument();
+    expect(screen.getByText('Moderate history.')).toBeInTheDocument();
+    const brief = screen.getByTestId('fleet-operations-summary');
+    expect(brief).toHaveTextContent('Retained source data');
+    const forecastMetric = brief.querySelector('[data-operational-metric="forecast"]');
+    expect(forecastMetric).toHaveAttribute('data-value-state', 'value');
+    expect(forecastMetric?.querySelector('[data-operational-value]')).toHaveTextContent('20');
+    fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+    for (const action of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
+      expect(screen.getByRole('menuitem', { name: action })).toBeEnabled();
+    }
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
 
   it('enables loaded-value checklists only when each complete fleet list is loaded', () => {
     const view = renderPage();
@@ -245,7 +319,7 @@ describe('FleetOperationsPage', () => {
     expect(screen.getByText('Cost-center allocation')).toBeInTheDocument();
     expect(screen.getByText('Charging policy matrix')).toBeInTheDocument();
     expect(screen.getByText('Maintenance work-order board')).toBeInTheDocument();
-    expect(screen.getByText('Utilization forecast')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Utilization forecast' })).toBeInTheDocument();
     expect(screen.getAllByText('Pool Y').length).toBeGreaterThan(0);
     const reservation = screen.getByRole('button', { name: 'New reservation' });
     expect(reservation.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
@@ -254,6 +328,26 @@ describe('FleetOperationsPage', () => {
     expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
     fireEvent.click(reservation);
     expect(screen.getByRole('dialog', { name: 'Create reservation' })).toBeInTheDocument();
+  });
+
+  it('opens the actual summary drawer without displacing operational entities or write workflows', async () => {
+    renderPage();
+    const brief = screen.getByTestId('fleet-operations-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief).toHaveTextContent('Fleet-wide · Loaded operational records');
+    expect(brief).toHaveTextContent('1 loaded of 1 source records; offset 0, limit 100');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Operational record summary details' });
+    expect(drawer).toHaveTextContent('Requested or confirmed reservations in the loaded records.');
+    expect(drawer).toHaveTextContent('not a count of assignments active at this instant');
+    expect(drawer).toHaveTextContent('Forecast limitations: Moderate history.');
+    expect(drawer).toHaveTextContent('Loaded counts are not server-wide totals.');
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Operational record summary details' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New reservation' })).toBeEnabled();
+    expect(screen.getByRole('table', { name: 'Utilization forecast — data table', hidden: true })).toBeInTheDocument();
   });
 
   it('keeps retained roster rows and all independently usable operational panels on refresh failure', () => {
@@ -266,7 +360,7 @@ describe('FleetOperationsPage', () => {
       'Charging policy matrix', 'Maintenance work-order board', 'Utilization forecast']) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
-    expect(document.querySelector('[data-stat-strip="fleet-operations-summary"]')).not.toBeNull();
+    expect(screen.getByTestId('fleet-operations-summary')).toHaveAttribute('data-operational-brief');
     expect(document.querySelector('[data-chart-key="fleet-ops-utilization"]')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);

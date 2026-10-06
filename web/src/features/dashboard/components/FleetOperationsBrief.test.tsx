@@ -19,7 +19,7 @@
  * read the English defaults without booting the i18n runtime.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, within, cleanup } from '@testing-library/react'
+import { render, screen, within, cleanup, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@/components/feedback'
@@ -114,7 +114,9 @@ function serverSummary(over: Partial<FleetServerSummary> = {}): FleetServerSumma
 /** Taxonomy/metric value for a label, read out of its own <dd>. */
 function valueFor(label: string): string {
   const panel = screen.getByTestId('fleet-operations-brief')
-  return within(panel).getByText(label).parentElement?.querySelector('dd')?.textContent ?? ''
+  const el = within(panel).getByText(label)
+  const metric = el.closest('[data-operational-metric]')
+  return metric?.textContent ?? el.parentElement?.querySelector('dd')?.textContent ?? ''
 }
 
 afterEach(cleanup)
@@ -323,12 +325,34 @@ describe('FleetOperationsBrief — server-derived summary', () => {
     renderBrief({ vehicles: [makeVehicle(1)], fleetStates: undefined, summary: null, isPending: true })
 
     expect(valueFor('Reporting')).toBe('—')
-    expect(valueFor('Verified')).toContain('—')
+    expect(screen.getByTestId('fleet-posture-operational-brief')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('fleet-posture-operational-brief').querySelector('[data-operational-metric="count:1"]')).toHaveAttribute('data-value-state', 'missing')
     expect(screen.getByText('Checking live state')).toBeInTheDocument()
   })
 })
 
 describe('FleetOperationsBrief — trust and accessibility', () => {
+  it('retains source fractions, real observation age and taxonomy in the review drawer', () => {
+    const vehicle = makeVehicle(1, 'Falcon')
+    const observedAt = Date.now() - 3 * 60 * 60_000
+    renderBrief({
+      vehicles: [vehicle], selectedVehicle: vehicle, isError: true,
+      fleetStates: [entry(vehicle, { observedAt, outcome: 'failed', stale: true, freshness: 'stale' })],
+    })
+    const brief = screen.getByTestId('fleet-posture-operational-brief')
+    expect(brief).toHaveAttribute('data-operational-brief')
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
+    expect(valueFor('Verified')).toContain('0/1')
+    expect(valueFor('Oldest reading')).toContain('3h ago')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    expect(within(drawer).getByRole('heading', { name: 'Fleet operating posture details' })).toBeInTheDocument()
+    expect(within(drawer).getByText('0/1')).toBeInTheDocument()
+    expect(within(drawer).getByText('3h ago')).toBeInTheDocument()
+    expect(within(drawer).getByText(/oldest reading is a real backend observation/)).toBeInTheDocument()
+    expect(screen.getByTestId('fleet-posture-taxonomy')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open vehicle' })).toHaveAttribute('href', '/vehicles/1')
+  })
   it('announces the posture headline in a polite live region', () => {
     const vehicles = [makeVehicle(1), makeVehicle(2)]
     renderBrief({

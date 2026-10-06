@@ -38,6 +38,12 @@ vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => operationalMode,
 }));
 
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  const { summaryTestPreferences } = await import('../components/operationalbrief-a-g/summaryTestPreferences');
+  return { ...actual, useSettings: summaryTestPreferences };
+});
+
 vi.mock('react-i18next', async () => {
   const actual =
     await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -159,9 +165,9 @@ function renderPage() {
   return { ...result, client };
 }
 
-/** The MetricCard root text ("<label><value>") for a given KPI label. */
+/** The operational metric text ("<label><value>") for a given KPI label. */
 function kpiCardText(label: string): string {
-  return screen.getByText(label).closest('div')?.textContent ?? '';
+  return screen.getByText(label).closest('[data-operational-metric]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -171,6 +177,19 @@ beforeEach(() => {
 });
 
 describe('APIKeysPage', () => {
+  it('uses the actual compact brief and review drawer without losing key-management controls', async () => {
+    installRequest(threeKeys());
+    renderPage();
+    await screen.findByText('Falcon');
+    const summary = screen.getByTestId('api-keys-summary');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(4);
+    expect(summary).toHaveTextContent('Loaded inventory snapshot');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('loaded API key inventory');
+    expect(screen.getByRole('button', { name: 'Create key' })).toBeInTheDocument();
+  });
+
   it('renders KPI counts, key inventory, and access levels when keys load', async () => {
     installRequest(threeKeys());
     renderPage();
@@ -254,7 +273,9 @@ describe('APIKeysPage', () => {
 
     // Loading branch: skeletons render, real KPI values do not yet.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Total keys')).not.toBeInTheDocument();
+    expect(screen.getByText('Total keys')).toBeInTheDocument();
+    expect(screen.getByTestId('api-keys-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('api-keys-summary').querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryByText('No API keys')).not.toBeInTheDocument();
 
     // Flush the query so React Query teardown is clean.
@@ -367,7 +388,9 @@ describe('APIKeysPage', () => {
     expect(screen.getByText('3 total')).toBeInTheDocument();
     expect(kpiCardText('Total keys')).toContain('3');
     expect(screen.queryByText("Can't reach server")).toBeNull();
-    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Delete key Nova' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/Nova/)).toBeInTheDocument();

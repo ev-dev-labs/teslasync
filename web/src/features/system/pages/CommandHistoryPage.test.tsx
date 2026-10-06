@@ -22,7 +22,7 @@
  *      block).
  *
  * Strategy mirrors the sibling PeriodComparePage suite: render the REAL page +
- * REAL shared subtree (PageContainer, MetricCard, Timeline, TabNav, Pagination,
+ * REAL shared subtree (PageContainer, OperationalBrief, Timeline, TabNav, Pagination,
  * QueryError, charts). Only the network `request` helper and react-i18next are
  * mocked. `useVehicles` runs for real (driven by the mocked `request`) so the
  * active-vehicle derivation and its enabled/disabled query gate are genuinely
@@ -36,7 +36,7 @@
  * (`waitForCount`), never a heading.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -197,7 +197,7 @@ function renderPage(initialEntries: string[] = ['/command-history']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
         <SelectedVehicleProvider>
@@ -206,6 +206,7 @@ function renderPage(initialEntries: string[] = ['/command-history']) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 }
 
 /** The KPI band is the only `<section aria-label>` → exposed as role "region". */
@@ -267,6 +268,8 @@ describe('CommandHistoryPage — happy path', () => {
     await waitForCount(5);
 
     const band = kpiBand();
+    expect(band.querySelector('[data-operational-brief]')).toBeInTheDocument();
+    expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     for (const label of [
       'Total commands',
       'Commands (24h)',
@@ -279,9 +282,15 @@ describe('CommandHistoryPage — happy path', () => {
     }
     expect(within(band).getByText('5')).toBeInTheDocument(); // total
     expect(within(band).getByText('3')).toBeInTheDocument(); // 24h
-    expect(within(band).getByText('60.00%')).toBeInTheDocument(); // success rate
+    const rate = within(band).getByText('Success rate').closest('[data-operational-metric]') as HTMLElement;
+    expect(rate.querySelector('[data-operational-value]')).toHaveTextContent('60.00%');
     expect(within(band).getByText('2')).toBeInTheDocument(); // failed
     expect(within(band).getByText('Lock')).toBeInTheDocument(); // most-used, i18n-resolved
+    expect(within(band).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    const last = within(band).getByText('Last sent').closest('[data-operational-metric]') as HTMLElement;
+    expect(last).toHaveTextContent(new Date(RECENT).getUTCFullYear().toString());
+    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
   });
 
   it('renders all four analytics/detail panels with data (never their empty states)', async () => {
@@ -333,8 +342,11 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     // Panels stay mounted; the KPI band is present even while the feed loads.
     expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);
     expect(kpiBand()).toBeInTheDocument();
-    // … but its cards wait for data: skeletons, never fabricated zeros.
-    expect(within(kpiBand()).queryByText('Total commands')).not.toBeInTheDocument();
+    // OperationalBrief keeps labels mounted, while values wait for data.
+    expect(within(kpiBand()).getByText('Total commands')).toBeInTheDocument();
+    expect(kpiBand().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(kpiBand().querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(kpiBand().querySelector('[data-operational-value]')).not.toBeInTheDocument();
     // No analytics empty copy while genuinely loading.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
   });
@@ -380,6 +392,25 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     expect(screen.getAllByText('Select a vehicle to view command activity')).toHaveLength(3);
     // The command feed is gated off — enabled:!!vehicleId — so it never fires.
     expect(historyCalls().length).toBe(0);
+    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    expect(within(kpiBand()).queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('retains all six summary values and their scope during a failed background refresh', async () => {
+    installRequest({ commands: richCommands() });
+    const { client } = renderPage();
+    await waitForCount(5);
+    installRequest({ commandsMode: 'reject', commandsError: new ApiError('refresh failed', 500) });
+    await act(async () => { await client.invalidateQueries(); });
+
+    await waitFor(() =>
+      expect(within(kpiBand()).getByText('Data may be stale')).toBeInTheDocument(),
+    );
+    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
+    expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
+    expect(within(kpiBand()).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    expect(within(timelinePanel()).getByText('Wake up')).toBeInTheDocument();
+    expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
   });
 });
 

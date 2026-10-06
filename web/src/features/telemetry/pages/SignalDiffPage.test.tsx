@@ -26,6 +26,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -128,7 +129,7 @@ vi.mock('@/api/hooks/usePinned', async (importOriginal) => {
 });
 
 // SavedViewMenu fires its own saved-views query; stub it so the header stays
-// network-free. MetricCard + BulkActionsToolbar stay real.
+// network-free. OperationalBrief + BulkActionsToolbar stay real.
 vi.mock('@/components/data-display', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/data-display')>();
   return { ...actual, SavedViewMenu: () => <div data-testid="saved-view-menu" /> };
@@ -243,12 +244,11 @@ function renderPage(route = ROUTE) {
   );
 }
 
-/** Read the value paragraph of the MetricCard whose label is `label`. */
+/** Read the actual OperationalBrief value whose label is `label`. */
 function kpiValueText(label: string): string {
-  const card = screen.getByText(label).closest('div.flex-1');
+  const card = screen.getByText(label).closest('[data-operational-metric]');
   if (!card) throw new Error(`no metric card for "${label}"`);
-  const paragraphs = card.querySelectorAll('p');
-  return paragraphs[1]?.textContent ?? '';
+  return card.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -279,6 +279,16 @@ describe('SignalDiffPage', () => {
     expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-rows', '4');
     expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '4');
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+    const brief = screen.getByTestId('signal-diff-page-summary');
+    expect(brief).toHaveTextContent('Retained source data');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('All returned changed rows before name and category filters.');
+    expect(drawer).toHaveTextContent('Independent saved pins for this vehicle');
+    expect(drawer).toHaveTextContent('not a sample coverage duration');
+    expect(within(drawer).getByText('Window span')).toBeInTheDocument();
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '4');
     expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
   it('renders the header, KPI band, and derived counts when the diff resolves', () => {

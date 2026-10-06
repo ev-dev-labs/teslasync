@@ -36,7 +36,7 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
@@ -178,6 +178,7 @@ beforeEach(() => {
   analyticsMock.mockReturnValue(makeQuery({ data: SUMMARY }));
   setUnits('km');
   useFormattingMock.mockReturnValue({
+    currencySymbol: '$',
     formatCurrency: (amount: number, decimals?: number) =>
       `$${Number(amount ?? 0).toFixed(decimals ?? 2)}`,
   });
@@ -208,7 +209,7 @@ describe('AnalyticsSummaryWidget', () => {
   it('retains the complete grid and exposes offline trust after a paused refresh', () => {
     analyticsMock.mockReturnValue({ ...makeQuery({ data: SUMMARY }), fetchStatus: 'paused' });
     renderWidget();
-    expect(screen.getByText('1,000.00')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
     expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
   });
@@ -218,7 +219,9 @@ describe('AnalyticsSummaryWidget', () => {
       data: { ...SUMMARY, totalDistanceKm: 0, totalEnergyKwh: 0, avgEfficiencyWhKm: 0 },
     }));
     renderWidget();
-    expect(screen.getAllByText('0.00')).toHaveLength(3);
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
     expect(screen.queryByText('No analytics data')).not.toBeInTheDocument();
   });
   it('renders the four KPI cards with km-unit conversions + currency formatting', () => {
@@ -233,12 +236,10 @@ describe('AnalyticsSummaryWidget', () => {
     }
 
     // Distance 1000 km → identity → "1,000"; efficiency 150 Wh/km identity.
-    expect(screen.getByText('1,000.00')).toBeInTheDocument();
-    expect(screen.getByText('150.00')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
     // Energy formats to one decimal; unit label present.
-    expect(screen.getByText('200.00')).toBeInTheDocument();
-    expect(screen.getByText('kWh')).toBeInTheDocument();
+    expect(screen.getByText('200.00 kWh')).toBeInTheDocument();
     // Cost per km: 250 / 1000 = 0.250 → formatCurrency(0.25, 3).
     expect(screen.getByText('$0.25')).toBeInTheDocument();
   });
@@ -248,11 +249,9 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget();
 
     // 1000 km * 1000 / 1609.344 ≈ 621.4 → fmtNumber(_, 0) → "621".
-    expect(screen.getByText('621.37')).toBeInTheDocument();
-    expect(screen.getByText('mi')).toBeInTheDocument();
+    expect(screen.getByText('621.37 mi')).toBeInTheDocument();
     // 150 Wh/km * 1.60934 = 241.4 → "241" Wh/mi.
-    expect(screen.getByText('241.40')).toBeInTheDocument();
-    expect(screen.getByText('Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument();
     expect(screen.getByText('Cost / mi')).toBeInTheDocument();
     // Cost per mi: 250 / 621.37 ≈ 0.402 → "$0.402".
     expect(screen.getByText('$0.40')).toBeInTheDocument();
@@ -272,7 +271,7 @@ describe('AnalyticsSummaryWidget', () => {
     expect(screen.queryByText('—')).not.toBeInTheDocument();
     expect(screen.getByText('$0.00')).toBeInTheDocument();
     // The other cards still render their values.
-    expect(screen.getByText('1,000.00')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
   });
 
   it('compact layout shows the animated distance headline + caption only', () => {
@@ -337,7 +336,7 @@ describe('AnalyticsSummaryWidget', () => {
     );
     expect(() => renderWidget()).not.toThrow();
 
-    expect(screen.getByText('500.00')).toBeInTheDocument();
+    expect(screen.getByText('500.00 km')).toBeInTheDocument();
     // Both missing efficiency and energy default to zero measurements.
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     // totalCost missing → costPerDist 0 → "—".
@@ -370,7 +369,7 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget({ cols: 4, rows: 2 });
 
     // The stat grid still renders alongside the trends.
-    expect(screen.getByText('1,000.00')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
 
     // Each sparkline is an accessible image labelled from its metric.
     const trends = screen.getAllByRole('img', { name: /trend$/ });
@@ -384,7 +383,7 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget({ cols: 4, rows: 2 });
 
     // Grid renders, but there are no trend series to plot.
-    expect(screen.getByText('1,000.00')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
     expect(screen.queryAllByRole('img', { name: /trend$/ })).toHaveLength(0);
   });
 
@@ -409,6 +408,18 @@ describe('AnalyticsSummaryWidget', () => {
     const trends = screen.getAllByRole('img', { name: /trend$/ });
     expect(trends).toHaveLength(1);
     expect(screen.getByRole('img', { name: 'Avg efficiency trend' })).toBeInTheDocument();
-    expect(screen.getByText('1,000.00')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+  });
+
+  it('reviews the actual normalized measurements, source window limitations and cost denominator', () => {
+    renderWidget();
+    const brief = screen.getByTestId('analytics-summary-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('1,000.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('$0.25')).toBeInTheDocument();
+    expect(within(drawer).getByText(/source currency per metre/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Exact bounds and completeness are not supplied/).length).toBeGreaterThan(0);
   });
 });

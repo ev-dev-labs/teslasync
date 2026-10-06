@@ -249,7 +249,7 @@ describe('AppearanceSettings — structure & delegation', () => {
     }
     expect(screen.getByText('Tight rows — fits more on screen')).toBeInTheDocument()
     expect(screen.getByText('Roomy — easier to read at distance')).toBeInTheDocument()
-    expect(container.querySelectorAll('span[style]')).toHaveLength(
+    expect(container.querySelectorAll('[data-chart-palette-swatch]')).toHaveLength(
       CHART_COLORS_CB_SAFE.length + CHART_COLORS_NEON.length,
     )
     expect(findPutCall()).toBeUndefined()
@@ -331,8 +331,14 @@ describe('AppearanceSettings — chart palette', () => {
       within(group).getByRole('radio', { name: /Stylistic neon/i }),
     ).not.toBeChecked()
     // Each palette renders one swatch per colour constant.
-    expect(group.querySelectorAll('span.rounded-full')).toHaveLength(
+    expect(group.querySelectorAll('[data-chart-palette-swatch]')).toHaveLength(
       CHART_COLORS_CB_SAFE.length + CHART_COLORS_NEON.length,
+    )
+    expect(group.querySelectorAll('[data-chart-palette-swatch="cb_safe"]')).toHaveLength(
+      CHART_COLORS_CB_SAFE.length,
+    )
+    expect(group.querySelectorAll('[data-chart-palette-swatch="neon"]')).toHaveLength(
+      CHART_COLORS_NEON.length,
     )
   })
 

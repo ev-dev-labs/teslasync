@@ -254,7 +254,7 @@ describe('ChargeHistoryWidget — empty / gated states', () => {
     renderWidget(FULL, 7);
 
     expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No charge sessions yet').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).toBeNull();
     // No summary stats when there is nothing to summarise.
     expect(screen.queryByText('Total')).toBeNull();

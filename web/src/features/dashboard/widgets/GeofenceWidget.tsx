@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Crosshair } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Circle, Marker, vehicleIcon } from '@/components/maps';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { useVehicleState, useVehicles } from '@/api/hooks/useVehicles';
@@ -14,7 +14,7 @@ import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { GeofenceStatusList } from '../components/continuation-dashboard-2/GeofenceStatusList';
 
 /** Haversine distance in meters between two lat/lon points */
 export function haversineMeters(
@@ -178,6 +178,8 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
       noPadding={showMap}
       {...shellProps}
     >
+      <StaleRefreshWarning state={stateTrust} />
+      {stateTrust.fatalError && <QueryError error={stateTrust.fatalError} onRetry={stateTrust.retry ?? undefined} />}
       {fenceTrust.fatalError ? (
         <QueryError error={fenceTrust.fatalError} onRetry={() => { void fenceRefetch(); }} />
       ) : fenceLoading && isEmpty ? (
@@ -222,42 +224,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
 
           {/* Fence list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2">
-            <ul className="space-y-1.5">
-              {fences.map((f) => (
-                <li
-                  key={f.id}
-                  className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 min-h-[44px] ${
-                    f.inside && f.enabled
-                      ? 'bg-green-500/10 ring-1 ring-green-500/30'
-                      : 'bg-[var(--surface-2)]'
-                  }`}
-                >
-                  <div className="flex flex-col min-w-0">
-                    <span className={`${dashboardTokens.title} break-words`}>
-                      {f.name}
-                    </span>
-                    <span className={dashboardTokens.unit}>
-                      {t('widget.geofence.radius', 'Radius')}: {fmtRadius(f.radius)}
-                    </span>
-                  </div>
-                  <div className="flex-shrink-0">
-                    {!f.enabled ? (
-                      <Badge variant="neutral" size="sm">
-                        {t('widget.geofence.disabled', 'Disabled')}
-                      </Badge>
-                    ) : f.inside ? (
-                      <Badge variant="success" size="sm" dot>
-                        {t('widget.geofence.inside', 'Inside')}
-                      </Badge>
-                    ) : (
-                      <Badge variant="neutral" size="sm">
-                        {hasCoords && f.validMap ? t('widget.geofence.outside', 'Outside') : '—'}
-                      </Badge>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <GeofenceStatusList fences={fences} hasCoords={hasCoords} formatRadius={fmtRadius} />
           </div>
         </div>
       )}

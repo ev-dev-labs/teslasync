@@ -20,19 +20,29 @@ import { render, screen, cleanup } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { VehicleState } from '@/api/types'
 
-// Deterministic distance formatter so assertions don't depend on the real
-// SI-conversion lib or the settings context. Returns `<n> km` for a finite
-// number and an em dash for nullish/non-finite input (mirroring the lib's own
-// empty-display contract), and records its args for delegation assertions.
+// Observe raw distance at the real shared conversion and specialist rate
+// boundaries without replacing the rendered formatter output.
 const { mockFormatDistance } = vi.hoisted(() => ({
-  mockFormatDistance: vi.fn((v: number | null | undefined) =>
-    typeof v === 'number' && Number.isFinite(v) ? `${v} km` : '—',
-  ),
+  mockFormatDistance: vi.fn(),
 }))
 
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ formatDistance: mockFormatDistance }),
-}))
+vi.mock('@/lib/unitConversion', async importActual => {
+  const actual = await importActual<typeof import('@/lib/unitConversion')>()
+  return { ...actual,
+    convertDistanceFromSI: (...args: Parameters<typeof actual.convertDistanceFromSI>) => {
+      mockFormatDistance(args[0]); return actual.convertDistanceFromSI(...args)
+    },
+  }
+})
+vi.mock('@/hooks/useUnits', async importActual => {
+  const actual = await importActual<typeof import('@/hooks/useUnits')>()
+  return { useUnits: () => {
+    const units = actual.useUnits()
+    return { ...units, formatDistance: (value: Parameters<typeof units.formatDistance>[0]) => {
+      mockFormatDistance(value); return units.formatDistance(value)
+    } }
+  } }
+})
 
 // i18n stub: return the default-fallback string so the tests assert on stable
 // English copy independent of the en.json shape (same convention the sibling
@@ -64,7 +74,8 @@ vi.mock('react-i18next', async () => {
 })
 
 import { BatteryRangePanel } from './BatteryRangePanel'
-import { gaugeColor, gaugeWidth, gaugeFraction } from '@/test/gaugeTestUtils';
+import { gaugeColor, gaugeFraction } from '@/test/gaugeTestUtils';
+import { statText } from '../statstrip-vehicle-detail/testQueries'
 
 function makeState(overrides: Partial<VehicleState> = {}): VehicleState {
   return {
@@ -130,19 +141,18 @@ describe('BatteryRangePanel — battery gauge', () => {
     expect(gaugeHex(container)).toBe('#ef4444')
   })
 
-  it('null-safes an undefined battery level to 0 without emitting NaN geometry', () => {
+  it('keeps an undefined battery unknown without emitting NaN geometry or critical-low colour', () => {
     const { container } = render(
       <BatteryRangePanel state={makeState({ battery_level: undefined })} />,
     )
 
-    // Value falls back to 0 (not NaN → "0" via the gauge formatter)...
-    expect(screen.getByText('0.00')).toBeInTheDocument()
-    // ...an unknown battery is treated as the critical-low colour...
-    expect(gaugeHex(container)).toBe('#ef4444')
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument()
+    expect(gaugeHex(container)).toBeUndefined()
     // ...and crucially the fill geometry stays a finite number (the fix:
     // an undefined level previously produced a NaN width).
     expect(Number.isNaN(gaugeFraction(container))).toBe(false)
-    expect(gaugeWidth(container)).toBe('0%')
+    expect(container.querySelector('[role="meter"]')).toBeNull()
   })
 })
 
@@ -154,16 +164,18 @@ describe('BatteryRangePanel — range metrics', () => {
     expect(mockFormatDistance).toHaveBeenCalledWith(480)
     expect(screen.getByText('Rated range')).toBeInTheDocument()
     expect(screen.getByText('Ideal range')).toBeInTheDocument()
-    expect(screen.getByText('500 km')).toBeInTheDocument()
-    expect(screen.getByText('480 km')).toBeInTheDocument()
+    expect(screen.getByText(statText('0.50 km'))).toBeInTheDocument()
+    expect(screen.getByText(statText('0.48 km'))).toBeInTheDocument()
+    expect(document.querySelector('[data-testid="vehicle-live-overview-summary"][data-operational-brief]')).not.toBeNull()
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(3)
   })
 
   it('renders an em dash when a range value is missing', () => {
     render(<BatteryRangePanel state={makeState({ rated_range: undefined })} />)
 
-    expect(mockFormatDistance).toHaveBeenCalledWith(undefined)
+    expect(mockFormatDistance).not.toHaveBeenCalledWith(undefined)
     // The Rated Range card body falls back to the formatter's em dash.
-    expect(screen.getByText('Rated range').closest('div')).toHaveTextContent('—')
+    expect(screen.getByText('Rated range').closest('[data-operational-metric]')).toHaveTextContent('—')
   })
 })
 
@@ -172,7 +184,7 @@ describe('BatteryRangePanel — charging state', () => {
     render(<BatteryRangePanel state={makeState({ is_charging: true, charge_rate: 48 })} />)
 
     expect(mockFormatDistance).toHaveBeenCalledWith(48)
-    expect(screen.getByText('48 km/h')).toBeInTheDocument()
+    expect(screen.getByText('0.05 km/h')).toBeInTheDocument()
   })
 
   it('shows "Not Charging" when idle and never formats the charge rate', () => {
@@ -219,9 +231,9 @@ describe('BatteryRangePanel — accessibility', () => {
   it('marks the three decorative lucide icons as aria-hidden', () => {
     const { container } = render(<BatteryRangePanel state={makeState()} />)
 
-    // Navigation + MapPin + BatteryCharging are decorative; the gauge's own
+    // Navigation + MapPin + BatteryCharging and the shared review action are decorative; the gauge's own
     // <svg> is intentionally NOT hidden (it carries the visible readout).
     const hidden = container.querySelectorAll('svg[aria-hidden="true"]')
-    expect(hidden).toHaveLength(3)
+    expect(hidden).toHaveLength(4)
   })
 })

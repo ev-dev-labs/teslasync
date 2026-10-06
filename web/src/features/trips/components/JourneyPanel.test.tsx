@@ -11,6 +11,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { ToastProvider } from '@/components/feedback';
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -140,7 +142,9 @@ function renderPanel(vehicleId: number | null = 7) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <JourneyPanel vehicleId={vehicleId} />
+        <ToastProvider>
+          <JourneyPanel vehicleId={vehicleId} />
+        </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -167,6 +171,28 @@ beforeEach(() => {
 });
 
 describe('JourneyPanel', () => {
+  it.each([
+    { status: 'planned', mounted: ['Leave now?'], absent: ['Live trip', 'Replan', 'Arrival', 'Trip report'] },
+    { status: 'active', mounted: ['Live trip', 'Replan', 'Arrival'], absent: ['Leave now?', 'Trip report'] },
+    { status: 'paused', mounted: ['Live trip', 'Replan', 'Arrival'], absent: ['Leave now?', 'Trip report'] },
+    { status: 'completed', mounted: ['Trip report'], absent: ['Leave now?', 'Live trip', 'Replan', 'Arrival'] },
+    { status: 'aborted', mounted: ['Trip report'], absent: ['Leave now?', 'Live trip', 'Replan', 'Arrival'] },
+  ])('preserves $status lifecycle presenters and both independent preparation panels', ({ status, mounted, absent }) => {
+    mockDetail.mockReturnValue(idle({
+      data: { ...detail, session: { ...detail.session, status }, next_statuses: [] },
+    }));
+    renderPanel();
+    for (const title of ['Score stops', 'When to leave', 'Ready to roll', ...mounted]) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    for (const title of absent) {
+      expect(screen.queryByRole('heading', { name: title })).not.toBeInTheDocument();
+    }
+    expect(mockDeparture).toHaveBeenCalledWith(1, expect.any(String), expect.any(String), { enabled: false });
+    expect(mockChecklist).toHaveBeenCalledWith(1);
+    expect(mockTransition.mock.results[0].value.mutate).not.toHaveBeenCalled();
+  });
+
   it('lists sessions with routes and statuses', () => {
     renderPanel();
     expect(mockList).toHaveBeenCalledWith(7, '');

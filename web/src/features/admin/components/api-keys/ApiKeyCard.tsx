@@ -110,7 +110,7 @@ export function ApiKeyCard({
             {t('apiKeys.signedInAs', 'Signed in as {{subject}}', { subject: apiKey.subject })}
           </Caption>
         )}
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 }

@@ -5,7 +5,7 @@ import { Gauge, Search, Scale, Waypoints } from 'lucide-react';
 import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
 import { Text, Badge, HelpTooltip } from '@/components/ui';
 
-import { StatStrip } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -83,6 +83,10 @@ export default function TireDifferentialDriftPage() {
     [summary.corners, unitPrefs.pressure, t],
   );
 
+  const leakDaysToThreshold = summary.leakCorner != null
+    ? (summary.corners.find(c => c.corner === summary.leakCorner)?.daysToThreshold ?? null)
+    : null;
+
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('tireDifferentialDrift.title', 'Tire differential drift')} />;
   }
@@ -90,11 +94,6 @@ export default function TireDifferentialDriftPage() {
   const isLoading = historyQuery.isLoading && !historySource.hasData;
   const leakCard = summary.leakCorner != null ? cornerLabel(summary.leakCorner) : null;
   const imbalanceCard = summary.imbalanceCorner != null ? cornerLabel(summary.imbalanceCorner) : null;
-  const leakDaysToThreshold =
-    summary.leakCorner != null
-      ? (summary.corners.find((c) => c.corner === summary.leakCorner)?.daysToThreshold ?? null)
-      : null;
-
   return (
     <PageLayout
       title={t('tireDifferentialDrift.title', 'Tire differential drift')}
@@ -108,8 +107,11 @@ export default function TireDifferentialDriftPage() {
       <FadeIn>
         <LayoutCard title={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}>
           <VehicleSourceContent source={historySource} label={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}>
-            <StatStrip id="tire-differential-drift-summary" variant="embedded" loading={isLoading}
-              period={{ kind: 'unknown', label: t('tireDifferentialDrift.title', 'Tire differential drift') }}
+            <VehicleOperationalBrief embedded id="tire-differential-drift-summary" loading={isLoading}
+              title={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}
+              available={historySource.hasData}
+              period={{ kind: 'unknown', label: t('tireDifferentialDrift.title', 'Tire differential drift'),
+                reason: t('tireDifferentialDrift.brief.scope', 'Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings.') }}
               metrics={[
                 {
                   metricId: 'text', occurrenceId: 'leak-corner',
@@ -119,18 +121,20 @@ export default function TireDifferentialDriftPage() {
                   context: <><Search className="h-5 w-5" aria-hidden="true" />{t('tireDifferentialDrift.leakScore', 'evidence score {{score}}', { score: fmtNumber(summary.leakScore) })}</>,
                 },
                 {
-                  metricId: 'text', occurrenceId: 'imbalance',
+                  metricId: 'pressure', occurrenceId: 'imbalance',
                   label: t('tireDifferentialDrift.imbalance', 'Structural imbalance'),
-                  rawValue: historySource.hasData ? formatPressure(summary.imbalancePa / 1000) : null,
+                  rawValue: historySource.hasData ? summary.imbalancePa / 1000 : null,
+                  display: { formatter: raw => ({ value: formatPressure(raw), unit: '' }) },
                   description: t('help.tireDifferentialDrift.imbalance', "The spread between each corner's mean (constant) residual — independent of the leak ranking. A corner permanently offset (e.g. after a wheel swap) shows up here with zero slope, invisible to the leak ranking alone."),
                   context: <><Scale className="h-5 w-5" aria-hidden="true" />{imbalanceCard != null
                     ? t('tireDifferentialDrift.imbalanceCorner', 'largest offset: {{corner}}', { corner: imbalanceCard })
                     : t('tireDifferentialDrift.noImbalance', 'corners evenly matched')}</>,
                 },
                 {
-                  metricId: 'text', occurrenceId: 'threshold-days',
+                  metricId: 'duration', occurrenceId: 'threshold-days',
                   label: t('tireDifferentialDrift.daysToThreshold', 'Days to threshold'),
-                  rawValue: historySource.hasData && leakDaysToThreshold != null ? String(leakDaysToThreshold) : null,
+                  rawValue: historySource.hasData && leakDaysToThreshold != null ? leakDaysToThreshold * 86400 : null,
+                  display: { formatter: () => ({ value: String(leakDaysToThreshold), unit: '' }) },
                   context: <><Gauge className="h-5 w-5" aria-hidden="true" />{t('tireDifferentialDrift.daysToThresholdHint', 'projected from the fitted trend, evidence-gated')}</>,
                 },
                 {

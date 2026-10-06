@@ -39,37 +39,45 @@ export function HealthSummary({
       metrics={[
         {
           key: 'soh', label: t('battery.metric.soh', 'State of Health'), value: healthValue,
+          metricId: 'percent', rawValue: healthMeasured ? health?.current_soh : null,
           icon: <Heart className="h-5 w-5" aria-hidden="true" />,
         },
         {
           key: 'currentCap', label: t('battery.metric.currentCap', 'Current Capacity'),
           value: capacityMeasured && health ? formatEnergy(health.estimated_capacity_wh) : '—',
+          metricId: 'energy', rawValue: capacityMeasured ? health?.estimated_capacity_wh : null,
           icon: <Battery className="h-5 w-5" aria-hidden="true" />,
         },
         {
           key: 'originalCap', label: t('battery.metric.originalCap', 'Original Capacity'),
           value: originalCapacityMeasured && health ? formatEnergy(health.original_capacity_wh) : '—',
+          metricId: 'energy', rawValue: originalCapacityMeasured ? health?.original_capacity_wh : null,
           icon: <BatteryFull className="h-5 w-5" aria-hidden="true" />,
         },
         {
           key: 'degradation', label: t('battery.metric.degradation', 'Degradation Rate'),
           value: healthMeasured && health ? `${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}` : '—',
+          metricId: 'rate', rawValue: healthMeasured ? health?.degradation_rate_pct_per_year : null,
           icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
         },
         {
           key: 'cycles', label: t('battery.metric.cycles', 'Total Cycles'),
           value: health ? fmtNumber(health.total_cycles) : '—',
+          metricId: 'number', rawValue: health?.total_cycles,
           icon: <RefreshCcw className="h-5 w-5" aria-hidden="true" />,
         },
         {
           key: 'age', label: t('battery.metric.age', 'Battery Age'),
           value: health && health.battery_age_months > 0
             ? `${health.battery_age_months} ${t('battery.months', 'months')}` : '—',
+          metricId: 'number', rawValue: health && health.battery_age_months > 0 ? health.battery_age_months : null,
           icon: <Clock className="h-5 w-5" aria-hidden="true" />,
         },
         {
           key: 'fullChargeComplete', label: t('battery.metric.fullChargeComplete', 'Full Charge Complete'),
           value: chargingLive?.bms_fullcharge_complete == null ? '—' : chargingLive.bms_fullcharge_complete
+            ? t('common.yes', 'Yes') : t('common.no', 'No'),
+          metricId: 'status', rawValue: chargingLive?.bms_fullcharge_complete == null ? null : chargingLive.bms_fullcharge_complete
             ? t('common.yes', 'Yes') : t('common.no', 'No'),
           icon: <CheckCircle className="h-5 w-5" aria-hidden="true" />,
         },

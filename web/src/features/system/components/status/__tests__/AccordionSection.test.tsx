@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { Activity } from 'lucide-react'
 
@@ -61,7 +61,7 @@ describe('AccordionSection', () => {
     )
   })
 
-  it('toggles open then closed on click', () => {
+  it('toggles open then closed on click', async () => {
     renderSection()
     const toggle = screen.getByRole('button')
 
@@ -71,7 +71,7 @@ describe('AccordionSection', () => {
 
     fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByTestId('panel-content')).toBeNull()
+    await waitFor(() => expect(screen.queryByTestId('panel-content')).toBeNull())
   })
 
   it('uses a native button for Enter activation without a competing key handler', () => {

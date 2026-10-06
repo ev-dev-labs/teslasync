@@ -15,7 +15,9 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { TreeSelect, type TreeGroup, type TreeLeaf } from '@/components/forms';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { useAvailableSignals } from '@/api/hooks/useSignals';
+import { useDataState } from '@/hooks/useDataState';
 import type { SignalDescriptor } from '@/api/types';
 import { SignalSparklinePreview } from './SignalSparklinePreview';
 
@@ -88,6 +90,7 @@ export function SignalCategoryTree({
 }: SignalCategoryTreeProps) {
   const { t } = useTranslation();
   const query = useAvailableSignals(vehicleId);
+  const catalogState = useDataState(query);
 
   const groups = useMemo<TreeGroup<SignalDescriptor>[]>(() => {
     const signals = query.data?.signals ?? [];
@@ -142,32 +145,35 @@ export function SignalCategoryTree({
     [isSearching, expandedSet, vehicleId],
   );
 
-  const catalogError = query.isError
-    ? (query.error as Error | null)?.message?.trim() || t('common.unknownError', 'unknown error')
+  const catalogError = catalogState.fatalError
+    ? catalogState.fatalError.message.trim() || t('common.unknownError', 'unknown error')
     : undefined;
 
   return (
-    <TreeSelect<SignalDescriptor>
-      groups={groups}
-      selectedIds={selectedSignals}
-      onChange={onChange}
-      searchValue={searchValue}
-      onSearchChange={onSearchChange}
-      expandedGroupIds={expandedGroupIds}
-      onExpandedChange={onExpandedChange}
-      isLoading={query.isLoading}
-      ariaLabel={t('signals.catalog.aria', 'Signal catalog')}
-      searchPlaceholder={t('signals.catalog.searchPlaceholder', 'Search signals…')}
-      emptyState={
-        catalogError !== undefined
-          ? t('signals.catalog.loadError', 'Failed to load catalog: {{message}}', {
-              message: catalogError,
-            })
-          : t('signals.catalog.empty', 'No signals available for this vehicle.')
-      }
-      className={className}
-      maxHeightClassName={maxHeightClassName}
-      renderLeafRight={showSparklines ? renderSparkline : undefined}
-    />
+    <div className="min-w-0 max-w-full space-y-3">
+      <StaleRefreshWarning state={catalogState} label={t('signals.catalog.aria', 'Signal catalog')} />
+      <TreeSelect<SignalDescriptor>
+        groups={groups}
+        selectedIds={selectedSignals}
+        onChange={onChange}
+        searchValue={searchValue}
+        onSearchChange={onSearchChange}
+        expandedGroupIds={expandedGroupIds}
+        onExpandedChange={onExpandedChange}
+        isLoading={query.isLoading && !catalogState.hasData}
+        ariaLabel={t('signals.catalog.aria', 'Signal catalog')}
+        searchPlaceholder={t('signals.catalog.searchPlaceholder', 'Search signals…')}
+        emptyState={
+          catalogError !== undefined
+            ? t('signals.catalog.loadError', 'Failed to load catalog: {{message}}', {
+                message: catalogError,
+              })
+            : t('signals.catalog.empty', 'No signals available for this vehicle.')
+        }
+        className={className}
+        maxHeightClassName={maxHeightClassName}
+        renderLeafRight={showSparklines ? renderSparkline : undefined}
+      />
+    </div>
   );
 }

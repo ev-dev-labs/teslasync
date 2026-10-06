@@ -59,6 +59,7 @@ function makePlace(overrides: Partial<Geofence> = {}): Geofence {
     alert_on_exit: false,
     origin: 'manual',
     needs_review: false,
+    is_charging_location: false,
     archived_at: null,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
@@ -103,7 +104,7 @@ describe('PlacesTable — loading/error/empty', () => {
 
   describe('PlacesTable — selection', () => {
     it('does not expose row-selection controls without a bulk-selection handler', () => {
-      renderTable({ places: [makePlace()] });
+      renderTable({ places: [makePlace()], currentRates: [] });
       expect(screen.queryByRole('checkbox', { name: 'Select row' })).toBeNull();
     });
   });
@@ -137,6 +138,26 @@ describe('PlacesTable — loading/error/empty', () => {
 });
 
 describe('PlacesTable — rows', () => {
+  it('does not label an unresolved rate source as an authoritative missing rate', () => {
+    renderTable({ places: [makePlace()], currentRates: undefined });
+    expect(screen.getByText('Rate unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Not set')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes pending rates without hiding directory controls or selected place IDs', () => {
+    const place = makePlace({ id: 42 });
+    const onSelect = vi.fn();
+    renderTable({ places: [place], currentRates: undefined, ratesLoading: true, onSelect });
+    expect(screen.getByText('Loading rate…')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Manage' }));
+    expect(onSelect).toHaveBeenCalledWith(place);
+  });
+
+  it('preserves a measured zero rate through a directory refresh failure', () => {
+    renderTable({ places: [makePlace()], currentRates: [makeRate({ rate_per_wh: 0 })], error: new Error('refresh') });
+    expect(screen.getByText('$0.000')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage' })).toBeInTheDocument();
+  });
   it('filters the complete directory before client pagination', () => {
     renderTable({
       places: Array.from({ length: 30 }, (_, index) =>
@@ -162,7 +183,7 @@ describe('PlacesTable — rows', () => {
   });
 
   it('renders name, origin, category, and Manage for a manual place with no rate', () => {
-    renderTable({ places: [makePlace()] });
+    renderTable({ places: [makePlace()], currentRates: [] });
 
     expect(screen.getAllByText('Home')).toHaveLength(2);
     expect(screen.getByText('Manual')).toBeInTheDocument();

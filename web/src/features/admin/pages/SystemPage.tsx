@@ -4,25 +4,25 @@
  * A full-width command-center view of the throttles and worker fleet that
  * bound this TeslaSync deployment. Composed as a modern-ui bento:
  *
- *   1. Health-at-a-glance KPI band (SystemHealthOverview) — headline numbers
+ *   1. Health-at-a-glance OperationalBrief — headline numbers
  *      rolled up from both feeds.
- *   2. Detail band — the RateLimitStatusPanel and QueueStatusPanel side by
- *      side on wide screens (each self-contained: its own hook, refresh,
- *      loading / empty / error handling and, for queues, a per-worker drawer).
+ *   2. Detail band — RateBudgetPanel and WorkerQueuePanel side by side
+ *      on wide screens, each with independent refresh and source states;
+ *      worker selection opens a separately queried recent-job drawer.
  *
  * The page owns the two TanStack queries so the header freshness chip and the
  * "Refresh all" action can span both feeds; the panels below reuse the same
- * deduped query cache, so there is no extra network cost.
+ * query results directly, so detail presentation adds no duplicate observers.
  *
- * Route wiring lives in App.tsx + routeRegistry.ts. Reuse the same nav-entry
- * pattern as the Diagnostic page when adding new system panels.
+ * SYSTEM_PAGE_PATH records the intended route identity; the application shell
+ * owns mounting and navigation.
  */
 
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { Button, SectionTitle } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -30,9 +30,9 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useRateLimitStatus } from '@/api/hooks/useSystem'
 import { useQueueStatus } from '@/api/hooks/useSystemQueues'
 
-import { RateLimitStatusPanel } from '@/features/admin/components/RateLimitStatusPanel'
-import { QueueStatusPanel } from '@/features/admin/components/QueueStatusPanel'
-import { SystemHealthOverview } from '@/features/admin/components/SystemHealthOverview'
+import { RateBudgetPanel } from '../components/continuation-admin-2/RateBudgetPanel'
+import { WorkerQueuePanel } from '../components/continuation-admin-2/WorkerQueuePanel'
+import { SystemOperationalBrief } from '../components/operationalbrief-r-z/SystemOperationalBrief'
 
 export const SYSTEM_PAGE_PATH = '/admin/system'
 
@@ -85,7 +85,7 @@ export default function SystemPage() {
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t(
         'system.page.subtitle',
@@ -100,7 +100,7 @@ export default function SystemPage() {
           <SectionTitle id="system-overview-heading" className="mb-3">
             {t('system.overview.title', 'Health at a glance')}
           </SectionTitle>
-          <SystemHealthOverview rateLimit={rateLimit} queue={queue} />
+          <SystemOperationalBrief rateLimit={rateLimit} queue={queue} />
         </section>
       </FadeIn>
 
@@ -110,11 +110,11 @@ export default function SystemPage() {
             {t('system.detail.title', 'Throttles & workers')}
           </SectionTitle>
           <div className="grid grid-cols-1 items-start gap-4 xl:gap-5 2xl:grid-cols-2">
-            <RateLimitStatusPanel />
-            <QueueStatusPanel />
+            <RateBudgetPanel query={rateLimit} />
+            <WorkerQueuePanel query={queue} />
           </div>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

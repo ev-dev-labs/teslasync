@@ -159,6 +159,18 @@ export default function FleetOperationsPage() {
             workOrders: workOrdersState.hasData,
             forecast: forecastState.hasData,
           }}
+          sources={{
+            reservations: reservationsState,
+            assignments: assignmentsState,
+            workOrders: workOrdersState,
+            forecast: forecastState,
+          }}
+          coverage={{
+            reservations: reservationsQuery.data,
+            assignments: assignmentsQuery.data,
+            workOrders: workOrdersQuery.data,
+          }}
+          forecastSource={forecastQuery.data}
         />
       </FadeIn>
 

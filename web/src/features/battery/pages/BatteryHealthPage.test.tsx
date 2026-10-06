@@ -23,7 +23,7 @@
  * slice tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -281,12 +281,12 @@ function renderPage() {
 /** Read the canonical summary by named region, source label and stat value. */
 function summaryMetricValue(label: string): string {
   const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
-  const labelElement = within(summary).getByText(label, { selector: '[data-stat-label]' });
-  const stat = labelElement.closest('[data-stat]');
+  const labelElement = within(summary).getByText(label);
+  const stat = labelElement.closest('[data-operational-metric]');
   if (!(stat instanceof HTMLElement)) {
     throw new Error(`Summary metric "${label}" has no canonical stat tile`);
   }
-  const value = stat.querySelector('[data-stat-value]');
+  const value = stat.querySelector('[data-operational-value]');
   if (!value) throw new Error(`Summary metric "${label}" has no canonical stat value`);
   return value.textContent ?? '';
 }
@@ -529,6 +529,14 @@ describe('BatteryHealthPage · states', () => {
     expect(within(outline).getByText('No charging data for breakdown')).toBeVisible();
     expect(within(outline).getByText('No charging statistics yet')).toBeVisible();
     expect(within(outline).getByRole('link', { name: 'Battery Cells' })).toHaveAttribute('href', '/battery-cells');
+    const comparison = within(outline).getByRole('region', { name: 'Capacity and range evidence' });
+    expect(comparison.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    const brief = within(outline).getByTestId('battery-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    fireEvent.click(within(comparison).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Capacity When New')).toBeVisible();
+    expect(within(drawer).getAllByText('Capacity measurements are not available yet; battery health cannot be assessed.').length).toBeGreaterThan(0);
   });
 });
 

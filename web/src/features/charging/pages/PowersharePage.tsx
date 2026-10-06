@@ -4,7 +4,8 @@ import { Zap, RefreshCw } from 'lucide-react';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { Button } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
 
@@ -119,16 +120,18 @@ export default function PowersharePage() {
       context: t('powershare.kpi.typeSub', 'Powershare destination'),
     },
     {
-      metricId: 'text', occurrenceId: 'output-power',
+      metricId: 'power', occurrenceId: 'output-power',
       label: t('powershare.kpi.outputPower', 'Output Power'),
-      rawValue: powerKw != null ? `${fmtNumber(powerKw)} kW` : null,
+      rawValue: powerKw != null ? powerKw * 1000 : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) },
       description: t('powershare.kpi.outputPowerSub', 'Instantaneous power draw'),
       context: t('powershare.kpi.outputPowerSub', 'Instantaneous power draw'),
     },
     {
-      metricId: 'text', occurrenceId: 'hours-remaining',
+      metricId: 'duration', occurrenceId: 'hours-remaining',
       label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),
-      rawValue: hoursLeft != null ? `${fmtNumber(hoursLeft)} h` : null,
+      rawValue: hoursLeft != null ? hoursLeft * 3600 : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw / 3600), unit: 'h' }) },
       description: t('powershare.kpi.hoursRemainingSub', 'Runtime at current output'),
       context: t('powershare.kpi.hoursRemainingSub', 'Runtime at current output'),
     },
@@ -186,7 +189,7 @@ export default function PowersharePage() {
         <section
           aria-label={t('powershare.kpi.sectionLabel', 'Powershare metrics')}
         >
-          <StatStrip
+          <ChargingSummaryBrief
             id="powershare-metrics"
             metrics={metrics}
             retained={snapshotState.status === 'stale'}

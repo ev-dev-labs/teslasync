@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, MetricValue, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
@@ -11,22 +12,6 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 interface HvacCyclingIntervalDispositionProps {
   summary: HvacCyclingSummary;
   state: HvacCyclingQueryState;
-}
-
-function Disposition({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  const { fmtInt } = useNumberFormatting();
-  return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <MetricValue className="mt-1">{fmtInt(value)}</MetricValue>
-    </div>
-  );
 }
 
 export function HvacCyclingIntervalDisposition({
@@ -47,40 +32,25 @@ export function HvacCyclingIntervalDisposition({
           )}
         </Text>
         <HvacCyclingSectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, md: 4 }} gap={3}>
-            <Disposition
-              label={t('hvacCycling.intervals.candidates', 'Candidate adjacent pairs')}
-              value={interval.candidateAdjacentPairs}
-            />
-            <Disposition
-              label={t('hvacCycling.intervals.observed', 'Observed intervals')}
-              value={interval.observedIntervals}
-            />
-            <Disposition
-              label={t('hvacCycling.intervals.longGap', 'Long-gap exclusions')}
-              value={interval.longGapExclusions}
-            />
-            <Disposition
-              label={t('hvacCycling.intervals.unknown', 'Unknown-state barriers')}
-              value={interval.unknownStateBarriers}
-            />
-            <Disposition
-              label={t('hvacCycling.intervals.nonpositive', 'Nonpositive pairs')}
-              value={interval.nonpositiveIntervals}
-            />
-            <Disposition
-              label={t('hvacCycling.intervals.duplicates', 'Duplicates removed first')}
-              value={interval.duplicatesRemovedBeforePairing}
-            />
-            <Disposition
-              label={t('hvacCycling.intervals.terminal', 'Terminal samples')}
-              value={interval.terminalSamples}
-            />
-            <Disposition
-              label={t('hvacCycling.intervals.runIntervals', 'Intervals represented in runs')}
-              value={summary.runs.reduce((sum, run) => sum + run.intervals, 0)}
-            />
-          </Grid>
+          <VehicleOperationalBrief embedded id="hvac-cycling-interval-summary"
+            title={t('hvacCycling.intervals.title', 'Interval disposition')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('hvacCycling.intervals.subtitle', 'Every adjacent unique-timestamp pair receives one outcome before runs are formed.') }}
+            metrics={[
+              { key: 'candidates', label: t('hvacCycling.intervals.candidates', 'Candidate adjacent pairs'), value: interval.candidateAdjacentPairs },
+              { key: 'observed', label: t('hvacCycling.intervals.observed', 'Observed intervals'), value: interval.observedIntervals },
+              { key: 'gaps', label: t('hvacCycling.intervals.longGap', 'Long-gap exclusions'), value: interval.longGapExclusions },
+              { key: 'unknown', label: t('hvacCycling.intervals.unknown', 'Unknown-state barriers'), value: interval.unknownStateBarriers },
+              { key: 'nonpositive', label: t('hvacCycling.intervals.nonpositive', 'Nonpositive pairs'), value: interval.nonpositiveIntervals },
+              { key: 'duplicates', label: t('hvacCycling.intervals.duplicates', 'Duplicates removed first'), value: interval.duplicatesRemovedBeforePairing },
+              { key: 'terminal', label: t('hvacCycling.intervals.terminal', 'Terminal samples'), value: interval.terminalSamples },
+              { key: 'runs', label: t('hvacCycling.intervals.runIntervals', 'Intervals represented in runs'), value: summary.runs.reduce((sum, run) => sum + run.intervals, 0) },
+            ].map(fact => ({
+              metricId: 'count' as const, occurrenceId: fact.key, label: fact.label, rawValue: fact.value,
+              display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
+            }))}
+          />
           <Text as="p" variant="caption" className="mt-3">
             {t(
               'hvacCycling.intervals.identity',

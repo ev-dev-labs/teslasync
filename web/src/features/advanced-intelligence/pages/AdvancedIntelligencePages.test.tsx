@@ -220,8 +220,12 @@ describe('critical advanced intelligence interactions', () => {
     const first = screen.getByText('First explanation');
     const second = screen.getByText('Second explanation');
     expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('No intent inferred')).toBeInTheDocument();
-    expect(screen.getByText('No compromise inferred')).toBeInTheDocument();
+    const firstFinding = first.closest('article');
+    const secondFinding = second.closest('article');
+    expect(firstFinding).not.toBeNull();
+    expect(secondFinding).not.toBeNull();
+    expect(within(firstFinding!).getByText('• No intent inferred')).toBeInTheDocument();
+    expect(within(secondFinding!).getByText('• No compromise inferred')).toBeInTheDocument();
     expect(screen.getByText(/72.*confidence/)).toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
     expect(screen.getByText('Anomaly is not attribution')).toBeInTheDocument();

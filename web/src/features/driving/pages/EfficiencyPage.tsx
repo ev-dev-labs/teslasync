@@ -12,11 +12,12 @@ import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
 import {
-  EfficiencyStats, EfficiencyOverview, EfficiencyTrend, EfficiencySpeedDistribution,
+  EfficiencyOverview, EfficiencyTrend, EfficiencySpeedDistribution,
   EfficiencyScatter, EfficiencyTemperatureTable,
   buildEfficiencyModel, inspectStats, inspectDrives,
   type StatsPresentation, type DrivesPresentation,
 } from '../components/efficiency-modernization';
+import { EfficiencyEvidenceBrief } from '../components/operationalbrief-a-m/EfficiencyEvidenceBrief';
 
 // Public helper identities retained for existing consumers and contract tests.
 export { efficiencyColor } from '../components/efficiency-modernization';
@@ -80,7 +81,7 @@ export default function EfficiencyPage() {
       {/* A — all eight original KPIs and the specialist glossary. */}
       <FadeIn>
         <section aria-label={t('efficiency.section.kpis', 'Key metrics')} className="min-w-0">
-          <EfficiencyStats {...statsProps} kind="kpis" />
+          <EfficiencyEvidenceBrief {...statsProps} kind="kpis" />
         </section>
       </FadeIn>
       {/* B — original overview gauge/bars + annotated daily series. */}
@@ -110,7 +111,7 @@ export default function EfficiencyPage() {
           <SectionTitle>{t('efficiency.section.breakdown', 'Breakdown & insights')}</SectionTitle>
           <CardGrid label={t('efficiency.section.breakdown', 'Breakdown and insights')} items={[
             { id: 'temperature-table', size: 'half', content: <EfficiencyTemperatureTable {...drivesProps} /> },
-            { id: 'energy-insights', size: 'third', content: <EfficiencyStats {...statsProps} kind="insights" /> },
+            { id: 'energy-insights', size: 'third', content: <EfficiencyEvidenceBrief {...statsProps} kind="insights" /> },
           ]} />
         </section>
       </FadeIn>

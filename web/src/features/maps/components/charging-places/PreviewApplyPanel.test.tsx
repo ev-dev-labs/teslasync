@@ -137,6 +137,24 @@ describe('PreviewApplyPanel — no rate selected', () => {
 });
 
 describe('PreviewApplyPanel — preview metrics', () => {
+  it('retains all preview evidence after refresh failure without performing an apply', () => {
+    mockedPreview.mockReturnValue(makePreviewQuery({ data: makePreview(), isError: true, error: new Error('refresh') }));
+    renderPanel({ geofenceId: 7, rate });
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('6')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('$7.20')).toBeInTheDocument();
+    expect(applyMutate).not.toHaveBeenCalled();
+  });
+
+  it('shows unknown counts rather than fabricated zero before a preview resolves', () => {
+    mockedPreview.mockReturnValue(makePreviewQuery({ data: undefined }));
+    renderPanel({ geofenceId: 7, rate });
+    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    expect(applyMutate).not.toHaveBeenCalled();
+  });
   it('renders matched/eligible/protected/energy/estimated-cost for the selected rate', () => {
     renderPanel({ geofenceId: 7, rate });
 

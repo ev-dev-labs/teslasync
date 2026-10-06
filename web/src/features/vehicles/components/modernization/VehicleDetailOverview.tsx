@@ -22,12 +22,12 @@ export function VehicleDetailOverview({ state, stateQuery }: {
         <VehiclePanelGrid label={t('vehicles.detail.overview', 'Live overview')} items={[
           { id: 'vehicle-battery-range', size: 'half', content:
             <SectionErrorBoundary name="vehicle-detail:battery-range" fallbackTitle={t('vehicles.detail.section.batteryRangeFailed', 'Battery & range section failed to load')}>
-              <VehicleSourcePanel query={stateQuery} available={state != null} renderEmpty={false}
+              <VehicleSourcePanel query={stateQuery} available={state != null}
                 resourceName={liveResource}
                 label={t('vehicles.detail.batteryRange', 'Battery & range')}
                 emptyMessage={t('vehicles.noLiveData', 'No live data')}
                 errorMessage={t('vehicles.detail.section.batteryRangeFailed', 'Battery & range section failed to load')}>
-                {state ? <BatteryRangePanel state={state} /> : null}
+                <BatteryRangePanel state={state} sourceQuery={stateQuery} />
               </VehicleSourcePanel>
             </SectionErrorBoundary>
           },

@@ -8,9 +8,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { StatStrip, type StatMetric } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
 
 import { archetypeQualityLabel, archetypeStatusLabel } from './labels';
 import { ArchetypeQueryStatus } from './ArchetypeQueryStatus';
@@ -29,6 +28,58 @@ export function ArchetypeEvidenceLedger({
     (total, cluster) => total + cluster.ambiguousAssignments,
     0,
   );
+  const awaiting = t('archetypes.kpis.awaiting', 'Awaiting drive evidence');
+  const notPublished = t('archetypes.kpis.notPublished', 'Not published');
+  const metrics: StatMetric[] = [
+    {
+      metricId: 'text', occurrenceId: 'archetypes-returned',
+      label: t('archetypes.kpis.returned', 'Returned rows'),
+      rawValue: resolved ? fmtInt(summary.source.returnedRows) : null,
+      context: <><Activity className="h-5 w-5" aria-hidden="true" />{resolved
+        ? t('archetypes.kpis.windowHint', 'Bounded at {{limit}} newest rows', { limit: fmtInt(summary.coverage.historyLimit) })
+        : awaiting}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'archetypes-eligible',
+      label: t('archetypes.kpis.eligible', 'Eligible drives'),
+      rawValue: resolved ? fmtInt(summary.analyzedDrives) : null,
+      context: <><ScanSearch className="h-5 w-5" aria-hidden="true" />{resolved
+        ? t('archetypes.kpis.skippedHint', '{{count}} rows excluded', { count: summary.skippedDrives })
+        : awaiting}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'archetypes-clusters',
+      label: t('archetypes.kpis.clusters', 'Published clusters'),
+      rawValue: resolved ? fmtInt(summary.k) : null,
+      context: <><Layers3 className="h-5 w-5" aria-hidden="true" />{resolved
+        ? t('archetypes.kpis.collisionsHint', '{{count}} repeated heuristic labels', { count: summary.labelCollisionCount })
+        : awaiting}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'archetypes-status',
+      label: t('archetypes.kpis.status', 'Model status'),
+      rawValue: resolved ? archetypeStatusLabel(t, summary.status) : null,
+      context: <><Waypoints className="h-5 w-5" aria-hidden="true" />{resolved
+        ? t('archetypes.kpis.dimensionsHint', '{{active}} of 6 feature dimensions active', { active: fmtInt(summary.activeFeatureDimensions) })
+        : awaiting}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'archetypes-separation',
+      label: t('archetypes.kpis.separation', 'Silhouette separation'),
+      rawValue: clustered ? fmtScientificNumber(summary.silhouette, 3) : null,
+      context: <><Split className="h-5 w-5" aria-hidden="true" />{clustered
+        ? archetypeQualityLabel(t, summary.quality) : notPublished}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'archetypes-ambiguous',
+      label: t('archetypes.kpis.ambiguous', 'Boundary-ambiguous drives'),
+      rawValue: clustered ? fmtInt(ambiguous) : null,
+      context: <><ShieldCheck className="h-5 w-5" aria-hidden="true" />{clustered
+        ? t('archetypes.kpis.ambiguousHint', '{{share}} of assignments', {
+          share: fmtPercent(summary.analyzedDrives > 0 ? (ambiguous / summary.analyzedDrives) * 100 : 0),
+        }) : notPublished}</>,
+    },
+  ];
 
   return (
     <section
@@ -38,89 +89,22 @@ export function ArchetypeEvidenceLedger({
         'Drive archetype KPI and evidence ledger',
       )}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('archetypes.kpis.title', 'KPI and evidence ledger')}
-        </PanelTitle>
-        <Grid cols={{ default: 1, sm: 2, xl: 6 }} gap={3}>
-          <MetricCard
-            label={t('archetypes.kpis.returned', 'Returned rows')}
-            value={resolved ? fmtInt(summary.source.returnedRows) : '—'}
-            subtitle={resolved
-              ? t(
-                  'archetypes.kpis.windowHint',
-                  'Bounded at {{limit}} newest rows',
-                  { limit: fmtInt(summary.coverage.historyLimit) },
-                )
-              : t('archetypes.kpis.awaiting', 'Awaiting drive evidence')}
-            icon={<Activity className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('archetypes.kpis.eligible', 'Eligible drives')}
-            value={resolved ? fmtInt(summary.analyzedDrives) : '—'}
-            subtitle={resolved
-              ? t('archetypes.kpis.skippedHint', '{{count}} rows excluded', {
-                  count: summary.skippedDrives,
-                })
-              : t('archetypes.kpis.awaiting', 'Awaiting drive evidence')}
-            icon={<ScanSearch className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('archetypes.kpis.clusters', 'Published clusters')}
-            value={resolved ? fmtInt(summary.k) : '—'}
-            subtitle={resolved
-              ? t(
-                  'archetypes.kpis.collisionsHint',
-                  '{{count}} repeated heuristic labels',
-                  { count: summary.labelCollisionCount },
-                )
-              : t('archetypes.kpis.awaiting', 'Awaiting drive evidence')}
-            icon={<Layers3 className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('archetypes.kpis.status', 'Model status')}
-            value={resolved ? archetypeStatusLabel(t, summary.status) : '—'}
-            subtitle={resolved
-              ? t(
-                  'archetypes.kpis.dimensionsHint',
-                  '{{active}} of 6 feature dimensions active',
-                  { active: fmtInt(summary.activeFeatureDimensions) },
-                )
-              : t('archetypes.kpis.awaiting', 'Awaiting drive evidence')}
-            icon={<Waypoints className="h-5 w-5" />}
-            color={clustered ? 'green' : 'amber'}
-          />
-          <MetricCard
-            label={t('archetypes.kpis.separation', 'Silhouette separation')}
-            value={clustered ? fmtScientificNumber(summary.silhouette, 3) : '—'}
-            subtitle={clustered
-              ? archetypeQualityLabel(t, summary.quality)
-              : t('archetypes.kpis.notPublished', 'Not published')}
-            icon={<Split className="h-5 w-5" />}
-            color={summary.quality === 'strong' ? 'green' : 'amber'}
-          />
-          <MetricCard
-            label={t('archetypes.kpis.ambiguous', 'Boundary-ambiguous drives')}
-            value={clustered ? fmtInt(ambiguous) : '—'}
-            subtitle={clustered
-              ? t('archetypes.kpis.ambiguousHint', '{{share}} of assignments', {
-                  share: fmtPercent(
-                    summary.analyzedDrives > 0
-                      ? (ambiguous / summary.analyzedDrives) * 100
-                      : 0,
-                  ),
-                })
-              : t('archetypes.kpis.notPublished', 'Not published')}
-            icon={<ShieldCheck className="h-5 w-5" />}
-            color="amber"
-          />
-        </Grid>
+      <LayoutCard
+        title={t('archetypes.kpis.title', 'KPI and evidence ledger')}
+        actions={<ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
+        <StatStrip
+          id="archetype-evidence-metrics"
+          variant="embedded"
+          metrics={metrics}
+          period={{
+            kind: 'unknown',
+            label: t('archetypes.coverage.sourcePeriod', 'Returned drive-history window'),
+            reason: t('archetypes.coverage.subtitle', 'Coverage describes the returned history window, never lifetime driving behavior.'),
+          }}
+        />
         <ArchetypeQueryStatus summary={summary} state={state} />
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

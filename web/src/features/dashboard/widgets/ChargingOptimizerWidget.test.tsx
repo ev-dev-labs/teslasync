@@ -229,6 +229,18 @@ afterEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('ChargingOptimizerWidget', () => {
+  it('preserves all 24 specialist rate cells and the wall-clock start marker after typography adoption', () => {
+    renderWidget({ cols: 4, rows: 2 });
+    const timeline = screen.getByRole('img', { name: '24h rate timeline' });
+    expect(timeline.children).toHaveLength(24);
+    expect(screen.getByTitle('2 AM — Off-peak').querySelector('svg')).toBeInTheDocument();
+    expect(screen.getByTitle('6 PM — Peak')).toBeInTheDocument();
+    expect(screen.getByTitle('10 AM — Standard')).toBeInTheDocument();
+    expect(screen.getByText('Peak charging: 15.00%')).toBeInTheDocument();
+    expect(screen.getByText('Shift to off-peak')).toBeInTheDocument();
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+  });
+
   it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 2 }])(
     'retains all populated mode content on refresh failure and retries at %j', (size) => {
       const refetch = vi.fn();

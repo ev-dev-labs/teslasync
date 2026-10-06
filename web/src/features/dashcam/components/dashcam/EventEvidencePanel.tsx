@@ -43,7 +43,7 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
   const items: TimelineItemData[] = clip.eventCandidates.map((candidate) => ({
     title: (
       <span className="flex min-w-0 flex-wrap items-center gap-2">
-        {EVENT_TYPE_LABELS[candidate.type]}
+        {t(`dashcam.events.type.${candidate.type}`, EVENT_TYPE_LABELS[candidate.type])}
         <Badge size="sm" variant={CONFIDENCE_BADGE_VARIANT[candidate.confidence]}>
           {t(`dashcam.events.confidence.${candidate.confidence}`, candidate.confidence)}
         </Badge>
@@ -58,7 +58,7 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
 
   return (
     <LayoutCard title={t('dashcam.events.title', 'Event evidence')}>
-      <Timeline items={items} />
+      <Timeline items={items} label={t('dashcam.events.title', 'Event evidence')} summaryBounds={{}} />
     </LayoutCard>
   );
 }

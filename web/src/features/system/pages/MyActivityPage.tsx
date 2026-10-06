@@ -110,7 +110,9 @@ export default function MyActivityPage() {
       ) : (
         <>
           <FadeIn>
-            <MyActivityKpiBand kpis={analytics.kpis} isLoading={isLoading} />
+            <MyActivityKpiBand kpis={analytics.kpis} isLoading={isLoading && !state.hasData}
+              available={state.hasData} retained={state.hasData && query.isError}
+              scope={t('activity.myActivity.brief.range', 'Loaded activity for {{start}} – {{end}}; at most {{limit}} actions.', { start, end, limit: ACTIVITY_LIMIT })} />
           </FadeIn>
 
           <FadeIn delay={0.1}>

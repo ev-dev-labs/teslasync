@@ -196,6 +196,20 @@ describe('DashboardsPage', () => {
     expect(ascending).toBe(true);
   });
 
+  it('keeps the manual composer and workflow reference free of fabricated fleet summary measurements', () => {
+    const { container } = renderPage();
+    expect(container.querySelector('[data-operational-brief]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric]')).toBeNull();
+    expect(screen.getByText('How it works')).toBeInTheDocument();
+    expect(screen.getByText('Curated panel catalog')).toBeInTheDocument();
+    expect(editor()).toHaveValue('');
+    for (const name of SORTED_PANEL_NAMES) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: /Copy to clipboard/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Clear$/i })).toBeDisabled();
+  });
+
   it('maps each curated panel to its Grafana panel-kind glyph via panelKindIcon', () => {
     renderPage();
 

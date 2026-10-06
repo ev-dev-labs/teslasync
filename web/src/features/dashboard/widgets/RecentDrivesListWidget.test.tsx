@@ -303,14 +303,13 @@ describe('RecentDrivesListWidget — rendering', () => {
     expect(screen.getByText('456 Oak Ave')).toBeInTheDocument();
   });
 
-  it('truncates a long address to 30 characters with an ellipsis in the wide layout', () => {
+  it('preserves the complete long address in the reflowing wide layout', () => {
     const long = 'A'.repeat(40);
     setup({ drives: makeQuery({ data: [makeDrive({ start_address: long, end_address: undefined })] }) });
     renderWidget({ size: WIDE });
 
-    // Displayed text is the 30-char slice + ellipsis; the missing end address
-    // collapses to the "—" placeholder.
-    expect(screen.getByText('A'.repeat(30) + '…')).toBeInTheDocument();
+    expect(screen.getByText(long)).toBeInTheDocument();
+    expect(screen.queryByText('A'.repeat(30) + '…')).not.toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 

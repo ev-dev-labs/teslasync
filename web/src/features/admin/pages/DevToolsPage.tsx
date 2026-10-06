@@ -15,13 +15,13 @@ import { useVehicles } from '@/api/hooks/useVehicles'
 import { getErrorMessage } from '@/lib/errorMessage'
 
 import {
-  DevToolsOverview,
   FleetApiSection,
   FleetTelemetryHealth,
   InfrastructureSection,
   ClientUtilitiesSection,
   ReferenceLinksSection,
 } from '../components/devtools'
+import { DevToolsBrief } from '../components/operationalbrief-a-g/DevToolsBrief'
 
 /* ─── tab definitions ─────────────────────────────────────────────────── */
 
@@ -113,11 +113,14 @@ export default function DevToolsPage() {
 
         {/* 1 — KPI cockpit band: always-visible live + catalog status */}
         <FadeIn>
-          <DevToolsOverview
+          <DevToolsBrief
             errorVinCount={errorVins.length}
             vehicleCount={vehicles.length}
             telemetryUnknown={!telemetryState.hasData}
             vehiclesUnknown={!vehiclesState.hasData}
+            loading={(telemetryQuery.isLoading && !telemetryState.hasData) || (vehiclesQuery.isLoading && !vehiclesState.hasData)}
+            retained={telemetryState.status === 'stale' || vehiclesState.status === 'stale'}
+            refreshing={telemetryState.isRefreshing || vehiclesState.isRefreshing}
           />
         </FadeIn>
 

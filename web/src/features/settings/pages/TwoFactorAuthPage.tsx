@@ -53,7 +53,7 @@ export default function TwoFactorAuthPage() {
       {statusState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       {/* 1 — KPI band: at-a-glance credential summary. */}
       <FadeIn>
-        <TotpKpiBand data={status.data} isLoading={status.isLoading} />
+        <TotpKpiBand data={status.data} isLoading={statusState.status === 'initial'} retained={statusState.status === 'stale'} />
       </FadeIn>
 
       {/* 2 — Hero enrollment flow (spans two columns) + setup guide. */}

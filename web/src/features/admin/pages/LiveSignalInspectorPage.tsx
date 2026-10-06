@@ -28,7 +28,6 @@ import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry';
 
 import {
   LiveSignalToolbar,
-  LiveSignalKpiBand,
   LiveSignalSourceBreakdown,
   LiveSignalKindBreakdown,
   LiveSignalsTable,
@@ -37,6 +36,7 @@ import {
   computeStats,
   type SectionStatus,
 } from '../components/live-signal-inspector';
+import { LiveSignalsOperationalBrief } from '../components/operationalbrief-h-q/LiveSignalsOperationalBrief';
 
 export default function LiveSignalInspectorPage() {
   const { t } = useTranslation();
@@ -107,7 +107,13 @@ export default function LiveSignalInspectorPage() {
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section aria-label={t('admin.liveSignals.kpis', 'Snapshot summary')}>
-          <LiveSignalKpiBand stats={stats} />
+          <LiveSignalsOperationalBrief
+            stats={stats}
+            status={status}
+            hasSnapshot={vehicleId !== null && live.data?.signals != null}
+            vehicleId={vehicleId}
+            observedAt={vehicleId !== null ? live.data?.at : undefined}
+          />
         </section>
       </FadeIn>
 

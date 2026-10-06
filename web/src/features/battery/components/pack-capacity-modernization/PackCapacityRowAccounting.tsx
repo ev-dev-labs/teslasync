@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { AlertBanner } from '@/components/feedback';
 import { DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import type { PackCapacityResult, PackCapacityRowCategory } from '../../lib/packCapacity';
@@ -108,26 +109,28 @@ export function PackCapacityRowAccounting({
   ], [accounting.returnedRows, locale, t]);
   const exclusionShare = accounting.returnedRows > 0
     ? accounting.excludedRows / accounting.returnedRows : 0;
-  const metric = (occurrenceId: string, label: string, value: string, context: string): StatMetric => ({
-    metricId: 'text', occurrenceId, rawValue: value, label, description: context, context,
+  const metric = (occurrenceId: string, label: string, value: number, context: string,
+    formatter: (raw: number) => string): StatMetric => ({
+    metricId: 'number', occurrenceId, rawValue: value, label, description: context, context,
+    display: { formatter: raw => ({ value: formatter(raw), unit: '' }) },
   });
   const metrics = [
     metric('pack-capacity:returned', t('packCapacity.accounting.returned', 'Rows returned'),
-      packCapacityNumber(accounting.returnedRows, locale, 0),
-      t('packCapacity.accounting.requested', 'up to {{limit}} requested', { limit: accounting.historyLimit })),
+      accounting.returnedRows,
+      t('packCapacity.accounting.requested', 'up to {{limit}} requested', { limit: accounting.historyLimit }), raw => packCapacityNumber(raw, locale, 0)),
     metric('pack-capacity:accepted', t('packCapacity.accounting.accepted', 'Qualified measurements'),
-      packCapacityNumber(accounting.includedRows, locale, 0),
-      t('packCapacity.accounting.afterValidation', 'after all validation and cap rules')),
+      accounting.includedRows,
+      t('packCapacity.accounting.afterValidation', 'after all validation and cap rules'), raw => packCapacityNumber(raw, locale, 0)),
     metric('pack-capacity:excluded', t('packCapacity.accounting.excluded', 'Excluded rows'),
-      packCapacityNumber(accounting.excludedRows, locale, 0),
-      t('packCapacity.accounting.primaryReason', 'one primary reason per row')),
+      accounting.excludedRows,
+      t('packCapacity.accounting.primaryReason', 'one primary reason per row'), raw => packCapacityNumber(raw, locale, 0)),
     metric('pack-capacity:exclusion-share', t('packCapacity.accounting.exclusionShare', 'Excluded share'),
-      packCapacityPercent(exclusionShare, locale),
-      t('packCapacity.accounting.ofReturned', 'of known returned rows')),
+      exclusionShare,
+      t('packCapacity.accounting.ofReturned', 'of known returned rows'), raw => packCapacityPercent(raw, locale)),
   ];
 
   return (
-    <section data-testid="pack-capacity-accounting">
+    <section aria-label={t('packCapacity.accounting.title', 'Source-row accounting')} data-testid="pack-capacity-accounting">
       <GlassPanel className="min-w-0 p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -137,10 +140,11 @@ export function PackCapacityRowAccounting({
           {t('packCapacity.accounting.subtitle', 'Every returned charging row enters exactly one primary category before filtering.')}
         </Text>
         <PackCapacitySectionBody result={result} state={state} requirement="none">
-          <StatGroup
+          <BatteryEvidenceBrief
             id="pack-capacity-accounting-summary"
-            className="mb-4"
+            title={t('packCapacity.modernization.accountingSummary', 'Charging-row summary')}
             metrics={metrics}
+            retained={Boolean(state.refreshError)}
             period={{
               kind: 'alltime',
               label: t('packCapacity.modernization.period', 'Returned charging-history window'),

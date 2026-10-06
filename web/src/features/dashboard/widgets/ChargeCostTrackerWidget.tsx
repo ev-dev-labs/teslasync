@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { DollarSign, Zap, Fuel, TrendingDown } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -11,7 +11,9 @@ import { request } from '@/api/client';
 
 import { convertDistanceToSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
@@ -130,6 +132,35 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       || (costPerKwh == null && knownNumber(session.cost_decimal) == null && knownNumber(session.cost) == null)),
   }) : undefined;
   const currency = (value: number | null, decimals?: number) => value == null ? null : formatCurrency(value, decimals);
+  const summary: readonly StatMetric[] = [
+    {
+      metricId: 'energy', rawValue: sessions == null ? null : energyWh,
+      label: t('widget.chargeCost.totalEnergy', 'Total energy'),
+      description: t('widget.chargeCost.energyDescription', 'Known energy in returned sessions; missing session energy keeps coverage partial.'),
+      display: { formatter: raw => ({ value: fmtNumber(convertEnergyFromSI(Number(raw), unitPrefs.energy)), unit: unitPrefs.energy }) },
+    },
+    {
+      metricId: 'currency', rawValue: sessions == null ? null : metrics.totalCost,
+      label: t('widget.chargeCost.totalCost', 'Total cost'),
+      description: t('widget.chargeCost.costDescription', 'Recorded session cost or the configured electricity-rate estimate; missing required operands remain unknown.'),
+      display: { formatter: raw => ({ value: formatCurrency(Number(raw)), unit: '' }) },
+    },
+    ...(isTall ? [
+      {
+        metricId: 'rate' as const,
+        rawValue: metrics.costPerDistance == null ? null : metrics.costPerDistance / convertDistanceToSI(1, distanceUnit),
+        label: t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', { unit: distanceUnit }),
+        description: t('widget.chargeCost.rateDescription', 'Configured electricity cost per estimated distance; canonical raw rate is currency per metre, not a measured trip rate.'),
+        display: { formatter: (raw: number | string) => ({ value: formatCurrency(Number(raw) * convertDistanceToSI(1, distanceUnit)), unit: '' }) },
+      },
+      {
+        metricId: 'currency' as const, rawValue: metrics.gasSavings,
+        label: t('widget.chargeCost.gasSavings', 'vs gas savings'),
+        description: t('widget.chargeCost.savingsDescription', 'Estimated gasoline cost minus charge cost; distance uses the existing 3.5 miles per kWh assumption.'),
+        display: { formatter: (raw: number | string) => ({ value: formatCurrency(Number(raw)), unit: '' }) },
+      },
+    ] : []),
+  ];
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -184,12 +215,16 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       isError={isError}
       onRefresh={handleRefresh}
     >
+      <DashboardSourceBrief
+        metrics={summary} state={dataState ?? deriveDataState(query, { provenance: 'inferred' })}
+        eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+        title={t('widget.chargeCost.summaryTitle', 'Charge cost sources')}
+        description={t('widget.chargeCost.summaryDescription', 'Recorded and inferred charging costs remain distinct from measured drive costs; configured gas and electricity assumptions are retained.')}
+        scope={t('widget.chargeCost.summaryScope', 'Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound', { vehicleId: id, start: thirtyDaysAgo })}
+        loading={isLoading && !sessions} testId="charge-cost-operational-brief"
+      />
       {hasData ? (
         <div className="space-y-2">
-          <WidgetStatGrid cols={2} stats={[
-            { label: t('widget.chargeCost.totalEnergy', 'Total energy'), value: energyWh == null ? null : `${fmtNumber(convertEnergyFromSI(energyWh, unitPrefs.energy))} ${unitPrefs.energy}`, icon: <Zap className="h-3.5 w-3.5" /> },
-            { label: t('widget.chargeCost.totalCost', 'Total cost'), value: currency(metrics.totalCost), icon: <DollarSign className="h-3.5 w-3.5" /> },
-          ]} />
           <div className={`flex min-w-0 flex-wrap justify-between gap-2 ${dashboardTokens.metricLabel}`}>
             <span>{t('widget.chargeCost.sessions', '{{count}} sessions', { count: metrics.sessionCount })}</span>
             <span>{costPerKwh != null ? formatCurrency(costPerKwh) : '—'}/{t('widget.chargeCost.kwh', 'kWh')}</span>
@@ -197,10 +232,6 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
 
           {isTall && (
             <div className="space-y-2">
-              <WidgetStatGrid cols={2} stats={[
-                { label: t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', { unit: distanceUnit }), value: currency(metrics.costPerDistance), icon: <Fuel className="h-3.5 w-3.5" /> },
-                { label: t('widget.chargeCost.gasSavings', 'vs gas savings'), value: currency(metrics.gasSavings), icon: <TrendingDown className="h-3.5 w-3.5" /> },
-              ]} />
               <p className={dashboardTokens.metricLabel}>
                 {metrics.gasSavings != null ? t('widget.chargeCost.savingsNote', '30-day estimate') : t('widget.chargeCost.configureGas', 'Set gas price in settings')}
               </p>

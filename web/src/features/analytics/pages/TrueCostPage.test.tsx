@@ -6,6 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
 import type { CostBreakdown } from '@/types/analytics';
+import type { StatMetric } from '@/components/data-display';
+
+const bridgeCapture = vi.hoisted(() => vi.fn<(metrics: readonly StatMetric[]) => void>());
+vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
+  return { ...actual, useOperationalMetrics: (...args: Parameters<typeof actual.useOperationalMetrics>) => {
+    bridgeCapture(args[0]);
+    return actual.useOperationalMetrics(...args);
+  } };
+});
 
 const h = vi.hoisted(() => ({
   query: undefined as unknown,
@@ -364,6 +374,28 @@ describe('TrueCostPage persistent query states', () => {
 });
 
 describe('TrueCostPage evidence rendering', () => {
+  it('reviews numeric source operands and preserved costing boundaries in the real drawer', () => {
+    renderPage();
+    const brief = screen.getByTestId('tco-evidence-kpis');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    const metrics = bridgeCapture.mock.calls.map(call => call[0])
+      .find(items => items.some(metric => metric.occurrenceId === 'tco-recorded-spend'));
+    expect(metrics).toHaveLength(8);
+    for (const metric of metrics ?? []) {
+      expect(metric.metricId).not.toBe('text');
+      if (metric.rawValue != null) expect(typeof metric.rawValue).toBe('number');
+    }
+    expect(metrics?.find(metric => metric.occurrenceId === 'tco-recorded-energy')?.metricId).toBe('energy');
+    expect(metrics?.find(metric => metric.occurrenceId === 'tco-drive-distance')?.metricId).toBe('distance');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Positive-cost sessions only')).toBeInTheDocument();
+    expect(within(drawer).getByText('First-to-last positive-drive span; not tenure')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not a complete ownership-cost account/)).toBeInTheDocument();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
   it('keeps every accounting operand and temporal evidence row in accessible shared tables', () => {
     renderPage();
 

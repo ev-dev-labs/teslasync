@@ -125,7 +125,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
     dataState,
     // Forward the fetch error so a failure surfaces the shared QueryError
     // panel instead of masquerading as the "No position data" empty state.
-    error: error ? String(error) : null,
+    error: dataState.fatalError ? String(dataState.fatalError) : null,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -165,7 +165,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
   // ─── Standard / Wide layout ───
   return (
     <WidgetShell
-      icon={<MapIcon className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<MapIcon className="h-3.5 w-3.5 text-cyan-300" />}
       noPadding
       actions={
         isWide && totalPositions > 0 ? (

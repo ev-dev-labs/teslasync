@@ -61,7 +61,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 import { useSettings } from '@/hooks/useSettings';
-import { AISignalExplorerNlFilter } from '@/components/ai/AISignalExplorerNlFilter';
+import { AISignalExplorerNlFilter } from '@/components/ai';
 import SignalExplorerPage from '@/features/telemetry/pages/SignalExplorerPage';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';

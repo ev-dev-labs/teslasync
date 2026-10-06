@@ -93,6 +93,27 @@ afterEach(() => {
 });
 
 describe('BatteryComparison', () => {
+  it('compares every returned fleet member beyond the loading-skeleton limit without reordering the caller', async () => {
+    const vehicles = Array.from({ length: 28 }, (_, index) => makeVehicle(
+      28 - index, `Comparison member ${28 - index}`,
+    ));
+    const originalIds = vehicles.map(vehicle => vehicle.id);
+    resolvedFleet(Object.fromEntries(vehicles.map(vehicle => [
+      vehicle.id, makeState(vehicle.id, vehicle.id * 1000),
+    ])));
+    renderComparison(vehicles);
+    await waitFor(() => expect(screen.getAllByRole('progressbar')).toHaveLength(28));
+    const bars = screen.getAllByRole('progressbar');
+    expect(bars.map(bar => bar.getAttribute('aria-label'))).toEqual(
+      originalIds.map(id => `Comparison member ${id} battery level`),
+    );
+    expect(bars.map(bar => Number(bar.getAttribute('aria-valuenow')))).toEqual(originalIds);
+    expect(mockFetch.mock.calls.map(call => call[0])).toEqual(originalIds);
+    expect(vehicles.map(vehicle => vehicle.id)).toEqual(originalIds);
+    expect(screen.getByText('Comparison member 1')).toBeInTheDocument();
+    expect(screen.getByText('Comparison member 28')).toBeInTheDocument();
+  });
+
   it('renders an accessible battery bar per vehicle with clamped level and converted range', async () => {
     resolvedFleet({
       1: makeState(82, 300_000), // 300 km

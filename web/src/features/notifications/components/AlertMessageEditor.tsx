@@ -42,11 +42,18 @@ import {
   Modal,
   Popover,
   Textarea,
+  Text,
+  Caption,
+  Code,
 } from '@/components/ui'
+import { PillFilterBar } from '@/components/forms'
+import { QueryError, StaleRefreshWarning } from '@/components/feedback'
+import { useDataState } from '@/hooks/useDataState'
+import type { DataState } from '@/api/dataState'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
-import { AIAlertMessageTemplateSuggestion } from '@/components/ai/AIAlertMessageTemplateSuggestion'
+import { AIAlertMessageTemplateSuggestion } from '@/components/ai'
 import {
   useAlertMessagePlaceholders,
   useAlertMessagePresets,
@@ -178,6 +185,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
       vehicle_timezone: draft.vehicle_timezone,
       enabled: !disabled,
     })
+    const placeholdersState = useDataState(placeholdersQuery)
 
     const filteredPlaceholders = useMemo<AlertMessagePlaceholder[]>(() => {
       const all = placeholdersQuery.data ?? []
@@ -287,6 +295,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
     // ──────────────── Preset gallery ────────────────
     const [presetModalOpen, setPresetModalOpen] = useState(false)
     const presetsQuery = useAlertMessagePresets(draft.kind, draft)
+    const presetsState = useDataState(presetsQuery)
     const [presetFilter, setPresetFilter] = useState<string | null>(null)
 
     // Set of placeholder keys that are valid for the current rule's op.
@@ -438,16 +447,16 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
     // ──────────────── Render ────────────────
     return (
       <div className={cn('space-y-2', className)}>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Checkbox
             id={`${textareaId}-include-title`}
             checked={includeTitle}
             disabled={disabled}
             onChange={onIncludeTitleChange}
             label={
-              <span className="text-xs text-[var(--text-primary)]">
+              <Text as="span" variant="bodySm">
                 {t('notifications.alertStudio.editor.includeTitleLabel', 'Include title in notifications')}
-              </span>
+              </Text>
             }
           />
           <HelpIcon
@@ -466,8 +475,8 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           disabled={disabled}
         />
 
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1">
             <label
               htmlFor={textareaId}
               className={typography.role.metricLabel}
@@ -490,6 +499,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
             />
           </div>
           <UiButton
+            wrapLabel
             ref={presetButtonRef}
             type="button"
             variant="ghost"
@@ -525,6 +535,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           onSelect={insertPlaceholder}
           onClose={closeAutocomplete}
           loading={placeholdersQuery.isLoading}
+          source={placeholdersState}
         />
 
         <PreviewPanel
@@ -542,7 +553,8 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           activeTag={presetFilter}
           onTagChange={setPresetFilter}
           onApply={applyPreset}
-          loading={presetsQuery.isLoading}
+          loading={presetsQuery.isLoading && !presetsState.hasData}
+          source={presetsState}
         />
       </div>
     )
@@ -559,6 +571,7 @@ interface PlaceholderAutocompleteProps {
   items: AlertMessagePlaceholder[]
   cursor: number
   loading: boolean
+  source: DataState<AlertMessagePlaceholder[]>
   onSelect: (item: AlertMessagePlaceholder) => void
   onClose: () => void
 }
@@ -569,6 +582,7 @@ function PlaceholderAutocomplete({
   items,
   cursor,
   loading,
+  source,
   onSelect,
   onClose,
 }: PlaceholderAutocompleteProps) {
@@ -597,14 +611,17 @@ function PlaceholderAutocomplete({
       className="max-h-72 w-72 overflow-y-auto p-1"
       ariaLabel={t('notifications.alertStudio.editor.autocompleteLabel', 'Placeholder suggestions')}
     >
-      {loading ? (
-        <div className="px-2 py-3 text-xs text-[var(--text-muted)]">
+      <StaleRefreshWarning state={source} label={t('notifications.alertStudio.editor.autocompleteLabel', 'Placeholder suggestions')} />
+      {source.fatalError ? (
+        <QueryError error={source.fatalError} onRetry={source.retry ?? undefined} />
+      ) : loading && !source.hasData ? (
+        <Text variant="bodySm" color="muted" className="px-2 py-3">
           {t('common.loading', 'Loading…')}
-        </div>
+        </Text>
       ) : items.length === 0 ? (
-        <div className="px-2 py-3 text-xs text-[var(--text-muted)]">
+        <Text variant="bodySm" color="muted" className="px-2 py-3">
           {t('notifications.alertStudio.editor.autocompleteEmpty', 'No matching placeholders')}
-        </div>
+        </Text>
       ) : (
         grouped.map(([groupName, entries]) => (
           <div key={groupName} className="mb-1 last:mb-0">
@@ -613,6 +630,7 @@ function PlaceholderAutocomplete({
             </div>
             {entries.map(({ item, index }) => (
               <UiButton
+                wrapLabel
                 key={item.key}
                 type="button"
                 variant="ghost"
@@ -625,8 +643,8 @@ function PlaceholderAutocomplete({
                 )}
                 onClick={() => onSelect(item)}
               >
-                <code className="shrink-0 font-mono text-cyan-400">{`{{${item.key}}}`}</code>
-                <span className="flex-1 truncate">{item.label}</span>
+                <Code className="min-w-0 break-words">{`{{${item.key}}}`}</Code>
+                <Text as="span" variant="bodySm" className="min-w-0 flex-1 break-words">{item.label}</Text>
               </UiButton>
             ))}
           </div>
@@ -646,35 +664,39 @@ interface PreviewPanelProps {
 function PreviewPanel({ preview, error, loading, includeTitle }: PreviewPanelProps) {
   const { t } = useTranslation()
   return (
-    <GlassPanel className="p-2 text-xs">
+    <GlassPanel className="min-w-0 p-2">
       <div className={cn('mb-1 flex items-center gap-1', typography.role.metricLabel)}>
         <Icons.show className="h-3 w-3" aria-hidden="true" />
         {t('notifications.alertStudio.editor.previewLabel', 'Preview')}
       </div>
-      {error ? (
-        <div className="text-red-400">{error}</div>
-      ) : loading ? (
-        <div className="text-[var(--text-muted)]">
+      {error && <Text variant="bodySm" role="alert" className="break-words text-rose-300">{error}</Text>}
+      {error && preview != null && (
+        <Text variant="bodySm" color="secondary" role="status">
+          {t('notifications.alertStudio.editor.previewRetained', 'The previous preview remains visible; it may not reflect the current draft.')}
+        </Text>
+      )}
+      {loading ? (
+        <Text variant="bodySm" color="muted">
           {t('common.loading', 'Loading…')}
-        </div>
-      ) : preview == null ? (
-        <div className="text-[var(--text-muted)]">
+        </Text>
+      ) : preview == null && !error ? (
+        <Text variant="bodySm" color="muted">
           {t('notifications.alertStudio.editor.previewEmpty', 'Start typing to see a preview')}
-        </div>
-      ) : (
+        </Text>
+      ) : preview != null ? (
         <div className="space-y-0.5">
           {includeTitle && preview.title && (
-            <div className="font-semibold text-[var(--text-primary)]">{preview.title}</div>
+            <Text variant="bodySm" weight="semibold" className="break-words">{preview.title}</Text>
           )}
-          <div className="text-[var(--text-secondary)] whitespace-pre-line">
+          <Text variant="bodySm" color="secondary" className="whitespace-pre-line break-words">
             {preview.body || (
               <em className="text-[var(--text-muted)]">
                 {t('notifications.alertStudio.editor.previewEmptyBody', '(no body — title carries the alert)')}
               </em>
             )}
-          </div>
+          </Text>
         </div>
-      )}
+      ) : null}
     </GlassPanel>
   )
 }
@@ -685,6 +707,7 @@ interface PresetGalleryModalProps {
   tags: string[]
   activeTag: string | null
   loading: boolean
+  source: DataState<AlertMessagePreset[]>
   onTagChange: (tag: string | null) => void
   onApply: (preset: AlertMessagePreset) => void
   onClose: () => void
@@ -696,6 +719,7 @@ function PresetGalleryModal({
   tags,
   activeTag,
   loading,
+  source,
   onTagChange,
   onApply,
   onClose,
@@ -709,79 +733,60 @@ function PresetGalleryModal({
       size="lg"
     >
       <div className="space-y-3">
-        <p className="text-xs text-[var(--text-secondary)]">
+        <Text variant="bodySm" color="secondary">
           {t(
             'notifications.alertStudio.editor.presetModalIntro',
             'Curated templates for common alert shapes. Click one to apply it; you can edit it afterwards.',
           )}
-        </p>
+        </Text>
+        <StaleRefreshWarning state={source} label={t('notifications.alertStudio.editor.presetModalTitle', 'Message presets')} />
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            <UiButton
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={cn(
-                typography.size['2xs'],
-                'h-auto rounded-full border px-2 py-0.5 tracking-wider font-normal',
-                activeTag == null
-                  ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300'
-                  : 'border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
-              )}
-              onClick={() => onTagChange(null)}
-            >
-              {t('notifications.alertStudio.editor.presetAllTag', 'All')}
-            </UiButton>
-            {tags.map(tag => (
-              <UiButton
-                key={tag}
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  typography.size['2xs'],
-                  'h-auto rounded-full border px-2 py-0.5 tracking-wider font-normal',
-                  activeTag === tag
-                    ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300'
-                    : 'border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
-                )}
-                onClick={() => onTagChange(tag)}
-              >
-                {tag}
-              </UiButton>
-            ))}
-          </div>
+          <PillFilterBar
+            items={[
+              { key: 'all', label: t('notifications.alertStudio.editor.presetAllTag', 'All') },
+              ...tags.map(tag => ({ key: `tag:${tag}`, label: tag })),
+            ]}
+            activeKey={activeTag == null ? 'all' : `tag:${activeTag}`}
+            onChange={key => onTagChange(key === 'all' ? null : key.slice(4))}
+            semanticMode="filters"
+            scrollable={false}
+            ariaLabel={t('notifications.alertStudio.editor.presetTagFilter', 'Filter message presets by tag')}
+            className="flex-wrap"
+          />
         )}
-        {loading ? (
-          <div className="py-6 text-center text-xs text-[var(--text-muted)]">
+        {source.fatalError ? (
+          <QueryError error={source.fatalError} onRetry={source.retry ?? undefined} />
+        ) : loading ? (
+          <Text variant="bodySm" color="muted" className="py-6 text-center">
             {t('common.loading', 'Loading…')}
-          </div>
+          </Text>
         ) : presets.length === 0 ? (
-          <div className="py-6 text-center text-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="muted" className="py-6 text-center">
             {t('notifications.alertStudio.editor.presetEmpty', 'No presets match this filter')}
-          </div>
+          </Text>
         ) : (
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {presets.map(preset => (
               <li key={preset.id}>
                 <UiButton
+                  wrapLabel
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="flex h-auto w-full flex-col items-start gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] p-3 text-left font-normal hover:border-cyan-500/40 hover:bg-[var(--surface-2)]"
                   onClick={() => onApply(preset)}
                 >
-                  <div className="text-xs font-semibold text-[var(--text-primary)]">
+                  <Text as="span" variant="bodySm" weight="semibold" className="break-words">
                     {preset.name}
-                  </div>
+                  </Text>
                   {preset.description && (
-                    <div className={typography.role.caption}>{preset.description}</div>
+                    <Caption className="break-words">{preset.description}</Caption>
                   )}
-                  <code className="mt-1 block w-full overflow-x-auto whitespace-nowrap rounded bg-[var(--surface-2)] px-2 py-1 font-mono text-xs text-cyan-300">
+                  <Code className="mt-1 block w-full whitespace-pre-wrap break-words rounded bg-[var(--surface-2)] px-2 py-1">
                     {preset.template}
-                  </code>
+                  </Code>
                   {preset.example && (
-                    <div className={typography.role.caption}>{preset.example}</div>
+                    <Caption className="break-words">{preset.example}</Caption>
                   )}
                   {preset.tags && preset.tags.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">

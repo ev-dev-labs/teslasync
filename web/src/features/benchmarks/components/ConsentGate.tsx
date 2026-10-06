@@ -40,7 +40,6 @@ export function ConsentGate({
               )}
             </Text>
           </div>
-          </BenchmarkStatusContent>
           {optedIn ? (
             <InlineCallout variant="success" icon={<CheckCircle2 />}>
               {t(
@@ -77,6 +76,7 @@ export function ConsentGate({
           ) : null}
         </div>
       </div>
+      </BenchmarkStatusContent>
     </LayoutCard>
   );
 }

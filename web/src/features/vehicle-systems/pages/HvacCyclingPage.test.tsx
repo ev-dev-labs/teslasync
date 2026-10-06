@@ -88,6 +88,7 @@ vi.mock('@/components/charts', () => ({
       <div role="img" aria-label={ariaLabel}>{typeof children === 'function' ? children({}) : children}</div>
     </div>
   ),
+  ChartLegend: () => null,
   ChartTooltip: () => null,
   Legend: () => null,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -199,6 +200,11 @@ describe('HvacCyclingPage', () => {
     expect(h.historyHook).toHaveBeenLastCalledWith('7');
     expect(screen.getByText('2-run denominator')).toBeInTheDocument();
     expect(screen.getAllByText('Complete support').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Hourly HVAC duty' })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: 'Bar chart of HVAC duty by local hour with observed-time support in the data table',
+    })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Observed duration: 35\.0 min/)).toBeInTheDocument();
   });
 
   it('keeps the header and every shell without a vehicle or duplicate control', () => {
@@ -254,6 +260,7 @@ describe('HvacCyclingPage', () => {
       'Climate history could not refresh. Showing the most recently loaded HVAC evidence.',
     )).toBeInTheDocument();
     expect(screen.getAllByText('Complete support').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText(/^Observed duration: 35\.0 min/)).toBeInTheDocument();
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries).toHaveLength(1);
     fireEvent.click(retries[0]!);
@@ -320,5 +327,6 @@ describe('HvacCyclingPage', () => {
     expect(screen.getByText(
       'The denominator is zero: every active fragment is left-censored, right-censored, or both. No short-cycle rate is published.',
     )).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Qualified short-cycle rate: —/)).toBeInTheDocument();
   });
 });

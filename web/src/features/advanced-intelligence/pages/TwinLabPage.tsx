@@ -5,10 +5,10 @@ import {
   Bar, BarChart, CartesianGrid, CHART_COLORS,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 
-import { ChartCard, Grid, PageLayout } from '@/components/layout';
+import { ChartCard, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -20,6 +20,7 @@ import type { TwinScenarioInput } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, TwinScenarioForm } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
 
 const createScenario = (index: number, name: string): TwinScenarioInput => ({
   name,
@@ -31,7 +32,7 @@ const createScenario = (index: number, name: string): TwinScenarioInput => ({
 });
 
 export default function TwinLabPage() {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -54,6 +55,23 @@ export default function TwinLabPage() {
   };
 
   const result = mutation.data;
+  const summaryMetrics: readonly StatMetric[] = [
+    { occurrenceId: 'model', metricId: 'text', rawValue: result?.model_name,
+      label: t('advancedIntelligence.twin.baseline.model', 'Model'),
+      description: t('advancedIntelligence.twin.brief.model', 'Source-provided model name from this simulation result.') },
+    { occurrenceId: 'efficiency', metricId: 'efficiency', rawValue: result?.baseline.efficiency_wh_per_m,
+      label: t('advancedIntelligence.twin.baseline.efficiency', 'Efficiency'),
+      description: t('advancedIntelligence.twin.brief.efficiency', 'Calibrated energy intensity in preferred energy-per-distance units; missing calibration is not zero consumption.'),
+      display: { formatter: (raw, preferences) => ({
+        value: formatEfficiencyFromSI(raw, preferences.units), unit: '',
+      }) } },
+    { occurrenceId: 'usable-battery', metricId: 'energy', rawValue: result?.baseline.usable_battery_wh,
+      label: t('advancedIntelligence.twin.baseline.capacity', 'Usable battery'),
+      description: t('advancedIntelligence.twin.brief.capacity', 'Returned usable battery estimate for the calibrated baseline.') },
+    { occurrenceId: 'calibration-samples', metricId: 'count', rawValue: result?.baseline.calibration_sample_count,
+      label: t('advancedIntelligence.twin.baseline.samples', 'Calibration samples'),
+      description: t('advancedIntelligence.twin.brief.samples', 'Calibration sample count for this model, not scenario count or confidence.') },
+  ];
   const chartData = useMemo(() => (result?.scenarios ?? []).map((scenario) => ({
     name: scenario.name,
     low: scenario.range_low_m == null
@@ -112,35 +130,25 @@ export default function TwinLabPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <InsightPanel
+        <AnalysisBrief
+          id="advanced-intelligence-twin-brief"
           title={t('advancedIntelligence.twin.baseline.title', 'Calibrated baseline')}
-          empty={!result}
+          description={t('advancedIntelligence.twin.brief.description', 'Vehicle-specific calibration returned by the simulation, with source measurements and uncertainty kept separate from real-world guarantees.')}
+          metrics={summaryMetrics}
+          vehicleId={result?.vehicle_id ?? vehicleId}
+          hasResult={result != null}
+          pending={mutation.isPending}
+          error={mutation.error}
+          quality={result?.data_quality}
+          evidence={result?.evidence}
+          limitations={result?.limitations}
+          generatedAt={result?.generated_at}
+          provenance={t('advancedIntelligence.twin.brief.source', 'Calibrated twin simulation')}
           emptyMessage={t(
             'advancedIntelligence.twin.baseline.empty',
             'Run scenarios to view the calibrated baseline.',
           )}
-        >
-          <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.model', 'Model')}
-              value={result?.model_name ?? null}
-            />
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.efficiency', 'Efficiency')}
-              value={result
-                ? formatEfficiencyFromSI(result.baseline.efficiency_wh_per_m, units.unitPrefs)
-                : null}
-            />
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.capacity', 'Usable battery')}
-              value={units.formatEnergy(result?.baseline.usable_battery_wh)}
-            />
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.samples', 'Calibration samples')}
-              value={result ? fmtInt(result.baseline.calibration_sample_count) : null}
-            />
-          </Grid>
-        </InsightPanel>
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>

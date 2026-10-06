@@ -16,10 +16,11 @@ import {
 
 import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
 import { Badge, Button, Pagination, Text, Caption } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai/AISoftwareUpdateChangelogSummarizer';
+import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -107,12 +108,9 @@ export default function SoftwareUpdatesPage() {
       .map((u) => (u.installed_at ? new Date(u.installed_at).getTime() : NaN))
       .filter((n) => Number.isFinite(n))
       .sort((a, b) => a - b);
-    if (ms.length < 2) return '—';
-    const spanDays = (ms[ms.length - 1] - ms[0]) / 86_400_000;
-    return t('softwareUpdates.kpi.cadenceDays', '{{days}}d', {
-      days: fmtInt(spanDays / (ms.length - 1)),
-    });
-  }, [installedUpdates, t, fmtInt]);
+    if (ms.length < 2) return null;
+    return (ms[ms.length - 1] - ms[0]) / 1000 / (ms.length - 1);
+  }, [installedUpdates]);
 
   // ── Cadence chart (updates per calendar month) ──
   const cadence = useMemo<CadencePoint[]>(() => {
@@ -173,7 +171,7 @@ export default function SoftwareUpdatesPage() {
     { metricId: 'count', occurrenceId: 'software-installed', label: t('softwareUpdates.kpi.installed', 'Installed'), description: t('softwareUpdates.kpi.installedHelp', 'Loaded updates whose status is installed.'), rawValue: observedCount(source.available, installedCount), display: { units: { locale } } },
     { metricId: 'count', occurrenceId: 'software-pending', label: t('softwareUpdates.kpi.pending', 'Pending'), description: t('softwareUpdates.kpi.pendingHelp', 'All loaded updates minus installed updates; includes every other status.'), rawValue: observedCount(source.available, pendingCount), display: { units: { locale } } },
     { metricId: 'text', occurrenceId: 'software-last-installed', label: t('softwareUpdates.kpi.lastInstalled', 'Last installed'), description: t('softwareUpdates.kpi.lastHelp', 'Latest nonempty installation date among loaded installed updates.'), rawValue: lastInstalledAt ? formatDate(lastInstalledAt) : null },
-    { metricId: 'text', occurrenceId: 'software-average-cadence', label: t('softwareUpdates.kpi.avgCadence', 'Avg cadence'), description: t('softwareUpdates.kpi.cadenceHelp', 'Span in days divided by the number of intervals between valid installation dates on this page.'), rawValue: avgCadence === '—' ? null : avgCadence },
+    { metricId: 'duration', occurrenceId: 'software-average-cadence', label: t('softwareUpdates.kpi.avgCadence', 'Avg cadence'), description: t('softwareUpdates.kpi.cadenceHelp', 'Span in days divided by the number of intervals between valid installation dates on this page.'), rawValue: avgCadence, display: { formatter: raw => ({ value: t('softwareUpdates.kpi.cadenceDays', '{{days}}d', { days: fmtInt(raw / 86400) }), unit: '' }) } },
   ];
   const retryContent = isError ? <QueryError error={error} onRetry={handleRetry} /> : undefined;
   const resetAction = presetId !== 'all'
@@ -193,11 +191,12 @@ export default function SoftwareUpdatesPage() {
     >
       {/* 1 — KPI band ─────────────────────────────────────────────── */}
       <FadeIn>
-        <StatStrip
+        <VehicleOperationalBrief
           id="software-update-summary"
           title={t('softwareUpdates.kpi.label', 'Software update summary')}
           metrics={metrics}
           loading={source.initialLoading}
+          available={source.available}
           retained={source.retained}
           error={isError ? t('softwareUpdates.source.failed', 'Update history could not be refreshed. Retry to recover.') : null}
           period={{

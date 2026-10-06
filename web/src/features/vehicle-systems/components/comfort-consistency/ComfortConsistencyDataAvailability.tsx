@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { Grid, LayoutCard } from '@/components/layout';
+import { LayoutCard } from '@/components/layout';
 import {
   Badge,
-  MetricLabel,
   Text,
 } from '@/components/ui';
 
@@ -11,6 +10,7 @@ import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 interface ComfortConsistencyDataAvailabilityProps {
   summary: ComfortConsistencySummary;
@@ -21,7 +21,7 @@ interface Availability {
   key: string;
   label: string;
   available: boolean;
-  support: string;
+  support: number | null;
 }
 
 export function ComfortConsistencyDataAvailability({
@@ -35,51 +35,49 @@ export function ComfortConsistencyDataAvailability({
       key: 'rows',
       label: t('comfortConsistency.availability.rows', 'Endpoint rows'),
       available: summary.rows.returnedRows > 0,
-      support: fmtInt(summary.rows.returnedRows),
+      support: summary.rows.returnedRows,
     },
     {
       key: 'timestamps',
       label: t('comfortConsistency.availability.timestamps', 'Chronological timeline'),
       available: summary.rows.uniqueTimestampRows > 0,
-      support: fmtInt(summary.rows.uniqueTimestampRows),
+      support: summary.rows.uniqueTimestampRows,
     },
     {
       key: 'thermal',
       label: t('comfortConsistency.availability.thermal', 'Thermally complete rows'),
       available: summary.sources.thermallyCompleteRows > 0,
-      support: fmtInt(summary.sources.thermallyCompleteRows),
+      support: summary.sources.thermallyCompleteRows,
     },
     {
       key: 'samples',
       label: t('comfortConsistency.availability.samples', 'Active sample metrics'),
       available: summary.analyzedSamples > 0,
-      support: fmtInt(summary.analyzedSamples),
+      support: summary.analyzedSamples,
     },
     {
       key: 'intervals',
       label: t('comfortConsistency.availability.intervals', 'Duration-weighted metrics'),
       available: summary.intervals.observedActiveIntervals > 0,
-      support: fmtInt(summary.intervals.observedActiveIntervals),
+      support: summary.intervals.observedActiveIntervals,
     },
     {
       key: 'agreement',
       label: t('comfortConsistency.availability.agreement', 'Setpoint agreement'),
       available: summary.meanSetpointDisagreementC != null,
-      support: fmtInt(summary.pairedSetpointAnalyzedSamples),
+      support: summary.pairedSetpointAnalyzedSamples,
     },
     {
       key: 'windows',
       label: t('comfortConsistency.availability.windows', 'Stabilization windows'),
       available: summary.stabilizationWindows.length > 0,
-      support: fmtInt(summary.stabilizationWindows.length),
+      support: summary.stabilizationWindows.length,
     },
     {
       key: 'score',
       label: t('comfortConsistency.availability.score', 'Adjusted consistency score'),
       available: summary.consistencyScore != null,
-      support: summary.consistencyScore != null
-        ? String(summary.consistencyScore)
-        : '—',
+      support: summary.consistencyScore,
     },
   ];
 
@@ -93,26 +91,21 @@ export function ComfortConsistencyDataAvailability({
           )}
         </Text>
         <ComfortConsistencySectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 1, sm: 2, xl: 4 }} gap={3}>
-            {items.map((item) => (
-              <div
-                key={item.key}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <MetricLabel>{item.label}</MetricLabel>
-                  <Badge variant={item.available ? 'success' : 'neutral'}>
-                    {item.available
-                      ? t('comfortConsistency.availability.available', 'Available')
-                      : t('comfortConsistency.availability.withheld', 'Withheld')}
-                  </Badge>
-                </div>
-                <Text as="p" variant="caption" className="mt-2">
-                  {item.support}
-                </Text>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="comfort-consistency-availability-summary"
+            title={t('comfortConsistency.availability.title', 'Data-availability matrix')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('comfortConsistency.availability.subtitle', 'Each analytical layer is published only when its own evidence gate is met.') }}
+            metrics={items.map(item => ({
+              metricId: item.key === 'score' ? 'number' as const : 'count' as const,
+              occurrenceId: item.key, label: item.label, rawValue: item.support,
+              display: { formatter: (raw: number) => ({ value: item.key === 'score' ? String(raw) : fmtInt(raw), unit: '' }) },
+              context: <Badge variant={item.available ? 'success' : 'neutral'}>
+                {item.available ? t('comfortConsistency.availability.available', 'Available')
+                  : t('comfortConsistency.availability.withheld', 'Withheld')}
+              </Badge>,
+            }))}
+          />
         </ComfortConsistencySectionBody>
       </LayoutCard>
     </section>

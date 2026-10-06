@@ -217,28 +217,33 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
           {t('notifications.alertStudio.computedMetric.preview', 'Live preview')}
         </Text>
         {!ready && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="muted">
             {t(
               'notifications.alertStudio.computedMetric.previewIdle',
               'Pick a metric, window, operator, and threshold to preview.',
             )}
-          </p>
+          </Text>
         )}
         {ready && previewMut.isPending && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="muted">
             {t('notifications.alertStudio.computedMetric.previewLoading', 'Computing…')}
-          </p>
+          </Text>
         )}
         {ready && previewError && (
-          <p role="alert" className="text-xs text-rose-300">{previewError}</p>
+          <Text role="alert" variant="bodySm" className="break-words text-rose-300">{previewError}</Text>
         )}
         {ready && !previewMut.isPending && !previewError && !previewData && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="muted">
             {t('notifications.alertStudio.computedMetric.previewEmpty', 'No preview available yet.')}
-          </p>
+          </Text>
         )}
-        {ready && !previewMut.isPending && !previewError && previewData && (
-          <p className="text-xs text-[var(--text-primary)]">
+        {ready && !previewMut.isPending && previewError && previewData && (
+          <Text variant="bodySm" color="secondary" role="status">
+            {t('notifications.alertStudio.editor.previewRetained', 'The previous preview remains visible; it may not reflect the current draft.')}
+          </Text>
+        )}
+        {ready && !previewMut.isPending && previewData && (
+          <Text variant="bodySm" className="break-words">
             {t(
               'notifications.alertStudio.computedMetric.previewValue',
               'Right now this metric is {{value}}{{suffix}} — would {{verdict}} fire.',
@@ -250,7 +255,7 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
                   : t('notifications.alertStudio.computedMetric.wouldNot', 'NOT'),
               },
             )}
-          </p>
+          </Text>
         )}
       </GlassPanel>
     </div>

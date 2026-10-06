@@ -7,6 +7,7 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { Badge, Button, HelperText } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
@@ -28,10 +29,13 @@ function downloadJson(filename: string, data: unknown): void {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  try {
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) {
@@ -52,7 +56,7 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
       if (err instanceof CryptoUnavailableError) {
         setError(err.message);
       } else {
-        setError(err instanceof Error ? err.message : String(err));
+        setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));
       }
     } finally {
       setIsSigning(false);
@@ -61,8 +65,13 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
 
   const handleDownload = async () => {
     if (!signed) return;
-    downloadJson(`${report.report_id}.json`, signed);
-    await recordAuditEvent('report_exported', `Exported signed report ${report.report_id} as JSON.`);
+    setError(null);
+    try {
+      downloadJson(`${signed.report.report_id}.json`, signed);
+      await recordAuditEvent('report_exported', `Exported signed report ${signed.report.report_id} as JSON.`);
+    } catch (err) {
+      setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));
+    }
   };
 
   return (

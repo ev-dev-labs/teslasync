@@ -199,13 +199,18 @@ export default function SharedDrivePage() {
     return <SharedDriveLoading />;
   }
 
+  // A cached session payload must not bypass a failed public-token check.
+  if (error) {
+    return <ExpiredShareView />;
+  }
+
   /* ---- Session share branch ---- */
   if (isSharedSession(rawData)) {
     return <SharedSessionReport data={rawData} />;
   }
 
   /* ---- Error / expired ---- */
-  if (error || !data) {
+  if (!data) {
     return <ExpiredShareView />;
   }
 

@@ -11,13 +11,14 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Server, ArrowLeft, ShieldCheck, Radio, Braces, Plug, ExternalLink,
+  Server, ArrowLeft, ShieldCheck, Radio, Plug, ExternalLink,
   Activity, Boxes, Cpu, Clock, AlertTriangle, BarChart3, Home, HeartPulse,
 } from 'lucide-react'
 
 import { PageLayout } from '@/components/layout'
 import { GlassPanel, Button, Badge, SectionTitle, PanelTitle, Text, Caption } from '@/components/ui'
-import { MetricCard, KVList } from '@/components/data-display'
+import { KVList } from '@/components/data-display'
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
 import { InlineCallout } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -203,39 +204,19 @@ export default function StatusApiDocsPage() {
     >
       {/* 1 — Quick-reference KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('statusApi.kpi.label', 'API surface summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <MetricCard
-            label={t('statusApi.kpi.endpoints', 'Endpoints')}
-            value={String(endpoints.length)}
-            subtitle={t('statusApi.kpi.endpointsSub', 'Documented routes')}
-            icon={<Server className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.transport', 'Transport')}
-            value="REST + SSE"
-            subtitle={t('statusApi.kpi.transportSub', 'Poll or stream')}
-            icon={<Radio className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.payload', 'Payload')}
-            value="JSON"
-            subtitle={t('statusApi.kpi.payloadSub', 'application/json')}
-            icon={<Braces className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.contract', 'Contract')}
-            value={t('statusApi.kpi.contractValue', 'Additive-only')}
-            subtitle={t('statusApi.kpi.contractSub', 'v1 stable')}
-            icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-          />
-        </section>
+        <SystemSummaryBrief
+          title={t('statusApi.kpi.label', 'API surface summary')}
+          description={t('statusApi.brief.description', 'Documented endpoint count, transport, payload, and compatibility policy.')}
+          scope={t('statusApi.brief.scope', 'Bundled documentation, not a runtime availability probe.')}
+          available
+          metrics={[{ metricId: 'count', occurrenceId: 'endpoints', rawValue: endpoints.length,
+            label: t('statusApi.kpi.endpoints', 'Endpoints'), context: t('statusApi.kpi.endpointsSub', 'Documented routes') }]}
+          textMetrics={[
+            { key: 'transport', label: t('statusApi.kpi.transport', 'Transport'), value: 'REST + SSE', detail: t('statusApi.kpi.transportSub', 'Poll or stream') },
+            { key: 'payload', label: t('statusApi.kpi.payload', 'Payload'), value: 'JSON', detail: t('statusApi.kpi.payloadSub', 'application/json') },
+            { key: 'contract', label: t('statusApi.kpi.contract', 'Contract'), value: t('statusApi.kpi.contractValue', 'Additive-only'), detail: t('statusApi.kpi.contractSub', 'v1 stable') },
+          ]}
+        />
       </FadeIn>
 
       {/* 2 — Overview + Integrations bento */}

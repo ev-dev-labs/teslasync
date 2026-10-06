@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display';
-import { LayoutCard } from '@/components/layout';
+import { type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
@@ -56,14 +56,13 @@ export function CabinThermalEvidenceStats({
       hint: t('cabinThermal.kpis.tauHint', 'withheld without an accepted fit'),
     },
   ];
-  // Text is intentional: preserve the original fmtInt / useUnits specialist
-  // formatters exactly, including preference subscription and seconds input.
   const metrics: StatMetric[] = presentCabinThermalLedger(
     summary, resolved, fmtInt, formatDuration,
   ).map((fact, index) => ({
-    metricId: 'text',
+    metricId: fact.id === 'tau' ? 'duration' : 'count',
     occurrenceId: `cabin-thermal-${fact.id}`,
-    rawValue: fact.value,
+    rawValue: fact.raw,
+    display: { formatter: raw => ({ value: fact.id === 'tau' ? formatDuration(raw) : fmtInt(raw), unit: '' }) },
     label: descriptions[index].label,
     description: descriptions[index].hint,
     context: resolved ? descriptions[index].hint : unavailable,
@@ -75,11 +74,12 @@ export function CabinThermalEvidenceStats({
       data-testid="cabin-thermal-kpis"
       aria-label={t('cabinThermal.kpis.aria', 'Cabin thermal evidence accounting summary')}
     >
-      <LayoutCard title={t('cabinThermal.kpis.title', 'Thermal evidence ledger')}>
-        <StatStrip
+        <VehicleOperationalBrief
           id="cabin-thermal-evidence"
+          title={t('cabinThermal.kpis.title', 'Thermal evidence ledger')}
           metrics={metrics}
-          variant="embedded"
+          loading={state.isLoading}
+          available={resolved}
           period={{
             kind: 'unknown',
             label: t('cabinThermal.kpis.returnedHint', 'raw endpoint rows'),
@@ -87,7 +87,6 @@ export function CabinThermalEvidenceStats({
           retained={Boolean(state.refreshError) || (resolved && Boolean(state.isPaused))}
         />
         <CabinThermalQueryStatus summary={summary} state={state} />
-      </LayoutCard>
     </section>
   );
 }

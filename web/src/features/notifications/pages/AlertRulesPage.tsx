@@ -16,7 +16,7 @@ import {
   useSortToggle,
   type Column,
 } from '@/components/ui';
-import { MetricCard, MetricBar, SeverityBadge } from '@/components/data-display';
+import { OperationalBrief, DataProvenanceBadge, MetricBar, SeverityBadge, type StatMetric } from '@/components/data-display';
 import {
   PieChart,
   Pie,
@@ -55,6 +55,7 @@ import { normalizeSeverity, chartTokens } from '@/lib/tokens';
 
 import { AlertRuleEditor } from '../components/AlertRuleEditor';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ─── Constants ──────────────────────────────────────────── */
 
@@ -485,6 +486,22 @@ export default function AlertRulesPage() {
       {t('alertRules.openStudio', 'Create rule')}
     </Button>
   );
+  const ruleProvenance = t('alertRules.brief.provenance', 'Counts cover the loaded rule set before search and channel filtering. Snoozed rules can overlap enabled or disabled rules; snooze status uses the current browser time.');
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'rules-total', rawValue: rulesState.hasData ? stats.total : null,
+      label: t('alertRules.kpi.total', 'Total rules'), context: <Icons.notifications className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-enabled', rawValue: rulesState.hasData ? stats.enabled : null,
+      label: t('common.enabled', 'Enabled'), context: <Icons.power className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-disabled', rawValue: rulesState.hasData ? stats.disabled : null,
+      label: t('common.disabled', 'Disabled'), context: <Icons.pause className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-critical', rawValue: rulesState.hasData ? stats.critical : null,
+      label: t('severity.critical', 'Critical'), context: <Icons.alertCircle className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-snoozed', rawValue: rulesState.hasData ? stats.snoozed : null,
+      label: t('alertRules.status.snoozed', 'Snoozed'), context: <Icons.moon className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-computed', rawValue: rulesState.hasData ? stats.computed : null,
+      label: t('alertRules.kpi.computed', 'Computed'), context: <Icons.activity className="h-5 w-5" aria-hidden="true" /> },
+  ];
+  const operationalMetrics = useOperationalMetrics(metrics);
 
   if (editIdParam !== null) {
     const editId = /^\d+$/.test(editIdParam) ? Number(editIdParam) : NaN;
@@ -542,44 +559,21 @@ export default function AlertRulesPage() {
       <FadeIn>
         <section
           aria-label={t('alertRules.kpis', 'Alert rule metrics')}
-          className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6"
+          className="min-w-0"
         >
-          <MetricCard
-            label={t('alertRules.kpi.total', 'Total rules')}
-            value={rulesState.hasData ? fmtInt(stats.total) : '—'}
-            icon={<Icons.notifications className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('common.enabled', 'Enabled')}
-            value={rulesState.hasData ? fmtInt(stats.enabled) : '—'}
-            icon={<Icons.power className="h-5 w-5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('common.disabled', 'Disabled')}
-            value={rulesState.hasData ? fmtInt(stats.disabled) : '—'}
-            icon={<Icons.pause className="h-5 w-5" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t('severity.critical', 'Critical')}
-            value={rulesState.hasData ? fmtInt(stats.critical) : '—'}
-            icon={<Icons.alertCircle className="h-5 w-5" />}
-            color="red"
-          />
-          <MetricCard
-            label={t('alertRules.status.snoozed', 'Snoozed')}
-            value={rulesState.hasData ? fmtInt(stats.snoozed) : '—'}
-            icon={<Icons.moon className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('alertRules.kpi.computed', 'Computed')}
-            value={rulesState.hasData ? fmtInt(stats.computed) : '—'}
-            icon={<Icons.activity className="h-5 w-5" />}
-            color="blue"
-          />
+          <OperationalBrief compact loading={isLoading} testId="alert-rules-brief"
+            eyebrow={t('alertRules.kpis', 'Alert rule metrics')}
+            title={t('alertRules.brief.title', 'Rule configuration and current snoozes')}
+            description={ruleProvenance} metrics={operationalMetrics}
+            statusLabel={isLoading ? t('common.loading', 'Loading…') : rulesState.status === 'stale'
+              ? t('dataState.stale.title', 'Data may be stale')
+              : rulesState.status === 'offline' ? t('dataState.offline.title', 'Offline')
+                : isError ? t('alertRules.brief.unavailable', 'Rules unavailable')
+                  : t('alertRules.brief.available', 'Rule set loaded')}
+            statusTone={isError || rulesState.status === 'stale' || rulesState.status === 'offline' ? 'warning' : 'neutral'}
+            scope={t('alertRules.brief.scope', 'All loaded rules · before filters')}
+            freshness={<DataProvenanceBadge provenance={rulesState.provenance} status={rulesState.status} updatedAt={rulesState.updatedAt} />}
+            provenance={ruleProvenance} />
         </section>
       </FadeIn>
 

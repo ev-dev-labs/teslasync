@@ -77,7 +77,7 @@ import {
 import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { NotificationFilterBar } from './NotificationFilterBar';
-import { AIInboxAutoCategorization } from '@/components/ai/AIInboxAutoCategorization';
+import { AIInboxAutoCategorization } from '@/components/ai';
 import { NotificationGroupRow } from './NotificationGroupRow';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { PullToRefresh } from '@/components/mobile';

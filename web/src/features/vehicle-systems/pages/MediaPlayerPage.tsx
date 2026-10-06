@@ -325,7 +325,9 @@ export default function MediaPlayerPage() {
       )}
       {(mediaState.retained || historyState.retained) && (
         <Caption role="status">
-          {t('media.modernization.retained', 'Refresh failed; previously loaded data remains visible for the affected source.')}
+          {mediaSource.refreshError || historySource.refreshError
+            ? t('media.modernization.retained', 'Refresh failed; previously loaded data remains visible for the affected source.')
+            : t('dataState.refreshBlocked.message', 'The device is offline, so this section is showing the last values it received.')}
         </Caption>
       )}
 
@@ -477,7 +479,7 @@ export default function MediaPlayerPage() {
 
       {/* ── Row 2 — KPI band ─────────────────────────────────── */}
       <FadeIn delay={0.05}>
-        <section aria-label={t('media.statsSection', 'Listening stats')}>
+        <div>
         <MediaStats
           historySource={historySource} mediaSource={mediaSource}
           filtered={filtered} history={historyQuery.data} latest={latest}
@@ -485,7 +487,7 @@ export default function MediaPlayerPage() {
           mediaLoading={mediaQuery.isLoading} historyError={historyQuery.error}
           mediaError={mediaQuery.error} start={start} end={end}
         />
-        </section>
+        </div>
       </FadeIn>
 
       {/* ── Row 3 — Charts bento ─────────────────────────────── */}
@@ -493,7 +495,7 @@ export default function MediaPlayerPage() {
         <CardGrid label={t('media.chartsSection', 'Media charts')} items={[
           { id: 'media-volume-history', size: 'half', content: <MediaSlot>
           {/* Volume over time — all finite source samples retained */}
-          <section role="region" aria-label={t('media.volumeOverTime', 'Volume over time')}>
+          <section aria-label={t('media.volumeOverTime', 'Volume over time')}>
           <LayoutCard title={t('media.volumeOverTime', 'Volume over time')}>
             <VehicleSourceContent source={historySource} enabled={hasVehicle}
               label={t('media.volumeOverTime', 'Volume over time')}>

@@ -100,10 +100,6 @@ vi.mock('../components/weekly-digest-modernization', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../components/weekly-digest-modernization')>();
   return {
     ...actual,
-    DigestSummary: (props: Parameters<typeof actual.DigestSummary>[0]) => {
-      sectionCaptures[props.comparison ? 'wow-summary' : 'summary-hero'] = props;
-      return <actual.DigestSummary {...props} />;
-    },
     DrivingPanel: (props: Parameters<typeof actual.DrivingPanel>[0]) => {
       sectionCaptures['driving-section'] = props;
       return <actual.DrivingPanel {...props} />;
@@ -120,11 +116,21 @@ vi.mock('../components/weekly-digest-modernization', async (importOriginal) => {
       sectionCaptures['alerts-section'] = props;
       return <actual.AlertsPanel {...props} />;
     },
-    FsdPanel: (props: Parameters<typeof actual.FsdPanel>[0]) => {
-      sectionCaptures['fsd-section'] = props;
-      return <actual.FsdPanel {...props} />;
-    },
   };
+});
+vi.mock('../components/operationalbrief-n-z/FsdOperationalPanel', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/FsdOperationalPanel')>();
+  return { ...actual, FsdOperationalPanel: (props: Parameters<typeof actual.FsdOperationalPanel>[0]) => {
+    sectionCaptures['fsd-section'] = props;
+    return <actual.FsdOperationalPanel {...props} />;
+  } };
+});
+vi.mock('../components/operationalbrief-n-z/DigestOperationalSummary', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/DigestOperationalSummary')>();
+  return { ...actual, DigestOperationalSummary: (props: Parameters<typeof actual.DigestOperationalSummary>[0]) => {
+    sectionCaptures[props.comparison ? 'wow-summary' : 'summary-hero'] = props;
+    return <actual.DigestOperationalSummary {...props} />;
+  } };
 });
 
 import { useWeeklyDigest } from '../components/weekly-digest';
@@ -219,6 +225,12 @@ const panelTitles: Record<string, string> = {
   'fsd-section': 'Supervised driving',
 };
 function section(id: string): HTMLElement {
+  if (id === 'summary-hero' || id === 'wow-summary') {
+    const brief = screen.getByTestId(id === 'summary-hero' ? 'weekly-digest-summary' : 'weekly-digest-comparison');
+    const frame = brief.closest('[data-digest-summary-frame]');
+    if (!(frame instanceof HTMLElement)) throw new Error(`Missing real summary frame: ${id}`);
+    return frame;
+  }
   const heading = screen.getAllByRole('heading', { name: panelTitles[id], level: 3 })
     .find(element => element.hasAttribute('data-card-title'));
   const card = heading?.closest('[data-card]');
@@ -289,6 +301,22 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
 });
 
 describe('WeeklyDigestPage — summary aggregation (drives + charging)', () => {
+  it('reviews numeric weekly metrics and prior-week trends through the real evidence drawer', () => {
+    mockHook.mockReturnValue(makeHook({ metrics: {
+      ...baseMetrics, totalDistanceM: 120000, prevDistanceM: 60000, totalDrives: 12, prevDriveCount: 6,
+      energyUsedWh: 18000, prevEnergyWh: 9000, chargingCost: 36, prevChargingCost: 18, co2Saved: 24, prevCo2: 12,
+    } }));
+    renderPage();
+    const brief = screen.getByTestId('weekly-digest-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getByText(/^120(?:\.00)? km$/)).toBeInTheDocument();
+    expect(within(drawer).getByText('Selected week; based on available history records.')).toBeInTheDocument();
+  });
+
   it('renders measured SI totals and source chart rows through the real shared renderers', () => {
     mockHook.mockReturnValue(makeHook({
       metrics: {

@@ -1,4 +1,8 @@
 import type { ReactNode } from 'react';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$', unit_of_length: 'km', unit_of_temp: 'C' }, settingsUnavailable: false }),
+}));
 import {
   act,
   fireEvent,

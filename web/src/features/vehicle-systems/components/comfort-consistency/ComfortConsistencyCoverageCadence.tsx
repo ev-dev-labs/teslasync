@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { Grid, LayoutCard } from '@/components/layout';
+import { LayoutCard } from '@/components/layout';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import {
-  MetricLabel,
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
@@ -18,15 +18,6 @@ interface ComfortConsistencyCoverageCadenceProps {
   state: ComfortConsistencyQueryState;
   locale: string;
   formatDuration: UnitFormatter;
-}
-
-function CoverageMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="body" className="mt-1">{value}</Text>
-    </div>
-  );
 }
 
 export function ComfortConsistencyCoverageCadence({
@@ -55,49 +46,28 @@ export function ComfortConsistencyCoverageCadence({
           state={state}
           requirement="timestamps"
         >
-          <Grid cols={{ default: 2, xl: 4 }} gap={3}>
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.earliest', 'Earliest valid timestamp')}
-              value={date(coverage.earliestValidMs)}
-            />
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.latest', 'Latest valid timestamp')}
-              value={date(coverage.latestValidMs)}
-            />
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.span', 'Timeline span')}
-              value={formatDuration(coverage.spanS)}
-            />
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.stateCoverage', 'Known-HVAC coverage')}
-              value={coverage.stateCoverage != null
-                ? fmtPercent(coverage.stateCoverage * 100)
-                : '—'}
-            />
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.medianGap', 'Median cadence')}
-              value={formatDuration(coverage.medianGapS)}
-            />
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.p90Gap', 'P90 cadence')}
-              value={formatDuration(coverage.p90GapS)}
-            />
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.maxGap', 'Maximum observed gap')}
-              value={formatDuration(coverage.maxObservedGapS)}
-            />
-            <CoverageMetric
-              label={t('comfortConsistency.coverage.gaps', 'Cadence / long gaps')}
-              value={t(
-                'comfortConsistency.coverage.gapPair',
-                '{{cadence}} / {{long}}',
-                {
-                  cadence: fmtInt(coverage.cadenceIntervals),
-                  long: fmtInt(coverage.longGapCount),
-                },
-              )}
-            />
-          </Grid>
+          <VehicleOperationalBrief embedded id="comfort-consistency-coverage-summary"
+            title={t('comfortConsistency.coverage.title', 'Chronological coverage and cadence')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('comfortConsistency.coverage.subtitle', 'Every unique valid timestamp defines source span and cadence, including rows later excluded from comfort scoring.') }}
+            metrics={[
+              { metricId: 'text', occurrenceId: 'earliest', label: t('comfortConsistency.coverage.earliest', 'Earliest valid timestamp'), rawValue: coverage.earliestValidMs != null ? date(coverage.earliestValidMs) : null },
+              { metricId: 'text', occurrenceId: 'latest', label: t('comfortConsistency.coverage.latest', 'Latest valid timestamp'), rawValue: coverage.latestValidMs != null ? date(coverage.latestValidMs) : null },
+              ...[
+                { key: 'span', label: t('comfortConsistency.coverage.span', 'Timeline span'), value: coverage.spanS },
+                { key: 'median', label: t('comfortConsistency.coverage.medianGap', 'Median cadence'), value: coverage.medianGapS },
+                { key: 'p90', label: t('comfortConsistency.coverage.p90Gap', 'P90 cadence'), value: coverage.p90GapS },
+                { key: 'max', label: t('comfortConsistency.coverage.maxGap', 'Maximum observed gap'), value: coverage.maxObservedGapS },
+              ].map(fact => ({
+                metricId: 'duration' as const, occurrenceId: fact.key, label: fact.label, rawValue: fact.value,
+                display: { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) },
+              })),
+              { metricId: 'percent', occurrenceId: 'state-coverage', label: t('comfortConsistency.coverage.stateCoverage', 'Known-HVAC coverage'), rawValue: coverage.stateCoverage != null ? coverage.stateCoverage * 100 : null, display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) } },
+              { metricId: 'count', occurrenceId: 'gap-pair', label: t('comfortConsistency.coverage.gaps', 'Cadence / long gaps'), rawValue: coverage.cadenceIntervals,
+                display: { formatter: raw => ({ value: t('comfortConsistency.coverage.gapPair', '{{cadence}} / {{long}}', { cadence: fmtInt(raw), long: fmtInt(coverage.longGapCount) }), unit: '' }) } },
+            ]}
+          />
         </ComfortConsistencySectionBody>
       </LayoutCard>
     </section>

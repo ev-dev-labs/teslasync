@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { GlassPanel, MetricLabel, MetricValue, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel } from '@/components/ui';
+import { type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import type { ChargeRateStats } from './helpers';
@@ -13,33 +15,37 @@ export function ChargeRatePanel({ stats }: ChargeRatePanelProps) {
   const { t } = useTranslation();
   const { formatDuration, formatEnergy, formatPower } = useUnits();
 
-  const metrics = [
+  const metrics: StatMetric[] = [
     {
-      key: 'average',
+      occurrenceId: 'average', metricId: 'power',
       label: t('charging.deliveryRate.average', 'Average delivery rate'),
-      value: formatPower(stats.averagePowerW),
-      detail: t(
+      rawValue: stats.averagePowerW,
+      display: { formatter: raw => ({ value: formatPower(raw), unit: '' }) },
+      context: t(
         'charging.deliveryRate.averageDetail',
         'Time-weighted power across completed sessions with usable energy and duration.',
       ),
     },
     {
-      key: 'best',
+      occurrenceId: 'best', metricId: 'power',
       label: t('charging.deliveryRate.best', 'Highest-rate session'),
-      value: formatPower(stats.best.powerW),
-      detail: formatDateTime(stats.best.date),
+      rawValue: stats.best.powerW,
+      display: { formatter: raw => ({ value: formatPower(raw), unit: '' }) },
+      context: formatDateTime(stats.best.date),
     },
     {
-      key: 'worst',
+      occurrenceId: 'worst', metricId: 'power',
       label: t('charging.deliveryRate.worst', 'Lowest-rate session'),
-      value: formatPower(stats.worst.powerW),
-      detail: formatDateTime(stats.worst.date),
+      rawValue: stats.worst.powerW,
+      display: { formatter: raw => ({ value: formatPower(raw), unit: '' }) },
+      context: formatDateTime(stats.worst.date),
     },
     {
-      key: 'observed',
+      occurrenceId: 'observed', metricId: 'energy',
       label: t('charging.deliveryRate.observed', 'Observed delivery'),
-      value: formatEnergy(stats.totalEnergyWh),
-      detail: t(
+      rawValue: stats.totalEnergyWh,
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
+      context: t(
         'charging.deliveryRate.observedDetail',
         '{{duration}} across {{count}} sessions',
         {
@@ -48,33 +54,18 @@ export function ChargeRatePanel({ stats }: ChargeRatePanelProps) {
         },
       ),
     },
-  ] as const;
+  ];
 
   return (
     <GlassPanel className="p-5">
-      <div className="mb-4 flex items-start gap-2">
+      <div className="mb-2 flex items-start gap-2">
         <Activity className="mt-0.5 h-4 w-4 text-emerald-300" aria-hidden="true" />
-        <div>
-          <PanelTitle>{t('charging.deliveryRate.title', 'Charging delivery rate')}</PanelTitle>
-          <Text as="p" size="xs" color="muted" className="mt-1">
-            {t(
-              'charging.deliveryRate.hint',
-              'Observed energy per elapsed hour; this is power delivery, not wall-to-battery efficiency.',
-            )}
-          </Text>
-        </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <GlassPanel key={metric.key} className="p-4">
-            <MetricValue className="text-xl">{metric.value}</MetricValue>
-            <MetricLabel className="mt-1">{metric.label}</MetricLabel>
-            <Text as="p" size="2xs" color="muted" className="mt-1">
-              {metric.detail}
-            </Text>
-          </GlassPanel>
-        ))}
-      </div>
+      <ChargingSummaryBrief metrics={metrics}
+        title={t('charging.deliveryRate.title', 'Charging delivery rate')}
+        description={t('charging.deliveryRate.hint', 'Observed energy per elapsed hour; this is power delivery, not wall-to-battery efficiency.')}
+        period={{ kind: 'unknown', label: t('charging.brief.loadedSessions', 'Loaded charging sessions'),
+          reason: t('charging.brief.deliveryScope', 'Computed from the loaded history, independently of collection and search filters; only usable energy and positive completed-session duration contribute.') }} />
     </GlassPanel>
   );
 }

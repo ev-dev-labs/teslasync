@@ -114,7 +114,7 @@ describe('Energy flow modernization — real shared surfaces', () => {
     }
     expect(within(card('Energy flow diagram')).getByText('12.00 kW')).toBeInTheDocument();
     const efficiency = card('Efficiency metrics');
-    const context = efficiency.querySelector('[data-stat-context]');
+    const context = efficiency.querySelector('[data-battery-detail-context]');
     expect(context).not.toBeNull();
     expect(within(context as HTMLElement).getByText('Excellent')).toBeInTheDocument();
   });

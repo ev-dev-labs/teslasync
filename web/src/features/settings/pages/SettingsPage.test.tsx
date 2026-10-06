@@ -227,11 +227,10 @@ function renderPage(initialEntries: string[] = ['/settings']) {
   )
 }
 
-/** Return the StatCard root element that contains the given label text. */
+/** Return the actual Brief metric occurrence containing the label. */
 function statCard(label: string): HTMLElement {
   const labelEl = screen.getByText(label)
-  // label <span> → header <div> → Card root <div>
-  const card = labelEl.closest('div')?.parentElement
+  const card = labelEl.closest('[data-operational-metric]')
   if (!card) throw new Error(`no card root found for label "${label}"`)
   return card as HTMLElement
 }
@@ -249,6 +248,18 @@ beforeEach(() => {
 // ── KPI band — loaded metric derivation ─────────────────────────────────────
 
 describe('SettingsPage — KPI band derivation', () => {
+  it('retains configuration context and the existing cost denomination in the real Review drawer', () => {
+    renderPage()
+    expect(statCard('Energy cost')).toHaveAttribute('data-value-state', 'value')
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    expect(within(drawer).getByText('$0.12')).toBeInTheDocument()
+    expect(within(drawer).getByText('per kWh')).toBeInTheDocument()
+    expect(within(drawer).getByText('100%')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-general')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Data export/i })).toBeInTheDocument()
+  })
+
   it('renders all seven preference cards from settings + font prefs (metric / rated defaults)', () => {
     renderPage()
 
@@ -395,14 +406,15 @@ describe('SettingsPage — loading & empty placeholders', () => {
     expect(screen.getByTestId('stub-workspace')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).toBeNull()
   })
-  it('renders skeleton cards (no metric labels) while settings load', () => {
+  it('retains Brief labels with busy placeholders while settings load', () => {
     setSettings(undefined, { isLoading: true })
 
     renderPage()
 
-    // StatCard swaps its body for skeletons when loading → labels not painted.
-    expect(screen.queryByText('Distance')).toBeNull()
-    expect(screen.queryByText('Currency')).toBeNull()
+    expect(screen.getByText('Distance')).toBeInTheDocument()
+    expect(screen.getByText('Currency')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-preferences-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('settings-preferences-summary').querySelectorAll('[data-operational-value]')).toHaveLength(0)
     // The rest of the page still renders (never a frozen/blank screen).
     expect(screen.getByRole('link', { name: /Data export/i })).toBeInTheDocument()
   })

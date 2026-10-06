@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { fmtInt as libFmtInt } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
-import { neonColorMap, typography, type NeonColor } from '@/lib/tokens';
+import { typography, type NeonColor } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 
 import { PageLayout } from '@/components/layout';
@@ -24,7 +24,8 @@ import {
   HelperText,
   type Column,
 } from '@/components/ui';
-import { MetricCard, TimeStamp } from '@/components/data-display';
+import { TimeStamp } from '@/components/data-display';
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import {
   Skeleton,
   EmptyState,
@@ -364,41 +365,24 @@ function FormatInfoCards() {
 function DataOverviewCard({
   overview,
   isLoading,
+  retained = false,
 }: {
   overview: DataOverview | undefined;
   isLoading: boolean;
+  retained?: boolean;
 }) {
   const { t } = useTranslation();
   return (
-    <GlassPanel className="p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Icons.database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        <PanelTitle>{t('dataExport.dataOverview', 'Data overview')}</PanelTitle>
-      </div>
-      {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-        </div>
-      ) : overview ? (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2">
-            <Icons.vehicle className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
-            <Text size="xs" color="secondary">
-              {fmtInt(overview.drives)} {t('dataExport.drives', 'Drives')}
-            </Text>
-          </div>
-          <div className="flex items-center gap-2">
-            <Icons.charging className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
-            <Text size="xs" color="secondary">
-              {fmtInt(overview.charging_sessions)} {t('dataExport.chargingSessions', 'Charging sessions')}
-            </Text>
-          </div>
-        </div>
-      ) : (
-        <Text as="p" variant="caption">{t('dataExport.unavailable', 'Unavailable')}</Text>
-      )}
-    </GlassPanel>
+    <SystemSummaryBrief
+      title={t('dataExport.dataOverview', 'Data overview')}
+      description={t('dataExport.brief.recordsDescription', 'Record counts reported by drive and charging export jobs in the loaded history.')}
+      scope={t('dataExport.brief.recordsScope', 'Exported records may overlap between jobs; these are not unique database session totals.')}
+      available={overview != null} loading={isLoading} retained={retained}
+      metrics={[
+        { metricId: 'count', occurrenceId: 'exported-drives', rawValue: overview?.drives, label: t('dataExport.drives', 'Drives') },
+        { metricId: 'count', occurrenceId: 'exported-charging', rawValue: overview?.charging_sessions, label: t('dataExport.chargingSessions', 'Charging sessions') },
+      ]}
+    />
   );
 }
 
@@ -439,13 +423,15 @@ function CustomDateRange({
 function StatsRow({
   jobs,
   isLoading,
+  retained = false,
 }: {
   jobs: ExportJobSummary[] | undefined;
   isLoading: boolean;
+  retained?: boolean;
 }) {
   const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
-  const totalExports = jobs?.length ?? '—';
+  const totalExports = jobs?.length ?? null;
 
   const totalSize = useMemo(
     () => (jobs ?? []).reduce((sum, j) => sum + (j.file_size ?? 0), 0),
@@ -470,44 +456,27 @@ function StatsRow({
     return formatRelative(sorted[0].created_at);
   }, [jobs]);
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} height={80} rounded />
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <MetricCard
-        label={t('dataExport.totalExports', 'Total exports')}
-        value={totalExports}
-        icon={<Icons.package className="h-4 w-4" />}
-        color="cyan"
-      />
-      <MetricCard
-        label={t('dataExport.totalSize', 'Total size')}
-        value={jobs == null ? '—' : formatBytes(totalSize, { zeroAsEmpty: true })}
-        icon={<Icons.hardDrive className="h-4 w-4" />}
-        color="blue"
-      />
-      <MetricCard
-        label={t('dataExport.mostExported', 'Most exported')}
-        value={mostExportedType}
-        icon={<Icons.analytics className="h-4 w-4" />}
-        color="purple"
-        subtitle={t('dataExport.byCount', 'By count')}
-      />
-      <MetricCard
-        label={t('dataExport.lastExport', 'Last export')}
-        value={lastExport}
-        icon={<Icons.clock className="h-4 w-4" />}
-        color="green"
-      />
-    </div>
+    <SystemSummaryBrief
+      title={t('dataExport.stats.aria', 'Export summary metrics')}
+      description={t('dataExport.brief.description', 'Export counts, recorded file bytes, most frequent export type, and latest creation time from the loaded job history.')}
+      scope={t('dataExport.brief.scope', 'Loaded export jobs; no server-wide total or reporting window is supplied.')}
+      available={jobs != null} loading={isLoading} retained={retained}
+      metrics={[
+        { metricId: 'count', occurrenceId: 'total-exports', rawValue: totalExports, label: t('dataExport.totalExports', 'Total exports') },
+        { metricId: 'bytes', occurrenceId: 'total-size', rawValue: jobs == null ? null : totalSize,
+          label: t('dataExport.totalSize', 'Total size'),
+          context: t('dataExport.brief.bytesContext', 'Sum of recorded file sizes; jobs without a file size contribute no recorded bytes.'),
+          display: { formatter: (raw) => ({ value: formatBytes(raw, { zeroAsEmpty: false }) }) } },
+      ]}
+      textMetrics={[
+        { key: 'most-exported', label: t('dataExport.mostExported', 'Most exported'), value: mostExportedType,
+          valueState: mostExportedType === '—' ? 'missing' : 'value', detail: t('dataExport.byCount', 'By count') },
+        { key: 'last-export', label: t('dataExport.lastExport', 'Last export'), value: lastExport,
+          valueState: lastExport === '—' ? 'missing' : 'value',
+          detail: t('dataExport.brief.lastContext', 'Latest job creation time, not completion or download time.') },
+      ]}
+    />
   );
 }
 
@@ -1274,9 +1243,7 @@ export default function DataExportPage() {
 
       {/* 1 — KPI band */}
       <FadeIn>
-        <section aria-label={t('dataExport.stats.aria', 'Export summary metrics')}>
-          <StatsRow jobs={jobs} isLoading={jobsLoading} />
-        </section>
+        <StatsRow jobs={jobs} isLoading={jobsLoading} retained={jobsState.hasData && jobsQuery.isError} />
       </FadeIn>
 
       {/* 2 — Primary bento: export wizard (hero) + context rail */}
@@ -1297,7 +1264,7 @@ export default function DataExportPage() {
             />
           </div>
           <div className="space-y-4 xl:col-span-1">
-            <DataOverviewCard overview={dataOverview} isLoading={jobsLoading} />
+            <DataOverviewCard overview={dataOverview} isLoading={jobsLoading} retained={jobsState.hasData && jobsQuery.isError} />
             <FormatInfoCards />
           </div>
         </section>

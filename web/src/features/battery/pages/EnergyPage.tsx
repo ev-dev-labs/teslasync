@@ -9,8 +9,10 @@ import {
 
 import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
 import {
-  BatteryPanelGrid, BatterySpecialistSummary, CostComparisonCard, LifetimeStat,
+  BatteryPanelGrid, BatterySpecialistSummary, CostComparisonCard,
 } from '../components/modernization';
+import type { BatterySummaryMetric } from '../components/modernization/BatterySpecialistSummary';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import {
   DataTable, Badge, Text, Caption,
   HelperText, type Column,
@@ -624,17 +626,19 @@ export default function EnergyPage() {
     costedSessions.length > 0
       ? `${costCoverageComplete ? '' : '≥ '}${formatCurrency(totalCost)}`
       : '—';
-  const kpis: { key: string; label: string; value: string; icon: ReactNode; color: NeonColor }[] = [
+  const kpis: (BatterySummaryMetric & { color: NeonColor })[] = [
     {
       key: 'costPerDist',
       label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }),
       value: costPerDistance != null ? formatCurrency(costPerDistance) : '—',
+      metricId: 'currency', rawValue: costPerDistance,
       icon: <DollarSign className="h-4 w-4" />, color: 'cyan',
     },
     {
       key: 'costPerKwh',
       label: t('energy.metric.costPerKwh', 'Cost per kWh'),
       value: costPerKwh != null ? formatCurrency(costPerKwh) : '—',
+      metricId: 'currency', rawValue: costPerKwh,
       icon: <Zap className="h-4 w-4" />, color: 'green',
     },
     {
@@ -643,6 +647,7 @@ export default function EnergyPage() {
       value: !statsDataState.hasData
         ? '—'
         : `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`,
+      metricId: 'distance', rawValue: statsDataState.hasData ? totalDistance : null,
       icon: <Route className="h-4 w-4" />, color: 'blue',
     },
     {
@@ -651,18 +656,21 @@ export default function EnergyPage() {
       value: !sessionsDataState.hasData
         ? '—'
         : `${sessionCapReached ? '≥ ' : ''}${sessions.length}`,
+      metricId: 'count', rawValue: sessionsDataState.hasData ? sessions.length : null,
       icon: <BatteryCharging className="h-4 w-4" />, color: 'purple',
     },
     {
       key: 'monthlyEst',
       label: t('energy.metric.monthlyEst', 'Monthly est.'),
       value: monthlyProjectedCost != null ? formatCurrency(monthlyProjectedCost) : '—',
+      metricId: 'currency', rawValue: monthlyProjectedCost,
       icon: <CalendarDays className="h-4 w-4" />, color: 'amber',
     },
     {
       key: 'yearlyEst',
       label: t('energy.metric.yearlyEst', 'Yearly est.'),
       value: yearlyProjectedCost != null ? formatCurrency(yearlyProjectedCost) : '—',
+      metricId: 'currency', rawValue: yearlyProjectedCost,
       icon: <TrendingUp className="h-4 w-4" />, color: 'red',
     },
   ];
@@ -850,6 +858,7 @@ export default function EnergyPage() {
       )}
 
       <OperationalBrief
+        compact
         testId="energy-operational-brief"
         eyebrow={t('operations.energy.eyebrow', 'Energy posture')}
         title={t('operations.energy.title', 'Consumption, efficiency, and cost in one operating view')}
@@ -887,6 +896,8 @@ export default function EnergyPage() {
         metrics={[
           {
             key: 'consumption',
+            rawValue: scopedDriveEnergyWh > 0 ? scopedDriveEnergyWh : null,
+            valueState: scopedDriveEnergyWh > 0 ? 'value' : 'missing',
             label: t('operations.energy.consumption', 'Drive consumption'),
             value: scopedDriveEnergyWh > 0 ? formatEnergy(scopedDriveEnergyWh) : '—',
             detail: t(
@@ -897,6 +908,8 @@ export default function EnergyPage() {
           },
           {
             key: 'efficiency',
+            rawValue: avgEfficiency > 0 ? avgEfficiency : null,
+            valueState: avgEfficiency > 0 ? 'value' : 'missing',
             label: t('energy.gauge.efficiency', 'Efficiency'),
             value: avgEfficiency > 0
               ? `${fmtInt(toEfficiencyDisplay(avgEfficiency))} ${efficiencyUnit}`
@@ -909,6 +922,8 @@ export default function EnergyPage() {
           },
           {
             key: 'idle-drain',
+            rawValue: idleDrainRate,
+            valueState: idleDrainRate == null ? 'missing' : 'value',
             label: t('operations.energy.idleDrain', 'Idle drain'),
             value: idleDrainQuery.isLoading
               ? t('common.loading', 'Loading…')
@@ -923,6 +938,8 @@ export default function EnergyPage() {
           },
           {
             key: 'charging-loss',
+            rawValue: null,
+            valueState: 'missing',
             label: t('operations.energy.chargingLoss', 'Charging losses'),
             value: t('operations.energy.notMeasured', 'Not measured'),
             detail: t(
@@ -933,6 +950,8 @@ export default function EnergyPage() {
           },
           {
             key: 'cost',
+            rawValue: costedSessions.length > 0 ? totalCost : null,
+            valueState: costedSessions.length > 0 ? 'value' : 'missing',
             label: t('operations.energy.recordedCost', 'Recorded cost'),
             value: recordedCostValue,
             detail: t(
@@ -944,6 +963,8 @@ export default function EnergyPage() {
           },
           {
             key: 'projection',
+            rawValue: projectedMonthlyConsumptionWh,
+            valueState: projectedMonthlyConsumptionWh == null ? 'missing' : 'value',
             label: t('operations.energy.projectedUsage', 'Projected 30-day use'),
             value: projectedMonthlyConsumptionWh != null
               ? formatEnergy(projectedMonthlyConsumptionWh)
@@ -987,35 +1008,29 @@ export default function EnergyPage() {
           </Text>
           {isLoading ? <ChartBlockSkeleton height={200} /> : peakEfficiencyDay != null && bestEfficiencyDay != null ? (
             <>
-              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <MetricTile
-                  value={toEfficiencyDisplay(peakEfficiencyDay.efficiency_wh_per_m)}
-                  unit={efficiencyUnit}
-                  label={t('energy.drivers.highestDay', 'Highest observed day')}
-                  sublabel={formatDayKey(peakEfficiencyDay.date, { style: 'long' })}
-                  accentClass="text-amber-300"
-                />
-                <MetricTile
-                  value={toEfficiencyDisplay(bestEfficiencyDay.efficiency_wh_per_m)}
-                  unit={efficiencyUnit}
-                  label={t('energy.drivers.lowestDay', 'Lowest observed day')}
-                  sublabel={formatDayKey(bestEfficiencyDay.date, { style: 'long' })}
-                  accentClass="text-emerald-300"
-                />
-                <MetricTile
-                  value={efficiencySpreadPct}
-                  unit="%"
-                  label={t('energy.drivers.spread', 'Observed daily spread')}
-                  sublabel={t('energy.drivers.spreadHint', 'Difference relative to weighted average')}
-                  accentClass="text-cyan-300"
-                />
-                <MetricTile
-                  value={toDistanceDisplay(peakEfficiencyDay.distance_m)}
-                  unit={distanceUnit}
-                  label={t('energy.drivers.distanceContext', 'Distance on highest day')}
-                  sublabel={t('energy.drivers.contextNotCause', 'Context only, not causal attribution')}
-                />
-              </div>
+              <BatteryEvidenceBrief
+                title={t('energy.drivers.title', 'Efficiency driver investigation')}
+                period={{ kind: 'unknown', label: t('operations.scope.days', '{{count}} days', { count: periodDays }),
+                  reason: t('energy.drivers.contextNotCause', 'Context only, not causal attribution') }}
+                retained={statsDataState.status === 'stale'}
+                metrics={[
+                  { metricId: 'efficiency', occurrenceId: 'highest-day', rawValue: peakEfficiencyDay.efficiency_wh_per_m,
+                    label: t('energy.drivers.highestDay', 'Highest observed day'),
+                    display: { formatter: raw => ({ value: fmtNumber(toEfficiencyDisplay(raw)), unit: efficiencyUnit }) },
+                    context: formatDayKey(peakEfficiencyDay.date, { style: 'long' }) },
+                  { metricId: 'efficiency', occurrenceId: 'lowest-day', rawValue: bestEfficiencyDay.efficiency_wh_per_m,
+                    label: t('energy.drivers.lowestDay', 'Lowest observed day'),
+                    display: { formatter: raw => ({ value: fmtNumber(toEfficiencyDisplay(raw)), unit: efficiencyUnit }) },
+                    context: formatDayKey(bestEfficiencyDay.date, { style: 'long' }) },
+                  { metricId: 'percent', occurrenceId: 'observed-spread', rawValue: efficiencySpreadPct,
+                    label: t('energy.drivers.spread', 'Observed daily spread'),
+                    context: t('energy.drivers.spreadHint', 'Difference relative to weighted average') },
+                  { metricId: 'distance', occurrenceId: 'highest-day-distance', rawValue: peakEfficiencyDay.distance_m,
+                    label: t('energy.drivers.distanceContext', 'Distance on highest day'),
+                    display: { formatter: raw => ({ value: fmtNumber(toDistanceDisplay(raw)), unit: distanceUnit }) },
+                    context: t('energy.drivers.contextNotCause', 'Context only, not causal attribution') },
+                ]}
+              />
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Link
                   to="/temperature-impact"
@@ -1107,26 +1122,22 @@ export default function EnergyPage() {
           <LayoutCard title={t('energy.lifetime.title', 'Lifetime metrics')}>
             {liveChargingQuery.isLoading && !liveChargingDataState.hasData && <Skeleton className="mb-3 h-16 rounded-xl" />}
             {liveChargingDataState.fatalError && <QueryError error={liveChargingDataState.fatalError} onRetry={() => { void liveChargingQuery.refetch(); }} />}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <LifetimeStat
-                label={t('energy.lifetime.energyUsed', 'Lifetime energy used')}
-                value={liveCharging?.lifetime_energy_used != null ? fmtNumber(liveCharging.lifetime_energy_used) : '—'}
-                unit={liveCharging?.lifetime_energy_used != null ? 'kWh' : undefined}
-                desc={t('energy.lifetime.energyUsedDesc', 'Total energy consumed since vehicle delivery')}
-                accent={liveCharging?.lifetime_energy_used != null ? 'text-cyan-300' : 'text-[var(--text-muted)]'}
-              />
-              <LifetimeStat
-                label={t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
-                value={
-                  !sessionsDataState.hasData
-                    ? '—'
-                    : `${sessionCapReached ? '≥ ' : ''}${fmtNumber(toEnergyDisplay(totalChargingEnergyWh))}`
-                }
-                unit={!sessionsDataState.hasData ? undefined : energyUnit}
-                desc={t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
-                accent="text-emerald-300"
-              />
-            </div>
+            <BatteryEvidenceBrief
+              title={t('energy.lifetime.title', 'Lifetime metrics')}
+              retained={liveChargingDataState.status === 'stale' || sessionsDataState.status === 'stale'}
+              period={{ kind: 'unknown', label: t('energy.lifetime.brief.scope', 'Lifetime BMS reading and selected charging window'),
+                reason: t('energy.lifetime.brief.description', 'The lifetime BMS counter is reported in kWh; charging energy uses the selected date range and may be a lower bound when returned sessions reach the cap.') }}
+              metrics={[
+                { metricId: 'number', occurrenceId: 'lifetime-energy', rawValue: liveCharging?.lifetime_energy_used,
+                  label: t('energy.lifetime.energyUsed', 'Lifetime energy used'),
+                  display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kWh' }) },
+                  description: t('energy.lifetime.energyUsedDesc', 'Total energy consumed since vehicle delivery') },
+                { metricId: 'energy', occurrenceId: 'period-energy', rawValue: sessionsDataState.hasData ? totalChargingEnergyWh : null,
+                  label: t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' }),
+                  display: { formatter: raw => ({ value: `${sessionCapReached ? '≥ ' : ''}${fmtNumber(toEnergyDisplay(raw))}`, unit: energyUnit }) },
+                  description: t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range') },
+              ]}
+            />
           </LayoutCard>
         </BatteryPanelGrid>
       </FadeIn>

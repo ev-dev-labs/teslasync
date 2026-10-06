@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FileText, Clock, AlertTriangle, Activity,
+  FileText,
   Layers, RefreshCw,
 } from 'lucide-react';
 
@@ -10,7 +10,6 @@ import {
   GlassPanel, Button, Badge,
   PanelTitle, Caption, Text,
 } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -29,6 +28,7 @@ import {
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { ApiLogsBackendErrors } from '../components/ApiLogsBackendErrors';
 import { ApiLogsFrontendErrors } from '../components/ApiLogsFrontendErrors';
+import { ApiLogsSummary } from '../components/statstrip-api-quality/ApiLogsSummary';
 
 /* ------------------------------------------------------------------ */
 /*  Local helpers                                                      */
@@ -70,7 +70,7 @@ function serviceBadgeConfig(service: string): { label: string; variant: LogBadge
 /* ------------------------------------------------------------------ */
 
 export default function ApiLogsPage() {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('apiLogs.title', 'API logs'));
   const serviceConfig = useCallback((svc: string) => {
@@ -91,7 +91,7 @@ export default function ApiLogsPage() {
   const limit = [25, 50, 100].includes(requestedSize) ? requestedSize : 25;
 
   // The header owns the `from`/`to` window for both KPIs and request rows.
-  const { startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive, timezone, presetId } = useRangeState({
     persistKey: 'api-logs.range',
     defaultPresetId: 'all',
   });
@@ -261,42 +261,8 @@ export default function ApiLogsPage() {
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section
-          aria-label={t('apiLogs.title', 'API logs')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <StatCard
-            className="!min-h-0 !gap-1 !p-3"
-            loading={statsLoading && !stats}
-            icon={<FileText className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.totalCalls', 'Total calls')}
-            value={stats?.total_calls != null ? fmtInt(stats.total_calls) : '—'}
-          />
-          <StatCard
-            className="!min-h-0 !gap-1 !p-3"
-            loading={statsLoading && !stats}
-            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.errorRate', 'Error rate')}
-            value={stats?.error_rate != null ? `${fmtNumber(stats.error_rate)}%` : '—'}
-            trend={stats && stats.error_rate > 5 && stats.error_count != null
-              ? { direction: 'up' as const, value: String(stats.error_count), positive: false }
-              : undefined}
-          />
-          <StatCard
-            className="!min-h-0 !gap-1 !p-3"
-            loading={statsLoading && !stats}
-            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.avgDuration', 'Avg duration')}
-            value={stats?.avg_duration_ms != null ? `${fmtInt(stats.avg_duration_ms)}ms` : '—'}
-          />
-          <StatCard
-            className="!min-h-0 !gap-1 !p-3"
-            loading={statsLoading && !stats}
-            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.last24h', 'Last 24h')}
-            value={stats?.last_24h != null ? fmtInt(stats.last_24h) : '—'}
-          />
-        </section>
+        <ApiLogsSummary state={statsState} loading={statsLoading && !stats}
+          start={startInstant} endExclusive={endInstantExclusive} timezone={timezone} allTime={presetId === 'all'} />
       </FadeIn>
 
       <FadeIn delay={0.05}>

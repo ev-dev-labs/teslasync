@@ -20,8 +20,8 @@ import {
 } from '../components/charging-curve';
 import { sessionLabel, generateChargingCurve, avg, durationMinutes } from '../components/charging-curve/helpers';
 import type { SummaryStats } from '../components/charging-curve/types';
-import { AIChargingCurveFingerprintClustering } from '@/components/ai/AIChargingCurveFingerprintClustering';
-import { AIMLChargingCurveClustering } from '@/components/ai/AIMLChargingCurveClustering';
+import { AIChargingCurveFingerprintClustering } from '@/components/ai';
+import { AIMLChargingCurveClustering } from '@/components/ai';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import {

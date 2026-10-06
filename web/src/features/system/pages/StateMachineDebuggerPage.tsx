@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
+import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
 
 import type { Column } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import {
@@ -29,18 +28,20 @@ import { FSM_TYPE_OPTIONS } from '@/types/fsm';
 import { StateBadge } from '../components/StateBadge';
 import { TimeStamp } from '@/components/data-display';
 import { FSMStateDiagram } from '../components/FSMStateDiagram';
-import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
+import { FSMHealthPanel } from '../components/FSMHealthPanel';
 import { FSMTimelineChart } from '../components/FSMTimelineChart';
 import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
 import { StateTimeline } from '../components/state-machine/StateTimeline';
 import { LiveControls } from '../components/state-machine/LiveControls';
 import { SnapshotInspector } from '../components/state-machine/SnapshotInspector';
-import { AIStateMachineDebuggerNarrator } from '@/components/ai/AIStateMachineDebuggerNarrator';
+import { AIStateMachineDebuggerNarrator } from '@/components/ai';
 import {
   windowTransitions,
   nextWiderPreset,
 } from '../components/state-machine/windowTransitions';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FSMOperationalBrief } from '../components/statstrip-fsm/FSMOperationalBrief';
+import type { StatPeriod } from '@/lib/metric-reference';
 
 /* ─── Vehicle state styling (for live state hero) ─── */
 const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
@@ -176,10 +177,6 @@ export default function StateMachineDebuggerPage() {
   } = transQuery;
   const transError = transTrust.fatalError;
 
-  // The KPI band mixes transition-derived cards with the live-state card, so
-  // either query failing poisons it; retry refetches both sources.
-  const kpiError = transError ?? stateError;
-  const kpiLoading = (stateLoading || transLoading) && !kpiError;
   const retryKpiQueries = useCallback(() => {
     refetchTrans();
     refetchState();
@@ -194,7 +191,6 @@ export default function StateMachineDebuggerPage() {
   const transitions: FSMTransition[] = transData?.data ?? [];
   const totalRows = transData?.total ?? 0;
 
-  const flapIds = useMemo(() => computeFlapIds(transitions), [transitions]);
 
   /* ─── Pie chart data — state distribution ─── */
   const pieData = useMemo(() => {
@@ -374,8 +370,17 @@ export default function StateMachineDebuggerPage() {
     { value: '100', label: '100' },
   ];
 
-  // Compute totals from transitions data
-  const totalTransitionsOnPage = transitions.length;
+  const summaryPeriod: StatPeriod = startInstant && endInstantExclusive ? {
+    kind: 'analysis', label: activeRangeLabel, start: startInstant, endExclusive: endInstantExclusive,
+    timezone: vehicleTz, completeness: 'subset',
+    provenance: t('fsm.statstrip.provenance', 'Page and flap counts cover the loaded server page; total covers matching transitions in the selected window. Current state comes from a separate live-state snapshot.'),
+  } : !start && !end ? {
+    kind: 'alltime', label: activeRangeLabel,
+    provenance: t('fsm.statstrip.alltimeProvenance', 'All matching transition history; page and flap counts cover only loaded rows. Current state is a separate live snapshot.'),
+  } : {
+    kind: 'unknown', label: activeRangeLabel,
+    reason: t('fsm.statstrip.unknownPeriod', 'Transition bounds were not supplied. Page and flap counts remain page-scoped; current state is a separate live snapshot.'),
+  };
 
   // Map transitions for timeline chart: use to_state as the grouping key
   const timelineTransitions = useMemo(() =>
@@ -536,45 +541,8 @@ export default function StateMachineDebuggerPage() {
       <StaleRefreshWarning state={transTrust} label={t('fsm.timelineTitle', 'Transition log')} />
       {/* ──── 1 — KPI band: full-width responsive metric grid ──── */}
       <FadeIn>
-        <section
-          aria-label={t('fsm.kpis', 'FSM summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          {kpiLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
-            ))
-          ) : kpiError ? (
-            <QueryError
-              error={kpiError}
-              onRetry={retryKpiQueries}
-              className="col-span-2 lg:col-span-4"
-            />
-          ) : (
-            <>
-          <StatCard
-            label={t('fsm.totalOnPage', 'Transitions (Page)')}
-            value={`${fmtInt(totalTransitionsOnPage)} / ${fmtInt(totalRows)}`}
-            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('fsm.totalTransitions', 'Total transitions')}
-            value={fmtInt(totalRows)}
-            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('fsm.flapCount', 'Flap warnings')}
-            value={fmtInt(flapIds.size)}
-            icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('fsm.currentState', 'Current state')}
-            value={stateName ?? '—'}
-            icon={<Zap className="h-4 w-4" aria-hidden="true" />}
-          />
-            </>
-          )}
-        </section>
+        <FSMOperationalBrief transitions={transQuery} stateQuery={stateQuery} currentState={stateName}
+          period={summaryPeriod} onRetry={retryKpiQueries} />
       </FadeIn>
 
       {/* ──── 2 — Page-specific filters (FSM Type + Per Page) ──── */}

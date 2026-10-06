@@ -28,9 +28,11 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import { request } from '@/api/client';
 import {
-  PeriodStatistics, BatteryStatistics, MileageStatistics,
   StatisticsChartPlacement, StatisticsSource, type PeriodStats,
 } from '../components/statistics-modernization';
+import { StatisticsPeriodBrief } from '../components/operationalbrief-n-z/StatisticsPeriodBrief';
+import { StatisticsMileageBrief } from '../components/operationalbrief-n-z/StatisticsMileageBrief';
+import { StatisticsBatteryBrief } from '../components/operationalbrief-n-z/StatisticsBatteryBrief';
 
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
@@ -160,7 +162,7 @@ export default function StatisticsPage() {
           <CardGrid label={t('statistics.periodSummary', 'Totals and averages')} items={[{
             id: 'statistics-period',
             size: 'full',
-            content: <PeriodStatistics
+            content: <StatisticsPeriodBrief
               stats={stats}
               loading={statsLoading}
               error={statsError}
@@ -177,7 +179,7 @@ export default function StatisticsPage() {
       <Section id="statistics-health-state" title={t('statistics.healthAndState', 'Battery health and vehicle states')}>
         <FadeIn delay={0.1}>
           <CardGrid label={t('statistics.healthAndState', 'Battery health and vehicle states')} items={[
-            { id: 'statistics-battery', size: 'half', content: <BatteryStatistics query={batteryQuery} /> },
+            { id: 'statistics-battery', size: 'half', content: <StatisticsBatteryBrief query={batteryQuery} /> },
             { id: 'statistics-state', size: 'half', content: (
           <StatisticsChartPlacement>
           <ChartCard
@@ -231,7 +233,7 @@ export default function StatisticsPage() {
       <Section id="statistics-mileage-fleet" title={t('statistics.mileageAndFleet', 'Mileage and fleet comparison')}>
         <FadeIn delay={0.2}>
           <CardGrid label={t('statistics.mileageAndFleet', 'Mileage and fleet comparison')} items={[
-            { id: 'statistics-mileage', size: 'third', content: <MileageStatistics query={mileageQuery} fromKm={fromKm} distanceUnit={distanceUnit} /> },
+            { id: 'statistics-mileage', size: 'third', content: <StatisticsMileageBrief query={mileageQuery} fromKm={fromKm} distanceUnit={distanceUnit} /> },
             { id: 'statistics-fleet', size: 'half', content: (
           <StatisticsChartPlacement>
           <ChartCard

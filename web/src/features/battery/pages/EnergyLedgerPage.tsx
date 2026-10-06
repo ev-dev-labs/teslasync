@@ -5,7 +5,8 @@ import { BatteryWarning, Bug, Scale, Sigma } from 'lucide-react';
 import { PageLayout, LayoutCard, ChartCard, SourceContent } from '@/components/layout';
 import { Text, Badge, HelpTooltip } from '@/components/ui';
 
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import { Skeleton, EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -97,28 +98,32 @@ export default function EnergyLedgerPage() {
   const summaryReady = !isLoading && !isError;
   const summaryMetrics: StatMetric[] = [
     {
-      metricId: 'text', occurrenceId: 'ledger-closure',
+      metricId: 'percent', occurrenceId: 'ledger-closure',
       label: t('energyLedger.closure', 'Books Closure'),
-      rawValue: summaryReady ? `${Math.round(summary.closureRate * 100)}%` : null,
+      rawValue: summaryReady ? summary.closureRate * 100 : null,
+      display: { formatter: raw => ({ value: `${Math.round(raw)}%`, unit: '' }) },
       context: summaryReady ? <><Scale className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.closureRate >= 0.9 ? 'success' : summary.closureRate >= 0.75 ? 'warning' : 'danger'}>{t('energyLedger.closureHint', 'of charged energy accounted for')}</Badge></> : undefined,
       description: t('help.energyLedger.closure', 'Energy has to go somewhere. Everything charged either reached the wheels, was lost while standing still, or is still sitting in the pack — so charged minus driven minus standby minus the change in stored energy should come out near zero. Whatever is left over is the ledger residual, and it is the honest measure of how much your data is failing to explain.'),
     },
     {
-      metricId: 'text', occurrenceId: 'ledger-driving',
+      metricId: 'percent', occurrenceId: 'ledger-driving',
       label: t('energyLedger.driving', 'Reached the Wheels'),
-      rawValue: summaryReady ? `${Math.round(summary.drivingShare * 100)}%` : null,
+      rawValue: summaryReady ? summary.drivingShare * 100 : null,
+      display: { formatter: raw => ({ value: `${Math.round(raw)}%`, unit: '' }) },
       context: summaryReady ? <><Sigma className="h-5 w-5" aria-hidden="true" />{formatEnergy(summary.totalDrivenWh)}</> : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'ledger-vampire',
+      metricId: 'rate', occurrenceId: 'ledger-vampire',
       label: t('energyLedger.vampire', 'Vampire Drain'),
-      rawValue: summaryReady ? `${Math.round(summary.vampireWhPerDay)} Wh/day` : null,
+      rawValue: summaryReady ? summary.vampireWhPerDay : null,
+      display: { formatter: raw => ({ value: `${Math.round(raw)} Wh/day`, unit: '' }) },
       context: summaryReady ? <><BatteryWarning className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.vampireWhPerDay > 1000 ? 'danger' : 'neutral'}>{t('energyLedger.standbyPower', 'about {{p}} while parked', { p: formatPower(summary.meanStandbyPowerW) })}</Badge></> : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'ledger-residual',
+      metricId: 'energy', occurrenceId: 'ledger-residual',
       label: t('energyLedger.unexplained', 'Unexplained'),
-      rawValue: summaryReady ? formatEnergy(Math.abs(summary.totalResidualWh)) : null,
+      rawValue: summaryReady ? Math.abs(summary.totalResidualWh) : null,
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
       context: summaryReady ? <><Bug className="h-5 w-5" aria-hidden="true" />{summary.packCapacityWh != null
         ? t('energyLedger.derivedPack', 'derived pack {{v}}', { v: formatEnergy(summary.packCapacityWh) })
         : t('energyLedger.noPack', 'pack size not yet derivable')}</> : undefined,
@@ -139,8 +144,8 @@ export default function EnergyLedgerPage() {
       <StaleRefreshWarning state={drivesState} label={t('dataSources.labels.driveHistory', 'Drive history')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section aria-label={t('energyLedger.kpis', 'Energy ledger metrics')}>
-        <StatStrip title={t('energyLedger.kpis', 'Energy ledger metrics')}
+        <section>
+        <BatteryEvidenceBrief title={t('energyLedger.kpis', 'Energy ledger metrics')}
           metrics={summaryMetrics} loading={isLoading}
           retained={sessionsState.status === 'stale' || drivesState.status === 'stale'}
           period={{ kind: 'unknown', label: t('energyLedger.chart', 'Monthly Balance'),

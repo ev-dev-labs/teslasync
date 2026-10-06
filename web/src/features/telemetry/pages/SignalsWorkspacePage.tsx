@@ -26,7 +26,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
   AlertCircle,
-  ArrowUpDown,
   Bell,
   Database,
   GitCompare,
@@ -40,9 +39,8 @@ import {
 import { PageLayout, SourceContent } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption, GlossaryTerm } from '@/components/ui';
 
-import { StatCard, BulkActionsToolbar, SavedViewMenu, type BulkAction } from '@/components/data-display';
-import { EmptyState, AlertBanner, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
+import { OperationalBrief, BulkActionsToolbar, SavedViewMenu, type BulkAction } from '@/components/data-display';
+import { EmptyState, EmptyStateGuidanceDetails, AlertBanner, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
@@ -77,6 +75,8 @@ import {
 import { useLiveSignalStream, type SignalStat } from '../hooks/useLiveSignalStream';
 import { pLimit } from '@/lib/pLimit';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { signalsWorkspaceSummary, signalsDiffSummary } from '../components/statstrip-signals-mqtt/signalsSummary';
 
 // Bound the parallel signal-history fetches so a "select all 80 signals"
 // click can't fire 80 simultaneous requests at the backend. 6 keeps the
@@ -99,7 +99,7 @@ const PER_PAGE_OPTIONS = [
 type CombinedHistoryRow = SignalLogEntry;
 
 export default function SignalsWorkspacePage() {
-  const { fmtInt } = useNumberFormatting();
+  const { locale } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('signalsWorkspace.title', 'Signals'));
@@ -368,6 +368,18 @@ export default function SignalsWorkspacePage() {
   const anyError = catalogState.fatalError
     ?? (isCompare ? diffState.fatalError : !isLive && exploreKey !== null ? historicalState.fatalError : null);
   const hasHistorical = exploreKey !== null;
+  const workspaceSummary = signalsWorkspaceSummary({
+    selected: selectedSignals.length, pinned: pinnedSignals.size, isLive, isCompare,
+    rate: live.tailRate, connected: live.connected, locale,
+  }, t);
+  const diffUnavailable = !diffResp || diffState.fatalError != null;
+  const diffSummary = signalsDiffSummary({
+    changed: diffUnavailable ? null : diffAllRows.length,
+    visible: diffUnavailable ? null : diffFilteredRows.length,
+    pinned: pinnedSignals.size, atA: atAIso, atB: atBIso,
+  }, t);
+  const workspaceBriefMetrics = useOperationalMetrics(workspaceSummary.metrics);
+  const diffBriefMetrics = useOperationalMetrics(diffSummary.metrics);
 
   return (
     <PageLayout
@@ -427,29 +439,18 @@ export default function SignalsWorkspacePage() {
 
       {/* ── KPI headline strip ─────────────────────────────────── */}
       <FadeIn>
-        <section
-          aria-label={t('signalsWorkspace.kpis', 'Workspace summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <StatCard
-            label={t('signalsWorkspace.selected', 'Selected')}
-            value={fmtInt(selectedSignals.length)}
-            icon={<ArrowUpDown className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('signalsWorkspace.mode', 'Mode')}
-            value={isCompare ? t('signalsWorkspace.compare', 'Compare') : isLive ? t('signalsWorkspace.live', 'Live') : t('signalsWorkspace.historical', 'Historical')}
-            icon={isCompare ? <GitCompare className="h-4 w-4" aria-hidden="true" /> : isLive ? <Radio className="h-4 w-4" aria-hidden="true" /> : <Database className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('signalsWorkspace.liveRate', 'Live rate')}
-            value={isLive ? `${fmtInt(live.tailRate)} /s` : '—'}
-            icon={<Radio className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('signalsWorkspace.pinned', 'Pinned signals')}
-            value={fmtInt(pinnedSignals.size)}
-            icon={<Pin className="h-4 w-4" aria-hidden="true" />}
+        <section aria-label={t('signalsWorkspace.kpis', 'Workspace summary')}>
+          <OperationalBrief
+            compact
+            testId="signals-workspace-summary"
+            eyebrow={t('signalsWorkspace.title', 'Signals')}
+            title={t('signalsWorkspace.summary.title', 'Selection and stream context')}
+            description={workspaceSummary.period.kind === 'snapshot' ? workspaceSummary.period.provenance : workspaceSummary.period.label}
+            metrics={workspaceBriefMetrics}
+            scope={workspaceSummary.period.label}
+            statusLabel={isCompare ? t('signalsWorkspace.compare', 'Compare')
+              : isLive ? t('signalsWorkspace.live', 'Live') : t('signalsWorkspace.historical', 'Historical')}
+            freshness={isLive ? live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected') : undefined}
           />
         </section>
       </FadeIn>
@@ -555,17 +556,21 @@ export default function SignalsWorkspacePage() {
               />
 
               <FadeIn delay={0.05}>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <StatCard label={t('signalDiff.totalChanged', 'Changed signals')} value={(diffLoading && !diffResp) || diffState.fatalError ? '—' : String(diffAllRows.length)} />
-                  <StatCard label={t('signalDiff.visible', 'Visible after filter')} value={(diffLoading && !diffResp) || diffState.fatalError ? '—' : String(diffFilteredRows.length)} />
-                  <StatCard label={t('signalDiff.pinnedCount', 'Pinned')} value={String(pinnedSignals.size)} />
-                  <StatCard
-                    label={t('signalDiff.windowSpan', 'Window span')}
-                    value={atAIso && atBIso
-                      ? `${Math.abs(new Date(atBIso).getTime() - new Date(atAIso).getTime()) / 1000} s`
-                      : '—'}
-                  />
-                </div>
+                <OperationalBrief
+                  compact
+                  testId="signals-diff-summary"
+                  eyebrow={t('signalsWorkspace.compare', 'Compare')}
+                  title={t('signalDiff.tableTitle', 'Signal differences')}
+                  description={diffSummary.period.kind === 'unknown' ? diffSummary.period.reason ?? diffSummary.period.label : diffSummary.period.label}
+                  metrics={diffBriefMetrics}
+                  scope={diffSummary.period.label}
+                  statusLabel={diffLoading && !diffResp ? t('common.loading', 'Loading')
+                    : diffState.fatalError ? t('error.loadFailed', 'Failed to load data')
+                      : diffState.refreshError || diffState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
+                        : diffResp ? t('signalsWorkspace.summary.diffAvailable', 'Snapshot comparison available')
+                          : t('signalsWorkspace.summary.diffUnavailable', 'Snapshot comparison unavailable')}
+                  statusTone={diffState.fatalError ? 'danger' : diffState.refreshError || diffState.isRefreshBlocked ? 'warning' : 'neutral'}
+                />
               </FadeIn>
 
               <BulkActionsToolbar

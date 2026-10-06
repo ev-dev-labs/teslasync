@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 
@@ -15,15 +16,6 @@ interface HvacCyclingCoverageCadenceProps {
   state: HvacCyclingQueryState;
   locale: string;
   formatDuration: UnitFormatter;
-}
-
-function CoverageMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="body" className="mt-1">{value}</Text>
-    </div>
-  );
 }
 
 export function HvacCyclingCoverageCadence({
@@ -48,49 +40,28 @@ export function HvacCyclingCoverageCadence({
           )}
         </Text>
         <HvacCyclingSectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, xl: 4 }} gap={3}>
-            <CoverageMetric
-              label={t('hvacCycling.coverage.earliest', 'Earliest valid timestamp')}
-              value={date(coverage.earliestValidMs)}
-            />
-            <CoverageMetric
-              label={t('hvacCycling.coverage.latest', 'Latest valid timestamp')}
-              value={date(coverage.latestValidMs)}
-            />
-            <CoverageMetric
-              label={t('hvacCycling.coverage.span', 'Timeline span')}
-              value={formatDuration(coverage.spanS)}
-            />
-            <CoverageMetric
-              label={t('hvacCycling.coverage.stateCoverage', 'Known-state coverage')}
-              value={coverage.stateCoverage != null
-                ? fmtPercent(coverage.stateCoverage * 100)
-                : '—'}
-            />
-            <CoverageMetric
-              label={t('hvacCycling.coverage.medianGap', 'Median cadence')}
-              value={formatDuration(coverage.medianGapS)}
-            />
-            <CoverageMetric
-              label={t('hvacCycling.coverage.p90Gap', 'P90 cadence')}
-              value={formatDuration(coverage.p90GapS)}
-            />
-            <CoverageMetric
-              label={t('hvacCycling.coverage.maxGap', 'Maximum observed gap')}
-              value={formatDuration(coverage.maxObservedGapS)}
-            />
-            <CoverageMetric
-              label={t('hvacCycling.coverage.gaps', 'Cadence / long gaps')}
-              value={t(
-                'hvacCycling.coverage.gapPair',
-                '{{cadence}} / {{long}}',
-                {
-                  cadence: fmtInt(coverage.cadenceIntervals),
-                  long: fmtInt(coverage.longGapCount),
-                },
-              )}
-            />
-          </Grid>
+          <VehicleOperationalBrief embedded id="hvac-cycling-coverage-summary"
+            title={t('hvacCycling.coverage.title', 'Chronological coverage and cadence')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('hvacCycling.coverage.subtitle', 'Valid unique timestamps define span and cadence even when HVAC state is unknown.') }}
+            metrics={[
+              { metricId: 'text', occurrenceId: 'earliest', label: t('hvacCycling.coverage.earliest', 'Earliest valid timestamp'), rawValue: coverage.earliestValidMs != null ? date(coverage.earliestValidMs) : null },
+              { metricId: 'text', occurrenceId: 'latest', label: t('hvacCycling.coverage.latest', 'Latest valid timestamp'), rawValue: coverage.latestValidMs != null ? date(coverage.latestValidMs) : null },
+              ...[
+                { key: 'span', label: t('hvacCycling.coverage.span', 'Timeline span'), value: coverage.spanS },
+                { key: 'median', label: t('hvacCycling.coverage.medianGap', 'Median cadence'), value: coverage.medianGapS },
+                { key: 'p90', label: t('hvacCycling.coverage.p90Gap', 'P90 cadence'), value: coverage.p90GapS },
+                { key: 'max', label: t('hvacCycling.coverage.maxGap', 'Maximum observed gap'), value: coverage.maxObservedGapS },
+              ].map(fact => ({
+                metricId: 'duration' as const, occurrenceId: fact.key, label: fact.label, rawValue: fact.value,
+                display: { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) },
+              })),
+              { metricId: 'percent', occurrenceId: 'state-coverage', label: t('hvacCycling.coverage.stateCoverage', 'Known-state coverage'), rawValue: coverage.stateCoverage != null ? coverage.stateCoverage * 100 : null, display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) } },
+              { metricId: 'count', occurrenceId: 'gap-pair', label: t('hvacCycling.coverage.gaps', 'Cadence / long gaps'), rawValue: coverage.cadenceIntervals,
+                display: { formatter: raw => ({ value: t('hvacCycling.coverage.gapPair', '{{cadence}} / {{long}}', { cadence: fmtInt(raw), long: fmtInt(coverage.longGapCount) }), unit: '' }) } },
+            ]}
+          />
         </HvacCyclingSectionBody>
       </LayoutCard>
     </section>

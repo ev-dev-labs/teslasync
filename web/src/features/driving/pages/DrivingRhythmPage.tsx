@@ -14,7 +14,6 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import {
   DepartureConsistency,
-  DrivingRhythmKpis,
   DrivingRhythmMethodology,
   HourlyDistribution,
   MonthlyRhythmTrend,
@@ -24,6 +23,7 @@ import {
   type DrivingRhythmSectionState,
 } from '../components/driving-rhythm';
 import { buildDrivingRhythm } from '../lib/drivingRhythm';
+import { DrivingRhythmBrief } from '../components/operationalbrief-a-m/DrivingRhythmBrief';
 
 const SPLIT_COLUMNS = { default: 1, xl: 5 } as const;
 
@@ -81,7 +81,9 @@ export default function DrivingRhythmPage() {
     >
       <StaleRefreshWarning state={sourceState} label={t('rhythm.title', 'Driving Rhythm')} />
       <FadeIn>
-        <DrivingRhythmKpis summary={summary} {...sectionState} />
+        <DrivingRhythmBrief summary={summary} {...sectionState}
+          scope={t('rhythm.brief.window', '{{start}}–{{end}} · {{timezone}}', { start, end, timezone })}
+          retained={sourceState.status === 'stale' || sourceState.refreshError != null} />
       </FadeIn>
 
       <FadeIn delay={0.05}>

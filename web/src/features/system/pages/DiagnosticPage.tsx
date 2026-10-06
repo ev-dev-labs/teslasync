@@ -19,13 +19,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
-  Gauge,
-  ListChecks,
   PlayCircle,
   RefreshCw,
   ShieldAlert,
-  ShieldCheck,
-  Timer,
   XCircle,
 } from 'lucide-react';
 
@@ -41,7 +37,8 @@ import {
   MetricLabel,
   SectionTitle,
 } from '@/components/ui';
-import { CompositionRail, MetricCard } from '@/components/data-display';
+import { CompositionRail } from '@/components/data-display';
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import { AlertBanner, EmptyState, Spinner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useOptionalToast } from '@/components/feedback/Toast';
@@ -303,52 +300,29 @@ function OverallHero({
   );
 }
 
-function StatusSummary({ summary }: { summary: DiagnosticSummary }) {
+function StatusSummary({ summary, generatedAt, retained }: { summary: DiagnosticSummary; generatedAt: string; retained: boolean }) {
   useNumberFormatting();
   const { t } = useTranslation();
   return (
-    <section
-      aria-label={t('diagnostic.summary.title', 'Diagnostic summary')}
-      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
-    >
-      <MetricCard
-        label={t('diagnostic.summary.total', 'Total checks')}
-        value={summary.total}
-        icon={<ListChecks className="h-5 w-5" aria-hidden />}
-        color="cyan"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.passing', 'Passing')}
-        value={summary.ok}
-        icon={<ShieldCheck className="h-5 w-5" aria-hidden />}
-        color="green"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.warnings', 'Warnings')}
-        value={summary.warn}
-        icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
-        color="amber"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.failures', 'Failures')}
-        value={summary.fail}
-        icon={<XCircle className="h-5 w-5" aria-hidden />}
-        color="red"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.totalTime', 'Total time')}
-        value={formatMs(summary.totalMs)}
-        icon={<Timer className="h-5 w-5" aria-hidden />}
-        color="blue"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.slowest', 'Slowest check')}
-        value={summary.slowest ? formatMs(summary.slowest.duration_ms ?? 0) : '—'}
-        subtitle={summary.slowest?.name}
-        icon={<Gauge className="h-5 w-5" aria-hidden />}
-        color="purple"
-      />
-    </section>
+    <SystemSummaryBrief
+      title={t('diagnostic.summary.title', 'Diagnostic summary')}
+      description={t('diagnostic.brief.description', 'Probe outcomes and recorded timings from the displayed diagnostic report.')}
+      scope={t('diagnostic.brief.scope', 'One diagnostic run; total time is the sum of probe durations.')}
+      available
+      retained={retained}
+      freshness={generatedAt}
+      metrics={[
+        { metricId: 'count', occurrenceId: 'total', rawValue: summary.total, label: t('diagnostic.summary.total', 'Total checks') },
+        { metricId: 'count', occurrenceId: 'passing', rawValue: summary.ok, label: t('diagnostic.summary.passing', 'Passing') },
+        { metricId: 'count', occurrenceId: 'warnings', rawValue: summary.warn, label: t('diagnostic.summary.warnings', 'Warnings') },
+        { metricId: 'count', occurrenceId: 'failures', rawValue: summary.fail, label: t('diagnostic.summary.failures', 'Failures') },
+        { metricId: 'latency', occurrenceId: 'total-time', rawValue: summary.totalMs / 1000, label: t('diagnostic.summary.totalTime', 'Total time'),
+          display: { formatter: (raw) => ({ value: formatMs(raw * 1000) }) } },
+        { metricId: 'latency', occurrenceId: 'slowest', rawValue: summary.slowest?.duration_ms != null ? summary.slowest.duration_ms / 1000 : null,
+          label: t('diagnostic.summary.slowest', 'Slowest check'), context: summary.slowest?.name,
+          display: { formatter: (raw) => ({ value: formatMs(raw * 1000) }) } },
+      ]}
+    />
   );
 }
 
@@ -489,7 +463,7 @@ export default function DiagnosticPage() {
             </FadeIn>
 
             <FadeIn delay={0.05}>
-              <StatusSummary summary={summary} />
+              <StatusSummary summary={summary} generatedAt={report.generated_at} retained={!!latestError} />
             </FadeIn>
 
             <FadeIn delay={0.1}>

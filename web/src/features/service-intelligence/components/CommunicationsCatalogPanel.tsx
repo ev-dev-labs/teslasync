@@ -14,10 +14,12 @@ import {
   type CommunicationsCatalogStatus,
   type OfficialNHTSACommunicationsArtifactURL,
 } from '@/api/hooks/useServiceIntelligence';
-import { DateTime } from '@/components/data-display';
-import { AlertBanner, EmptyState, Skeleton } from '@/components/feedback';
+import { DateTime, OperationalBrief } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { AlertBanner, EmptyState, PermissionGuidanceNotice, Skeleton } from '@/components/feedback';
 import { LayoutCard, SourceContent } from '@/components/layout';
-import { Table, Badge, Button, Caption, Text } from '@/components/ui';
+import { Badge, Button, Caption, Text } from '@/components/ui';
 
 const catalogFreshnessMs = 8 * 24 * 60 * 60 * 1000;
 
@@ -65,6 +67,21 @@ export function CommunicationsCatalogPanel({
   const freshness = communicationsCatalogFreshness(status);
   const latest = status?.latest_successful ?? null;
   const latestAttempt = status?.latest_attempt ?? null;
+  const metrics: readonly StatMetric[] = [
+    {
+      metricId: 'count', occurrenceId: 'normalized-tesla-records',
+      rawValue: status?.record_count,
+      label: t('serviceIntelligence.catalog.records', 'Normalized Tesla records'),
+      description: t('serviceIntelligence.catalog.brief.recordsDetail', 'Normalized catalog inventory across imported periods; not the selected vehicle match count.'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'official-period-artifacts',
+      rawValue: OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS.length,
+      label: t('serviceIntelligence.catalog.coverage', 'Official period artifacts'),
+      description: t('serviceIntelligence.catalog.brief.coverageDetail', 'Allow-listed official periods available to import, not proof that every period has been imported.'),
+    },
+  ];
+  const operationalMetrics = useOperationalMetrics(metrics);
 
   return (
     <LayoutCard
@@ -75,21 +92,6 @@ export function CommunicationsCatalogPanel({
       )}
       actions={<div className="flex flex-wrap items-center gap-2">
         <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        <Badge
-          variant={
-            freshness === 'fresh'
-              ? 'success'
-              : freshness === 'stale'
-                ? 'warning'
-                : 'neutral'
-          }
-        >
-          {freshness === 'fresh'
-            ? t('serviceIntelligence.catalog.fresh', 'Fresh')
-            : freshness === 'stale'
-              ? t('serviceIntelligence.catalog.stale', 'Stale')
-              : t('serviceIntelligence.catalog.unavailable', 'Not imported')}
-        </Badge>
       </div>}
     >
       <SourceContent
@@ -102,32 +104,30 @@ export function CommunicationsCatalogPanel({
         errorRecovery={{ onRetry }}
       >
         <div className="space-y-4">
-          <Table aria-label={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}><tbody>
-            <tr>
-              <th scope="row">
-                <Caption>{t('serviceIntelligence.catalog.records', 'Normalized Tesla records')}</Caption>
-              </th>
-              <td><Text variant="metricValue">{status?.record_count ?? 0}</Text></td>
-            </tr>
-            <tr>
-              <th scope="row">
-                <Caption>{t('serviceIntelligence.catalog.coverage', 'Official period artifacts')}</Caption>
-              </th>
-              <td><Text variant="metricValue">{OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS.length}</Text></td>
-            </tr>
-            <tr>
-              <th scope="row">
-                <Caption>{t('serviceIntelligence.catalog.lastSuccess', 'Last successful import')}</Caption>
-              </th>
-              <td>
-                {latest?.completed_at ? (
+          <OperationalBrief
+            compact
+            testId="service-intelligence-catalog-summary"
+            eyebrow={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}
+            title={t('serviceIntelligence.catalog.brief.title', 'Catalog coverage summary')}
+            description={t('serviceIntelligence.catalog.subtitle', 'Administrator controls for the normalized manufacturer-communications index.')}
+            statusLabel={freshness === 'fresh'
+              ? t('serviceIntelligence.catalog.fresh', 'Fresh')
+              : freshness === 'stale'
+                ? t('serviceIntelligence.catalog.stale', 'Stale')
+                : t('serviceIntelligence.catalog.unavailable', 'Not imported')}
+            statusTone={freshness === 'fresh' ? 'success' : freshness === 'stale' ? 'warning' : 'neutral'}
+            scope={<Badge variant="neutral">{t('serviceIntelligence.catalog.brief.scope', 'Global catalog · official periods')}</Badge>}
+            freshness={<Caption>
+              {t('serviceIntelligence.catalog.lastSuccess', 'Last successful import')}{' '}
+              {latest?.completed_at ? (
                   <DateTime value={latest.completed_at} variant="full" />
                 ) : (
-                  <Text variant="body">{t('serviceIntelligence.catalog.never', 'Never')}</Text>
+                  t('serviceIntelligence.catalog.never', 'Never')
                 )}
-              </td>
-            </tr>
-          </tbody></Table>
+            </Caption>}
+            provenance={t('serviceIntelligence.catalog.brief.provenance', 'Official NHTSA bulk artifacts. Freshness follows the last successful import; a failed later attempt does not replace retained records.')}
+            metrics={operationalMetrics}
+          />
 
           {freshness === 'unavailable' && (
             <EmptyState
@@ -277,6 +277,9 @@ export function CommunicationsCatalogPanel({
           </div>
         </div>
       </SourceContent>
+      {error != null && !loading && (
+        <PermissionGuidanceNotice evidence={{ error }} className="mt-3" />
+      )}
     </LayoutCard>
   );
 }

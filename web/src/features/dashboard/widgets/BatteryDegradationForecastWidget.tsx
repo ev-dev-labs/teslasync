@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingDown, AlertTriangle, Lightbulb, Zap, Thermometer, Battery } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, Subhead, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetTipCards, type TipItem } from './shared';
@@ -161,24 +160,24 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
 
             {/* Horizon outlook: 1/3/5-year twin readout */}
               <div className="flex flex-col gap-1.5">
-                <h4 className={dashboardTokens.metricLabel}>
+                <Subhead className="break-words">
                   {t('widget.forecast.horizon', '1 / 3 / 5-year outlook')}
-                </h4>
+                </Subhead>
                 {(data?.horizon_outlook?.points?.length ?? 0) > 0 ? <ul className="grid grid-cols-1 gap-2 @xs:grid-cols-3">
                   {(data?.horizon_outlook?.points ?? []).map((p) => (
                     <li
                       key={p.years}
                       className="min-w-0 border-b border-[var(--border-subtle)] py-2"
                     >
-                      <p className={dashboardTokens.metricLabel}>
+                      <Caption className="block break-words">
                         {t('widget.forecast.years', '{{n}} yr', { n: p.years })}
-                      </p>
-                      <p className={dashboardTokens.secondaryMetric}>
+                      </Caption>
+                      <Text as="p" size="lg" weight="semibold" color="primary" className="break-words tabular-nums">
                         {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct)}%` : '—'}
-                      </p>
-                      <p className={dashboardTokens.metricLabel}>
+                      </Text>
+                      <Caption className="block break-words tabular-nums">
                         {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high) : '—'}
-                      </p>
+                      </Caption>
                     </li>
                   ))}
                 </ul> : (
@@ -189,9 +188,9 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
 
             {/* Risk factors list */}
               <div className="flex flex-col gap-1.5">
-                <h4 className={dashboardTokens.metricLabel}>
+                <Subhead className="break-words">
                   {t('widget.forecast.riskFactors', 'Risk factors')}
-                </h4>
+                </Subhead>
                 {riskFactors.length > 0 ? <ul className="flex flex-col gap-1">
                   {riskFactors.slice(0, 5).map((rf, idx) => {
                     const score = knownNumber(rf.score);
@@ -205,12 +204,12 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                           {riskIcon(rf.name)}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <span className={`${dashboardTokens.title} block break-words`}>
+                          <Text as="span" variant="bodySm" className="block break-words">
                             {rf.label ?? rf.name ?? '—'}
-                          </span>
-                          <span className={`${dashboardTokens.metricLabel} block break-words`}>
+                          </Text>
+                          <Caption className="block break-words">
                             {rf.detail ?? '—'}
-                          </span>
+                          </Caption>
                         </div>
                         <Badge variant={impact != null ? impactVariant(impact) : 'neutral'} size="sm">
                           {score != null ? fmtNumber(score) : '—'}
@@ -226,9 +225,9 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
 
             {/* Recommendations as tip cards */}
               <div className="flex flex-col gap-1.5">
-                <h4 className={dashboardTokens.metricLabel}>
+                <Subhead className="break-words">
                   {t('widget.forecast.recommendations', 'Recommendations')}
-                </h4>
+                </Subhead>
                 <WidgetTipCards tips={tipItems} maxTips={3} emptyMessage={t('widget.chargingOptimizer.noRecommendations', 'No recommendations')} />
               </div>
           </div>

@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import '../../../i18n';
@@ -498,7 +498,7 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(screen.getByText('conditions:0')).toBeInTheDocument();
     expect(screen.getByText('actions:1')).toBeInTheDocument();
     // Readiness starts incomplete (no name, no trigger).
-    expect(screen.getByText('Not ready yet')).toBeInTheDocument();
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
     // Form controls are present and labelled.
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/trigger type/i)).toBeInTheDocument();
@@ -506,14 +506,14 @@ describe('AutomationBuilderPage — create mode', () => {
 
   it('flips the readiness badge to "Ready to save" once name + trigger are set', () => {
     renderPage('/automations/new');
-    expect(screen.getByText('Not ready yet')).toBeInTheDocument();
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Commute Prep' } });
     fireEvent.change(screen.getByLabelText(/trigger type/i), {
       target: { value: 'trigger_signal' },
     });
 
-    expect(screen.getByText('Ready to save')).toBeInTheDocument();
+    expect(screen.getAllByText('Ready to save')).toHaveLength(2);
     expect(screen.queryByText('Not ready yet')).not.toBeInTheDocument();
     // The stubbed configurator reflects the newly created default trigger.
     expect(screen.getByText('tc:trigger_signal')).toBeInTheDocument();
@@ -527,6 +527,26 @@ describe('AutomationBuilderPage — create mode', () => {
 
     expect(await screen.findByText('Name is required')).toBeInTheDocument();
     expect(H.createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('reviews the actual draft summary while retaining labelled editors and proposal-only behavior', () => {
+    renderPage('/automations/new');
+    fireEvent.click(screen.getByRole('button', { name: 'add-condition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'add-action' }));
+    const brief = screen.getByTestId('automation-builder-brief');
+    expect(brief.querySelector('[data-operational-metric="conditions"]')).toHaveTextContent('1');
+    expect(brief.querySelector('[data-operational-metric="actions"]')).toHaveTextContent('2');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Automation summary details' });
+    expect(within(drawer).getAllByText('Current editor draft only. Publishing still requires validation and an explicit save.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('Actions are executed in order.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Name$/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/trigger type/i)).toBeInTheDocument();
+    expect(screen.getByTestId('condition-builder')).toBeInTheDocument();
+    expect(screen.getByTestId('action-builder')).toBeInTheDocument();
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
+    expect(H.testRunMutate).not.toHaveBeenCalled();
   });
 
   it('creates the automation with a normalized payload and navigates to the list', async () => {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Radio } from 'lucide-react';
-import { Caption } from '@/components/ui';
+import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 
@@ -9,7 +9,8 @@ import { deriveDataState, knownNumber } from '@/api/dataState';
 import { formatRelative } from '@/lib/dateFormat';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
+import { WidgetBigNumber, WidgetStatusGrid, type StatusCell } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -69,7 +70,7 @@ export function deriveMqttStats(
 }
 
 export default function MQTTStatusWidget({ size }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const query = useMQTTStatus();
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
@@ -118,23 +119,32 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
             <WidgetStatusGrid cells={[status]} />
 
             {/* Stats grid */}
-            <WidgetStatGrid cols={2} stats={[
-              { label: t('widget.mqtt.msgRate', 'Messages/sec'), value: stats.messagesPerSec == null ? '—' : fmtNumber(stats.messagesPerSec) },
-              { label: t('widget.mqtt.totalToday', 'Total messages'), value: stats.totalMessages == null ? '—' : fmtInt(stats.totalMessages) },
-            ]} />
+            <DashboardSourceBrief
+              metrics={[
+                { metricId: 'rate', rawValue: stats.messagesPerSec, label: t('widget.mqtt.msgRate', 'Messages/sec'), description: t('widget.mqtt.rateDescription', 'Sum of returned per-vehicle signal rates; one missing operand makes the total unknown.'), display: { formatter: raw => ({ value: fmtNumber(Number(raw)), unit: '' }) } },
+                { metricId: 'count', rawValue: stats.totalMessages, label: t('widget.mqtt.totalToday', 'Total messages'), description: t('widget.mqtt.countDescription', 'Sum of returned signal counters; counter reset periods are not supplied by the source.') },
+              ]}
+              state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+              title={t('widget.mqtt.summaryTitle', 'MQTT source counters')}
+              description={t('widget.mqtt.summaryDescription', 'Fleet counters retain complete-operand checks; connection presence and newest valid observation remain separate evidence.')}
+              scope={t('widget.mqtt.summaryScope', 'Returned streaming-fleet rows; no complete calendar-day or verified-live coverage is inferred')}
+              loading={isLoading && !data} testId="mqtt-operational-brief"
+            />
 
             {/* Last message & broker */}
             <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <Caption>{t('widget.mqtt.lastMessage', 'Last message')}</Caption>
-                <Caption className="truncate">
-                  {stats.lastMessage ? formatRelative(stats.lastMessage) : '—'}
-                </Caption>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <Caption>{t('widget.mqtt.broker', 'Broker')}</Caption>
-                <Caption className="truncate" title={broker}>{broker}</Caption>
-              </div>
+              <KVList layout="responsive" wrap items={[
+                {
+                  id: 'last-message',
+                  label: t('widget.mqtt.lastMessage', 'Last message'),
+                  value: stats.lastMessage ? formatRelative(stats.lastMessage) : '—',
+                },
+                {
+                  id: 'broker',
+                  label: t('widget.mqtt.broker', 'Broker'),
+                  value: <span title={broker}>{broker}</span>,
+                },
+              ]} />
             </div>
           </div>
       )}

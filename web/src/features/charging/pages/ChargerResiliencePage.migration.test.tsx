@@ -26,7 +26,8 @@ vi.mock('@/components/motion', async importOriginal => {
   return { ...actual, FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> };
 });
 const longSite = 'Home charging location with the complete specialist label longer than twenty characters';
-const chartLabel = 'Bar chart of the percentage of total charging energy delivered at each site';
+const chartTitle = 'Energy Share by Site';
+const chartDescription = 'Bar chart of the percentage of total charging energy delivered at each site';
 function session(id: string, location: string, energy: number): ChargingSession {
   const started = '2026-01-01T00:00:00Z';
   return {
@@ -50,7 +51,7 @@ function mountPage() {
     <ChargerResiliencePage />
   </MemoryRouter></QueryClientProvider>);
 }
-function tiles(container: HTMLElement) { return container.querySelectorAll('[data-stat]'); }
+function tiles(container: HTMLElement) { return container.querySelectorAll('[data-operational-metric]'); }
 function assertSections(container: HTMLElement) {
   expect(tiles(container)).toHaveLength(4);
   for (const label of ['Energy Share by Site', 'What If the Top Site Disappeared?', 'Sites'])
@@ -82,12 +83,13 @@ describe('charger resilience canonical migration', () => {
       `${summary.topSiteDependencyPct.toFixed(2)}%`, `${summary.fallbackCoveragePct.toFixed(2)}%`,
     ];
     Array.from(tiles(container)).forEach((tile, index) => {
-      expect(tile.querySelector('[data-stat-value]')).toHaveTextContent(expected[index]!);
+      expect(tile.querySelector('[data-operational-value]')).toHaveTextContent(expected[index]!);
     });
     expect(screen.getAllByText(longSite).length).toBeGreaterThanOrEqual(2);
     for (const label of ['Energy at risk', 'New top site', 'Score before', 'Score after loss'])
       expect(screen.getByText(label)).toBeInTheDocument();
-    const chart = screen.getByRole('figure', { name: chartLabel });
+    const chart = screen.getByRole('figure', { name: chartTitle });
+    expect(within(chart).getByRole('img', { name: chartDescription })).toBeInTheDocument();
     const table = within(chart).getByRole('table');
     expect(table).toHaveTextContent(longSite);
     expect(table).toHaveTextContent('Backup station');
@@ -99,8 +101,8 @@ describe('charger resilience canonical migration', () => {
       isError: mode === 'refresh-error', fetchStatus: mode === 'paused' ? 'paused' : 'idle' };
     const { container } = mountPage();
     assertSections(container);
-    expect(container.querySelector('[data-stat-strip]')).toHaveAttribute('data-retained', 'true');
-    expect(screen.getByRole('figure', { name: chartLabel })).toHaveTextContent(longSite);
+    expect(container.querySelector('[data-period-kind]')).toHaveAttribute('data-retained', 'true');
+    expect(screen.getByRole('figure', { name: chartTitle })).toHaveTextContent(longSite);
     const notice = screen.getByTestId('stale-refresh-warning');
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(h.refetch).toHaveBeenCalledTimes(1);
@@ -114,9 +116,11 @@ describe('charger resilience canonical migration', () => {
     };
     const { container } = mountPage();
     assertSections(container);
-    expect(container.querySelectorAll('[data-stat-value]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(mode === 'loading' ? 0 : 4);
+    if (mode === 'loading') expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     for (const tile of tiles(container)) {
-      expect(tile).toHaveAttribute('data-state', mode === 'loading' ? 'loading' : 'missing');
+      expect(tile).toHaveAttribute('data-value-state', 'missing');
+      if (mode !== 'loading') expect(tile.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
     }
     if (mode === 'fatal') {
       fireEvent.click(screen.getAllByRole('button', { name: /retry/i })[0]!);
@@ -130,9 +134,9 @@ describe('charger resilience canonical migration', () => {
   it('does not confuse a real single-site zero score with unavailable measurements', () => {
     h.query = { ...h.query, data: [sessions[0]!] };
     const { container } = mountPage();
-    expect(tiles(container)[0]).toHaveAttribute('data-state', 'value');
-    expect(tiles(container)[0]?.querySelector('[data-stat-value]')).toHaveTextContent('0.00');
-    expect(tiles(container)[3]?.querySelector('[data-stat-value]')).toHaveTextContent('0.00%');
+    expect(tiles(container)[0]).toHaveAttribute('data-value-state', 'value');
+    expect(tiles(container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0.00');
+    expect(tiles(container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('0.00%');
     expect(screen.getByText('None yet')).toBeInTheDocument();
   });
 });

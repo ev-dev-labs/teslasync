@@ -16,6 +16,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import './operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 
 type LiveEntry = { value: unknown; timestamp: string | null };
@@ -98,10 +99,10 @@ function renderPanel(props?: Partial<SignalCatalogPanelProps>) {
   );
 }
 
-// StatCard renders <label span> then a sibling value row; hop across.
+// Query the accepted renderer's value independently of layout or table labels.
 function statValue(label: string): string {
   const labelEl = screen.getAllByText(label).find((element) => !element.closest('table'))!;
-  return labelEl.parentElement?.nextElementSibling?.textContent?.trim() ?? '';
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent?.trim() ?? '';
 }
 
 // The signal-name column is the only place that renders <code>.

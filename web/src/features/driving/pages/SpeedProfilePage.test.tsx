@@ -345,9 +345,9 @@ describe('SpeedProfilePage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();
-    expect(screen.getByText('90.00')).toBeInTheDocument(); // avg 25 m/s → 90 km/h
-    expect(screen.getByText('144.00')).toBeInTheDocument(); // peak 40 m/s → 144 km/h
-    expect(screen.getByText('54.00')).toBeInTheDocument(); // optimal 15 m/s → 54 km/h
+    expect(screen.getByText('90.00 km/h')).toBeInTheDocument(); // avg 25 m/s → 90 km/h
+    expect(screen.getByText('144.00 km/h')).toBeInTheDocument(); // peak 40 m/s → 144 km/h
+    expect(screen.getByText('54.00 km/h')).toBeInTheDocument(); // optimal 15 m/s → 54 km/h
     expect(screen.getByText('500')).toBeInTheDocument(); // total readings
     expect(screen.getByText('5 drives analysed')).toBeInTheDocument();
 
@@ -398,7 +398,7 @@ describe('SpeedProfilePage', () => {
     unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_MI });
     renderPage();
 
-    expect(screen.getByText('55.92')).toBeInTheDocument(); // 25 m/s → 56 mph
+    expect(screen.getByText('55.92 mph')).toBeInTheDocument(); // 25 m/s → 56 mph
     expect(screen.getByTestId('gauge-Avg Speed')).toHaveTextContent('56mph');
     // Efficiency unit label flips to Wh/mi (drive→bucket matching is unit-aware,
     // so the exact matched-card count is display-unit dependent — assert ≥1).

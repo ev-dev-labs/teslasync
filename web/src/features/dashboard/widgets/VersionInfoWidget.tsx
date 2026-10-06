@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import { KVList } from '@/components/data-display';
-import { Badge } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { Badge, Caption, Text } from '@/components/ui';
+import { SourceContent } from '@/components/layout';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useVersionInfo, useCaptureStats } from '@/api/hooks/useSettings';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
@@ -12,7 +13,6 @@ import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '—';
@@ -71,22 +71,27 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
 
   const kvItems = useMemo(() => [
     {
+      id: 'version',
       label: t('widget.versionInfo.version', 'Version'),
-      value: <span className="font-bold">{chartVersion}</span>,
+      value: <Text size="sm" weight="bold" color="primary">{chartVersion}</Text>,
     },
     {
+      id: 'build-date',
       label: t('widget.versionInfo.buildDate', 'Build date'),
       value: buildDate,
     },
     {
+      id: 'git-sha',
       label: t('widget.versionInfo.gitSha', 'Git SHA'),
       value: <span className="font-mono break-all">{truncatedSha}</span>,
     },
     {
+      id: 'go-version',
       label: t('widget.versionInfo.goVersion', 'Go version'),
       value: goVersion,
     },
     {
+      id: 'uptime',
       label: t('widget.versionInfo.uptime', 'Uptime'),
       value: uptime,
     },
@@ -120,15 +125,13 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
     return items;
   }, [t, signalsPerSec, messagesToday, bytesProcessed, avgLatency, isWide, fmtNumber, fmtInt, displayPrecision, displayLocale]);
 
-  const versionState = useDataState(version);
-  const captureState = useDataState(capture);
+  const versionState = useDataState(version, { unavailable: version.data == null });
+  const captureState = useDataState(capture, { unavailable: capture.data == null });
   const retry = () => { void version.refetch(); void capture.refetch(); };
   const dataState = {
-    ...(versionState.hasData && !isCompact
-      ? combineDataStates([versionState, captureState])
-      : versionState),
-    data: version.data,
-    hasData: versionState.hasData,
+    ...(isCompact ? versionState : combineDataStates([versionState, captureState])),
+    data: isCompact ? version.data : [version.data, capture.data],
+    hasData: versionState.hasData || (!isCompact && captureState.hasData),
     retry,
   };
   const hasData = version.data != null;
@@ -144,39 +147,47 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
       isError={version.isError || (!isCompact && capture.isError)}
       onRefresh={retry}
     >
-      {hasData ? (
-        isCompact ? (
+      {isCompact ? (
+        hasData ? (
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-            <span className={dashboardTokens.secondaryMetric}>{chartVersion}</span>
+            <Text size="lg" weight="semibold" color="primary" className="max-w-full break-words tabular-nums">{chartVersion}</Text>
             <Badge variant="neutral" className="text-2xs">
               {truncatedSha}
             </Badge>
           </div>
         ) : (
+          <EmptyState /* no-action: the widget header already exposes version refresh */
+            icon={<Info className="h-5 w-5" />} message={t('widget.versionInfo.noData', 'No version data available')} className="py-4" />
+        )
+      ) : (
           /* ── Standard / Wide layout ── */
           <div className="flex flex-col gap-3 h-full">
-            <KVList items={kvItems} />
-
+            <SourceContent
+              state={versionState.fatalError ? 'error' : !versionState.hasData ? 'loading' : !hasData ? 'empty' : versionState.refreshError ? 'retained' : 'ready'}
+              label={t('widget.versionInfo.title', 'Version info')}
+              emptyMessage={t('widget.versionInfo.noData', 'No version data available')}
+              errorMessage={t('widget.versionInfo.versionError', 'Version information could not be loaded.')}
+              error={versionState.fatalError}
+              errorRecovery={{ onRetry: versionState.retry ?? undefined }}
+              retainedMessage={t('widget.versionInfo.versionRetained', 'Previously loaded version information remains visible while it refreshes.')}
+            >
+            <KVList items={kvItems} layout="responsive" wrap />
             {isWide && (
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
-                <span>{t('widget.versionInfo.os', 'OS')}: {osInfo}</span>
-                <span>•</span>
-                <span>{t('widget.versionInfo.arch', 'Arch')}: {archInfo}</span>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <Caption className="break-words">{t('widget.versionInfo.os', 'OS')}: {osInfo}</Caption>
+                <Caption aria-hidden="true">•</Caption>
+                <Caption className="break-words">{t('widget.versionInfo.arch', 'Arch')}: {archInfo}</Caption>
               </div>
             )}
-
+            </SourceContent>
             <div className="mt-auto">
+              <StaleRefreshWarning state={captureState} />
+              {captureState.fatalError && <QueryError error={captureState.fatalError} onRetry={captureState.retry ?? undefined} />}
+              {!captureState.hasData && capture.isLoading && <Skeleton className="mb-2 h-8 w-full" />}
               <WidgetStatGrid stats={statItems} compact={isCompact} cols={isWide ? 4 : 2} />
             </div>
           </div>
-        )
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Info className="h-5 w-5" />}
-          message={t('widget.versionInfo.noData', 'No version data available')}
-          className="py-4"
-        />
       )}
     </WidgetShell>
   );

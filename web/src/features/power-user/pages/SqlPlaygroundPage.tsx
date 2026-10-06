@@ -44,8 +44,8 @@ import { Database, Info, Play, TerminalSquare, Trash2 } from 'lucide-react';
 import {
   AINLSqlPlayground,
   type ReadonlySQLDraft,
-} from '@/components/ai/AINLSqlPlayground';
-import { PageLayout } from '@/components/layout';
+} from '@/components/ai';
+import { Grid, PageLayout } from '@/components/layout';
 import {
   Button,
   CopyButton,
@@ -67,6 +67,7 @@ import { CURATED_CATALOG } from '../components/sqlCatalog';
 // Canonical localStorage key for the SQL draft. Persisted across navigation
 // so a user typing a long query doesn't lose progress on accidental reload.
 const SQL_PLAYGROUND_DRAFT_KEY = 'ai.sqlPlayground.draft';
+const WORKSPACE_COLUMNS = { default: 1, xl: 3 } as const;
 
 function loadPersistedSql(): string {
   if (typeof window === 'undefined') return '';
@@ -176,7 +177,7 @@ export default function SqlPlaygroundPage() {
     >
       <div className="space-y-6" data-testid="power-sql-playground-root">
         {/* 1 — KPI band: real catalog stats, reflows 2 → 4 columns */}
-        <FadeIn>
+        <FadeIn className="min-w-0 max-w-full">
           <CatalogKpiBand tableCount={tableCount} columnCount={columnCount} />
         </FadeIn>
 
@@ -184,14 +185,15 @@ export default function SqlPlaygroundPage() {
         <AINLSqlPlayground onApply={handleApplyAiDraft} />
 
         {/* 3 — Query workspace: editor hero + reference panel */}
-        <FadeIn delay={0.1}>
+        <FadeIn delay={0.1} className="min-w-0 max-w-full">
           <section
             aria-label={t('powerSql.workspace.label', 'Query workspace')}
-            className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+            className="min-w-0"
           >
-            <GlassPanel className="space-y-3 p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="flex items-center gap-2">
-                <TerminalSquare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Grid cols={WORKSPACE_COLUMNS} gap={4} className="min-w-0">
+            <GlassPanel className="min-w-0 max-w-full space-y-3 p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
+                <TerminalSquare className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
                 {t('powerSql.editor.title', 'Manual SQL editor')}
               </PanelTitle>
               <Textarea
@@ -209,6 +211,7 @@ export default function SqlPlaygroundPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="primary"
+                  wrapLabel
                   onClick={handleRun}
                   disabled={!canRun}
                   aria-disabled={!canRun ? 'true' : 'false'}
@@ -218,6 +221,7 @@ export default function SqlPlaygroundPage() {
                 </Button>
                 <Button
                   variant="secondary"
+                  wrapLabel
                   onClick={handleClear}
                   disabled={!canRun}
                   icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
@@ -258,12 +262,13 @@ export default function SqlPlaygroundPage() {
             </GlassPanel>
 
             <QueryReferencePanel />
+            </Grid>
           </section>
         </FadeIn>
 
         {/* 4 — Curated schema catalog: auto-fit bento of table cards */}
-        <FadeIn delay={0.2}>
-          <section aria-label={t('powerSql.catalog.title', 'Curated schema catalog')}>
+        <FadeIn delay={0.2} className="min-w-0 max-w-full">
+          <section className="min-w-0" aria-label={t('powerSql.catalog.title', 'Curated schema catalog')}>
             <div className="mb-1 flex items-center gap-2">
               <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               <SectionTitle>

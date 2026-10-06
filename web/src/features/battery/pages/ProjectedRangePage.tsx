@@ -4,7 +4,7 @@ import { Route } from 'lucide-react';
 import { CardGrid, LayoutCard, PageLayout } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { AIRangePrediction } from '@/components/ai/AIRangePrediction';
+import { AIRangePrediction } from '@/components/ai';
 import { useRangeProjection } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';

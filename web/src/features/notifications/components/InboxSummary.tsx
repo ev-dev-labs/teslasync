@@ -18,12 +18,13 @@ import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Archive, Inbox, MailWarning, AlertOctagon, AlertTriangle, Info, Clock } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
-import { EmptyState, QueryError, StatGridSkeleton, StaleRefreshWarning } from '@/components/feedback';
+import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
+import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import type { NotificationLog } from '@/api/types';
 import { formatRelativeTime, formatDateTime } from '@/lib/dateFormat';
 
 import { useDataState } from '@/hooks/useDataState';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 export interface InboxSummaryProps {
   /** The active (non-archived) notifications query (TanStack result) from the page. */
@@ -42,7 +43,6 @@ interface InboxStats {
 
 /** Compact backlog context; complete period aggregates remain in the report. */
 export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const state = useDataState(query);
   const rows = query.data ?? [];
@@ -66,23 +66,34 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
     return { total: rows.length, unread, critical, warn, info, lastTs };
   }, [rows, archived]);
 
-  const gridClass = 'grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-3 xl:grid-cols-6';
   const sectionLabel = archived ? t('notifications.archived.summary.label', 'Archived summary') : t('notifications.inbox.summary.label', 'Inbox summary');
 
   // Only the genuine first load (no cached rows yet) shows the skeleton.
   // A background refetch keeps its previously-fetched data, so we keep the
   // KPIs on screen instead of flashing an empty skeleton grid over them.
   const firstLoad = query.isLoading && rows.length === 0;
-
-  if (firstLoad) {
-    return (
-      <section aria-label={sectionLabel}>
-        <GlassPanel className="px-4 py-3">
-          <StatGridSkeleton cards={6} className="sm:grid-cols-3 xl:grid-cols-6 [&>div]:!h-8" />
-        </GlassPanel>
-      </section>
-    );
-  }
+  const scope = archived ? t('notifications.archived.summary.recentScope', 'Latest 50 archived entries · all time') : t('notifications.inbox.summary.recentScope', 'Latest 50 active entries · all time');
+  const provenance = t('notifications.inbox.summary.brief.provenance', 'Counts describe this bounded unfiltered sample, not the workspace period or the server total. Missing read timestamps count as unread.');
+  const lastReceivedValue = stats.lastTs > 0 ? formatRelativeTime(new Date(stats.lastTs)) : null;
+  const lastReceivedSubtitle = stats.lastTs > 0 ? formatDateTime(new Date(stats.lastTs)) : undefined;
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'inbox-total', rawValue: state.hasData ? stats.total : null,
+      label: archived ? t('notifications.archived.summary.total', 'Total archived') : t('notifications.inbox.summary.total', 'Recent notifications'),
+      context: <>{archived ? <Archive className="h-3.5 w-3.5" aria-hidden="true" /> : <Inbox className="h-3.5 w-3.5" aria-hidden="true" />}</> },
+    { metricId: 'count', occurrenceId: 'inbox-unread', rawValue: state.hasData ? stats.unread : null,
+      label: t('notifications.inbox.summary.unread', 'Unread'),
+      context: <><MailWarning className="h-3.5 w-3.5" aria-hidden="true" />{t('notifications.inbox.summary.unreadOf', '{{unread}} of {{total}}', { unread: stats.unread, total: stats.total })}</> },
+    { metricId: 'count', occurrenceId: 'inbox-critical', rawValue: state.hasData ? stats.critical : null,
+      label: t('notifications.inbox.summary.critical', 'Critical'), context: <AlertOctagon className="h-3.5 w-3.5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'inbox-warn', rawValue: state.hasData ? stats.warn : null,
+      label: t('notifications.inbox.summary.warnings', 'Warnings'), context: <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'inbox-info', rawValue: state.hasData ? stats.info : null,
+      label: t('notifications.inbox.summary.info', 'Info'), context: <Info className="h-3.5 w-3.5" aria-hidden="true" /> },
+    { metricId: 'text', occurrenceId: 'inbox-last', rawValue: lastReceivedValue,
+      label: archived ? t('notifications.archived.summary.lastArchived', 'Last archived') : t('notifications.inbox.summary.lastReceived', 'Last received'),
+      context: <><Clock className="h-3.5 w-3.5" aria-hidden="true" />{lastReceivedSubtitle}</> },
+  ];
+  const operationalMetrics = useOperationalMetrics(metrics);
 
   if (state.fatalError) {
     return (
@@ -98,7 +109,7 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
     );
   }
 
-  if (stats.total === 0) {
+  if (!firstLoad && stats.total === 0) {
     return (
       <section aria-label={sectionLabel}>
         <GlassPanel className="p-4 sm:p-5">
@@ -115,41 +126,28 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
     );
   }
 
-  const lastReceivedValue = stats.lastTs > 0 ? formatRelativeTime(new Date(stats.lastTs)) : '—';
-  const lastReceivedSubtitle = stats.lastTs > 0 ? formatDateTime(new Date(stats.lastTs)) : undefined;
-
   return (
     <section aria-label={sectionLabel}>
-      <GlassPanel className="px-4 py-3">
-        <StaleRefreshWarning state={state} label={sectionLabel} />
-        <div className={gridClass}>
-          {[
-            { label: archived ? t('notifications.archived.summary.total', 'Total archived') : t('notifications.inbox.summary.total', 'Recent notifications'), value: fmtInt(stats.total), Icon: archived ? Archive : Inbox },
-            { label: t('notifications.inbox.summary.unread', 'Unread'), value: fmtInt(stats.unread), Icon: MailWarning },
-            { label: t('notifications.inbox.summary.critical', 'Critical'), value: fmtInt(stats.critical), Icon: AlertOctagon },
-            { label: t('notifications.inbox.summary.warnings', 'Warnings'), value: fmtInt(stats.warn), Icon: AlertTriangle },
-            { label: t('notifications.inbox.summary.info', 'Info'), value: fmtInt(stats.info), Icon: Info },
-            { label: archived ? t('notifications.archived.summary.lastArchived', 'Last archived') : t('notifications.inbox.summary.lastReceived', 'Last received'), value: lastReceivedValue, Icon: Clock, title: lastReceivedSubtitle },
-          ].map(({ label, value, Icon, title }) => (
-            <div key={label} title={title} className="min-w-0">
-              <p className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-                <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                {label}
-              </p>
-              <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[var(--text-primary)]">{value}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-[var(--border-subtle)] pt-2 text-xs text-[var(--text-muted)]">
-          <span>{archived ? t('notifications.archived.summary.recentScope', 'Latest 50 archived entries · all time') : t('notifications.inbox.summary.recentScope', 'Latest 50 active entries · all time')}</span>
-          <span>{t('notifications.inbox.summary.unreadOf', '{{unread}} of {{total}}', { unread: stats.unread, total: stats.total })}</span>
-          {stats.total > stats.critical + stats.warn + stats.info && (
-            <span>{t('notifications.inbox.summary.unknownSeverity', '{{count}} with unknown severity', {
-              count: stats.total - stats.critical - stats.warn - stats.info,
-            })}</span>
-          )}
-        </div>
-      </GlassPanel>
+      <StaleRefreshWarning state={state} label={sectionLabel} />
+      <OperationalBrief compact loading={firstLoad} testId="notification-backlog-brief"
+        eyebrow={sectionLabel}
+        title={t('notifications.inbox.summary.brief.title', 'Backlog severity and read status')}
+        description={provenance}
+        statusLabel={firstLoad ? t('common.loading', 'Loading…') : state.status === 'stale'
+          ? t('dataState.stale.title', 'Data may be stale')
+          : state.status === 'offline' ? t('dataState.offline.title', 'Offline')
+            : t('notifications.inbox.summary.brief.available', 'Sample loaded')}
+        statusTone={state.status === 'stale' || state.status === 'offline' ? 'warning' : 'neutral'}
+        metrics={operationalMetrics} scope={scope}
+        freshness={<DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />}
+        provenance={`${scope}. ${provenance}`}
+        attention={stats.total > stats.critical + stats.warn + stats.info ? [{
+          key: 'unknown-severity', title: t('notifications.inbox.summary.brief.unknown', 'Unknown severity'),
+          description: t('notifications.inbox.summary.unknownSeverity', '{{count}} with unknown severity', {
+            count: stats.total - stats.critical - stats.warn - stats.info,
+          }),
+        }] : []}
+      />
     </section>
   );
 }

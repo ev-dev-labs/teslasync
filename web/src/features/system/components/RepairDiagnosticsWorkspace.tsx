@@ -5,7 +5,7 @@ import {
   useRepairSuggestions,
   useStaleSessions,
 } from '@/api/hooks/useDataRepair';
-import { AIDataRepairSuggestions } from '@/components/ai/AIDataRepairSuggestions';
+import { AIDataRepairSuggestions } from '@/components/ai';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
@@ -107,6 +107,7 @@ export function RepairDiagnosticsWorkspace({
         blocked={suggestionsState.hasData ? blockedCount : null}
         truncated={suggestionsQuery.data?.truncated ?? false}
         loading={suggestionsQuery.isLoading && !suggestionsState.hasData}
+        retained={suggestionsState.hasData && suggestionsQuery.isError}
       />
       <AIDataRepairSuggestions vehicleId={vehicleId} />
       <StaleRefreshWarning state={suggestionsState} label={t('dataRepair.kpi.suggestions', 'Suggested repairs')} />

@@ -16,19 +16,19 @@ import {
   ArchetypeCentroidMap,
   ArchetypeClusterComposition,
   ArchetypeConfidenceDistribution,
-  ArchetypeEvidenceLedger,
   ArchetypeExactAccounting,
   ArchetypeFeatureEvidence,
-  ArchetypeHistoryCoverage,
   ArchetypeHourlyProfile,
   ArchetypeMethodology,
   ArchetypeMonthlyComposition,
   ArchetypeProfiles,
   ArchetypeSeparation,
-  ArchetypeSourceDisposition,
   useDriveArchetypeDisplay,
   type ArchetypeQueryState,
 } from '../components/drive-archetypes';
+import { ArchetypeEvidenceBrief as ArchetypeEvidenceLedger } from '../components/operationalbrief-a-m/ArchetypeEvidenceBrief';
+import { ArchetypeSourceBrief as ArchetypeSourceDisposition } from '../components/operationalbrief-a-m/ArchetypeSourceBrief';
+import { ArchetypeCoverageBrief as ArchetypeHistoryCoverage } from '../components/operationalbrief-a-m/ArchetypeCoverageBrief';
 import { summarizeArchetypes } from '../lib/driveArchetypes';
 
 export default function DriveArchetypesPage() {

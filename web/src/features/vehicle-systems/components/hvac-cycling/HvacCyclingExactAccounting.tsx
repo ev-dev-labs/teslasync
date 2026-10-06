@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
 import { LayoutCard, Grid } from '@/components/layout';
-import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
+import { Badge, MetricLabel, Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
@@ -132,14 +133,16 @@ export function HvacCyclingExactAccounting({
           <Text as="h4" variant="label" className="mb-3 mt-5">
             {t('hvacCycling.accounting.outcomes', 'Mutually exclusive returned-row outcomes')}
           </Text>
-          <Grid cols={{ default: 2, md: 5 }} gap={3}>
-            {outcomes.map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-[var(--border-subtle)] p-3">
-                <MetricLabel>{label}</MetricLabel>
-                <MetricValue className="mt-1">{fmtInt(value)}</MetricValue>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="hvac-cycling-outcome-summary"
+            title={t('hvacCycling.accounting.outcomes', 'Mutually exclusive returned-row outcomes')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('hvacCycling.accounting.subtitle', 'Mutually exclusive row outcomes and pair dispositions keep source rows, samples, intervals, and runs distinct.') }}
+            metrics={outcomes.map(([label, rawValue], index) => ({
+              metricId: 'count' as const, occurrenceId: `outcome-${index}`, label, rawValue,
+              display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
+            }))}
+          />
         </HvacCyclingSectionBody>
       </LayoutCard>
     </section>

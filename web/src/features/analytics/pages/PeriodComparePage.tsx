@@ -11,7 +11,8 @@ import {
   Badge, Button, Select, Text,
   DataTable, type SelectOption, type Column,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief, type StatMetric } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { Skeleton, EmptyState, AlertBanner, QueryError } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
 import { FadeIn } from '@/components/motion';
@@ -32,7 +33,7 @@ import {
 } from '../lib/periodCompare';
 import { cn } from '@/lib/cn';
 import { resolveSemantic } from '@/lib/metricSemantics';
-import { AIPeriodCompareNarration } from '@/components/ai/AIPeriodCompareNarration';
+import { AIPeriodCompareNarration } from '@/components/ai';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import { deriveComparisonState } from '../components/period-compare-modernization/comparisonState';
@@ -188,6 +189,32 @@ export default function PeriodComparePage() {
       kind: resolveSemantic(metric.semantic).unit === 'count' ? 'count' as const : 'measurement' as const,
     }));
   }, [a, b, t, distanceUnit, efficiencyUnit]);
+  const briefMetrics: StatMetric[] = metrics.length === 0 ? [
+    { metricId: 'distance', occurrenceId: 'period-compare-distance', label: t('compare.totalDistance', 'Total distance'), rawValue: null },
+    { metricId: 'count', occurrenceId: 'period-compare-drives', label: t('compare.totalDrives', 'Total drives'), rawValue: null },
+    { metricId: 'energy', occurrenceId: 'period-compare-energy', label: t('compare.energyUsed', 'Energy used'), rawValue: null },
+    { metricId: 'efficiency', occurrenceId: 'period-compare-efficiency', label: t('compare.avgEfficiency', 'Avg efficiency'), rawValue: null },
+    { metricId: 'currency', occurrenceId: 'period-compare-cost', label: t('compare.totalCost', 'Total cost'), rawValue: null },
+    { metricId: 'mass', occurrenceId: 'period-compare-co2', label: t('compare.co2Saved', 'CO₂ saved'), rawValue: null },
+  ] : metrics.map(m => {
+    const metricId = m.key === 'distance' ? 'distance' : m.key === 'drives' ? 'count'
+      : m.key === 'energy' ? 'energy' : m.key === 'efficiency' ? 'efficiency'
+        : m.key === 'cost' ? 'currency' : 'mass';
+    const rawValue = m.key === 'distance' ? (a?.total_distance ?? 0) * METERS_PER_KM
+      : m.key === 'energy' ? m.a * 1000 : m.key === 'efficiency' ? (a?.avg_efficiency ?? 0) / 1000 : m.a;
+    const assessment = assessDelta(m.semantic, m.a, m.b);
+    return {
+      metricId, occurrenceId: `period-compare-${m.key}`, rawValue, label: m.label,
+      display: { formatter: () => ({ value: formatValue(m.a, m.kind), unit: m.unit }) },
+      context: `${t('compare.periodB', 'Period B')}: ${formatValue(m.b, m.kind)} ${m.unit}`.trim(),
+      comparisonContent: <Text variant="caption">
+        {t('compare.change', 'Change')}: {formatValue(m.a - m.b, m.kind)} {m.unit}; {pctChange(m.a, m.b).value}
+        {' · '}{assessment.favorable == null ? t('compare.brief.neutral', 'Direction is not scored')
+          : assessment.favorable ? t('compare.brief.favorable', 'Favorable change') : t('compare.brief.unfavorable', 'Unfavorable change')}
+      </Text>,
+    };
+  });
+  const operationalMetrics = useOperationalMetrics(briefMetrics);
 
   // Hero chart plots per-metric % change vs Period B (unitless, so a shared
   // % axis is honest) instead of raw values with incompatible units.
@@ -425,28 +452,25 @@ export default function PeriodComparePage() {
                 id: 'period-compare-kpis',
                 size: 'full',
                 content: (
-                  <LayoutCard title={t('compare.kpis', 'Comparison metrics')}>
-                    {metrics.length > 0 ? (
-                      <div className="grid min-w-0 grid-cols-2 gap-3 @[640px]:grid-cols-3 @[1280px]:grid-cols-6">
-                        {metrics.map((m) => (
-                          <MetricCard
-                            key={m.key}
-                            label={m.label}
-                            value={`${formatValue(m.a, m.kind)} ${m.unit}`.trim()}
-                            icon={m.icon}
-                            color={m.color}
-                            wrapLabel
-                            subtitle={`${t('compare.periodB', 'Period B')}: ${formatValue(m.b, m.kind)} ${m.unit}`.trim()}
-                            delta={{
-                              metric: m.semantic,
-                              current: m.a,
-                              previous: m.b,
-                              comparedTo: `${t('compare.vs', 'vs')} ${t('compare.periodB', 'Period B')}`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    ) : activeVehicle ? (
+                  <>
+                    <OperationalBrief compact testId="period-compare-summary"
+                      eyebrow={t('compare.title', 'Period comparison')}
+                      title={t('compare.brief.title', 'Period comparison evidence')}
+                      description={t('compare.brief.description', 'Period A measurements with Period B baselines and semantic changes. The two source windows are independent.')}
+                      metrics={operationalMetrics} loading={bothLoading}
+                      statusLabel={loadError ? t('compare.brief.unavailable', 'Source unavailable')
+                        : stateA.refreshError || stateB.refreshError ? t('compare.brief.retained', 'Retained comparison sources')
+                          : statsA.isPaused || statsB.isPaused ? t('compare.brief.paused', 'Comparison refresh paused')
+                        : bothLoading ? t('compare.brief.loading', 'Loading comparison')
+                          : a && b ? t('compare.brief.available', 'Both periods available') : t('compare.brief.incomplete', 'Comparison incomplete')}
+                      statusTone={loadError || stateA.refreshError || stateB.refreshError || statsA.isPaused || statsB.isPaused ? 'warning' : 'neutral'}
+                      scope={t('compare.brief.windows', 'Period A: {{periodA}} · Period B: {{periodB}}', {
+                        periodA: periodOptions.find(option => option.value === periodA)?.label,
+                        periodB: periodOptions.find(option => option.value === periodB)?.label,
+                      })}
+                      freshness={t('compare.brief.coverage', 'Period totals; continuous observation coverage is not reported.')}
+                      provenance={t('compare.title', 'Period comparison')} />
+                    {metrics.length === 0 && (activeVehicle ? (
                       <PeriodSources
                         stateA={stateA}
                         stateB={stateB}
@@ -458,8 +482,8 @@ export default function PeriodComparePage() {
                         icon={<Calendar className="h-10 w-10" aria-hidden="true" />}
                         message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
                       />
-                    )}
-                  </LayoutCard>
+                    ))}
+                  </>
                 ),
               },
               {

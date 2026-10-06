@@ -6,9 +6,12 @@ import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
+import { Delta } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetComparisonCard, WidgetStatGrid, type ComparisonMetric } from './shared';
+import { type ComparisonMetric } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -100,11 +103,33 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
     ];
   }, [data, distanceUnit, efficiencyUnit, t, fmtNumber, fmtInt]);
 
-  const visibleMetrics = isCompact ? metrics.slice(0, 2) : metrics;
-  const comparable = visibleMetrics.filter((metric): metric is ComparisonMetric =>
-    metric.current != null && metric.previous != null);
-  const unmeasured = visibleMetrics.filter((metric) =>
-    metric.current == null || metric.previous == null);
+  const sourceMetrics: DigestMetric[] = metrics.length > 0 ? metrics : [
+    { label: t('widget.weeklyDigest.distance', 'Distance'), current: null, previous: null, formattedCurrent: '—', unit: distanceUnit, higherIsBetter: true },
+    { label: t('widget.weeklyDigest.drives', 'Drives'), current: null, previous: null, formattedCurrent: '—', higherIsBetter: true },
+    { label: t('widget.weeklyDigest.energy', 'Energy'), current: null, previous: null, formattedCurrent: '—', unit: 'kWh', higherIsBetter: true },
+    { label: t('widget.weeklyDigest.efficiency', 'Efficiency'), current: null, previous: null, formattedCurrent: '—', unit: efficiencyUnit, higherIsBetter: false },
+  ];
+  const visibleMetrics = isCompact ? sourceMetrics.slice(0, 2) : sourceMetrics;
+  const rawMetrics: readonly StatMetric[] = visibleMetrics.map((metric, index) => ({
+    metricId: index === 0 ? 'distance' : index === 1 ? 'count' : index === 2 ? 'energy' : 'efficiency',
+    rawValue: index === 0
+      ? data?.distanceKm == null ? null : data.distanceKm * 1000
+      : index === 1 ? data?.drives
+        : index === 2 ? data?.energyKwh == null ? null : data.energyKwh * 1000
+          : data?.efficiency == null ? null : data.efficiency / 1000,
+    label: metric.label,
+    description: t('widget.weeklyDigest.summary.metricHelp', 'Current-week source quantity; the comparison uses its matching previous-week operand. Missing values are not zero.'),
+    display: { formatter: () => ({ value: metric.formattedCurrent ?? '—', unit: metric.unit ?? '' }) },
+    comparisonContent: metric.current != null && metric.previous != null ? (
+      <Delta
+        metric={{ direction: metric.higherIsBetter === false ? 'lower_better' : 'higher_better' }}
+        current={metric.current}
+        previous={metric.previous}
+        display="percent"
+        size="sm"
+      />
+    ) : null,
+  }));
 
   const handleRefresh = useCallback(() => {
     if (idStr) {
@@ -126,18 +151,17 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {metrics.length > 0 ? (
-        <div className="min-w-0">
-          {comparable.length > 0 && <WidgetComparisonCard metrics={comparable} />}
-          {unmeasured.length > 0 && (
-            <WidgetStatGrid stats={unmeasured.map((metric) => ({
-              label: metric.label,
-              value: metric.current == null ? null : metric.formattedCurrent,
-              unit: metric.unit,
-            }))} compact />
-          )}
-        </div>
-      ) : (
+      <DashboardSourceBrief
+          metrics={rawMetrics}
+          state={dataState}
+          eyebrow={t('widget.weeklyDigest.summary.eyebrow', 'Weekly comparison')}
+          title={t('widget.weeklyDigest.summary.title', 'Weekly operating digest')}
+          description={t('widget.weeklyDigest.summary.description', 'This week versus the source’s previous week for the resolved vehicle. Exact week boundaries, timezone and completeness are not supplied by this digest response; comparisons retain their original operands and direction rules.')}
+          scope={t('widget.weeklyDigest.summary.scope', 'Vehicle {{id}} · current / previous week', { id: idStr })}
+          testId="weekly-digest-operational-brief"
+          loading={isLoading && !data}
+        />
+      {metrics.length === 0 && !isLoading && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<CalendarDays className="h-5 w-5" />}
           message={t('widget.weeklyDigest.noData', 'No weekly data yet')}

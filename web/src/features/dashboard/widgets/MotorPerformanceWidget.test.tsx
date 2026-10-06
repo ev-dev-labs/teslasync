@@ -359,6 +359,27 @@ describe('MotorPerformanceWidget — compact view', () => {
 });
 
 describe('MotorPerformanceWidget — lifecycle states', () => {
+  it('uses the nullable canonical signed scale without turning an unknown reading into a meter', () => {
+    const { container } = renderWidget(FULL, { query: makeQuery({ data: makeMotor({ di_torque: null }) }) });
+    const scale = screen.getByRole('group', { name: 'Torque' });
+    expect(scale).not.toHaveAttribute('aria-valuenow');
+    expect(scale).not.toHaveAttribute('aria-valuemin');
+    expect(scale).not.toHaveAttribute('aria-valuemax');
+    expect(container.querySelector('[data-bipolar-fill]')).toBeNull();
+    expect(screen.getByText('Regen')).toBeInTheDocument();
+    expect(screen.getByText('Drive')).toBeInTheDocument();
+  });
+
+  it.each([650, -300])('preserves the full physical reading %s outside the displayed scale', (torque) => {
+    renderWidget(FULL, { query: makeQuery({ data: makeMotor({ di_torque: torque }) }) });
+    expect(screen.getByText(`${torque.toFixed(2)}`)).toBeInTheDocument();
+    expect(screen.getByText('Nm')).toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: 'Torque' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Reading outside displayed scale/)).toBeInTheDocument();
+    expect(screen.getByText('Regen')).toBeInTheDocument();
+    expect(screen.getByText('Drive')).toBeInTheDocument();
+  });
+
   it('retains measured torque and temperatures after a background failure', () => {
     const { container } = renderWidget(FULL, {
       query: makeQuery({ data: makeMotor({ di_torque: 0, di_stator_temp: 0 }), isError: true, error: new Error('refresh failed') }),

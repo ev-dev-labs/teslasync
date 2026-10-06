@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ReceiptText } from 'lucide-react';
 import { Text, Badge } from '@/components/ui';
-import { StatGroup } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { useBillVariance } from '@/api/hooks/useCharging';
 import { CostStatSection } from './CostStatSection';
 import { useIndependentStatPeriod } from './useSourceStatPeriod';
@@ -50,7 +50,11 @@ export function BillVarianceCard({ vehicleId }: BillVarianceCardProps) {
               })}
             </Text>
           </div>
-          <StatGroup period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+          <ChargingSummaryBrief title={t('costAnalysis.billVariance.title', 'Bill Truth: Measured vs Invoiced')}
+            sourceStatus={data?.verdict === 'reconciled' ? t('costAnalysis.billVariance.reconciled', 'Reconciled')
+              : data?.verdict === 'review' ? t('costAnalysis.billVariance.review', 'Needs review')
+                : t('costAnalysis.billVariance.missing', 'Missing invoices')}
+            period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
             metrics={[
               { metricId: 'energy', rawValue: data?.energy_delta_wh, display: energyDisplay,
                 label: t('costAnalysis.billVariance.energyDelta', 'Energy Δ'),

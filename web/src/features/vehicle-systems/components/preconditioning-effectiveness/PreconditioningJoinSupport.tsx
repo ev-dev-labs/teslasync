@@ -2,8 +2,9 @@ import { Repeat2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, MetricValue, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
@@ -26,17 +27,17 @@ export function PreconditioningJoinSupport({
   const { t } = useTranslation();
   const support = summary.windowSupport;
   const items = [
-    [t('preconditioningEffectiveness.join.overlap', 'Drive windows overlapping coverage'), fmtInt(summary.coverage.overlappingDriveWindows)],
-    [t('preconditioningEffectiveness.join.withRows', 'Departures with window rows'), fmtInt(support.departuresWithWindowRows)],
-    [t('preconditioningEffectiveness.join.withThermal', 'Departures with distinct-state support'), fmtInt(support.departuresWithThermalSupport)],
-    [t('preconditioningEffectiveness.join.references', 'Window-row references'), fmtInt(support.windowRowReferences)],
-    [t('preconditioningEffectiveness.join.uniqueUsed', 'Unique climate rows used'), fmtInt(support.climateRowsUsed)],
-    [t('preconditioningEffectiveness.join.reused', 'Climate rows reused'), fmtInt(support.climateRowsReused)],
-    [t('preconditioningEffectiveness.join.medianRows', 'Median window rows'), support.medianWindowRows != null ? fmtInt(support.medianWindowRows) : '—'],
-    [t('preconditioningEffectiveness.join.medianThermal', 'Median distinct cabin states'), support.medianThermalSamples != null ? fmtInt(support.medianThermalSamples) : '—'],
-    [t('preconditioningEffectiveness.join.medianSpan', 'Median observation span'), formatDuration(support.medianObservationSpanS)],
-    [t('preconditioningEffectiveness.join.medianLead', 'Median final-state lead'), formatDuration(support.medianLastSampleLeadS)],
-    [t('preconditioningEffectiveness.join.p90Lead', 'P90 final-state lead'), formatDuration(support.p90LastSampleLeadS)],
+    [t('preconditioningEffectiveness.join.overlap', 'Drive windows overlapping coverage'), summary.coverage.overlappingDriveWindows, 'count'],
+    [t('preconditioningEffectiveness.join.withRows', 'Departures with window rows'), support.departuresWithWindowRows, 'count'],
+    [t('preconditioningEffectiveness.join.withThermal', 'Departures with distinct-state support'), support.departuresWithThermalSupport, 'count'],
+    [t('preconditioningEffectiveness.join.references', 'Window-row references'), support.windowRowReferences, 'count'],
+    [t('preconditioningEffectiveness.join.uniqueUsed', 'Unique climate rows used'), support.climateRowsUsed, 'count'],
+    [t('preconditioningEffectiveness.join.reused', 'Climate rows reused'), support.climateRowsReused, 'count'],
+    [t('preconditioningEffectiveness.join.medianRows', 'Median window rows'), support.medianWindowRows, 'number'],
+    [t('preconditioningEffectiveness.join.medianThermal', 'Median distinct cabin states'), support.medianThermalSamples, 'number'],
+    [t('preconditioningEffectiveness.join.medianSpan', 'Median observation span'), support.medianObservationSpanS, 'duration'],
+    [t('preconditioningEffectiveness.join.medianLead', 'Median final-state lead'), support.medianLastSampleLeadS, 'duration'],
+    [t('preconditioningEffectiveness.join.p90Lead', 'P90 final-state lead'), support.p90LastSampleLeadS, 'duration'],
   ] as const;
 
   return (
@@ -49,17 +50,17 @@ export function PreconditioningJoinSupport({
           )}
         </Text>
         <PreconditioningSectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, md: 3, xl: 6 }} gap={3}>
-            {items.map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <MetricLabel>{label}</MetricLabel>
-                <MetricValue className="mt-1">{value}</MetricValue>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="preconditioning-join-summary"
+            title={t('preconditioningEffectiveness.join.title', 'Join-window support and overlap disclosure')}
+            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)
+              || state.climate.isPaused || state.drives.isPaused}
+            period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage'),
+              reason: t('preconditioningEffectiveness.join.subtitle', 'Support counts describe the bounded pre-drive join before classification gates are applied.') }}
+            metrics={items.map(([label, rawValue, metricId], index) => ({
+              occurrenceId: `join-${index}`, label, metricId, rawValue,
+              display: { formatter: (raw: number) => ({ value: metricId === 'duration' ? formatDuration(raw) : fmtInt(raw), unit: '' }) },
+            }))}
+          />
           <AlertBanner
             className="mt-4"
             variant={support.climateRowsReused > 0 ? 'warning' : 'info'}

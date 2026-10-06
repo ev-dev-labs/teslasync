@@ -93,6 +93,8 @@ export default function ChannelsPage() {
             stats={statsQuery.data}
             isLoading={!statsState.hasData && statsQuery.isLoading}
             error={statsState.fatalError}
+            retained={statsState.status === 'stale'}
+            source={statsState}
             onRetry={() => statsQuery.refetch()}
           />
         </section>

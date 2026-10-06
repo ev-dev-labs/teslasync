@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-import { StatGroup } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import {
   ChartTooltip, chartGrid, axisTickSm, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, EmbeddedChart,
@@ -81,7 +81,8 @@ export function TimeOfUseAnalysis({
           <div className="space-y-3">
             <Text as="h4" variant="label">{t('costAnalysis.tou.insights', 'Insights')}</Text>
             {touInsights ? (
-              <StatGroup period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+              <ChargingSummaryBrief title={t('costAnalysis.tou.insights', 'Insights')}
+                period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
                 metrics={[
                   { metricId: 'text', rawValue: touInsights.cheapest.label,
                     label: t('costAnalysis.tou.cheapestHour', 'Cheapest Hour'),

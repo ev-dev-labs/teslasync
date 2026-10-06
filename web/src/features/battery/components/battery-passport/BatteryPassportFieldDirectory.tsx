@@ -432,6 +432,27 @@ export function BatteryPassportFieldDirectory({
             data={rows}
             keyExtractor={(row) => row.field}
             mobileColumns={['field', 'summary']}
+            mobilePresentation={{
+              variant: 'keyValue',
+              roles: { field: 'title', summary: 'primary', source: 'meta', binding: 'badge' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'field': return row.field;
+                  case 'summary': return row.summary;
+                  case 'source': return row.source;
+                  case 'binding':
+                    return row.binding === 'value'
+                      ? t('batteryPassport.fields.boundValue', 'Bound value')
+                      : row.binding === 'utc_day'
+                        ? t('batteryPassport.fields.boundDay', 'Bound UTC day')
+                        : row.binding === 'digest'
+                          ? t('batteryPassport.fields.digest', 'Digest output')
+                          : t('batteryPassport.fields.notBound', 'Not bound');
+                  default: return null;
+                }
+              },
+            }}
+            rowLabel={(row) => row.field}
             density="compact"
             emptyMessage={t(
               'batteryPassport.fields.empty',

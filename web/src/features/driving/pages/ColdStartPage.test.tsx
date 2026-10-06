@@ -133,6 +133,10 @@ vi.mock('../components/cold-start', () => {
   };
 });
 
+vi.mock('../components/operationalbrief-a-m/ColdStartBrief', async () => ({
+  ColdStartBrief: (await import('../components/cold-start')).ColdStartKpis,
+}));
+
 import ColdStartPage from './ColdStartPage';
 
 function query(overrides: Record<string, unknown> = {}) {

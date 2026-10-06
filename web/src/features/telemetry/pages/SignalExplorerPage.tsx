@@ -19,12 +19,13 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Activity, AlertCircle, Clock, Database, Radio } from 'lucide-react';
+import { Activity, AlertCircle, Database, Radio } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Badge, HelpTooltip, Select } from '@/components/ui';
 import { EmptyState, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -49,7 +50,7 @@ import { useLiveSignalStream, type SignalStat } from '../hooks/useLiveSignalStre
 import {
   AISignalExplorerNlFilter,
   type SignalFilterDraft,
-} from '@/components/ai/AISignalExplorerNlFilter';
+} from '@/components/ai';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_SIGNALS = 5;
@@ -238,6 +239,29 @@ export default function SignalExplorerPage() {
     },
     [setUrlBatch],
   );
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'signals', rawValue: selectedSignals.length,
+      label: t('signalExplorer.kpi.signals', 'Signals'),
+      description: t('signalExplorer.kpi.ofMax', 'of {{max}} max', { max: MAX_SIGNALS }) },
+    { metricId: 'count', occurrenceId: 'records', rawValue: isLive ? pointCount : hasHistorical && !historyUnavailable ? pointCount : null,
+      label: isLive ? t('signalExplorer.kpi.liveEvents', 'Live events') : t('signalExplorer.kpi.records', 'Records'),
+      display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
+      description: isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded'),
+      context: isLive ? t('telemetryBrief.liveEventCount', 'Selected-signal SSE points received since the last reset; the chart retains a separate rolling 5-minute window.')
+        : t('telemetryBrief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.') },
+    isLive
+      ? { metricId: 'status', occurrenceId: 'span', rawValue: t('signalExplorer.kpi.live', 'Live'),
+        label: t('signalExplorer.kpi.timeSpan', 'Time span'),
+        description: t('signalExplorer.kpi.rollingWindow', '5-min window') }
+      : { metricId: 'duration', occurrenceId: 'span', rawValue: rangeDays > 0 ? rangeDays * 86_400 : null,
+        label: t('signalExplorer.kpi.timeSpan', 'Time span'),
+        display: { formatter: (raw) => ({ value: t('signalExplorer.kpi.days', '{{count}}d', { count: raw / 86_400 }), unit: '' }) },
+        description: start && end ? `${start} → ${end}` : t('signalExplorer.kpi.noRange', 'No range set'),
+        context: t('telemetryBrief.configuredRange', 'Configured inclusive day range; loaded rows may belong to the previously executed query until Explore is pressed.') },
+    { metricId: 'status', occurrenceId: 'status', rawValue: statusLabel,
+      label: t('signalExplorer.kpi.status', 'Status'),
+      description: historyUnavailable ? '—' : t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount }) },
+  ];
 
   return (
     <PageLayout
@@ -274,51 +298,16 @@ export default function SignalExplorerPage() {
         <>
           {/* 1 — KPI band: full-width responsive summary of the current exploration */}
           <FadeIn>
-            <section
-              aria-label={t('signalExplorer.kpis', 'Exploration summary')}
-              className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-            >
-              <MetricCard
-                label={t('signalExplorer.kpi.signals', 'Signals')}
-                value={selectedSignals.length}
-                subtitle={t('signalExplorer.kpi.ofMax', 'of {{max}} max', { max: MAX_SIGNALS })}
-                icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={isLive ? t('signalExplorer.kpi.liveEvents', 'Live events') : t('signalExplorer.kpi.records', 'Records')}
-                value={historyUnavailable ? '—' : fmtInt(pointCount)}
-                subtitle={isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded')}
-                icon={<Database className="h-5 w-5" aria-hidden="true" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalExplorer.kpi.timeSpan', 'Time span')}
-                value={
-                  isLive
-                    ? t('signalExplorer.kpi.live', 'Live')
-                    : rangeDays > 0
-                      ? t('signalExplorer.kpi.days', '{{count}}d', { count: rangeDays })
-                      : '—'
-                }
-                subtitle={
-                  isLive
-                    ? t('signalExplorer.kpi.rollingWindow', '5-min window')
-                    : start && end
-                      ? `${start} → ${end}`
-                      : t('signalExplorer.kpi.noRange', 'No range set')
-                }
-                icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('signalExplorer.kpi.status', 'Status')}
-                value={statusLabel}
-                subtitle={historyUnavailable ? '—' : t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount })}
-                icon={<Radio className="h-5 w-5" aria-hidden="true" />}
-                color={isLive ? (live.connected ? 'green' : 'red') : hasHistorical ? 'cyan' : 'amber'}
-              />
-            </section>
+            <TelemetrySummaryBrief title={t('signalExplorer.kpis', 'Exploration summary')}
+              metrics={metrics} testId="signal-explorer-summary"
+              unavailable={!isLive && hasHistorical && historicalState.fatalError != null}
+              unknown={!isLive && !hasHistorical} statusLabel={statusLabel} sourceStatus={!isLive && hasHistorical ? historicalState.status : undefined}
+              retained={!isLive && historicalState.hasData && (historicalState.isRefreshing || historicalState.status === 'stale' || historicalState.refreshError != null)}
+              scope={isLive ? t('signalExplorer.kpi.rollingWindow', '5-min window') : `${start || '—'} → ${end || '—'}`}
+              provenance={isLive ? t('telemetryBrief.chartProvenance', 'Selected-signal client SSE chart and accumulated numeric statistics')
+                : t('signalLog.subtitle', 'Query signal history from Postgres')}
+              description={isLive ? t('telemetryBrief.explorerLive', 'The chart retains five minutes; event counts and numeric statistics accumulate since reset. These are independent of the history query and tail buffer.')
+                : t('telemetryBrief.explorerDescription', 'Selected signals and configured dates are local controls; record and statistics counts cover only the bounded loaded result, not all history.')} />
           </FadeIn>
 
           {/* 2 — Controls: signal picker, per-page, explore / live */}

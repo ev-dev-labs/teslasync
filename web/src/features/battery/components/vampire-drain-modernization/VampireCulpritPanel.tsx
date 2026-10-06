@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Badge, Text } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useParkTruth, useVampireSplit } from '@/api/hooks/useTeslaPhysics';
@@ -86,7 +87,7 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
         ) : (
           <>
             <Text as="p" variant="bodySm">{t(ACTION[report.tonight].key, ACTION[report.tonight].fallback)}</Text>
-            <StatGroup metrics={metrics} period={period}
+            <BatteryEvidenceBrief title={t('vampireDrain.modernization.culpritSummary', 'Observed culprit evidence')} description={report.honesty} metrics={metrics} period={period}
               retained={(parkState.hasData && parkState.status !== 'ok') || (splitState.hasData && splitState.status !== 'ok')} />
             <div className="flex flex-wrap gap-2">
               <Badge variant={report.tonight === 'unknown' ? 'neutral' : 'warning'} size="sm">

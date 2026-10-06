@@ -22,7 +22,8 @@ import {
 
 import { cn } from '@/lib/cn';
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { StatGroup, type StatPeriod } from '@/components/data-display';
+import { type StatPeriod, type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
 import { deriveDataState } from '@/api/dataState';
 import {
   ClimateRenderGrid,
@@ -75,7 +76,7 @@ import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import { CHART_COLORS } from '@/lib/colors';
 
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
-import { AIPreheatPrecoolRecommender } from '@/components/ai/AIPreheatPrecoolRecommender';
+import { AIPreheatPrecoolRecommender } from '@/components/ai';
 import { useClimate, useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import type { ClimateState } from '@/types/vehicle-systems';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -291,7 +292,9 @@ function ComfortStat({
   label,
   tone,
   value,
+  metric,
   period,
+  retained,
   children,
   footer,
 }: {
@@ -299,18 +302,22 @@ function ComfortStat({
   tone: ComfortTone;
   /** Specialist display: a score without /100, or a signed temperature difference. */
   value?: string;
+  metric?: Pick<StatMetric, 'metricId' | 'rawValue' | 'display'>;
   period?: StatPeriod;
+  retained?: boolean;
   children?: ReactNode;
   footer: ReactNode;
 }) {
   return (
     <GlassPanel className="flex flex-col items-center gap-2 p-4">
       {value !== undefined && period ? (
-        <StatGroup className="w-full" period={period} metrics={[{
-          metricId: 'text',
+        <VehicleOperationalBrief id={`climate-comfort-${metric?.metricId ?? 'status'}`}
+          title={label} className="w-full" period={period} retained={retained} metrics={[{
+          metricId: metric?.metricId ?? 'status',
           label,
           description: label,
-          rawValue: value === '—' ? null : value,
+          rawValue: metric ? metric.rawValue : value === '—' ? null : value,
+          display: metric?.display,
           context: <div data-climate-comfort-tone={tone}>{footer}</div>,
         }]} />
       ) : (
@@ -788,7 +795,10 @@ export default function ClimateControlPage() {
                   label={t('climate.page.comfortScore', 'Comfort score')}
                   tone={scoreTone(comfortScore)}
                   value={comfortScore != null ? fmtNumber(comfortScore) : '—'}
+                  metric={{ metricId: 'number', rawValue: comfortScore,
+                    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
                   period={latestPeriod}
+                  retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
                   footer={
                     <Badge
                       variant={
@@ -815,7 +825,10 @@ export default function ClimateControlPage() {
                   value={tempDelta != null
                     ? `${tempDelta > 0 ? '+' : ''}${fmtNumber(toTemperatureDisplay(tempDelta) - toTemperatureDisplay(0))}${tempUnit}`
                     : '—'}
+                  metric={{ metricId: 'number', rawValue: tempDelta,
+                    display: { formatter: raw => ({ value: `${raw > 0 ? '+' : ''}${fmtNumber(toTemperatureDisplay(raw) - toTemperatureDisplay(0))}${tempUnit}`, unit: '' }) } }}
                   period={latestPeriod}
+                  retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
                   footer={
                     <Caption className="rounded-full bg-[var(--surface-2)] px-3 py-1 font-medium">
                       {tempDelta != null
@@ -863,7 +876,9 @@ export default function ClimateControlPage() {
           {latestLoading ? (
             <CardSkeletons count={13} className={SYSTEMS_GRID} />
           ) : (
-            <ClimateMetricGroup id="climate-systems-stats" period={latestPeriod}>
+            <ClimateMetricGroup id="climate-systems-stats" period={latestPeriod}
+              retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
+              title={t('climate.page.climateSystems', 'Climate systems')}>
               <MetricCard
                 label={t('telemetry.hvac', 'HVAC power')}
                 value={latest?.isAcOn == null ? '—' : latest.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}
@@ -905,6 +920,8 @@ export default function ClimateControlPage() {
               <MetricCard
                 label={t('widget.climatePanel.fanSpeed', 'Fan speed')}
                 value={latest?.fanSpeed != null ? String(latest.fanSpeed) : '—'}
+                metric={{ metricId: 'number', rawValue: latest?.fanSpeed,
+                  display: { formatter: raw => ({ value: String(raw), unit: '' }) } }}
                 color="cyan"
                 icon={<Wind className="h-5 w-5 text-teal-400" />}
                 subtitle={`${t('common.level', 'Level')} 0–10`}
@@ -912,6 +929,8 @@ export default function ClimateControlPage() {
 
               <MetricCard
                 label={t('climate.page.fanStatus', 'Fan status')}
+                metric={{ metricId: 'number', rawValue: latest?.hvacFanStatus,
+                  display: { formatter: raw => ({ value: raw > 0 ? t('climate.page.running', 'Running') : t('climate.page.idle', 'Idle'), unit: '' }) } }}
                 value={
                   latest?.hvacFanStatus != null
                     ? latest.hvacFanStatus > 0
@@ -937,6 +956,8 @@ export default function ClimateControlPage() {
 
               <MetricCard
                 label={t('climate.page.steeringWheelHeater', 'Steering wheel heater')}
+                metric={{ metricId: 'number', rawValue: latest?.hvacSteeringWheelHeatLevel,
+                  display: { formatter: raw => ({ value: raw > 0 ? t('common.on', 'On') : t('common.off', 'Off'), unit: '' }) } }}
                 value={
                   latest?.hvacSteeringWheelHeatLevel == null ? '—' :
                   latest.hvacSteeringWheelHeatLevel > 0
@@ -959,6 +980,8 @@ export default function ClimateControlPage() {
 
               <MetricCard
                 label={t('climate.page.steeringWheelHeatLevel', 'Steering wheel heat level')}
+                metric={{ metricId: 'number', rawValue: latest?.hvacSteeringWheelHeatLevel,
+                  display: { formatter: raw => ({ value: t(heatStyle(raw).labelKey, heatStyle(raw).label), unit: '' }) } }}
                 value={
                   latest?.hvacSteeringWheelHeatLevel == null
                     ? '—'
@@ -1134,7 +1157,9 @@ export default function ClimateControlPage() {
           {latestLoading ? (
             <CardSkeletons count={4} className={PROTECTION_GRID} />
           ) : (
-            <ClimateMetricGroup id="climate-protection-stats" period={latestPeriod}>
+            <ClimateMetricGroup id="climate-protection-stats" period={latestPeriod}
+              retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
+              title={t('climate.page.protectionSafety', 'Protection & safety')}>
               <MetricCard
                 label={t('climate.page.overheatProtection', 'Overheat protection')}
                 value={latest?.overheatProtection ?? t('common.unknown', 'Unknown')}
@@ -1167,6 +1192,8 @@ export default function ClimateControlPage() {
                     ? `${fmtNumber(toTemperatureDisplay(latest.passengerTempSetting))}${tempUnit}`
                     : '—'
                 }
+                metric={{ metricId: 'temperature', rawValue: latest?.passengerTempSetting,
+                  display: { formatter: raw => ({ value: `${fmtNumber(toTemperatureDisplay(raw))}${tempUnit}`, unit: '' }) } }}
                 color="purple"
                 icon={<Thermometer className="h-5 w-5 text-purple-400" />}
               />
@@ -1279,13 +1306,17 @@ export default function ClimateControlPage() {
             {historyLoading ? (
               <CardSkeletons count={4} className="grid grid-cols-2 gap-3 sm:gap-4" />
             ) : (
-              <ClimateMetricGroup id="climate-efficiency-stats" period={{
+              <ClimateMetricGroup id="climate-efficiency-stats"
+                retained={historyState.refreshError != null || (historyState.hasData && historyState.isRefreshBlocked)}
+                title={t('climate.page.climateEfficiency', 'Climate efficiency')} period={{
                 kind: 'unknown',
                 label: historyLabel,
               }}>
                 <MetricCard
                   label={t('climate.page.avgFanSpeed', 'Avg fan speed')}
                   value={efficiencyStats ? fmtNumber(efficiencyStats.avgFan) : '—'}
+                  metric={{ metricId: 'number', rawValue: efficiencyStats?.avgFan,
+                    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
                   icon={<Wind className="h-4 w-4" />}
                   color="cyan"
@@ -1293,6 +1324,8 @@ export default function ClimateControlPage() {
                 <MetricCard
                   label={t('climate.page.peakFanSpeed', 'Peak fan speed')}
                   value={efficiencyStats ? fmtNumber(efficiencyStats.peakFan) : '—'}
+                  metric={{ metricId: 'number', rawValue: efficiencyStats?.peakFan,
+                    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
                   icon={<Wind className="h-4 w-4" />}
                   color="purple"
@@ -1300,6 +1333,8 @@ export default function ClimateControlPage() {
                 <MetricCard
                   label={t('climate.page.acOnTime', 'AC on time')}
                   value={efficiencyStats ? `${fmtNumber(efficiencyStats.acOnPct)}%` : '—'}
+                  metric={{ metricId: 'percent', rawValue: efficiencyStats?.acOnPct,
+                    display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } }}
                   subtitle={t('climate.page.ofSamples', 'of samples')}
                   icon={<Zap className="h-4 w-4" />}
                   color="amber"
@@ -1309,10 +1344,14 @@ export default function ClimateControlPage() {
             </ClimateSourceBoundary>
             <ClimateSourceBoundary state={latestState} label={latestLabel}>
               {latestLoading ? <Skeleton height={84} /> :
-              <ClimateMetricGroup id="climate-efficiency-comfort" period={latestPeriod}>
+              <ClimateMetricGroup id="climate-efficiency-comfort" period={latestPeriod}
+                retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
+                title={t('climate.page.comfortScore', 'Comfort score')}>
                 <MetricCard
                   label={t('climate.page.comfortScore', 'Comfort score')}
                   value={comfortScore != null ? `${fmtNumber(comfortScore)}%` : '—'}
+                  metric={{ metricId: 'percent', rawValue: comfortScore,
+                    display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } }}
                   icon={<Thermometer className="h-4 w-4" />}
                   color={comfortScore != null && comfortScore >= 80 ? 'green' : 'amber'}
                 />

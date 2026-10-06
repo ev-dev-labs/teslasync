@@ -4,7 +4,8 @@ import { Icons } from '@/lib/icons';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, IconBox, SectionTitle, PanelTitle, Text } from '@/components/ui';
-import { CompositionRail, MetricCard } from '@/components/data-display';
+import { CompositionRail } from '@/components/data-display';
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -545,52 +546,22 @@ export default function RoadmapPage() {
       title={t('roadmap.title', 'Roadmap')}
       subtitle={t('roadmap.subtitle', "What's been built, What's in progress, and What's coming next")}
     >
-      <Text as="p" variant="bodySm">
-        {t('roadmap.note', 'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')}
-      </Text>
       {/* 1 — KPI band: initiatives per phase + totals */}
       <FadeIn>
-        <section
-          aria-label={t('roadmap.overview', 'Roadmap overview')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
-        >
-          <MetricCard
-            label={t('roadmap.phase.done', 'Completed')}
-            value={counts.done}
-            color="green"
-            icon={<CheckCircle className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.current', 'Active focus')}
-            value={counts.current}
-            color="cyan"
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.next', 'Up next')}
-            value={counts.next}
-            color="purple"
-            icon={<Star className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.future', 'Future')}
-            value={counts.future}
-            color="amber"
-            icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.metric.total', 'Total initiatives')}
-            value={total}
-            color="blue"
-            icon={<Layers className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.metric.featuresShipped', 'Features shipped')}
-            value={featuresShipped}
-            color="green"
-            icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
-          />
-        </section>
+        <SystemSummaryBrief
+          title={t('roadmap.overview', 'Roadmap overview')}
+          description={t('roadmap.note', 'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')}
+          scope={t('roadmap.brief.scope', 'Bundled roadmap entries, not live deployment or release telemetry.')}
+          available
+          metrics={[
+            { metricId: 'count', occurrenceId: 'done', rawValue: counts.done, label: t('roadmap.phase.done', 'Completed') },
+            { metricId: 'count', occurrenceId: 'current', rawValue: counts.current, label: t('roadmap.phase.current', 'Active focus') },
+            { metricId: 'count', occurrenceId: 'next', rawValue: counts.next, label: t('roadmap.phase.next', 'Up next') },
+            { metricId: 'count', occurrenceId: 'future', rawValue: counts.future, label: t('roadmap.phase.future', 'Future') },
+            { metricId: 'count', occurrenceId: 'total', rawValue: total, label: t('roadmap.metric.total', 'Total initiatives') },
+            { metricId: 'count', occurrenceId: 'features', rawValue: featuresShipped, label: t('roadmap.metric.featuresShipped', 'Features shipped') },
+          ]}
+        />
       </FadeIn>
 
       {/* 2 — Primary visual: delivery progress across phases */}

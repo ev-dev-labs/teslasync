@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Route, ArrowUpRight, MapPin, Clock, Battery } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
@@ -112,9 +113,9 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                       />
                       <div className="flex items-center gap-1 mt-0.5">
                         <Clock className="h-2.5 w-2.5 text-[var(--text-muted)]" aria-hidden="true" />
-                        <span className="text-2xs text-[var(--text-muted)] tabular-nums">
+                        <Caption className="tabular-nums">
                           {duration == null ? '—' : formatDurationMinutes(duration / 60, { subMinuteLabel: '<1m' })}
-                        </span>
+                        </Caption>
                       </div>
                     </div>
 
@@ -123,36 +124,36 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-2.5 w-2.5 text-emerald-400/60 flex-shrink-0" aria-hidden="true" />
-                          <span className="text-2xs text-[var(--text-secondary)] truncate">
-                            <span title={d.start_address ?? undefined}>{truncateAddress(d.start_address, 30)}</span>
-                          </span>
+                          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]" title={d.start_address ?? undefined}>
+                            {d.start_address || '—'}
+                          </Text>
                         </div>
                         <div className="flex items-center gap-1 mt-0.5">
                           <MapPin className="h-2.5 w-2.5 text-red-400/60 flex-shrink-0" aria-hidden="true" />
-                          <span className="text-2xs text-[var(--text-secondary)] truncate">
-                            <span title={d.end_address ?? undefined}>{truncateAddress(d.end_address, 30)}</span>
-                          </span>
+                          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]" title={d.end_address ?? undefined}>
+                            {d.end_address || '—'}
+                          </Text>
                         </div>
                       </div>
                     )}
 
                     {/* Right column: battery + date */}
-                    <div className="min-w-0 @xs:ml-auto @xs:text-right">
+                    <div className="min-w-0 @xs:ms-auto @xs:text-end">
                       <div className="flex items-center justify-end gap-1">
                         <Battery className="h-2.5 w-2.5 text-[var(--text-muted)]" aria-hidden="true" />
-                        <span className="text-2xs text-[var(--text-secondary)] tabular-nums">
+                        <Text variant="bodySm" className="tabular-nums">
                           {knownNumber(d.start_soc_pct) == null ? '?' : fmtNumber(d.start_soc_pct)}% → {knownNumber(d.end_soc_pct) == null ? '?' : fmtNumber(d.end_soc_pct)}%
-                        </span>
+                        </Text>
                       </div>
                       <div className="flex items-center justify-end gap-1 mt-0.5">
                         {batteryUsed != null && dist != null && dist > 0 && (
-                          <span className="text-2xs text-cyan-300 tabular-nums">
+                          <Text variant="bodySm" className="text-cyan-300 tabular-nums">
                             {fmtNumber(batteryUsed)}%
-                          </span>
+                          </Text>
                         )}
-                        <span className="text-2xs text-[var(--text-muted)] tabular-nums">
+                        <Caption className="tabular-nums">
                           {dateLabel}
-                        </span>
+                        </Caption>
                       </div>
                     </div>
                   </div>

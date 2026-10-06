@@ -203,6 +203,20 @@ beforeEach(() => {
   mockUseErrors.mockReturnValue(qr());
 });
 
+it('reviews the real fleet error sample while retaining source errors independently', () => {
+  mockUseVINs.mockReturnValue(qr({ data: [makeVIN({ active: true })], isError: true, error: new Error('refresh failed') }));
+  mockUseErrors.mockReturnValue(qr({ data: [makeError({ error_code: 'RETAINED' })] }));
+  renderWidget(STANDARD);
+  expect(screen.getByText('RETAINED')).toBeInTheDocument();
+  const brief = screen.getByTestId('telemetry-errors-operational-brief');
+  expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getAllByText('1')).toHaveLength(2);
+  expect(within(drawer).getByText(/not the total error count for a complete time range/)).toBeInTheDocument();
+  expect(within(drawer).getByText(/exact coverage bounds unknown/)).toBeInTheDocument();
+});
+
 // ── Compact layout (cols ≤ 1): the status hero ──────────────────────────────
 
 describe('TelemetryErrorsWidget — compact layout', () => {
@@ -211,6 +225,18 @@ describe('TelemetryErrorsWidget — compact layout', () => {
     const { container } = renderWidget(COMPACT);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Error VINs')).toBeNull();
+  });
+
+  it('does not treat a resolved error sample as a resolved compact VIN count', () => {
+    mockUseVINs.mockReturnValue(qr({ isLoading: true }));
+    mockUseErrors.mockReturnValue(qr({ data: [makeError()] }));
+    const { container } = renderWidget(COMPACT);
+
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(screen.queryByText('Error VINs')).not.toBeInTheDocument();
+    expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
+    expect(screen.queryByText('No telemetry error data')).not.toBeInTheDocument();
   });
 
   it('shows an empty state (never a blank panel) when both sources are empty', () => {
@@ -324,7 +350,8 @@ describe('TelemetryErrorsWidget — loading, error & refresh hardening', () => {
     mockUseVINs.mockReturnValue(qr({ data: [makeVIN()] }));
     mockUseErrors.mockReturnValue(qr({ isLoading: true }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByRole('status', { name: 'Loading Errors in fetched sample' })).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
     expect(screen.getByText('1 VINs with errors')).toBeInTheDocument();
     expect(screen.queryByText('Telemetry errors')).toBeInTheDocument();
   });

@@ -2,7 +2,8 @@ import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PrefetchLink } from '@/components/layout';
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { StatStrip, KVList } from '@/components/data-display';
+import { KVList } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
 import { SafetyPanelGrid } from '../components/safety-settings-modernization/SafetyPanelGrid';
 import { Icons } from '@/lib/icons';
 import {
@@ -16,7 +17,7 @@ import {
   type Column,
 } from '@/components/ui';
 
-import { MetricCard, TimeStamp, DataFreshnessAuto } from '@/components/data-display';
+import { TimeStamp, DataFreshnessAuto } from '@/components/data-display';
 import {
   LinearGauge,
   LineChart,
@@ -531,9 +532,10 @@ export default function SafetySettingsPage() {
             </div>
           ) : (
             <>
-              <StatStrip
+              <VehicleOperationalBrief embedded
                 id="safety-configuration-summary"
-                variant="embedded"
+                title={t('safety.kpis', 'Safety summary')}
+                available={latestSource.hasData}
                 retained={latestSource.refreshError != null || (latestSource.hasData && latestSource.isRefreshBlocked)}
                 period={{
                   kind: 'snapshot',
@@ -773,27 +775,33 @@ export default function SafetySettingsPage() {
               />
             ) : (
               <div className="grid grid-cols-1 gap-3">
-                <MetricCard
-                  icon={<Icon icon={Icons.navigation} size="lg" />}
-                  label={t('safety.distanceSinceReset', 'Distance since reset')}
-                  value={
-                    latest.miles_since_reset != null
-                      ? formatDistance(latest.miles_since_reset, { precision })
-                      : '—'
-                  }
-                  subtitle={latest.miles_since_reset == null ? unitPrefs.distance : undefined}
-                />
-                <MetricCard
-                  icon={<Icon icon={Icons.cpu} size="lg" />}
-                  label={t('safety.selfDrivingDistance', 'Self-driving distance')}
-                  value={
-                    latest.self_driving_miles_since_reset != null
-                      ? formatDistance(latest.self_driving_miles_since_reset, { precision })
-                      : '—'
-                  }
-                  subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', {
-                    unit: latest.self_driving_miles_since_reset == null ? unitPrefs.distance : '',
-                  })}
+                <VehicleOperationalBrief embedded id="safety-driving-summary"
+                  title={t('safety.drivingStats', 'Driving statistics')}
+                  retained={latestSource.refreshError != null || latestSource.isRefreshBlocked}
+                  period={{
+                    kind: 'snapshot',
+                    label: t('safety.settings.reportedSnapshot', 'Reported configuration snapshot'),
+                    observedAt: latest.created_at ?? null,
+                    provenance: t('safety.brief.counterSource', 'Counters from the reported safety snapshot; source field names and the existing distance display are retained without inferring units from identifiers.'),
+                  }}
+                  metrics={[
+                    {
+                      metricId: 'number', occurrenceId: 'distance-since-reset',
+                      label: t('safety.distanceSinceReset', 'Distance since reset'),
+                      rawValue: latest.miles_since_reset,
+                      display: { formatter: raw => ({ value: formatDistance(raw, { precision }), unit: '' }) },
+                      context: <><Icon icon={Icons.navigation} size="lg" />{latest.miles_since_reset == null ? unitPrefs.distance : undefined}</>,
+                    },
+                    {
+                      metricId: 'number', occurrenceId: 'self-driving-distance',
+                      label: t('safety.selfDrivingDistance', 'Self-driving distance'),
+                      rawValue: latest.self_driving_miles_since_reset,
+                      display: { formatter: raw => ({ value: formatDistance(raw, { precision }), unit: '' }) },
+                      context: <><Icon icon={Icons.cpu} size="lg" />{t('safety.distanceAutopilot', '{{unit}} (autopilot)', {
+                        unit: latest.self_driving_miles_since_reset == null ? unitPrefs.distance : '',
+                      })}</>,
+                    },
+                  ]}
                 />
                 {/* Contextual drill-through: this card shows the CURRENT
                     counter reading; FSD Insights turns the same signal into a

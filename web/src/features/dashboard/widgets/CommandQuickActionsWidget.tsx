@@ -4,13 +4,12 @@ import {
   Lock, Unlock, Thermometer, ThermometerSnowflake, Container, Flashlight,
   Volume2, Loader2, Zap,
 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps, WidgetSize } from './types';
 
@@ -123,6 +122,10 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                 key={cmd.id}
                 variant="ghost"
                 size="sm"
+                wrapLabel={!isCompact}
+                icon={isRunning
+                  ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-neon-cyan" />
+                  : <Icon aria-hidden="true" className={`h-4 w-4 ${cmd.color}`} />}
                 disabled={!!activeCommand || !operationalMode.canWrite}
                 title={
                   !operationalMode.canWrite
@@ -134,15 +137,10 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                 aria-label={t(cmd.labelKey, cmd.labelFallback)}
                 className="flex min-h-11 min-w-0 flex-col items-center gap-1 py-2 px-1 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--border-subtle)] transition-colors h-auto"
               >
-                {isRunning ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-neon-cyan" />
-                ) : (
-                  <Icon className={`h-4 w-4 ${cmd.color}`} />
-                )}
                 {!isCompact && (
-                  <span className={`${dashboardTokens.metricLabel} w-full text-center`}>
+                  <Text variant="bodySm" className="w-full text-center">
                     {t(cmd.labelKey, cmd.labelFallback)}
-                  </span>
+                  </Text>
                 )}
               </Button>
             );

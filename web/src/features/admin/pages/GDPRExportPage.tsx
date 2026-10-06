@@ -14,20 +14,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import {
-  HardDriveDownload,
-  RefreshCw,
-  FileText,
-  HardDrive,
-  Database,
-  CalendarPlus,
-  CalendarClock,
-} from 'lucide-react';
+import { HardDriveDownload, RefreshCw } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Card, Badge } from '@/components/ui';
-import { MetricLabel, MetricValue } from '@/components/ui/Typography';
-import { StatCard } from '@/components/data-display';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Button } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display';
+import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
 import { FadeIn } from '@/components/motion';
 import {
   EmptyState,
@@ -35,13 +27,11 @@ import {
   DataStateNotice,
   QueryError,
   SectionErrorBoundary,
-  Skeleton,
 } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useGDPRExport } from '@/api/hooks/useOperatorConfidence';
 import { apiUrl } from '@/api/client';
 import { isApiError } from '@/lib/resilience';
-import { cn } from '@/lib/cn';
 
 import { formatRelative } from '@/lib/dateFormat';
 
@@ -50,10 +40,9 @@ import {
   GDPRArtifactDetails,
   GDPRDownloadPanel,
   GDPRLifecyclePanel,
-  STATUS_VARIANT,
-  STATUS_ICON,
 } from '../components/gdpr-export';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState } from '@/api/dataState';
 
 export default function GDPRExportPage() {
   const { formatBytes } = useNumberFormatting();
@@ -76,9 +65,10 @@ export default function GDPRExportPage() {
   }, [activeId]);
 
   const query = useGDPRExport(activeId);
-  const subsystemMissing = isApiError(query.error) && query.error.status === 503;
-  const notFound = isApiError(query.error) && query.error.status === 404;
-  const otherError = query.isError && !subsystemMissing && !notFound;
+  const artifactState = deriveDataState(query);
+  const subsystemMissing = isApiError(artifactState.fatalError) && artifactState.fatalError.status === 503;
+  const notFound = isApiError(artifactState.fatalError) && artifactState.fatalError.status === 404;
+  const otherError = artifactState.fatalError && !subsystemMissing && !notFound;
   const artifact = query.data;
 
   const { refetch } = query;
@@ -101,7 +91,18 @@ export default function GDPRExportPage() {
   // skeletons while the first fetch resolves, then shows real values.
   const kpiLoading = query.isLoading && !artifact;
   const status = artifact?.status;
-  const StatusIcon = status ? STATUS_ICON[status] : null;
+  const summaryMetrics: StatMetric[] = [
+    { metricId: 'status', occurrenceId: 'status', label: t('admin.gdprExport.statusLabel', 'Status'),
+      rawValue: status ? t(`admin.gdprExport.status.${status}`, status) : undefined },
+    { metricId: 'text', occurrenceId: 'format', label: t('admin.gdprExport.formatLabel', 'Format'), rawValue: artifact?.format || undefined },
+    { metricId: 'bytes', occurrenceId: 'bytes', label: t('admin.gdprExport.bytesLabel', 'Size'), rawValue: artifact?.bytes,
+      display: { formatter: raw => ({ value: formatBytes(raw), unit: '' }) } },
+    { metricId: 'text', occurrenceId: 'storage', label: t('admin.gdprExport.storageLabel', 'Storage'), rawValue: artifact?.storage || undefined },
+    { metricId: 'text', occurrenceId: 'created', label: t('admin.gdprExport.createdLabel', 'Created'),
+      rawValue: artifact?.created_at ? formatRelative(artifact.created_at) : undefined, context: artifact?.created_at },
+    { metricId: 'text', occurrenceId: 'expires', label: t('admin.gdprExport.expiresLabel', 'Expires'),
+      rawValue: artifact?.expires_at ? formatRelative(artifact.expires_at) : undefined, context: artifact?.expires_at },
+  ];
 
   const actions = (
     <Button
@@ -116,7 +117,7 @@ export default function GDPRExportPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('admin.gdprExport.pageTitle', 'GDPR export')}
       subtitle={t(
         'admin.gdprExport.subtitle',
@@ -124,6 +125,9 @@ export default function GDPRExportPage() {
       )}
       secondaryActions={actions}
       query={activeId ? query : undefined}
+      dataSources={activeId && artifactState.hasData
+        ? [{ id: 'gdpr-artifact', label: t('admin.gdprExport.resourceName', 'Export artifact'), query }]
+        : undefined}
     >
       <div className="space-y-6">
         <FadeIn>
@@ -169,7 +173,7 @@ export default function GDPRExportPage() {
         ) : otherError ? (
           <GlassPanel className="p-4 sm:p-5">
             <QueryError
-              error={query.error}
+              error={artifactState.fatalError}
               onRetry={handleRefresh}
               resourceName={t('admin.gdprExport.resourceName', 'Export artifact')}
             />
@@ -179,64 +183,13 @@ export default function GDPRExportPage() {
             <div className="space-y-6">
               {/* KPI band — full-width responsive summary, more columns on wide screens */}
               <FadeIn delay={0.05}>
-                <section
-                  aria-label={t('admin.gdprExport.kpis', 'Artifact summary')}
-                  className="grid grid-cols-2 gap-4 md:grid-cols-3 3xl:grid-cols-6"
-                >
-                  <Card className="flex flex-col gap-1">
-                    <MetricLabel>{t('admin.gdprExport.statusLabel', 'Status')}</MetricLabel>
-                    {kpiLoading ? (
-                      <Skeleton width="60%" height={28} className="mt-1" />
-                    ) : status && StatusIcon ? (
-                      <div className="mt-1">
-                        <Badge
-                          variant={STATUS_VARIANT[status] ?? 'neutral'}
-                          size="lg"
-                          className=""
-                        >
-                          <StatusIcon
-                            className={cn('h-3.5 w-3.5', status === 'running' && 'animate-spin')}
-                            aria-hidden="true"
-                          />
-                          {t(`admin.gdprExport.status.${status}`, status)}
-                        </Badge>
-                      </div>
-                    ) : (
-                      <MetricValue>—</MetricValue>
-                    )}
-                  </Card>
-
-                  <StatCard
-                    label={t('admin.gdprExport.formatLabel', 'Format')}
-                    value={artifact?.format || '—'}
-                    icon={<FileText className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.bytesLabel', 'Size')}
-                    value={artifact?.bytes != null ? formatBytes(artifact.bytes) : '—'}
-                    icon={<HardDrive className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.storageLabel', 'Storage')}
-                    value={artifact?.storage || '—'}
-                    icon={<Database className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.createdLabel', 'Created')}
-                    value={artifact?.created_at ? formatRelative(artifact.created_at) : '—'}
-                    icon={<CalendarPlus className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                  <StatCard
-                    label={t('admin.gdprExport.expiresLabel', 'Expires')}
-                    value={artifact?.expires_at ? formatRelative(artifact.expires_at) : '—'}
-                    icon={<CalendarClock className="h-5 w-5" />}
-                    loading={kpiLoading}
-                  />
-                </section>
+                <AdminSummary metrics={summaryMetrics} testId="gdpr-export-summary"
+                  eyebrow={t('admin.gdprExport.pageTitle', 'GDPR export')}
+                  title={t('admin.gdprExport.kpis', 'Artifact summary')}
+                  description={t('admin.gdprExport.summary.source', 'Status, format, size, storage and lifecycle timestamps describe only the selected export artifact.')}
+                  scope={t('admin.gdprExport.summary.scope', 'Selected artifact snapshot; creation and expiry are lifecycle events, not a shared analysis range.')}
+                  sourceStatus={artifactState.status === 'stale' ? 'stale' : artifactState.isRefreshing ? 'refreshing' : artifactState.status}
+                  loading={kpiLoading} />
               </FadeIn>
 
               {artifact?.error && (
@@ -270,6 +223,6 @@ export default function GDPRExportPage() {
           </SectionErrorBoundary>
         )}
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

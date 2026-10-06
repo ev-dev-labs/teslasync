@@ -25,10 +25,11 @@
  *   - command band: lock/climate/horn dispatch the right command; offline and
  *     in-flight states disable the controls and surface the offline hint.
  *   - URL-state wiring: ?vehicle_id= selects that vehicle, unknown ids fall
- *     back to the first, and the switcher combobox updates the selection.
+ *     back to the first, and workspace changes update the selection without
+ *     mounting a competing local picker.
  *   - null-safety: absent location flags/destination/ETA collapse to the "—"
  *     glyph and the not-charging / unlocked / climate-off branches render.
- *   - a11y: labelled region landmarks, the vehicle combobox, and icon-only
+ *   - a11y: labelled region landmarks, workspace-owned selection, and icon-only
  *     controls all expose accessible names.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -227,16 +228,25 @@ const kpiRegion = () => screen.getByRole('region', { name: 'Vehicle overview' })
 const liveRegion = () => screen.getByRole('region', { name: 'Live status' });
 const controlsRegion = () => screen.getByRole('region', { name: 'Controls' });
 
-/** Value <p> that immediately follows a MetricCard's label span. */
+/** Read the real OperationalBrief measurement, independently from its caption. */
 function cardValue(region: HTMLElement, label: string): string {
-  const span = within(region).getByText(label);
-  return span.closest('p')?.nextElementSibling?.textContent ?? '';
+  const metric = within(region).getByText(label).closest('[data-operational-metric]');
+  return metric?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 /** Trailing element (value <Text> or status <Badge>) of a Detail/Status row. */
 function rowValue(scope: HTMLElement, label: string): string {
   const el = within(scope).getByText(label);
-  return el.closest('dt')?.nextElementSibling?.textContent ?? '';
+  const term = el.closest('dt');
+  expect(term).not.toBeNull();
+  return within(term!.parentElement!).getByRole('definition').textContent ?? '';
+}
+
+/** Charging and climate statuses accompany subheadings, not definition terms. */
+function subheadStatusValue(scope: HTMLElement, label: string): string {
+  const heading = within(scope).getByRole('heading', { name: label, level: 4 });
+  expect(heading.nextElementSibling).not.toBeNull();
+  return heading.nextElementSibling?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -350,6 +360,21 @@ describe('GlancePage — populated overview', () => {
     expect(cardValue(kpi, 'Speed')).toBe('spd(20)');
   });
 
+  it('opens the real review drawer while retaining live sections, gauge and command controls', () => {
+    renderPage();
+    const brief = screen.getByTestId('glance-operational-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('heading', { name: 'Vehicle operating summary details' })).toBeInTheDocument();
+    expect(within(drawer).getByText('spd(20)')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Poll completion is not a verified observation time/).length).toBeGreaterThan(0);
+    expect(within(drawer).getByText(/lifetime reading, not distance in a selected window/)).toBeInTheDocument();
+    expect(within(liveRegion()).getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
+    expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeEnabled();
+  });
+
   it('passes raw SI values to the unit formatters at the display edge', () => {
     renderPage();
 
@@ -376,11 +401,11 @@ describe('GlancePage — populated overview', () => {
     renderPage();
     const live = liveRegion();
 
-    expect(within(live).getByText('Charger power')).toBeInTheDocument();
-    expect(within(live).getByText(/kW/)).toBeInTheDocument();
-    expect(within(live).getByText('dist(30000)/h')).toBeInTheDocument(); // charge rate
-    expect(within(live).getByText('1.50 h')).toBeInTheDocument(); // time to full
-    expect(rowValue(live, 'Climate')).toBe('On');
+    expect(subheadStatusValue(live, 'Charging')).toBe('Charging');
+    expect(rowValue(live, 'Charger power')).toBe('11.00 kW');
+    expect(rowValue(live, 'Charge rate')).toBe('dist(30000)/h');
+    expect(rowValue(live, 'Time to full')).toBe('1.50 h');
+    expect(subheadStatusValue(live, 'Climate')).toBe('On');
     expect(rowValue(live, 'Interior')).toBe('temp(21)');
   });
 
@@ -396,14 +421,16 @@ describe('GlancePage — populated overview', () => {
     expect(within(live).getByText(/2024\.20\.1/)).toBeInTheDocument(); // software
   });
 
-  it('exposes labelled region landmarks and the vehicle switcher', () => {
+  it('exposes labelled region landmarks with workspace-owned vehicle selection', () => {
     renderPage();
 
     expect(kpiRegion()).toBeInTheDocument();
     expect(liveRegion()).toBeInTheDocument();
     expect(controlsRegion()).toBeInTheDocument();
-    const picker = screen.getByRole('combobox', { name: 'Select vehicle' });
-    expect(picker).toHaveValue('1');
+    expect(getWorkspaceRouteScope('/glance').vehicle).toBe(true);
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
+    expect(within(liveRegion()).getByRole('heading', { name: 'Car A' })).toBeInTheDocument();
+    expect(mockState).toHaveBeenCalledWith(1, { refetchInterval: 10_000 });
   });
 });
 
@@ -418,6 +445,7 @@ describe('GlancePage — per-panel state handling', () => {
     expect(screen.getByRole('heading', { name: 'Security & location' })).toBeInTheDocument();
     // …but no KPI values yet, and loading is not "empty".
     expect(within(kpiRegion()).queryByText('72.00%')).toBeNull();
+    expect(screen.getByTestId('glance-operational-brief')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText('No live data for this vehicle yet')).toBeNull();
   });
 
@@ -544,9 +572,14 @@ describe('GlancePage — null safety + idle branches', () => {
     mockState.mockReturnValue(makeQuery({ error: new Error('live state failed'), isError: true }));
     mockLocation.mockReturnValue(makeQuery({ data: LOCATION }));
     renderPage();
-    expect(rowValue('Place')).toHaveTextContent('Home');
-    expect(rowValue('Destination')).toHaveTextContent('Office');
-    expect(rowValue('ETA')).toHaveTextContent('15.00 min');
+    const live = liveRegion();
+    expect(rowValue(live, 'Place')).toBe('Home');
+    expect(rowValue(live, 'Destination')).toBe('Office');
+    expect(rowValue(live, 'ETA')).toBe('15.00 min');
+    expect(within(live).getAllByRole('alert')).toHaveLength(3);
+    expect(within(live).getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
+    expect(cardValue(kpiRegion(), 'Battery')).toBe('—');
+    expect(within(live).queryByText('Locked')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Security & location' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock' })).toBeDisabled();
   });
@@ -560,14 +593,35 @@ describe('GlancePage — null safety + idle branches', () => {
       charger_power: null,
       charge_rate: null,
     } } }));
-    renderPage();
+    const page = renderPage();
+    const live = liveRegion();
     expect(screen.queryByRole('meter')).toBeNull();
+    expect(cardValue(kpiRegion(), 'Battery')).toBe('—');
+    expect(cardValue(kpiRegion(), 'Range')).toBe('—');
+    expect(cardValue(kpiRegion(), 'Speed')).toBe('—');
     expect(units.formatDistance).toHaveBeenCalledWith(null);
-    expect(units.formatSpeed).toHaveBeenCalledWith(null);
-    expect(rowValue('Charger power')).toHaveTextContent('—');
-    expect(rowValue('Charge rate')).toHaveTextContent('—');
+    expect(units.formatSpeed).not.toHaveBeenCalledWith(null);
+    expect(rowValue(live, 'Charger power')).toBe('—');
+    expect(rowValue(live, 'Charge rate')).toBe('—');
     expect(screen.queryByText('0.00 kW')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Charging & climate' })).toBeInTheDocument();
+
+    page.unmount();
+    mockState.mockReturnValue(makeQuery({ data: { state: {
+      ...STATE,
+      battery_level: 0,
+      rated_range: 0,
+      speed: 0,
+      charger_power: 0,
+      charge_rate: 0,
+    } } }));
+    renderPage();
+    expect(cardValue(kpiRegion(), 'Battery')).toBe('0.00%');
+    expect(cardValue(kpiRegion(), 'Range')).toBe('dist(0)');
+    expect(cardValue(kpiRegion(), 'Speed')).toBe('spd(0)');
+    expect(within(liveRegion()).getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
+    expect(rowValue(liveRegion(), 'Charger power')).toBe('0.00 kW');
+    expect(rowValue(liveRegion(), 'Charge rate')).toBe('dist(0)/h');
   });
 
   it('keeps nullable status fields unknown rather than asserting unlocked, idle or off', () => {
@@ -575,9 +629,14 @@ describe('GlancePage — null safety + idle branches', () => {
       ...STATE, is_charging: null, is_climate_on: null, is_locked: null, sentry_mode: null,
     } } }));
     renderPage();
-    expect(rowValue('Doors')).toHaveTextContent('Unknown');
-    expect(rowValue('Sentry mode')).toHaveTextContent('Unknown');
+    const live = liveRegion();
+    expect(rowValue(live, 'Doors')).toBe('Unknown');
+    expect(rowValue(live, 'Sentry mode')).toBe('Unknown');
+    expect(subheadStatusValue(live, 'Charging')).toBe('Unknown');
+    expect(subheadStatusValue(live, 'Climate')).toBe('Unknown');
     expect(screen.queryByText('Unlocked')).toBeNull();
+    expect(within(live).queryByText('Idle')).toBeNull();
+    expect(within(live).queryByText('Charger power')).toBeNull();
     expect(screen.queryByText('Not currently charging')).toBeNull();
     expect(screen.queryByText('Off')).toBeNull();
   });
@@ -614,9 +673,11 @@ describe('GlancePage — null safety + idle branches', () => {
     const live = liveRegion();
 
     expect(within(live).getByText('Not currently charging')).toBeInTheDocument();
+    expect(subheadStatusValue(live, 'Charging')).toBe('Idle');
     expect(within(live).queryByText('Charger power')).toBeNull();
     expect(rowValue(live, 'Doors')).toBe('Unlocked');
-    expect(rowValue(live, 'Climate')).toBe('Off');
+    expect(rowValue(live, 'Sentry mode')).toBe('Off');
+    expect(subheadStatusValue(live, 'Climate')).toBe('Off');
     // Lock button now offers "Lock" (drives the inverse command payload).
     fireEvent.click(within(controlsRegion()).getByRole('button', { name: 'Lock' }));
     expect(sendCommand.mutate).toHaveBeenCalledWith({ vehicleId: 1, command: 'lock' });

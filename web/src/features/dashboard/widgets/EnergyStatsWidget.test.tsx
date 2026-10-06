@@ -32,7 +32,7 @@
  *     disabled (null id) query when no vehicle exists.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { DailyEnergy } from '@/types/energy';
@@ -247,13 +247,11 @@ describe('EnergyStatsWidget — standard (2×N)', () => {
 
     // Avg Efficiency: 0.15 Wh/m × 1000 = 150 Wh/km.
     expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
-    expect(screen.getByText('150.00')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
 
     // CO₂ Saved: 3.2 kg.
     expect(screen.getByText('CO₂ saved')).toBeInTheDocument();
-    expect(screen.getByText('3.20')).toBeInTheDocument();
-    expect(screen.getByText('kg')).toBeInTheDocument();
+    expect(screen.getByText('3.20 kg')).toBeInTheDocument();
   });
 
   it('withholds the wide-only Total Cost / Net Energy cards at 2 columns', () => {
@@ -292,8 +290,7 @@ describe('EnergyStatsWidget — wide (≥3 cols)', () => {
 
     // Total Cost: 4.5 → "4.50" with a "$" unit.
     expect(screen.getByText('Total cost')).toBeInTheDocument();
-    expect(screen.getByText('4.50')).toBeInTheDocument();
-    expect(screen.getByText('$')).toBeInTheDocument();
+    expect(screen.getByText('4.50 $')).toBeInTheDocument();
 
     // Net Energy: (15,000 − 12,000) Wh = 3,000 Wh → "3.0 kWh".
     expect(screen.getByText('Net energy')).toBeInTheDocument();
@@ -307,8 +304,7 @@ describe('EnergyStatsWidget — unit conversion', () => {
     renderWidget({ size: STANDARD });
 
     // 0.15 Wh/m × 1609.344 = 241.4016 → "241.4"; label follows the preference.
-    expect(screen.getByText('241.40')).toBeInTheDocument();
-    expect(screen.getByText('Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument();
     expect(screen.queryByText('Wh/km')).not.toBeInTheDocument();
     expect(screen.queryByText('150.00')).not.toBeInTheDocument();
   });
@@ -387,6 +383,21 @@ describe('EnergyStatsWidget — states & interaction', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reviews retained SI totals, the original source denomination and net-energy operands', () => {
+    setup({ stats: makeQuery({ data: makeStats(), error: new Error('refresh failed'), isError: true }) });
+    renderWidget({ size: WIDE });
+    const brief = screen.getByTestId('energy-stats-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('12.00 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText('4.50 $')).toBeInTheDocument();
+    expect(within(drawer).getByText('3.00 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText(/both operands must be measured/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/CO₂ savings remain estimates/).length).toBeGreaterThan(0);
   });
 });
 

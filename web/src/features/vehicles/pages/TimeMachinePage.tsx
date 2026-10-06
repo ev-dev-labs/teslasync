@@ -24,7 +24,8 @@ import {
 } from '@/api/hooks/useTimeMachine';
 import { PageLayout, Section, LayoutCard, SourceContent } from '@/components/layout';
 import { Badge, Button, GlassPanel, Slider, Text } from '@/components/ui';
-import { DateTime, StatStrip } from '@/components/data-display';
+import { DateTime, DataProvenanceBadge } from '@/components/data-display';
+import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -218,7 +219,7 @@ function CategoryCard({ category, fields, isLoading, isError, error, onRetry }: 
         error={error}
         errorRecovery={{ onRetry }}
         loadingContent={<Skeleton lines={4} height={18} />}
-        emptyContent={<EmptyState
+        emptyContent={<EmptyState /* no-action: category availability derives from the selected instant; reconstruction refresh is provided above */
           icon={<Icon className="h-6 w-6" aria-hidden="true" />}
           message={t('timeMachine.emptyCategory', 'No {{category}} signals at this instant', {
             category: title.toLowerCase(),
@@ -269,25 +270,35 @@ export default function TimeMachinePage() {
 
   // Immediate scrub instant (drives the display); a debounced copy drives the
   // query so dragging the slider doesn't fire a request per pixel.
-  const [atMs, setAtMs] = useState<number | null>(null);
-  const [debouncedAtMs, setDebouncedAtMs] = useState<number | null>(null);
+  const [scrub, setScrub] = useState<{
+    vehicleId: number | null;
+    atMs: number | null;
+    debouncedAtMs: number | null;
+  }>({ vehicleId, atMs: null, debouncedAtMs: null });
+  // Never send the previous vehicle's instant to a newly selected vehicle.
+  const atMs = scrub.vehicleId === vehicleId ? scrub.atMs : null;
+  const debouncedAtMs = scrub.vehicleId === vehicleId ? scrub.debouncedAtMs : null;
 
-  // Snap to the newest instant once history bounds arrive.
   useEffect(() => {
-    if (bounds && atMs === null) setAtMs(bounds.latestMs);
-  }, [bounds, atMs]);
-
-  // Reset when the vehicle (and therefore its history) changes.
-  useEffect(() => {
-    setAtMs(null);
-    setDebouncedAtMs(null);
-  }, [vehicleId]);
+    setScrub(current => {
+      if (current.vehicleId !== vehicleId) {
+        return { vehicleId, atMs: bounds?.latestMs ?? null, debouncedAtMs: null };
+      }
+      return bounds && current.atMs === null
+        ? { ...current, atMs: bounds.latestMs }
+        : current;
+    });
+  }, [vehicleId, bounds]);
 
   useEffect(() => {
     if (atMs === null) return;
-    const id = window.setTimeout(() => setDebouncedAtMs(atMs), SCRUB_DEBOUNCE_MS);
+    const id = window.setTimeout(() => {
+      setScrub(current => current.vehicleId === vehicleId
+        ? { ...current, debouncedAtMs: atMs }
+        : current);
+    }, SCRUB_DEBOUNCE_MS);
     return () => window.clearTimeout(id);
-  }, [atMs]);
+  }, [atMs, vehicleId]);
 
   const atISO = useMemo(
     () => (debouncedAtMs !== null ? new Date(debouncedAtMs).toISOString() : null),
@@ -317,9 +328,9 @@ export default function TimeMachinePage() {
     (p: number) => {
       if (!bounds) return;
       const next = bounds.span > 0 ? bounds.earliestMs + p * bounds.span : bounds.latestMs;
-      setAtMs(Math.round(next));
+      setScrub(current => ({ ...current, vehicleId, atMs: Math.round(next) }));
     },
-    [bounds],
+    [bounds, vehicleId],
   );
 
   // deltaMs === null ⇒ jump to the newest instant ("Now").
@@ -327,9 +338,12 @@ export default function TimeMachinePage() {
     (deltaMs: number | null) => {
       if (!bounds) return;
       const target = deltaMs === null ? bounds.latestMs : bounds.latestMs - deltaMs;
-      setAtMs(Math.min(bounds.latestMs, Math.max(bounds.earliestMs, target)));
+      setScrub(current => ({
+        ...current, vehicleId,
+        atMs: Math.min(bounds.latestMs, Math.max(bounds.earliestMs, target)),
+      }));
     },
-    [bounds],
+    [bounds, vehicleId],
   );
 
   const formatSliderValue = useCallback(
@@ -442,9 +456,14 @@ export default function TimeMachinePage() {
             <section
               aria-label={t('timeMachine.overview', 'Overview')}
             >
-              <StatStrip id="time-machine-summary"
-                period={{ kind: 'snapshot', label: t('timeMachine.summary', 'Reconstruction summary'), observedAt: stateQ.data?.at ?? null,
-                  provenance: t('timeMachine.summarySource', 'Historical signal reconstruction') }}
+              <VehicleEvidenceBrief id="time-machine-summary"
+                title={t('timeMachine.summary', 'Reconstruction summary')}
+                description={t('timeMachine.briefDescription', 'Reconstructed signals belong to the resolved instant; tracked fields and history span come from the independent timeline source.')}
+                status={stateState.status === 'stale' || rangeState.status === 'stale' ? 'stale' : stateState.status}
+                loading={reconstructing || rangeQ.isLoading}
+                scope={<DateTime value={stateQ.data?.at ?? null} variant="full" />}
+                provenance={t('timeMachine.summarySource', 'Historical signal reconstruction')}
+                freshness={<DataProvenanceBadge provenance={stateState.provenance} status={stateState.status} updatedAt={stateState.updatedAt} />}
                 metrics={[
                   { metricId: 'text', occurrenceId: 'viewing-at', label: t('timeMachine.viewingAt', 'Viewing at'),
                     rawValue: displayISO ? viewingAtLabel : null },
@@ -452,8 +471,10 @@ export default function TimeMachinePage() {
                     rawValue: reconstructing ? null : signalCount },
                   { metricId: 'count', occurrenceId: 'fields', label: t('timeMachine.fieldsTracked', 'Fields tracked'),
                     rawValue: range?.field_count ?? null },
-                  { metricId: 'text', occurrenceId: 'history-span', label: t('timeMachine.dataSpan', 'History span'),
-                    rawValue: bounds ? spanLabel : null },
+                  { metricId: 'duration', occurrenceId: 'history-span', label: t('timeMachine.dataSpan', 'History span'),
+                    rawValue: bounds ? bounds.span / 1000 : null,
+                    display: { formatter: raw => ({ value: formatDuration(raw, t), unit: '' }) },
+                    context: spanLabel },
                 ]}
               />
             </section>

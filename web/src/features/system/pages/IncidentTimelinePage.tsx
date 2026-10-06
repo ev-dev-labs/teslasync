@@ -21,13 +21,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft, AlertCircle, CheckCircle2, Clock, MessageSquare,
-  Activity, Layers, Radio, CalendarClock,
 } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
 import {
   GlassPanel, Button, Badge, ConfirmDialog, PanelTitle, Text, Label,
 } from '@/components/ui'
-import { MetricCard, KVList } from '@/components/data-display'
+import { KVList } from '@/components/data-display'
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
@@ -35,10 +35,10 @@ import { useIncident, usePatchIncident } from '@/api/hooks/useIncidents'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
-import { AIIncidentTimelineSummarizer } from '@/components/ai/AIIncidentTimelineSummarizer'
+import { AIIncidentTimelineSummarizer } from '@/components/ai'
 import {
   IncidentTimelineList, IncidentUpdateForm, IncidentSeverityChip,
-  STATUS_BADGE, STATUS_COLOR, fmtDuration, useIncidentStatusLabel,
+  STATUS_BADGE, fmtDuration, useIncidentStatusLabel,
 } from '../components/incident'
 
 export default function IncidentTimelinePage() {
@@ -75,15 +75,40 @@ export default function IncidentTimelinePage() {
       {t('incidentTimeline.back', 'Back')}
     </Button>
   )
+  const isResolved = incident?.status === 'resolved'
+  const affected = incident?.affected_components ?? []
+  const durationLabel = incident ? fmtDuration(incident.started_at, incident.resolved_at) : ''
+  const summary = (
+    <SystemSummaryBrief
+      title={t('incidentTimeline.kpis', 'Incident metrics')}
+      description={t('incidentTimeline.brief.description', 'Incident status, elapsed duration, recorded updates, affected components, source, and start time.')}
+      scope={incident ? `${fmtAbs(incident.started_at)} – ${incident.resolved_at ? fmtAbs(incident.resolved_at) : t('incidentTimeline.openFor', 'Open')}`
+        : t('incidentTimeline.brief.unknownScope', 'Incident window unavailable until the source resolves.')}
+      available={!!incident} loading={isLoading && !incident} retained={!!incident && incidentQuery.isError}
+      statusLabel={incident ? statusLabel(incident.status) : undefined}
+      freshness={incident ? fmtAbs(incident.updated_at) : undefined}
+      metrics={[
+        { metricId: 'duration', occurrenceId: 'duration', rawValue: incident
+          ? (Date.parse(incident.resolved_at ?? new Date().toISOString()) - Date.parse(incident.started_at)) / 1000 : null,
+          label: t('incidentTimeline.kpi.duration', 'Duration'), display: { formatter: () => ({ value: durationLabel || '—' }) } },
+        { metricId: 'count', occurrenceId: 'updates', rawValue: incident ? updates.length : null, label: t('incidentTimeline.kpi.updates', 'Updates') },
+        { metricId: 'count', occurrenceId: 'affected', rawValue: incident ? affected.length : null, label: t('incidentTimeline.kpi.affected', 'Affected') },
+      ]}
+      textMetrics={[
+        { key: 'status', label: t('incidentTimeline.kpi.status', 'Status'), value: incident ? statusLabel(incident.status) : '—',
+          valueState: incident ? 'value' : 'missing', detail: t('incidentTimeline.brief.statusContext', 'Recorded incident lifecycle state; resolution controls remain below.') },
+        { key: 'source', label: t('incidentTimeline.kpi.source', 'Source'), value: incident?.source ?? '—',
+          valueState: incident?.source ? 'value' : 'missing', detail: t('incidentTimeline.brief.sourceContext', 'Incident source as reported, without inference.') },
+        { key: 'started', label: t('incidentTimeline.kpi.started', 'Started'), value: incident ? fmtRel(incident.started_at) : '—',
+          valueState: incident ? 'value' : 'missing', detail: incident ? fmtAbs(incident.started_at) : '—' },
+      ]}
+    />
+  )
 
   if (isLoading && !incident) {
     return (
       <PageLayout title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.loading', 'Loading incident…')} secondaryActions={backAction}>
-        <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} height={84} />
-          ))}
-        </section>
+        {summary}
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <div className="xl:col-span-2"><Skeleton height={240} /></div>
           <Skeleton height={240} />
@@ -95,6 +120,7 @@ export default function IncidentTimelinePage() {
   if (error || !incident) {
     return (
       <PageLayout title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.notFound', 'Not found')} secondaryActions={backAction}>
+        {summary}
         <FadeIn>
           <GlassPanel className="p-4 sm:p-5">
             {error ? (
@@ -118,9 +144,6 @@ export default function IncidentTimelinePage() {
     )
   }
 
-  const isResolved = incident.status === 'resolved'
-  const affected = incident.affected_components ?? []
-  const durationLabel = fmtDuration(incident.started_at, incident.resolved_at)
 
   const handleResolve = async () => {
     try {
@@ -153,14 +176,7 @@ export default function IncidentTimelinePage() {
       <StaleRefreshWarning state={incidentState} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section aria-label={t('incidentTimeline.kpis', 'Incident metrics')} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
-          <MetricCard label={t('incidentTimeline.kpi.status', 'Status')} value={statusLabel(incident.status)} icon={<Activity className="h-5 w-5" aria-hidden="true" />} color={STATUS_COLOR[incident.status] ?? 'cyan'} />
-          <MetricCard label={t('incidentTimeline.kpi.duration', 'Duration')} value={durationLabel || '—'} icon={<Clock className="h-5 w-5" aria-hidden="true" />} color={isResolved ? 'green' : 'amber'} />
-          <MetricCard label={t('incidentTimeline.kpi.updates', 'Updates')} value={updates.length} icon={<MessageSquare className="h-5 w-5" aria-hidden="true" />} />
-          <MetricCard label={t('incidentTimeline.kpi.affected', 'Affected')} value={affected.length} icon={<Layers className="h-5 w-5" aria-hidden="true" />} color="purple" />
-          <MetricCard label={t('incidentTimeline.kpi.source', 'Source')} value={incident.source ?? '—'} icon={<Radio className="h-5 w-5" aria-hidden="true" />} color="blue" />
-          <MetricCard label={t('incidentTimeline.kpi.started', 'Started')} value={fmtRel(incident.started_at)} icon={<CalendarClock className="h-5 w-5" aria-hidden="true" />} />
-        </section>
+        {summary}
       </FadeIn>
 
       {/* 2 — Hero overview + details bento */}

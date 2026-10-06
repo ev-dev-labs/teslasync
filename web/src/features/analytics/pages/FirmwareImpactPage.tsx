@@ -10,11 +10,11 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { analyzeFirmwareImpact } from '../lib/firmwareImpact';
 import {
   FirmwareImpactSlot,
-  FirmwareImpactMetrics,
   FirmwareImpactChart,
   FirmwareImpactDetails,
   firmwareImpactState,
 } from '../components/firmware-impact-modernization';
+import { FirmwareBrief as FirmwareImpactMetrics } from '../components/operationalbrief-a-m/FirmwareBrief';
 
 export default function FirmwareImpactPage() {
   const { t } = useTranslation();

@@ -326,10 +326,10 @@ describe('BatteryTab — populated', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
     // Panel titles frame each section.
-    expect(screen.getByText('Health score timeline')).toBeInTheDocument();
-    expect(screen.getByText('Capacity trend')).toBeInTheDocument();
-    expect(screen.getByText('Range trend')).toBeInTheDocument();
-    expect(screen.getByText('Degradation & cycles')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Health score timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Capacity trend' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Range trend' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Degradation & cycles' })).toBeInTheDocument();
 
     // Four charts: one area, two lines, one composed.
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();

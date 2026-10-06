@@ -27,7 +27,7 @@ import type { Drive } from '@/types/driving';
 
 import { computeMileageBudget } from '../lib/mileageBudget';
 import { useMileageBudget } from '../hooks/useMileageBudget';
-import { MileageBudgetSummary } from '../components/MileageBudgetSummary';
+import { MileageBudgetBrief as MileageBudgetSummary } from '../components/operationalbrief-a-m/MileageBudgetBrief';
 
 /** km per statute mile, derived from the shared conversion lib. */
 const KM_PER_MILE = convertDistanceToSI(1, 'mi') / 1000;

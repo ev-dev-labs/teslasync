@@ -2,14 +2,15 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartLegend, ChartTooltip,
+  ChartLegend, ChartTooltip,
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { Table } from '@/components/ui';
+import { ChartCard } from '@/components/layout';
+import { Table, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
 import type { ChartDataPoint, DriveStats } from './types';
@@ -47,11 +48,14 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
         </tbody>
       </Table>
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
-      <ChartContainer
+      <ChartCard
         title={t('driveDetail.elevProfile', 'Elevation profile')}
         ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
         chartKey="drive-detail-elevation"
         height={220}
+        mobileHeight={220}
+        toolbar
+        exportable
       >
         {({ hiddenSeries }) => (
           points.filter((point) => point.elevation != null).length > 1 ? (
@@ -88,11 +92,11 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
           ) : (
             <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
               <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
-              <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+              <Text variant="caption">{t('driveDetail.noChartData', 'No telemetry data available')}</Text>
             </div>
           )
         )}
-      </ChartContainer>
+      </ChartCard>
     </FadeIn>
   );
 }

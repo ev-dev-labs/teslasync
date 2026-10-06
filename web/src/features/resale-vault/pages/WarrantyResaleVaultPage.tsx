@@ -127,13 +127,13 @@ export default function WarrantyResaleVaultPage() {
                 hasPartialErrors={hasPartialErrors}
                 sources={sources}
               />
-              <BatterySummaryPanel battery={evidence.battery} />
+              <BatterySummaryPanel battery={evidence.battery} sources={sources.filter((source) => source.section === 'battery')} />
               <BatteryCertificatePanel vehicleId={vehicleId} />
-              <MaintenanceSummaryPanel maintenance={evidence.maintenance} />
-              <SoftwareUpdateSummaryPanel softwareUpdates={evidence.software_updates} />
+              <MaintenanceSummaryPanel maintenance={evidence.maintenance} sources={sources.filter((source) => source.section === 'maintenance')} />
+              <SoftwareUpdateSummaryPanel softwareUpdates={evidence.software_updates} sources={sources.filter((source) => source.section === 'software_updates')} />
               <WarrantySummaryPanel warranty={evidence.warranty} />
-              <DrivingChargingSummaryPanel driving={evidence.driving_history} charging={evidence.charging_history} />
-              <IncidentSummaryPanel incidents={evidence.security_incidents} />
+              <DrivingChargingSummaryPanel driving={evidence.driving_history} charging={evidence.charging_history} sources={sources} />
+              <IncidentSummaryPanel incidents={evidence.security_incidents} sources={sources.filter((source) => source.section === 'security_incidents')} />
             </div>
           </FadeIn>
         )}

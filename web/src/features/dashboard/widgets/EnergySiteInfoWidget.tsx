@@ -7,8 +7,6 @@ import { Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 
-import { cn } from '@/lib/cn';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -89,21 +87,25 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
     // No sites — show empty via WidgetDetailCard (entries is [])
   } else if (info) {
     entries.push({
+      id: 'solar',
       label: t('widget.energySiteInfo.solarSize', 'Solar system'),
       value: solarPower,
     });
     entries.push({
+      id: 'powerwalls',
       label: t('widget.energySiteInfo.powerwall', 'Powerwalls'),
       // nameplate_energy is the site's total capacity, not capacity per pack.
       value: batteryCount == null && batteryCapacity == null
         ? '—' : `${batteryCount == null ? '—' : fmtInt(batteryCount)} · ${batteryEnergy}`,
     });
     entries.push({
+      id: 'firmware',
       label: t('widget.energySiteInfo.firmware', 'Gateway firmware'),
       value: gatewayFirmware,
       mono: true,
     });
     entries.push({
+      id: 'timezone',
       label: t('widget.energySiteInfo.timezone', 'Installation timezone'),
       value: installTimezone,
     });
@@ -123,7 +125,7 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className={cn(dashboardTokens.metricLabel, 'h-full min-w-0 [&_dl]:min-w-0 [&_dl>div]:flex-wrap [&_dl>div]:border-[var(--border-subtle)] [&_dt]:[font-size:inherit] [&_dt]:tracking-normal [&_dt]:whitespace-normal [&_dt]:overflow-visible [&_dd]:max-w-full [&_dd_span]:whitespace-normal [&_dd_span]:break-words [&_dd_span]:overflow-visible')}>
+      <div className="h-full min-w-0">
         <WidgetDetailCard
           entries={entries}
           compact={isCompact}

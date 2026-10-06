@@ -120,7 +120,7 @@ describe('live battery pages: independent sources and preserved orchestration', 
   it('keeps end-filtered distance/cost denominator values and all six specialist KPI identities', () => {
     const { container } = mount(<EnergyPage />, '/energy');
     const summary = screen.getByTestId('energy-summary');
-    expect(summary.querySelectorAll('[data-stat]')).toHaveLength(6);
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(within(summary).getByText('200 km')).toBeVisible();
     expect(within(summary).getByText('Cost per km')).toBeVisible();
     expect(within(summary).getByText('$0.01')).toBeVisible();
@@ -153,7 +153,7 @@ describe('live battery pages: independent sources and preserved orchestration', 
     expect(screen.getByRole('link', { name: 'Battery Cells' })).toHaveAttribute('href', '/battery-cells');
     expect(screen.getByTestId('test-ai-vehicle-scope')).toHaveAttribute('data-vehicle-id', '7');
     expect(container.querySelectorAll('[data-battery-panel]')).toHaveLength(11);
-    expect(screen.getByTestId('battery-health-summary').querySelectorAll('[data-stat]')).toHaveLength(7);
+    expect(screen.getByTestId('battery-health-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(7);
     expect(mocks.health).toHaveBeenCalledWith('7');
     expect(mocks.live).toHaveBeenCalledWith(7);
     if (state === 'error') {

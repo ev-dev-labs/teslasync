@@ -69,7 +69,10 @@ export default function SignalGapDetectorPage() {
       )}
 
       {/* 1 — KPI band: full-width staleness summary */}
-      <SignalGapKpis buckets={buckets} freshnessPct={freshnessPct} hasVehicle={hasVehicle} unavailable={sourceState.fatalError != null || (query.isLoading && !sourceState.hasData)} />
+      <SignalGapKpis buckets={buckets} freshnessPct={freshnessPct} hasVehicle={hasVehicle}
+        unavailable={sourceState.fatalError != null || (query.isLoading && !sourceState.hasData)}
+        loading={hasVehicle && query.isLoading && !sourceState.hasData}
+        retained={sourceState.hasData && (sourceState.isRefreshing || sourceState.status === 'stale' || sourceState.refreshError != null)} />
 
       {/* 2 — Hero bento: distribution chart + freshness gauge */}
       <FadeIn delay={0.1}>

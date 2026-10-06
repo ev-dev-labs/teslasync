@@ -358,6 +358,24 @@ describe('ComputedMetricEditor', () => {
     expect(alert).toHaveTextContent('preview failed')
   })
 
+  it('retains a previous computed value with an explicit old-preview notice on failure', () => {
+    previewState.data = {
+      kind: 'computed_metric', metric_id: 'cost_per_mi', metric_window: '7d',
+      metric_op: '>', threshold: 0.5, value: 1.25, would_trigger: true,
+    }
+    previewState.mutate = vi.fn(
+      (_payload: unknown, opts?: { onError?: (error: unknown) => void }) =>
+        opts?.onError?.(new Error('computed refresh failed')),
+    )
+    renderEditor(completeValue)
+    expect(screen.getByRole('alert')).toHaveTextContent('computed refresh failed')
+    expect(screen.getByText(/Right now this metric/)).toHaveTextContent('1.25')
+    expect(screen.getByText(/The previous preview remains visible/)).toBeInTheDocument()
+    expect(previewState.mutate).toHaveBeenCalledWith(expect.objectContaining({
+      metric_id: 'cost_per_mi', metric_window: '7d', metric_threshold: 0.5,
+    }), expect.anything())
+  })
+
   it('renders and edits preferred distances without changing the legacy metric payload', () => {
     vi.mocked(useSettings).mockReturnValue({
       settings: inputPreferences({ locale: 'de-DE', decimal_precision: 3 }),

@@ -18,7 +18,8 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
   const { formatDateTime } = useDateFormat();
@@ -45,6 +46,12 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   const hasData = chartData.length > 0;
   const isCompact = size.cols <= 1;
+  const sourceState = deriveDataState({
+    ...query,
+    data: charges ?? (isLoading || isError || error ? undefined : null),
+  }, { provenance: 'historical', unavailable: !hasData, partial: chartData.some(d => d.energy == null) });
+  const dataState = id > 0 ? sourceState : deriveDataState(vehiclesQuery);
+  const handleRefresh = () => { if (id > 0) void refetch(); else void vehiclesQuery.refetch(); };
 
   const stats: ChartSummaryStat[] = useMemo(() => {
     if (!hasData) return [];
@@ -62,12 +69,12 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
         title={t('widget.chargeHistory.title', 'Charge history')}
         loading={isLoading && !charges}
         error={!charges && error ? String(error) : null}
-        dataState={charges ? deriveDataState(query, { provenance: 'historical', partial: chartData.some(d => d.energy == null) }) : undefined}
+        dataState={dataState}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => refetch()}
+        onRefresh={handleRefresh}
       >
         <WidgetChartSummary
           compact
@@ -87,12 +94,12 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
       icon={<BarChart3 className="h-3.5 w-3.5 text-emerald-300" />}
       loading={isLoading && !charges}
       error={!charges && error ? String(error) : null}
-      dataState={charges ? deriveDataState(query, { provenance: 'historical', partial: chartData.some(d => d.energy == null) }) : undefined}
+      dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       <WidgetChartSummary
         isEmpty={!hasData}

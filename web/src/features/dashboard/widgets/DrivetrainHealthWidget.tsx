@@ -1,7 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog } from 'lucide-react';
-import { Skeleton } from '@/components/feedback';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { Caption } from '@/components/ui';
+import { SourceContent } from '@/components/layout';
 import { useDrivetrainHealth } from '@/api/hooks/useDriving';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -11,7 +13,6 @@ import { combineDataStates } from '@/api/dataState';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatusGrid, WidgetStatGrid, type StatGridItem } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -31,7 +32,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
 
   const healthQuery = useDrivetrainHealth(vehicleIdStr);
   const {
-    data: health, isLoading: healthLoading, error: healthError,
+    data: health, isLoading: healthLoading,
     isFetching: healthFetching, isStale: healthStale, isError: healthIsError,
     dataUpdatedAt: healthUpdatedAt, refetch: healthRefetch,
   } = healthQuery;
@@ -119,7 +120,6 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
 
   const shellProps = {
     loading: isLoading,
-    error: combined.fatalError ? String(healthError) : null,
     dataState: {
       ...combined,
       status: !hasData && isLoading ? 'initial' : combined.status,
@@ -139,8 +139,17 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
     return (
       <WidgetShell title={t('widget.drivetrainHealth.title', 'Drivetrain health')} {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
+          <SourceContent
+            state={healthTrust.fatalError ? 'error' : !healthTrust.hasData && healthLoading ? 'loading' : 'ready'}
+            label={t('widget.drivetrainHealth.assessment', 'Assessment')}
+            emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
+            errorMessage={t('widget.drivetrainHealth.assessmentError', 'The drivetrain assessment could not be loaded.')}
+            error={healthTrust.fatalError}
+            errorRecovery={{ onRetry: healthTrust.retry ?? undefined }}
+          >
           <WidgetStatusGrid cells={assessment} compact />
-          {!hasData && <p className={dashboardTokens.metricLabel}>{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</p>}
+          </SourceContent>
+          {!hasData && <Caption className="break-words">{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</Caption>}
         </div>
       </WidgetShell>
     );
@@ -153,12 +162,25 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
       {...shellProps}
     >
       <div className="flex min-w-0 flex-col gap-3">
-        <WidgetStatusGrid cells={assessment} />
+        <SourceContent
+          state={healthTrust.fatalError ? 'error' : !healthTrust.hasData && healthLoading ? 'loading' : health == null ? 'empty' : healthTrust.refreshError ? 'retained' : 'ready'}
+          label={t('widget.drivetrainHealth.assessment', 'Assessment')}
+          emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
+          errorMessage={t('widget.drivetrainHealth.assessmentError', 'The drivetrain assessment could not be loaded.')}
+          error={healthTrust.fatalError}
+          errorRecovery={{ onRetry: healthTrust.retry ?? undefined }}
+          emptyContent={<WidgetStatusGrid cells={assessment} />}
+          retainedMessage={t('widget.drivetrainHealth.assessmentRetained', 'The previous drivetrain assessment remains visible while it refreshes.')}
+        >
+          <WidgetStatusGrid cells={assessment} />
+        </SourceContent>
+        <StaleRefreshWarning state={motorTrust} />
+        {motorTrust.fatalError && <QueryError error={motorTrust.fatalError} onRetry={motorTrust.retry ?? undefined} />}
         <WidgetStatGrid stats={stats} cols={2} />
-        <p className={dashboardTokens.metricLabel}>
+        <Caption className="block break-words">
           {t('widget.drivetrainHealth.assessmentCaveat', 'Assessment from available telemetry; not a mechanical inspection.')}
-        </p>
-        {!hasData && <p className={dashboardTokens.metricLabel}>{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</p>}
+        </Caption>
+        {!hasData && <Caption className="block break-words">{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</Caption>}
       </div>
     </WidgetShell>
   );

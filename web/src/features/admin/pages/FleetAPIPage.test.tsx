@@ -159,7 +159,7 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const rendered = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -168,6 +168,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...rendered, client };
 }
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Fleet API summary' });
@@ -185,7 +186,36 @@ beforeEach(() => {
   mockedRequest.mockReset();
 });
 
+describe('FleetAPIPage retained sources', () => {
+  it('preserves full endpoint controls and runtime URLs after independent refresh failures', async () => {
+    installRequest();
+    const { client } = renderPage();
+    await screen.findByText(DEFAULT_ENDPOINTS.tesla_api);
+    await screen.findByText('/api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state');
+    installRequest({ rejectGet: ['/settings/polling-config', '/system/version'] });
+    await client.invalidateQueries();
+    await waitFor(() => expect(client.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true));
+    expect(screen.getByText(DEFAULT_ENDPOINTS.tesla_api)).toBeInTheDocument();
+    expect(screen.getByText('/api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Toggle Tesla API polling' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Category/ })).toBeInTheDocument();
+  });
+});
+
 describe('FleetAPIPage', () => {
+  it('retains raw enabled and selected counts with their catalog denominator and review details', async () => {
+    installRequest();
+    renderPage();
+    const summary = screen.getByTestId('fleet-api-summary');
+    await within(summary).findByText('On demand only');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3);
+    expect(summary.querySelector('[data-operational-metric="enabled"] [data-operational-value]')).toHaveTextContent('2 / 7');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('returned endpoint catalog');
+    expect(screen.getByRole('switch', { name: 'Toggle Tesla API polling' })).toBeInTheDocument();
+  });
+
   it('renders skeletons — no KPI values and no switches — while the sources load', () => {
     // Never-resolving promise keeps every query pending.
     mockedRequest.mockReturnValue(new Promise(() => {}));
@@ -196,8 +226,9 @@ describe('FleetAPIPage', () => {
     expect(screen.getByText('Fleet API settings')).toBeInTheDocument();
     expect(kpiRegion()).toBeInTheDocument();
 
-    // During the KPI skeleton no metric labels are rendered yet...
-    expect(within(kpiRegion()).queryByText('API status')).toBeNull();
+    expect(within(kpiRegion()).getByText('API status')).toBeInTheDocument();
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
     // ...and no toggle switches exist while polling/settings are still loading.
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
   });

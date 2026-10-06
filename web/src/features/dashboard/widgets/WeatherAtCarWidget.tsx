@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloudSun, Sun, CloudSnow, Thermometer } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { Caption } from '@/components/ui';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { isFiniteNumber } from '@/lib/numberFormat';
@@ -12,7 +13,6 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { safeArray } from '@/lib/safeArray';
 import { WidgetBigNumber } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 
 /** Coarse weather condition derived from the outside temperature (°C, SI). */
 export type WeatherCondition = 'freezing' | 'warm' | 'mild';
@@ -103,9 +103,9 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
             <div className="flex min-w-0 flex-col gap-0.5">
               <WidgetBigNumber value={`${fmtInt(toTemperatureDisplay(outsideTemp))}${tempUnit}`} label={t('widget.outsideTemp', 'Outside temperature')} />
               {isFiniteNumber(lat) && isFiniteNumber(lon) && (
-                <span className={dashboardTokens.metricLabel}>
+                <Caption className="break-words">
                   {fmtNumber(lat)}°, {fmtNumber(lon)}°
-                </span>
+                </Caption>
               )}
             </div>
           </div>

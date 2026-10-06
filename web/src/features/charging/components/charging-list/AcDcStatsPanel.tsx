@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import { formatDuration } from '../ChargingSessionCard';
 import type { AcDcBreakdown, AcDcBucket } from './helpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 
 interface AcDcStatsPanelProps {
   breakdown: AcDcBreakdown;
@@ -116,10 +117,18 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
 
       {/* Free charging total */}
       {freeCount > 0 && (
-        <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-center gap-4 text-xs text-[var(--text-secondary)]">
-          <span>{t('charging.table.freeCharged', 'Free charged')}: <strong className="text-emerald-300">{t('charging.stats.freeSessions', '{{count}} sessions', { count: freeCount })}</strong></span>
-          <span>{t('charging.table.freeEnergy', 'Free energy')}: <strong className="text-emerald-300">{fmtWithUnit(freeEnergy, 'kWh')}</strong></span>
-        </div>
+        <ChargingSummaryBrief className="mt-3"
+          title={t('charging.table.freeCharged', 'Free charged')}
+          metrics={[
+            { metricId: 'count', occurrenceId: 'free-sessions', rawValue: freeCount,
+              label: t('charging.table.freeCharged', 'Free charged'),
+              display: { formatter: raw => ({ value: t('charging.stats.freeSessions', '{{count}} sessions', { count: raw }), unit: '' }) } },
+            { metricId: 'energy', occurrenceId: 'free-energy', rawValue: freeEnergy * 1000,
+              label: t('charging.table.freeEnergy', 'Free energy'),
+              display: { formatter: raw => ({ value: fmtWithUnit(raw / 1000, 'kWh'), unit: '' }) } },
+          ]}
+          period={{ kind: 'unknown', label: t('charging.brief.loadedSessions', 'Loaded charging sessions'),
+            reason: t('charging.brief.freeScope', 'Recorded zero-cost sessions in the loaded AC/DC history; unknown costs are not counted as free.') }} />
       )}
     </GlassPanel>
   );

@@ -88,13 +88,13 @@ describe('live Sleep Efficiency modernization (authored; execution NOTRUN)', () 
     mount();
     allShells();
     const evidence = screen.getByTestId('sleep-efficiency-kpi-evidence');
-    expect(evidence.querySelectorAll('[data-stat]')).toHaveLength(7);
+    expect(evidence.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
     const durationMetric = evidence.querySelector('[aria-label^="Duration-based sleep efficiency:"]');
     expect(durationMetric).toHaveTextContent('—');
     expect(durationMetric).toHaveTextContent('Unavailable pending dwell reconstruction');
-    expect(within(evidence).getByText('Count-based; not a time share', { selector: '[data-stat-context]' })).toBeInTheDocument();
-    expect(within(evidence).getByText('Placeholder zero withheld', { selector: '[data-stat-context]' })).toBeInTheDocument();
-    expect(within(evidence).getByText('Source support score; not confidence', { selector: '[data-stat-context]' })).toBeInTheDocument();
+    expect(within(evidence).getByText('Count-based; not a time share', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
+    expect(within(evidence).getByText('Placeholder zero withheld', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
+    expect(within(evidence).getByText('Source support score; not confidence', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
     expect(screen.getAllByRole('figure')).toHaveLength(3);
   });
 

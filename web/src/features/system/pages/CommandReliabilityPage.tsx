@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCheck, Radio, RefreshCw, ShieldAlert } from 'lucide-react';
+import { CheckCheck, Radio } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -21,10 +22,11 @@ import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { chartTokens } from '@/lib/tokens';
-import { formatDateShort } from '@/lib/dateFormat';
+import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
 import { useTimezone } from '@/lib/timezone';
 
 import { analyzeCommandReliability, type ReliabilityGrade } from '../lib/commandReliability';
+import { commandReliabilityMetrics } from '../components/statstrip-command-summaries/commandSummaryMetrics';
 
 const GRADE_BADGE: Record<ReliabilityGrade, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
   excellent: 'success',
@@ -89,6 +91,9 @@ export default function CommandReliabilityPage() {
     () => chartData.map(({ grade, ...rest }) => ({ ...rest, grade: String(grade) })),
     [chartData],
   );
+  const operationalMetrics = useOperationalMetrics(
+    commandReliabilityMetrics(historyQuery.data != null ? summary : null, t),
+  );
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('commandReliability.title', 'Command reliability')} />;
@@ -111,58 +116,31 @@ export default function CommandReliabilityPage() {
       <FadeIn>
         <section
           aria-label={t('commandReliability.kpis', 'Command reliability metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         >
           {isError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
               <QueryError error={state.fatalError} onRetry={() => historyQuery.refetch()} />
             </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
           ) : (
-            <>
-              <MetricCard
-                label={t('commandReliability.overall', 'Overall success')}
-                value={`${Math.round(summary.overallSuccessRate * 100)}%`}
-                subtitle={t('commandReliability.attempts', '{{n}} attempts', {
-                  n: summary.totalAttempts,
-                })}
-                icon={<CheckCheck className="h-5 w-5" />}
-                color={summary.overallSuccessRate >= 0.95 ? 'green' : 'amber'}
-                help={{
-                  i18nKey: 'help.commandReliability.overall',
-                  defaultValue:
-                    'Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average.',
-                }}
-              />
-              <MetricCard
-                label={t('commandReliability.unreliable', 'Unreliable commands')}
-                value={summary.unreliableCount}
-                subtitle={
-                  summary.worstCommand != null
-                    ? summary.worstCommand.label
-                    : t('commandReliability.allFine', 'Nothing failing')
-                }
-                icon={<ShieldAlert className="h-5 w-5" />}
-                color={summary.unreliableCount > 0 ? 'red' : 'green'}
-              />
-              <MetricCard
-                label={t('commandReliability.intents', 'Distinct intents')}
-                value={summary.totalIntents}
-                subtitle={t('commandReliability.intentsHint', 'after collapsing retry storms')}
-                icon={<Radio className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('commandReliability.storms', 'Retry storms')}
-                value={summary.storms.length}
-                subtitle={t('commandReliability.stormsHint', 'you pressed it again, and again')}
-                icon={<RefreshCw className="h-5 w-5" />}
-                color={summary.storms.length > 0 ? 'amber' : 'purple'}
-              />
-            </>
+            <OperationalBrief
+              compact
+              testId="command-reliability-summary"
+              eyebrow={t('commandReliability.kpis', 'Command reliability metrics')}
+              title={t('commandReliability.brief.title', 'Command reliability summary')}
+              description={t('commandReliability.summary.scope', 'Selected vehicle command history, with existing success and retry-intent definitions.')}
+              metrics={operationalMetrics}
+              loading={isLoading}
+              scope={`${formatDateTime(startInstant, { tz: timeZone })} → ${formatDateTime(endInstantExclusive, { tz: timeZone })}`}
+              provenance={t('commandReliability.summary.scope', 'Selected vehicle command history, with existing success and retry-intent definitions.')}
+              statusLabel={isLoading ? t('commandReliability.brief.loading', 'Loading command outcomes')
+                : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
+                  : historyQuery.data == null ? t('commandReliability.brief.unavailable', 'Command outcomes unavailable')
+                    : summary.totalAttempts === 0 ? t('commandReliability.brief.empty', 'No attempts recorded')
+                      : t('commandReliability.brief.recorded', 'Recorded command outcomes')}
+              statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
+              freshness={state.updatedAt != null
+                ? formatDateTime(new Date(state.updatedAt).toISOString()) : undefined}
+            />
           )}
         </section>
       </FadeIn>

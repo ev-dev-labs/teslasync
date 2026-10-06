@@ -239,8 +239,8 @@ describe('LifetimeStatsPage', () => {
 
     // KPI band (km identity: 12345 km stays 12,345 km).
     expect(screen.getByText('1,234')).toBeInTheDocument(); // total drives
-    expect(screen.getByText('12,345.00')).toBeInTheDocument(); // total distance
-    expect(screen.getByText('3,456.70')).toBeInTheDocument(); // total energy kWh
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument(); // total distance
+    expect(screen.getByText('3,456.70 kWh')).toBeInTheDocument(); // total energy kWh
     expect(screen.getByText('$543.21')).toBeInTheDocument(); // electric cost (savings bar)
     expect(screen.getByText('$1,500.00')).toBeInTheDocument(); // gas-equivalent cost
 
@@ -250,8 +250,8 @@ describe('LifetimeStatsPage', () => {
     expect(screen.getByText('75.50 kWh')).toBeInTheDocument();
 
     // Fun facts + activity summary.
-    expect(screen.getByText('250.00')).toBeInTheDocument(); // earth %
-    expect(screen.getByText('3.20')).toBeInTheDocument(); // moon %
+    expect(screen.getByText('250.00 %')).toBeInTheDocument(); // earth %
+    expect(screen.getByText('3.20 %')).toBeInTheDocument(); // moon %
     expect(screen.getByText('Saturday')).toBeInTheDocument();
     expect(screen.getByText('18:00')).toBeInTheDocument();
     expect(screen.getByText('155.00 Wh/km')).toBeInTheDocument();
@@ -287,11 +287,11 @@ describe('LifetimeStatsPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('1,000.00')).toBeInTheDocument(); // total distance in miles
+    expect(screen.getByText('1,000.00 mi')).toBeInTheDocument(); // total distance in miles
     expect(screen.getByText('500.00 mi')).toBeInTheDocument(); // longest drive record
     expect(screen.getByText('100.00 mph')).toBeInTheDocument(); // highest speed record
     // The km identity value must NOT appear once the preference is miles.
-    expect(screen.queryByText('12,345.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('12,345.00 km')).not.toBeInTheDocument();
   });
 
   it('shows a skeleton in every panel while loading and leaks no ready values', () => {
@@ -301,7 +301,7 @@ describe('LifetimeStatsPage', () => {
 
     // Header still present; no resolved KPI values.
     expect(screen.getByRole('heading', { name: /Lifetime stats/i })).toBeInTheDocument();
-    expect(screen.queryByText('12,345.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('12,345.00 km')).not.toBeInTheDocument();
     expect(screen.queryByText('456.70 km')).not.toBeInTheDocument();
     // Skeletons render across the page.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
@@ -310,7 +310,7 @@ describe('LifetimeStatsPage', () => {
   it('renders a per-section EmptyState (never a blank panel) when the query resolves with no data', () => {
     h.query = makeQuery({ data: null });
 
-    renderPage();
+    const { container } = renderPage();
 
     // Several sections share the generic "no data" copy.
     expect(screen.getAllByText(/No driving data yet/i).length).toBeGreaterThanOrEqual(3);
@@ -318,6 +318,9 @@ describe('LifetimeStatsPage', () => {
     expect(screen.getByText(/Start driving to unlock achievements/i)).toBeInTheDocument();
     // Hero degrades gracefully to a zero drive count rather than crashing.
     expect(screen.getByText(/driven across 0 drives/i)).toBeInTheDocument();
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces QueryError in every panel and wires Retry to the query refetch', () => {

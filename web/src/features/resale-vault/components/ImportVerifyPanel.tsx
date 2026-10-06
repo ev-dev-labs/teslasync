@@ -11,8 +11,9 @@
  * (and whether it's since been revoked) — a trust signal, not a
  * cryptographic requirement.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { Badge, Input, HelperText } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
@@ -42,8 +43,10 @@ export function ImportVerifyPanel() {
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const importAttempt = useRef(0);
 
   const handleFile = async (file: File) => {
+    const attempt = ++importAttempt.current;
     setError(null);
     setResult(null);
     setImported(null);
@@ -51,6 +54,7 @@ export function ImportVerifyPanel() {
     setIsVerifying(true);
     try {
       const text = await file.text();
+      if (attempt !== importAttempt.current) return;
       const parsed: unknown = JSON.parse(text);
       if (!isSignedVaultReportShape(parsed)) {
         setError(
@@ -63,6 +67,7 @@ export function ImportVerifyPanel() {
       }
       setImported(parsed);
       const verification = await verifyReport(parsed);
+      if (attempt !== importAttempt.current) return;
       setResult(verification);
       await recordAuditEvent('report_imported', `Imported report ${parsed.report?.report_id ?? 'unknown'} from file "${file.name}".`);
       await recordAuditEvent(
@@ -70,15 +75,16 @@ export function ImportVerifyPanel() {
         `Verified imported report ${parsed.report?.report_id ?? 'unknown'}: ${verification.valid ? 'valid' : 'INVALID'}.`,
       );
     } catch (err) {
+      if (attempt !== importAttempt.current) return;
       if (err instanceof CryptoUnavailableError) {
         setError(err.message);
       } else if (err instanceof SyntaxError) {
         setError(t('resaleVault.import.badJson', 'This file is not valid JSON.'));
       } else {
-        setError(err instanceof Error ? err.message : String(err));
+        setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));
       }
     } finally {
-      setIsVerifying(false);
+      if (attempt === importAttempt.current) setIsVerifying(false);
     }
   };
 

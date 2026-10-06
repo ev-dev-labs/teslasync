@@ -264,7 +264,7 @@ const kpiRegion = () => screen.getByRole('region', { name: 'Summary metrics' });
 /** Read a KPI MetricCard's value <p> given its label, scoped to the KPI band. */
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? '';
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -304,7 +304,8 @@ describe('TemperatureImpactPage — loading', () => {
     expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     // Aggregates are withheld while the first load is in flight.
-    expect(kpiValue('Avg efficiency')).toBe('—');
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
   });
 });
 
@@ -325,12 +326,21 @@ describe('TemperatureImpactPage — error with no data', () => {
 
     // The error takes precedence over the empty copy (never both).
     expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
-    // KPIs still render as placeholders rather than crashing.
-    expect(kpiValue('Total data points')).toBe('0');
+    // An unavailable source cannot claim a measured zero sample count.
+    expect(kpiValue('Total data points')).toBe('—');
+    expect(kpiValue('Avg efficiency')).toBe('—');
   });
 });
 
 describe('TemperatureImpactPage — error with retained data', () => {
+  it('opens source-window and bucket captions in the actual Review details drawer', () => {
+    renderPage();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Summary metrics details' });
+    expect(within(drawer).getAllByText(/source window unspecified/).length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText('Lowest average consumption among populated temperature buckets.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText(`${AVG_WH_KM.toFixed(2)} Wh/km`)).toBeInTheDocument();
+  });
   it('keeps the last good analysis on screen when a background refetch errors', () => {
     // TanStack Query retains `data` from the last success even when a later
     // refetch fails, so a transient error must NOT collapse the page into

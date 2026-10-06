@@ -11,9 +11,11 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
+import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
 import type { ChargingForensicsItem } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel } from '../components';
 import { formatCurrencyMinor } from '../formatters';
+import { chargingForensicsExportRow } from '../chargingForensicsExport';
 
 const PAGE_SIZE = 15;
 
@@ -29,6 +31,13 @@ export default function ChargingForensicsPage() {
   const money = (minor: number | null, currency: string | null) => {
     if (minor == null || !currency) return '—';
     return formatCurrencyMinor(minor, currency, units.unitPrefs.locale);
+  };
+
+  const exportReconciliation = async (format: 'csv' | 'json') => {
+    if (vehicleId == null) return;
+    const rows = (await fetchAllChargingForensics(vehicleId)).map(chargingForensicsExportRow);
+    if (format === 'csv') downloadCSV('charging-forensics', objectsToCSV(rows));
+    else downloadJSON('charging-forensics', rows);
   };
 
   const columns = useMemo<Column<ChargingForensicsItem>[]>(() => [
@@ -135,23 +144,17 @@ export default function ChargingForensicsPage() {
             mobileColumns={['session', 'started', 'status']}
             exportable
             exportFilename="charging-forensics"
-            exportAll={() =>
-              vehicleId == null ? Promise.resolve([]) : fetchAllChargingForensics(vehicleId)
-            }
-            exportRow={(row) => ({
-              session_id: row.session_id,
-              started_at: row.started_at,
-              vehicle_energy_wh: row.vehicle_energy_wh,
-              meter_energy_wh: row.meter_energy_wh ?? '',
-              estimated_loss_wh: row.estimated_loss_wh ?? '',
-              estimated_loss_low_wh: row.estimated_loss_low_wh ?? '',
-              estimated_loss_high_wh: row.estimated_loss_high_wh ?? '',
-              recorded_cost_minor: row.recorded_cost_minor ?? '',
-              expected_cost_minor: row.expected_cost_minor ?? '',
-              cost_discrepancy_minor: row.cost_discrepancy_minor ?? '',
-              currency: row.currency ?? '',
-              status: row.status,
-            })}
+            controls={{
+              exports: {
+                onExportCsv: () => exportReconciliation('csv'),
+                onExportJson: () => exportReconciliation('json'),
+                disabled: vehicleId == null,
+                description: t(
+                  'advancedIntelligence.forensics.exportScope',
+                  'Exports include the full reconciliation result with canonical SI values, uncertainty bounds, and currency, regardless of visible columns.',
+                ),
+              },
+            }}
             emptyMessage={t('advancedIntelligence.forensics.empty', 'No charging sessions are available for reconciliation.')}
           />
           <Pagination

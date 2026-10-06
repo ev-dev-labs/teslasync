@@ -48,7 +48,10 @@ vi.mock('@/features/charging/components/stat-modernization', async importOrigina
 vi.mock('../cost-analysis', () => ({
   MonthlyCostChart: () => null, CostPerKwhChart: () => null, MonthlyCostTable: () => null,
 }));
-vi.mock('@/components/layout', () => ({ PageContainer: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
+vi.mock('@/components/layout', () => ({
+  PageLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+  PageContainer: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+}));
 vi.mock('@/components/motion', () => ({ FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> }));
 vi.mock('@/components/data-display', () => ({ SavedViewMenu: () => null }));
 vi.mock('@/components/ui', () => ({ PrintButton: () => null }));

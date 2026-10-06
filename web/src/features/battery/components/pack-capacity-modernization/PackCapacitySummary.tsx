@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { Select } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
@@ -30,10 +31,8 @@ interface PackCapacitySummaryProps {
 }
 
 /**
- * Shared stats presentation, specialist formatting. The glossary does not
- * define posterior capacity, one-sigma uncertainty or this support index.
- * Explicit text metrics preserve the original locale/precision/± semantics;
- * the canonical raw quantities remain in the unchanged analysis result.
+ * Numeric specialist displays retain posterior, one-sigma uncertainty and
+ * support semantics without treating the support index as model confidence.
  */
 export function PackCapacitySummary({
   result,
@@ -72,56 +71,63 @@ export function PackCapacitySummary({
   const textMetric = (
     occurrenceId: string,
     label: string,
-    value: string | null,
+    value: number | null,
     context: string,
+    formatter: (raw: number) => string,
     missingReason = noEstimate,
   ): StatMetric => ({
-    metricId: 'text',
+    metricId: 'number',
     occurrenceId,
     label,
     rawValue: resolved ? value : null,
     description: context,
     context: unresolvedSubtitle ?? context,
     missingReason: unresolvedSubtitle ?? missingReason,
+    display: { formatter: raw => ({ value: formatter(raw), unit: '' }) },
   });
   const metrics: StatMetric[] = [
     textMetric(
       'pack-capacity:current',
       t('packCapacity.kpis.current', 'Current estimate'),
-      result.summary.currentWh != null ? formatEnergy(result.summary.currentWh) : null,
+      result.summary.currentWh,
       posterior,
+      formatEnergy,
     ),
     textMetric(
       'pack-capacity:uncertainty',
       t('packCapacity.kpis.uncertainty', 'Filter uncertainty'),
-      result.summary.currentSigmaWh != null ? `±${formatEnergy(result.summary.currentSigmaWh)}` : null,
+      result.summary.currentSigmaWh,
       oneSigma,
+      raw => `±${formatEnergy(raw)}`,
     ),
     textMetric(
       'pack-capacity:ratio',
       t('packCapacity.kpis.ratio', 'Current / filtered maximum'),
-      result.summary.currentToMaxRatio != null
-        ? packCapacityPercent(result.summary.currentToMaxRatio, locale) : null,
+      result.summary.currentToMaxRatio,
       ratioHint,
+      raw => packCapacityPercent(raw, locale),
     ),
     textMetric(
       'pack-capacity:raw-median',
       t('packCapacity.kpis.rawMedian', 'Raw median'),
-      result.summary.rawMedianWh != null ? formatEnergy(result.summary.rawMedianWh) : null,
+      result.summary.rawMedianWh,
       rawRange,
+      formatEnergy,
     ),
     textMetric(
       'pack-capacity:annual-change',
       t('packCapacity.kpis.annualChange', 'Annualized linear change'),
-      annualChange != null ? formatEnergy(annualChange) : null,
+      annualChange,
       fitLabel,
+      formatEnergy,
       noFit,
     ),
     textMetric(
       'pack-capacity:support',
       t('packCapacity.kpis.support', 'Evidence support'),
-      `${packCapacityNumber(result.coverage.support.index, locale, 1)}/100`,
+      result.coverage.support.index,
       supportBand,
+      raw => `${packCapacityNumber(raw, locale, 1)}/100`,
     ),
   ];
 
@@ -166,10 +172,12 @@ export function PackCapacitySummary({
           </div>
         }
       >
-        <StatGroup
+        <BatteryEvidenceBrief
           id="pack-capacity-summary"
+          title={t('packCapacity.kpis.title', 'Capacity evidence under filter assumptions')}
           metrics={metrics}
           loading={state.isLoading}
+          retained={Boolean(state.refreshError)}
           period={{
             kind: 'alltime',
             label: t('packCapacity.modernization.period', 'Returned charging-history window'),

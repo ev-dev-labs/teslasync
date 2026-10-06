@@ -66,16 +66,16 @@ export function LiveThroughputPanel({
   );
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <PanelTitle className="flex items-center gap-2">
+    <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
           <Radio
-            className={connected ? 'h-4 w-4 text-rose-400' : 'h-4 w-4 text-[var(--text-muted)]'}
+            className={connected ? 'h-4 w-4 shrink-0 text-rose-400' : 'h-4 w-4 shrink-0 text-[var(--text-muted)]'}
             aria-hidden="true"
           />
           {t('liveMonitor.throughputTitle', 'Signal throughput')}
         </PanelTitle>
-        <Caption className="sm:ml-auto">
+        <Caption className="min-w-0 break-words tabular-nums sm:ms-auto">
           {t('liveMonitor.throughputNow', 'Now')}: {fmtInt(rate ?? 0)}/s ·{' '}
           {t('liveMonitor.throughputPeak', 'Peak')}: {fmtInt(peak ?? 0)}/s
         </Caption>

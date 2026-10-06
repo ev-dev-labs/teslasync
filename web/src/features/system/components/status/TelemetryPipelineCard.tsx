@@ -34,8 +34,14 @@ import { useMQTTStatus } from '@/api/hooks/useTelemetry'
 import type { Vehicle } from '@/api/types'
 import { fmtInt } from '@/lib/numberFormat'
 import { useTranslation } from 'react-i18next'
+import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief'
+import type { TFunction } from 'i18next'
 import { useDataState } from '@/hooks/useDataState'
 import { QueryError, StaleRefreshWarning } from '@/components/feedback'
+import { Caption, Text } from '@/components/ui'
+import { MetricBar } from '@/components/data-display'
+import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 interface TelemetryPipelineCardProps {
   vehicles: Vehicle[] | undefined
@@ -45,6 +51,7 @@ interface TelemetryPipelineCardProps {
   signalLogCount: number | undefined
   /** "now" passed in so the page-level tick re-renders the relative-time labels. */
   now: number
+  retained?: boolean
 }
 
 type Liveness = 'sending' | 'slow' | 'stale' | 'offline'
@@ -59,7 +66,7 @@ function fmtCount(n: number | undefined | null): string {
 
 // Render an absolute-clock-skew-tolerant relative time using the shared
 // `now` tick the page already drives every 5s.
-function relativeTime(iso: string | undefined, now: number): string {
+function relativeTime(iso: string | undefined, now: number, translate: TFunction): string {
   if (!iso) return '—'
   const t = Date.parse(iso)
   if (!Number.isFinite(t)) return '—'
@@ -67,13 +74,21 @@ function relativeTime(iso: string | undefined, now: number): string {
   const past = diff >= 0
   const abs = Math.abs(diff)
   const sec = Math.round(abs / 1000)
-  if (sec < 60) return past ? `${sec}s ago` : `in ${sec}s`
+  if (sec < 60) return past
+    ? translate('systemStatus.pipelineTime.secondsAgo', '{{count}}s ago', { count: sec })
+    : translate('systemStatus.pipelineTime.secondsAhead', 'in {{count}}s', { count: sec })
   const min = Math.round(sec / 60)
-  if (min < 60) return past ? `${min} min ago` : `in ${min} min`
+  if (min < 60) return past
+    ? translate('systemStatus.pipelineTime.minutesAgo', '{{count}} min ago', { count: min })
+    : translate('systemStatus.pipelineTime.minutesAhead', 'in {{count}} min', { count: min })
   const hr = Math.round(min / 60)
-  if (hr < 24) return past ? `${hr}h ago` : `in ${hr}h`
+  if (hr < 24) return past
+    ? translate('systemStatus.pipelineTime.hoursAgo', '{{count}}h ago', { count: hr })
+    : translate('systemStatus.pipelineTime.hoursAhead', 'in {{count}}h', { count: hr })
   const day = Math.round(hr / 24)
-  return past ? `${day}d ago` : `in ${day}d`
+  return past
+    ? translate('systemStatus.pipelineTime.daysAgo', '{{count}}d ago', { count: day })
+    : translate('systemStatus.pipelineTime.daysAhead', 'in {{count}}d', { count: day })
 }
 
 // Parse an ISO timestamp into ms-since-epoch, returning undefined for
@@ -131,31 +146,27 @@ function liveness(
   return { level: 'stale', source, lastSeenIso }
 }
 
-function livenessClasses(l: Liveness): { dot: string; label: string; chip: string } {
+function livenessClasses(l: Liveness): { dot: string; chip: string } {
   switch (l) {
     case 'sending':
       return {
-        dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]',
-        label: 'sending',
+        dot: 'bg-emerald-400',
         chip: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30',
       }
     case 'slow':
       return {
         dot: 'bg-amber-400',
-        label: 'slow',
         chip: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30',
       }
     case 'stale':
       return {
         dot: 'bg-red-500',
-        label: 'stale',
         chip: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30',
       }
     case 'offline':
     default:
       return {
         dot: 'bg-[var(--surface-2)]',
-        label: 'offline',
         chip: 'bg-white/[0.06] text-[var(--text-muted)] ring-1 ring-white/10',
       }
   }
@@ -169,9 +180,9 @@ function vinTail(vin: string | undefined | null): string {
 }
 
 function batteryColor(pct: number): string {
-  if (pct >= 50) return 'bg-emerald-400/70'
-  if (pct >= 20) return 'bg-amber-400/70'
-  return 'bg-red-500/70'
+  if (pct >= 50) return 'rgb(52 211 153 / 0.7)'
+  if (pct >= 20) return 'rgb(251 191 36 / 0.7)'
+  return 'rgb(239 68 68 / 0.7)'
 }
 
 function vehicleStateBadge(state: string | undefined): string {
@@ -190,8 +201,23 @@ export function TelemetryPipelineCard({
   chargingSessionsCount,
   signalLogCount,
   now,
+  retained = false,
 }: TelemetryPipelineCardProps) {
   const { t } = useTranslation()
+  const livenessLabels: Record<Liveness, string> = {
+    sending: t('systemStatus.pipelineStates.sending', 'sending'),
+    slow: t('systemStatus.pipelineStates.slow', 'slow'),
+    stale: t('systemStatus.pipelineStates.stale', 'stale'),
+    offline: t('systemStatus.pipelineStates.offline', 'offline'),
+  }
+  const stateLabels: Record<string, string> = {
+    online: t('systemStatus.pipelineStates.online', 'online'),
+    driving: t('systemStatus.pipelineStates.driving', 'driving'),
+    charging: t('systemStatus.pipelineStates.charging', 'charging'),
+    asleep: t('systemStatus.pipelineStates.asleep', 'asleep'),
+    offline: livenessLabels.offline,
+    unknown: t('systemStatus.pipelineStates.unknown', 'unknown'),
+  }
   const pollingQuery = useQuery({
     queryKey: ['system-status', 'polling-status'],
     queryFn: getPollingStatus,
@@ -239,82 +265,78 @@ export function TelemetryPipelineCard({
 
   return (
     <div className="space-y-4">
-      <StaleRefreshWarning state={pollingState} label={t('systemStatus.telemetry.pollSource', 'REST polling')} />
+      <StaleRefreshWarning state={pollingState} label={t('systemStatus.telemetrySources.pollSource', 'REST polling')} />
       {pollingState.fatalError && (
         <QueryError error={pollingState.fatalError} onRetry={() => { void pollingQuery.refetch(); }} />
       )}
-      <StaleRefreshWarning state={mqttState} label={t('systemStatus.telemetry.streamSource', 'Fleet Telemetry stream')} />
+      <StaleRefreshWarning state={mqttState} label={t('systemStatus.telemetrySources.streamSource', 'Fleet Telemetry stream')} />
       {mqttState.fatalError && (
         <QueryError error={mqttState.fatalError} onRetry={() => { void mqttQuery.refetch(); }} />
       )}
       {/* Fleet rollup grid */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm md:grid-cols-5">
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Vehicles</div>
-          <div className="tabular-nums text-[var(--text-primary)]">
-            {vehicles == null ? '—' : list.length > 0 ? `${list.length} connected` : 'none configured'}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">GPS positions</div>
-          <div className="tabular-nums text-[var(--text-primary)]">{fmtCount(positionCount)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Drives</div>
-          <div className="tabular-nums text-[var(--text-primary)]">{fmtCount(drivesCount)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Charging sessions</div>
-          <div className="tabular-nums text-[var(--text-primary)]">{fmtCount(chargingSessionsCount)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Signal log</div>
-          <div className="tabular-nums text-[var(--text-primary)]">{fmtCount(signalLogCount)}</div>
-        </div>
-      </div>
+      <SystemSummaryBrief
+        title={t('systemStatus.telemetryPipeline', 'Telemetry pipeline')}
+        description={t('systemStatus.pipelineBrief.description', 'Configured vehicles and recorded table counts; polling and stream liveness remain independent evidence below.')}
+        scope={t('systemStatus.pipelineBrief.scope', 'Vehicle response and database row-count snapshot; no shared historical window is supplied.')}
+        available={vehicles != null || positionCount != null || drivesCount != null || chargingSessionsCount != null || signalLogCount != null}
+        retained={retained}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'vehicles', rawValue: vehicles == null ? null : list.length,
+            label: t('systemStatus.vehicles', 'Vehicles'), context: vehicles == null ? '—' : list.length > 0
+              ? t('systemStatus.pipeline.connectedVehicles', '{{count}} connected', { count: list.length })
+              : t('systemStatus.pipeline.noneConfigured', 'none configured') },
+          { metricId: 'count', occurrenceId: 'positions', rawValue: positionCount, label: t('systemStatus.pipeline.positions', 'GPS positions'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
+          { metricId: 'count', occurrenceId: 'drives', rawValue: drivesCount, label: t('systemStatus.pipeline.drives', 'Drives'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
+          { metricId: 'count', occurrenceId: 'charging', rawValue: chargingSessionsCount, label: t('systemStatus.pipeline.chargingSessions', 'Charging sessions'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
+          { metricId: 'count', occurrenceId: 'signals', rawValue: signalLogCount, label: t('systemStatus.pipeline.signalLog', 'Signal log'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
+        ]}
+      />
 
-      {/* Liveness summary chips (only when there are any vehicles) */}
+      <SystemSummaryBrief
+        title={t('systemStatus.pipeline.liveness', 'Liveness:')}
+        description={t('systemStatus.pipelineBrief.livenessDescription', 'Configured vehicles classified by their most recent polling or Fleet Telemetry timestamp, using the existing liveness rules.')}
+        scope={t('systemStatus.pipelineBrief.livenessScope', 'Current client-clock age: sending under 5 minutes, slow from 5 to under 30 minutes, stale from 30 minutes; offline means no valid timestamp, not confirmed vehicle disconnection.')}
+        available={vehicles != null}
+        retained={retained || (pollingState.hasData && !!pollingState.refreshError) || (mqttState.hasData && !!mqttState.refreshError)}
+        freshness={t('systemStatus.pipelineBrief.livenessFreshness', 'Polling and stream timestamps remain independently visible on each vehicle row.')}
+        metricTones={{ 'liveness-sending': 'success', 'liveness-slow': 'warning', 'liveness-stale': 'danger', 'liveness-offline': 'neutral' }}
+        metrics={(['sending', 'slow', 'stale', 'offline'] as const).map(key => ({
+          metricId: 'count', occurrenceId: `liveness-${key}`, rawValue: vehicles == null ? null : counts[key],
+          label: livenessLabels[key],
+          context: key === 'offline' ? t('systemStatus.pipelineBrief.offlineMeaning', 'No valid polling or stream timestamp was supplied; missing evidence is not a measured outage.') : undefined,
+        }))}
+      />
+
+      {/* Source connectivity chips (only when there are any vehicles) */}
       {list.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-[var(--text-muted)]">Liveness:</span>
-          {(['sending', 'slow', 'stale', 'offline'] as Liveness[])
-            .filter((k) => counts[k] > 0)
-            .map((k) => {
-              const cls = livenessClasses(k)
-              return (
-                <span
-                  key={k}
-                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${cls.chip}`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${cls.dot}`} aria-hidden />
-                  {counts[k]} {cls.label}
-                </span>
-              )
-            })}
+        <div className={cn('flex flex-wrap items-center gap-1.5', typography.size.xs)}>
           {/* MQTT broker connectivity — neutral when connected, warning when not */}
           {mqttConnected ? (
             <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-1.5 py-0.5 text-cyan-300 ring-1 ring-cyan-400/20">
-              <Radio className="h-3 w-3" /> Fleet Telemetry connected
+              <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
+              {t('systemStatus.pipeline.streamConnected', 'Fleet Telemetry connected')}
             </span>
           ) : mqttConnected === false ? (
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
-              <WifiOff className="h-3 w-3" /> MQTT broker disconnected
+              <WifiOff className="h-3 w-3 shrink-0" aria-hidden="true" />
+              {t('systemStatus.pipeline.brokerDisconnected', 'MQTT broker disconnected')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
               <Radio className="h-3 w-3" aria-hidden="true" />
-              {t('systemStatus.telemetry.streamUnknown', 'Fleet Telemetry connection unknown')}
+              {t('systemStatus.telemetrySources.streamUnknown', 'Fleet Telemetry connection unknown')}
             </span>
           )}
           {/* Polling-engine state — informational when MQTT is healthy, warning otherwise */}
           {!pollingEnabled && (
             mqttConnected ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
-                polling engine off (streaming-only)
+                {t('systemStatus.pipeline.streamingOnly', 'polling engine off (streaming-only)')}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
-                <WifiOff className="h-3 w-3" /> polling engine disabled
+                <WifiOff className="h-3 w-3 shrink-0" aria-hidden="true" />
+                {t('systemStatus.pipeline.pollingDisabled', 'polling engine disabled')}
               </span>
             )
           )}
@@ -322,14 +344,18 @@ export function TelemetryPipelineCard({
       )}
 
       {/* Per-vehicle list */}
-      {list.length === 0 ? (
-        <div className="rounded-lg bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
-          No vehicles configured yet. Add a vehicle from the{' '}
+      {vehicles == null ? (
+        <Text as="p" variant="bodySm" className="rounded-lg bg-white/[0.03] p-4">
+          {t('systemStatus.pipeline.vehiclesUnavailable', 'Vehicle telemetry is unavailable until the vehicle list loads.')}
+        </Text>
+      ) : list.length === 0 ? (
+        <Text as="p" variant="bodySm" className="rounded-lg bg-white/[0.03] p-4">
+          {t('systemStatus.pipeline.emptyBeforeLink', 'No vehicles configured yet. Add a vehicle from the')}{' '}
           <Link to="/tesla-account" className="text-cyan-300 hover:text-cyan-200">
-            Tesla account
+            {t('systemStatus.pipeline.teslaAccount', 'Tesla account')}
           </Link>{' '}
-          page to see per-vehicle telemetry status.
-        </div>
+          {t('systemStatus.pipeline.emptyAfterLink', 'page to see per-vehicle telemetry status.')}
+        </Text>
       ) : (
         <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-white/[0.03]">
           {list.map((v) => {
@@ -338,77 +364,75 @@ export function TelemetryPipelineCard({
             const { level, source, lastSeenIso } = liveness(ps?.last_poll_time, ss?.lastReceived, now)
             const cls = livenessClasses(level)
             const stateLabel = vehicleStateBadge(v.state)
-            const battery = ps?.battery_level ?? null
-            const sourceLabel = source === 'stream' ? 'stream' : source === 'poll' ? 'poll' : null
+            const rawBattery = ps?.battery_level
+            const battery = rawBattery != null && Number.isFinite(rawBattery) ? rawBattery : null
+            const sourceLabel = source === 'stream'
+              ? t('systemStatus.pipeline.stream', 'stream')
+              : source === 'poll' ? t('systemStatus.pipeline.poll', 'poll') : null
             return (
               <li key={v.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3">
                 {/* Status pip + name */}
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <span
                     className={`h-2.5 w-2.5 shrink-0 rounded-full ${cls.dot}`}
-                    aria-label={`telemetry status: ${cls.label}`}
+                    role="img"
+                    aria-label={t('systemStatus.pipeline.statusAria', 'telemetry status: {{status}}', { status: livenessLabels[level] })}
                   />
                   <Car className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
                   <div className="min-w-0">
                     <Link
                       to={`/vehicles/${v.id}`}
-                      className="block truncate text-sm font-medium text-[var(--text-primary)] hover:text-cyan-200"
+                      className={cn('block break-words hover:text-cyan-300', typography.role.bodySm, typography.weight.medium)}
                     >
-                      {v.display_name || `Vehicle ${v.id}`}
+                      {v.display_name || t('systemStatus.pipeline.vehicleFallback', 'Vehicle {{id}}', { id: v.id })}
                     </Link>
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                      <span className="font-mono">VIN ···{vinTail(v.vin)}</span>
+                    <Caption className="flex flex-wrap items-center gap-2">
+                      <Text mono>{t('systemStatus.pipeline.vinTail', 'VIN ···{{tail}}', { tail: vinTail(v.vin) })}</Text>
                       <span aria-hidden>·</span>
-                      <span>{stateLabel}</span>
-                    </div>
+                      <span>{stateLabels[stateLabel] ?? stateLabel}</span>
+                    </Caption>
                   </div>
                 </div>
 
                 {/* Battery */}
                 <div className="flex w-28 shrink-0 items-center gap-2 sm:justify-end">
                   <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden />
-                  {battery != null ? (
-                    <>
-                      <div
-                        className="h-1.5 w-12 overflow-hidden rounded-full bg-white/[0.08]"
-                        role="progressbar"
-                        aria-valuenow={Math.round(battery)}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-label={`battery ${Math.round(battery)}%`}
-                      >
-                        <div
-                          className={`h-full ${batteryColor(battery)}`}
-                          style={{ width: `${Math.min(100, Math.max(0, battery))}%` }}
-                        />
-                      </div>
-                      <span className="w-9 text-right text-xs tabular-nums text-[var(--text-primary)]">
-                        {Math.round(battery)}%
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-[var(--text-muted)]">—</span>
-                  )}
+                  <div className="w-12 shrink-0">
+                    <MetricBar
+                      value={battery}
+                      max={100}
+                      color={batteryColor(battery ?? 0)}
+                      ariaLabel={battery == null
+                        ? t('systemStatus.pipeline.battery', 'Battery level')
+                        : t('systemStatus.pipeline.batteryAria', 'battery {{percent}}%', { percent: Math.round(battery) })}
+                      size="slim"
+                      fill="solid"
+                      showHeader={false}
+                    />
+                  </div>
+                  <Text size="xs" color={battery == null ? 'muted' : 'primary'} className="w-9 text-end tabular-nums">
+                    {battery == null ? '—' : `${Math.round(battery)}%`}
+                  </Text>
                 </div>
 
                 {/* Liveness chip + last/next poll */}
-                <div className="flex shrink-0 flex-col items-start gap-0.5 sm:w-52 sm:items-end">
-                  <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${cls.chip}`}>
-                    {source === 'stream' ? <Radio className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
-                    {cls.label}
+                <div className="flex min-w-0 flex-col items-start gap-0.5 sm:w-52 sm:items-end">
+                  <Text size="xs" className={`inline-flex flex-wrap items-center gap-1 rounded-md px-1.5 py-0.5 ${cls.chip}`}>
+                    {source === 'stream' ? <Radio className="h-3 w-3 shrink-0" aria-hidden /> : <Wifi className="h-3 w-3 shrink-0" aria-hidden />}
+                    {livenessLabels[level]}
                     {sourceLabel && (
-                      <span className="ml-1 text-2xs tracking-wide opacity-70">{sourceLabel}</span>
+                      <Caption className="ms-1">{sourceLabel}</Caption>
                     )}
-                  </span>
-                  <div className="text-xs tabular-nums text-[var(--text-muted)]">
-                    last: {relativeTime(lastSeenIso, now)}
+                  </Text>
+                  <Caption className="tabular-nums">
+                    {t('systemStatus.pipeline.last', 'last: {{time}}', { time: relativeTime(lastSeenIso, now, t) })}
                     {ps?.next_poll_after && (
                       <>
                         <span className="mx-1" aria-hidden>·</span>
-                        next: {relativeTime(ps.next_poll_after, now)}
+                        {t('systemStatus.pipeline.next', 'next: {{time}}', { time: relativeTime(ps.next_poll_after, now, t) })}
                       </>
                     )}
-                  </div>
+                  </Caption>
                 </div>
               </li>
             )
@@ -420,26 +444,26 @@ export function TelemetryPipelineCard({
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
         <Link
           to="/admin/telemetry/coverage"
-          className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20 min-h-[36px]"
+          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-cyan-300 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20', typography.size.xs, typography.weight.medium)}
         >
 
-          Open telemetry coverage
-          <ExternalLink className="h-3.5 w-3.5" />
+          {t('systemStatus.pipeline.openCoverage', 'Open telemetry coverage')}
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
         </Link>
         <Link
           to="/mqtt-inspector"
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]"
+          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-cyan-300 hover:bg-white/[0.04]', typography.size.xs)}
         >
-          <Radio className="h-3.5 w-3.5" />
+          <Radio className="h-3.5 w-3.5 shrink-0" aria-hidden />
 
-          MQTT inspector
+          {t('systemStatus.pipeline.mqttInspector', 'MQTT inspector')}
         </Link>
         <Link
           to="/vehicles"
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]"
+          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-cyan-300 hover:bg-white/[0.04]', typography.size.xs)}
         >
-          <Activity className="h-3.5 w-3.5" />
-          All vehicles
+          <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {t('systemStatus.pipeline.allVehicles', 'All vehicles')}
         </Link>
       </div>
     </div>

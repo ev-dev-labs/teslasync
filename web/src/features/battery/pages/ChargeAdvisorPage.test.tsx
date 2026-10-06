@@ -252,6 +252,21 @@ beforeEach(() => {
 });
 
 describe('ChargeAdvisorPage', () => {
+  it('reviews real independent drive and charging row evidence without replacing the accounting categories', () => {
+    renderPage();
+    const accounting = screen.getByTestId('charge-advisor-accounting');
+    const driveBrief = within(accounting).getByRole('region', { name: 'Drive-row evidence summary' });
+    const chargingBrief = within(accounting).getByRole('region', { name: 'Charging-row evidence summary' });
+    expect(driveBrief.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3);
+    expect(chargingBrief.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3);
+    expect(within(driveBrief).getByText('Returned rows').closest('[data-operational-metric]')?.querySelector('[data-operational-value]')).toHaveTextContent('8');
+    expect(within(chargingBrief).getByText('Returned rows').closest('[data-operational-metric]')?.querySelector('[data-operational-value]')).toHaveTextContent('1');
+    fireEvent.click(within(driveBrief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Returned rows')).toBeVisible();
+    expect(within(drawer).getByText('Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.')).toBeVisible();
+  });
+
   it('renders all thirteen persistent shells and both capped analytical hooks', () => {
     renderPage();
     expectEveryShell();
@@ -321,6 +336,71 @@ describe('ChargeAdvisorPage', () => {
     renderPage();
     expectEveryShell();
   });
+
+  it('keeps completed charging and observed live provenance usable while drive history initially loads', () => {
+    h.drives = query(undefined, { isLoading: true, isSuccess: false });
+    renderPage();
+    expectEveryShell();
+    const charging = within(screen.getByTestId('charge-advisor-charging-profile'));
+    expect(charging.getByText('20.0 kWh')).toBeInTheDocument();
+    expect(charging.getByText('Median end 80.00%')).toBeInTheDocument();
+    expect(charging.getByText('1 rows with valid Wh')).toBeInTheDocument();
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    expect(current.getByText('Live signal')).toBeInTheDocument();
+    expect(current.getByText('80.00%')).toBeInTheDocument();
+    expect(within(screen.getByTestId('charge-advisor-trend')).queryByRole('table', { hidden: true }))
+      .not.toBeInTheDocument();
+    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000);
+    expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000);
+  });
+
+  it('keeps all daily observations and seven-day scenarios while charging history initially loads', () => {
+    h.charging = query(undefined, { isLoading: true, isSuccess: false });
+    renderPage();
+    expectEveryShell();
+    const trend = within(screen.getByTestId('charge-advisor-trend')).getByRole('table', { hidden: true });
+    expect(within(trend).getAllByRole('row', { hidden: true })).toHaveLength(9);
+    const scenarios = within(screen.getByTestId('charge-advisor-scenarios')).getByRole('table', { hidden: true });
+    expect(within(scenarios).getAllByRole('columnheader', { hidden: true })).toHaveLength(5);
+    expect(within(scenarios).getAllByRole('row', { hidden: true })).toHaveLength(8);
+    const directory = screen.getByTestId('charge-advisor-directory');
+    expect(directory.querySelectorAll('article')).toHaveLength(7);
+    expect(within(directory).getByText('2026-06-03')).toBeInTheDocument();
+    expect(within(directory).getByText('2026-06-09')).toBeInTheDocument();
+    expect(within(screen.getByTestId('charge-advisor-current')).getByText('Live signal')).toBeInTheDocument();
+    expect(within(screen.getByTestId('charge-advisor-charging-profile')).queryByText('20.0 kWh'))
+      .not.toBeInTheDocument();
+  });
+
+  it.each(['drive', 'charging'] as const)(
+    'retains every actual scenario/trend cell and independent live provenance after a cached %s refresh failure',
+    failedSource => {
+      const view = renderPage();
+      const rows = (testId: string) => {
+        const table = within(screen.getByTestId(testId)).getByRole('table', { hidden: true });
+        return within(table).getAllByRole('row', { hidden: true }).slice(1).map(row =>
+          within(row).getAllByRole('cell', { hidden: true }).map(cell => cell.textContent));
+      };
+      const beforeTrend = rows('charge-advisor-trend');
+      const beforeScenarios = rows('charge-advisor-scenarios');
+      expect(beforeTrend).toHaveLength(8);
+      expect(beforeScenarios).toHaveLength(7);
+      expect(beforeScenarios.every(row => row.length === 5)).toBe(true);
+      if (failedSource === 'drive') {
+        h.drives = query(readyDrives(), { isError: true, error: new Error('drive refresh failed') }, h.driveRefetch);
+      } else {
+        h.charging = query([chargingAt('2026-05-30')], { isError: true, error: new Error('charging refresh failed') }, h.chargingRefetch);
+      }
+      view.rerenderPage();
+      expect(rows('charge-advisor-trend')).toEqual(beforeTrend);
+      expect(rows('charge-advisor-scenarios')).toEqual(beforeScenarios);
+      expect(within(screen.getByTestId('charge-advisor-charging-profile')).getByText('20.0 kWh')).toBeInTheDocument();
+      expect(within(screen.getByTestId('charge-advisor-current')).getByText('Live signal')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+      expect(h.driveRefetch).toHaveBeenCalledTimes(failedSource === 'drive' ? 1 : 0);
+      expect(h.chargingRefetch).toHaveBeenCalledTimes(failedSource === 'charging' ? 1 : 0);
+    },
+  );
 
   it('uses one retry surface for an initial drive/charging failure', () => {
     h.drives = query(undefined, { isError: true, isSuccess: false, error: new Error('drive') }, h.driveRefetch);

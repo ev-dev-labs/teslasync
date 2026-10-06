@@ -18,11 +18,11 @@ import {
   MonthlyOperatingContext,
   SpeedBandCoverage,
   SpeedBandScorecard,
-  SpeedSweetSpotKpis,
-  SpeedSweetSpotMethodology,
-  SweetSpotEvidence,
   type SpeedSweetSpotSectionState,
 } from '../components/speed-sweet-spot';
+import { SweetSpotSummaryBrief } from '../components/operationalbrief-n-z/SweetSpotSummaryBrief';
+import { SweetSpotEvidenceBrief } from '../components/operationalbrief-n-z/SweetSpotEvidenceBrief';
+import { SweetSpotMethodBrief } from '../components/operationalbrief-n-z/SweetSpotMethodBrief';
 import { computeSweetSpot } from '../lib/speedSweetSpot';
 
 const DRIVE_WINDOW_LIMIT = 1_000;
@@ -77,15 +77,21 @@ export default function SpeedSweetSpotPage() {
     >
       <StaleRefreshWarning state={sourceState} label={t('sweetSpot.title', 'Speed Sweet Spot')} />
       <FadeIn>
-        <SpeedSweetSpotKpis summary={summary} {...sectionState} />
+        <SweetSpotSummaryBrief summary={summary} {...sectionState}
+          scope={`${start} — ${end}`}
+          resolved={sourceState.hasData || drivesQuery.isSuccess}
+          retained={sourceState.isRefreshBlocked} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
         <Grid cols={EVIDENCE_COLUMNS} gap={4}>
-          <SweetSpotEvidence
+          <SweetSpotEvidenceBrief
             summary={summary}
             state={sectionState}
             className="xl:col-span-2"
+            scope={`${start} — ${end}`}
+            resolved={sourceState.hasData || drivesQuery.isSuccess}
+            retained={sourceState.isRefreshBlocked}
           />
           <SpeedBandCoverage
             summary={summary}
@@ -112,12 +118,14 @@ export default function SpeedSweetSpotPage() {
       </FadeIn>
 
       <FadeIn delay={0.3}>
-        <SpeedSweetSpotMethodology
+        <SweetSpotMethodBrief
           summary={summary}
           start={start}
           end={end}
           windowLimit={DRIVE_WINDOW_LIMIT}
           state={sectionState}
+          resolved={sourceState.hasData || drivesQuery.isSuccess}
+          retained={sourceState.isRefreshBlocked}
         />
       </FadeIn>
     </PageLayout>

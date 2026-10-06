@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { AlertBanner, QueryError } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -21,8 +22,7 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
     : analysis.sentry.hasAnyEvidence
       ? t('sleep.availability.status.partial', 'Partial')
       : t('sleep.availability.status.unavailable', 'Unavailable');
-  // Specialist formatted values preserve the existing minutes / percent / score
-  // precision and units. Text is intentional, not a coercion to another quantity.
+  // Duration is bridged in seconds; breadth is source support, not confidence.
   const metrics: StatMetric[] = [
     {
       metricId: 'text', occurrenceId: 'sleep-window', rawValue: rangeValue,
@@ -33,24 +33,26 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
         : t('sleep.kpi.invalidWindow', 'No valid inclusive day count'),
     },
     {
-      metricId: 'text', occurrenceId: 'sleep-destinations',
-      rawValue: hasResponse ? fmtInt(analysis.transitions.totalCount) : null,
+      metricId: 'count', occurrenceId: 'sleep-destinations',
+      rawValue: hasResponse ? analysis.transitions.totalCount : null,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       label: t('sleep.kpi.transitionDestinations', 'Valid transition destinations'),
       description: t('sleep.kpi.transitionSubtitle', 'Destination counts from the vehicle FSM'),
       context: t('sleep.kpi.transitionSubtitle', 'Destination counts from the vehicle FSM'),
     },
     {
-      metricId: 'text', occurrenceId: 'sleep-asleep-count-share',
+      metricId: 'percent', occurrenceId: 'sleep-asleep-count-share',
       rawValue: analysis.transitions.asleepShare != null
-        ? t('sleep.kpi.percentValue', '{{value}}%', { value: fmtNumber(analysis.transitions.asleepShare * 100) }) : null,
+        ? analysis.transitions.asleepShare * 100 : null,
+      display: { formatter: raw => ({ value: t('sleep.kpi.percentValue', '{{value}}%', { value: fmtNumber(raw) }), unit: '' }) },
       label: t('sleep.kpi.asleepTransitionShare', 'Asleep-transition share'),
       description: t('sleep.kpi.countBasedNotTime', 'Count-based; not a time share'),
       context: t('sleep.kpi.countBasedNotTime', 'Count-based; not a time share'),
     },
     {
-      metricId: 'text', occurrenceId: 'sleep-duration-efficiency',
-      rawValue: analysis.dwell.recomputedEfficiencyPct != null
-        ? t('sleep.kpi.percentValue', '{{value}}%', { value: fmtNumber(analysis.dwell.recomputedEfficiencyPct) }) : null,
+      metricId: 'percent', occurrenceId: 'sleep-duration-efficiency',
+      rawValue: analysis.dwell.recomputedEfficiencyPct,
+      display: { formatter: raw => ({ value: t('sleep.kpi.percentValue', '{{value}}%', { value: fmtNumber(raw) }), unit: '' }) },
       label: t('sleep.kpi.durationEfficiency', 'Duration-based sleep efficiency'),
       description: t('sleep.kpi.durationEfficiency', 'Duration-based sleep efficiency'),
       context: analysis.dwell.available
@@ -58,9 +60,10 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
         : t('sleep.kpi.dwellPending', 'Unavailable pending dwell reconstruction'),
     },
     {
-      metricId: 'text', occurrenceId: 'sleep-average-time-to-sleep',
+      metricId: 'duration', occurrenceId: 'sleep-average-time-to-sleep',
       rawValue: analysis.dwell.timeToSleepAvgMin != null
-        ? t('sleep.kpi.minutesValue', '{{value}} min', { value: fmtNumber(analysis.dwell.timeToSleepAvgMin) }) : null,
+        ? analysis.dwell.timeToSleepAvgMin * 60 : null,
+      display: { formatter: raw => ({ value: t('sleep.kpi.minutesValue', '{{value}} min', { value: fmtNumber(raw / 60) }), unit: '' }) },
       label: t('sleep.kpi.averageTimeToSleep', 'Average time-to-sleep'),
       description: t('sleep.kpi.averageTimeToSleep', 'Average time-to-sleep'),
       context: analysis.dwell.timeToSleepAvgMin != null
@@ -75,9 +78,9 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
       context: t('sleep.kpi.sentrySamples', 'Requires positive sample counts'),
     },
     {
-      metricId: 'text', occurrenceId: 'sleep-evidence-breadth',
-      rawValue: hasResponse
-        ? t('sleep.kpi.breadthValue', '{{score}} / 100', { score: fmtInt(analysis.breadth.score) }) : null,
+      metricId: 'score', occurrenceId: 'sleep-evidence-breadth',
+      rawValue: hasResponse ? analysis.breadth.score : null,
+      display: { formatter: raw => ({ value: t('sleep.kpi.breadthValue', '{{score}} / 100', { score: fmtInt(raw) }), unit: '' }) },
       label: t('sleep.kpi.evidenceBreadth', 'Evidence breadth'),
       description: t('sleep.kpi.breadthNotConfidence', 'Source support score; not confidence'),
       context: t('sleep.kpi.breadthNotConfidence', 'Source support score; not confidence'),
@@ -102,8 +105,9 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
               role={state.isLoading ? 'status' : undefined}
               aria-label={state.isLoading ? t('sleep.states.loadingAria', 'Loading sleep evidence') : undefined}
             >
-              <StatGroup
+              <BatteryEvidenceBrief
                 id="sleep-efficiency-evidence"
+                title={t('sleep.kpi.title', 'Evidence overview')}
                 metrics={metrics}
                 period={period}
                 loading={state.isLoading}

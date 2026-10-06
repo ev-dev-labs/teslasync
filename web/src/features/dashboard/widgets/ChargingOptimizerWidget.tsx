@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, Clock, BatteryCharging, DollarSign, Zap } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useChargingOptimizer } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -15,7 +15,6 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { neonColorMap } from '@/lib/tokens';
@@ -157,10 +156,10 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           ]} />
 
           {/* Schedule match badge */}
-          <div className="flex items-center justify-between">
-            <span className={dashboardTokens.metricLabel}>
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <Caption className="min-w-0 [overflow-wrap:anywhere]">
               {t('widget.chargingOptimizer.peakUsage', 'Peak charging: {{pct}}%', { pct: peakPct == null ? '—' : fmtNumber(peakPct) })}
-            </span>
+            </Caption>
             <Badge variant={peakPct == null ? 'neutral' : scheduleMatchesOptimal ? 'success' : 'warning'} size="sm">
               {peakPct == null ? '—' : scheduleMatchesOptimal
                 ? t('widget.chargingOptimizer.optimized', 'Optimized')
@@ -171,9 +170,9 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           {/* Wide mode: 24h timeline bar */}
           {isWide && (
             <div className="flex flex-col gap-1">
-              <span className={dashboardTokens.metricLabel}>
+              <Caption>
                 {t('widget.chargingOptimizer.rateTimeline', '24h rate timeline')}
-              </span>
+              </Caption>
               <div
                 className="flex h-6 rounded-md overflow-hidden border border-[var(--border-subtle)]"
                 role="img"
@@ -203,8 +202,8 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
                   );
                 })}
               </div>
-              <div className={cn('flex flex-wrap justify-between gap-1', dashboardTokens.metricLabel)}>
-                {[0, 6, 12, 18, 0].map((h, i) => <span key={i}>{hourLabel(h)}</span>)}
+              <div className="flex flex-wrap justify-between gap-1">
+                {[0, 6, 12, 18, 0].map((h, i) => <Text key={i} variant="caption">{hourLabel(h)}</Text>)}
               </div>
             </div>
           )}

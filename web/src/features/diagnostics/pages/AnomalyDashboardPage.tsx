@@ -1,29 +1,31 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, AlertTriangle, Clock, HeartPulse, BarChart3, ShieldCheck,
+  AlertTriangle, HeartPulse, BarChart3, ShieldCheck,
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief } from '@/components/data-display';
 import {
   ChartTooltip, CHART_COLORS,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StatGridSkeleton, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useAnomalies } from '@/api/hooks/useAnomalies';
-import { AIAnomalyExplanations } from '@/components/ai/AIAnomalyExplanations';
-import { AILearnedAnomalyBaselines } from '@/components/ai/AILearnedAnomalyBaselines';
+import { AIAnomalyExplanations } from '@/components/ai';
+import { AILearnedAnomalyBaselines } from '@/components/ai';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 import { AnomalyTimelineCard, SystemHealthCard } from '../components/anomaly-dashboard';
+import { anomalySummary } from '../components/statstrip-anomaly/anomalySummary';
 
 export default function AnomalyDashboardPage() {
   const { t } = useTranslation();
@@ -59,6 +61,8 @@ export default function AnomalyDashboardPage() {
 
   const anomalies = data?.anomalies ?? [];
   const healthEntries = Object.entries(data?.health_summary ?? {});
+  const summary = anomalySummary(data, t);
+  const briefMetrics = useOperationalMetrics(summary.metrics);
 
   const signalFrequencyColumns = useMemo<ChartDataColumn[]>(
     () => [
@@ -79,39 +83,25 @@ export default function AnomalyDashboardPage() {
       query={anomaliesQuery}
     >
       <StaleRefreshWarning state={state} />
-      {/* ── 1. KPI band — full-width responsive metric grid ─────────── */}
+      {/* ── 1. Summary — independently scoped source metrics ───────── */}
       <FadeIn>
         <section aria-label={t('anomaly.kpis', 'Summary metrics')}>
-          {isLoading && !data ? (
-            <StatGridSkeleton cards={4} />
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-              <MetricCard
-                label={t('anomaly.monitored', 'Signals monitored')}
-                value={data?.signals_monitored ?? '—'}
-                icon={<Activity className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('anomaly.last7d', 'Anomalies (7d)')}
-                value={data?.anomalies_last_7d ?? '—'}
-                icon={<AlertTriangle className="h-5 w-5" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('anomaly.last24h', 'Anomalies (24h)')}
-                value={data?.anomalies_last_24h ?? '—'}
-                icon={<Clock className="h-5 w-5" />}
-                color="red"
-              />
-              <MetricCard
-                label={t('anomaly.categories', 'Health categories')}
-                value={data?.health_summary != null ? healthEntries.length : '—'}
-                icon={<HeartPulse className="h-5 w-5" />}
-                color="green"
-              />
-            </div>
-          )}
+          <OperationalBrief
+            compact
+            testId="anomaly-summary"
+            eyebrow={t('anomaly.title', 'Anomaly detection')}
+            title={t('anomaly.summary.title', 'Coverage and anomaly windows')}
+            description={summary.period.kind === 'unknown' ? summary.period.reason ?? summary.period.label : summary.period.label}
+            metrics={briefMetrics}
+            scope={summary.period.label}
+            statusLabel={isLoading ? t('common.loading', 'Loading')
+              : error ? t('error.loadFailed', 'Failed to load data')
+                : state.refreshError || state.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
+                  : data ? t('anomaly.summary.available', 'Detector snapshot available')
+                    : t('anomaly.summary.unavailable', 'Detector snapshot unavailable')}
+            statusTone={error ? 'danger' : state.refreshError || state.isRefreshBlocked ? 'warning' : 'neutral'}
+            loading={isLoading}
+          />
         </section>
       </FadeIn>
 

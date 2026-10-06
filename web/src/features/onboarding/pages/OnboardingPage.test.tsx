@@ -92,6 +92,21 @@ vi.mock('@/hooks/useDateFormat', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: {
+      unit_of_length: 'km',
+      unit_of_temp: 'C',
+      unit_of_pressure: 'bar',
+      decimal_precision: 2,
+      locale: 'en-US',
+      currency_symbol: '$',
+    },
+    settingsUnavailable: false,
+    locale: 'en-US',
+  }),
+}));
+
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -256,5 +271,19 @@ describe('OnboardingPage', () => {
     expect(screen.queryByRole('button', { name: /Connect Tesla account/i })).toBeNull();
     expect(screen.getByRole('button', { name: /Skip for now/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Check again/i })).toBeInTheDocument();
+  });
+
+  it('migrates only the existing setup summary while preserving profile, checklist and resource controls', () => {
+    const { container } = renderPage();
+    const brief = screen.getByTestId('onboarding-setup-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(screen.getByText('Tailor your workspace')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Onboarding steps' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect Tesla account' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
   });
 });

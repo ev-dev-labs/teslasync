@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Delta } from '@/components/data-display';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { ChargingPeriodStats } from '@/lib/chargingAggregation';
 import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
@@ -60,7 +61,7 @@ export function ChargingOverviewStats({
           current={convertPowerFromSI(stats.avgPowerW, 'kW')}
           previous={convertPowerFromSI(prior.avgPowerW, 'kW')} display="percent" /> : undefined },
   ];
-  return <StatStrip id="charging-overview" testId="charging-overview"
+  return <ChargingSummaryBrief id="charging-overview" testId="charging-overview"
     title={t('charging.overview', 'Overview')} period={period} comparisonLabel={priorLabel}
     metrics={stats.count > 0 || loading ? metrics : []} loading={loading} retained={retained}
     secondary={secondary} footer={footer}

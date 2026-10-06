@@ -108,6 +108,10 @@ if (typeof window.matchMedia !== 'function') {
 import { request } from '@/api/client';
 import type { SearchHit, SearchHitType, SearchResponse } from '@/api/types';
 import SearchPage from './SearchPage';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -167,7 +171,7 @@ function renderPage(initialEntry = '/search') {
 /** The MetricCard root (`[data-role="metric-card"]`) that owns the given KPI label. */
 function metricCard(label: string): HTMLElement {
   const span = screen.getByText(label);
-  const root = span.closest('[data-role="metric-card"]');
+  const root = span.closest('[data-operational-metric]');
   if (!root) throw new Error(`no MetricCard root for "${label}"`);
   return root as HTMLElement;
 }
@@ -217,8 +221,10 @@ describe('SearchPage', () => {
       expect.stringContaining('q=model'),
       expect.anything(),
     );
-    // Resolved KPI labels are absent; the band is skeletonised instead.
-    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
+    // The brief retains labels, but does not expose a resolved numeric value.
+    expect(screen.getByText('Total results')).toBeInTheDocument();
+    expect(metricCard('Total results').querySelector('[data-operational-value]')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Search summary' })).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
   });
 

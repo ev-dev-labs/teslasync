@@ -34,7 +34,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -119,7 +119,7 @@ vi.mock('@/hooks/useUnits', () => ({
       duration: 'h',
       power: 'kW',
       locale: 'en-US',
-      precision: undefined,
+      precision: 2,
     },
     // SI (°C) → user preference at the render boundary. Deterministic and
     // network-free so temperature branches are assertable in both units.
@@ -276,12 +276,13 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByRole('region', { name: 'At a glance' })).toBeInTheDocument();
 
     // KPI band — space-before-unit strings are unique to the KPI cards.
-    expect(screen.getByText('3.9025 V')).toBeInTheDocument(); // avg voltage
-    expect(screen.getByText('Cell voltage heatmap').closest('section')).toHaveClass('items-start');
+    const metrics = within(screen.getByRole('region', { name: 'Summary metrics' }));
+    expect(metrics.getByText('3.9025 V')).toBeInTheDocument(); // avg voltage
+    expect(screen.getByText('Cell voltage heatmap').closest('[data-card-grid]')).toBeInTheDocument();
     expect(screen.getByText('#3 3.8500 V')).toBeInTheDocument(); // min cell → cell 3
     expect(screen.getByText('#4 3.9500 V')).toBeInTheDocument(); // max cell → cell 4
-    expect(screen.getByText('12.50 mV')).toBeInTheDocument(); // imbalance
-    expect(screen.getByText('398.50 V')).toBeInTheDocument(); // pack voltage
+    expect(metrics.getByText('12.50 mV')).toBeInTheDocument(); // imbalance
+    expect(metrics.getByText('398.50 V')).toBeInTheDocument(); // pack voltage
 
     // Temperature summary — SI °C identity via the stubbed formatter.
     expect(screen.getByText('25.00°C')).toBeInTheDocument();
@@ -300,7 +301,7 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByText('3.8500')).toBeInTheDocument();
     expect(screen.getByText('+5.00')).toBeInTheDocument();
     expect(screen.getByText('-45.00')).toBeInTheDocument();
-    expect(screen.getByText('Normal')).toBeInTheDocument();
+    expect(screen.getAllByText('Normal').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('4 cells')).toBeInTheDocument(); // count badge
 
     // Every section panel/title is present (no hidden sections).
@@ -315,7 +316,7 @@ describe('BatteryCellsPage', () => {
       'Temperature summary',
       'Health recommendations',
     ]) {
-      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: title, exact: true })).toBeInTheDocument();
     }
   });
 
@@ -365,7 +366,7 @@ describe('BatteryCellsPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('No cell readings available.')).toBeInTheDocument();
+    expect(screen.getAllByText('No cell readings available.')).toHaveLength(2);
     expect(screen.getByText('No distribution data available.')).toBeInTheDocument();
     expect(screen.getByText('No cell voltages available.')).toBeInTheDocument();
     expect(screen.getByText('No cell details available.')).toBeInTheDocument();

@@ -14,10 +14,16 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({
+  unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+    energy: 'Wh', duration: 's', power: 'W', precision: 2, locale: 'en-US' },
+}) }))
+vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }))
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -64,7 +70,7 @@ const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
 function renderPage() {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
   return render(
     <MemoryRouter>
@@ -114,6 +120,21 @@ afterEach(() => {
 })
 
 describe('RbacMatrixPage', () => {
+  it('reviews saved typed summary counts without removing access controls or the permission matrix', async () => {
+    mockedRequest.mockResolvedValue(makeMatrixResponse())
+    renderPage()
+    await screen.findByTestId('rbac-matrix-grid')
+    const brief = screen.getByTestId('rbac-operational-brief')
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    expect(brief.querySelector('[data-operational-metric="rbac-effective"]')).toHaveAttribute('data-value-state', 'value')
+    expect(brief.querySelector('[data-operational-metric="rbac-effective"] [data-operational-value]')).toHaveTextContent('1 / 2')
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(within(screen.getByRole('dialog')).getByText('Active grants')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getAllByText(/unsaved edits are not included/).length).toBeGreaterThan(0)
+    expect(screen.getByTestId('rbac-edit-button')).toBeInTheDocument()
+    expect(screen.getByTestId('rbac-matrix-grid')).toBeInTheDocument()
+  })
+
   it('renders the inline placeholder when the backend reports AUTH_MODE_OPEN', async () => {
     mockedRequest.mockRejectedValueOnce(
       new ApiError('open mode', 501, 'AUTH_MODE_OPEN'),
@@ -289,5 +310,28 @@ describe('RbacMatrixPage', () => {
     await waitFor(() =>
       expect(screen.getByTestId('rbac-empty')).toBeInTheDocument(),
     )
+  })
+
+  it('keeps the matrix and editable member identities after refresh rejection', async () => {
+    mockedRequest.mockResolvedValueOnce(makeMatrixResponse())
+    renderPage()
+    await screen.findByTestId('rbac-matrix-grid')
+    mockedRequest.mockRejectedValue(new Error('refresh unavailable'))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3))
+    await screen.findByText('Cached · refresh failed')
+    expect(screen.getByTestId('rbac-col-admin')).toBeInTheDocument()
+    expect(screen.queryByTestId('rbac-load-error')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('rbac-edit-button'))
+    const cell = screen.getByTestId('rbac-cell-edit-user-admin.audit')
+    fireEvent.click(cell)
+    expect(cell).toBeChecked()
+    expect(screen.getByTestId('rbac-save-button')).toHaveTextContent('1')
+    fireEvent.click(screen.getByTestId('rbac-cancel-button'))
+    expect(screen.getByTestId('rbac-cell-user-admin.audit')).toHaveTextContent('–')
+    expect(mockedRequest.mock.calls.some((call) => {
+      const init = call[1] as RequestInit | undefined
+      return init?.method === 'PUT'
+    })).toBe(false)
   })
 })

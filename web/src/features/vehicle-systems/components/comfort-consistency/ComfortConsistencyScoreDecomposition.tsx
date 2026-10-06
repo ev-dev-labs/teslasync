@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
@@ -19,24 +20,6 @@ interface ComfortConsistencyScoreDecompositionProps {
   formatDelta: TemperatureDeltaFormatter;
 }
 
-function ScoreMetric({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="body" className="mt-1">{value}</Text>
-      <Text as="p" variant="caption" className="mt-1">{note}</Text>
-    </div>
-  );
-}
-
 export function ComfortConsistencyScoreDecomposition({
   summary,
   state,
@@ -46,8 +29,6 @@ export function ComfortConsistencyScoreDecomposition({
   const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const score = summary.score;
-  const percent = (value: number | null) =>
-    value != null ? fmtPercent(value * 100) : '—';
 
   return (
     <section data-testid="comfort-consistency-score-decomposition">
@@ -63,70 +44,34 @@ export function ComfortConsistencyScoreDecomposition({
           state={state}
           requirement="samples"
         >
-          <Grid cols={{ default: 2, xl: 4 }} gap={3}>
-            <ScoreMetric
-              label={t('comfortConsistency.score.band', 'Band adherence')}
-              value={percent(score.bandAdherence)}
-              note={t('comfortConsistency.score.bandWeight', '50% weight')}
-            />
-            <ScoreMetric
-              label={t('comfortConsistency.score.deviation', 'Deviation component')}
-              value={percent(score.deviationScore)}
-              note={t(
-                'comfortConsistency.score.deviationWeight',
-                '25% weight; zero at {{value}}',
-                { value: formatDelta(score.deviationZeroC) },
-              )}
-            />
-            <ScoreMetric
-              label={t('comfortConsistency.score.agreement', 'Setpoint agreement')}
-              value={percent(score.agreementScore)}
-              note={t(
-                'comfortConsistency.score.agreementWeight',
-                '15% weight; zero at {{value}}',
-                { value: formatDelta(score.agreementZeroC) },
-              )}
-            />
-            <ScoreMetric
-              label={t('comfortConsistency.score.stabilization', 'Stabilization component')}
-              value={percent(score.stabilizationScore)}
-              note={t(
-                'comfortConsistency.score.stabilizationWeight',
-                '10% weight; zero at {{value}}',
-                {
-                  value: formatDuration(score.stabilizationZeroS),
-                },
-              )}
-            />
-            <ScoreMetric
-              label={t('comfortConsistency.score.raw', 'Raw blended score')}
-              value={score.rawScore != null ? fmtNumber(score.rawScore) : '—'}
-              note={t('comfortConsistency.score.rawHint', 'before confidence shrinkage')}
-            />
-            <ScoreMetric
-              label={t('comfortConsistency.score.adjusted', 'Published adjusted score')}
-              value={score.adjustedScore != null ? fmtNumber(score.adjustedScore) : '—'}
-              note={t('comfortConsistency.score.adjustedHint', 'shrunk toward neutral 50')}
-            />
-            <ScoreMetric
-              label={t('comfortConsistency.score.sampleConfidence', 'Sample confidence')}
-              value={percent(score.sampleConfidence)}
-              note={t(
-                'comfortConsistency.score.sampleConfidenceHint',
-                'full support at {{count}} active samples',
-                { count: score.fullSampleConfidenceAt },
-              )}
-            />
-            <ScoreMetric
-              label={t('comfortConsistency.score.windowConfidence', 'Window confidence')}
-              value={percent(score.windowConfidence)}
-              note={t(
-                'comfortConsistency.score.windowConfidenceHint',
-                'full support at {{count}} outside-band fragments',
-                { count: score.fullWindowConfidenceAt },
-              )}
-            />
-          </Grid>
+          <VehicleOperationalBrief embedded id="comfort-consistency-score-summary"
+            title={t('comfortConsistency.score.title', 'Score decomposition and confidence')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('comfortConsistency.score.notice', 'Confidence reflects active-sample and outside-band-fragment volume. Missing paired-setpoint or stabilization evidence leaves its component neutral; this is not a Tesla specification or diagnostic grade.') }}
+            metrics={[
+              ...[
+                { key: 'band', label: t('comfortConsistency.score.band', 'Band adherence'), value: score.bandAdherence, note: t('comfortConsistency.score.bandWeight', '50% weight') },
+                { key: 'deviation', label: t('comfortConsistency.score.deviation', 'Deviation component'), value: score.deviationScore, note: t('comfortConsistency.score.deviationWeight', '25% weight; zero at {{value}}', { value: formatDelta(score.deviationZeroC) }) },
+                { key: 'agreement', label: t('comfortConsistency.score.agreement', 'Setpoint agreement'), value: score.agreementScore, note: t('comfortConsistency.score.agreementWeight', '15% weight; zero at {{value}}', { value: formatDelta(score.agreementZeroC) }) },
+                { key: 'stabilization', label: t('comfortConsistency.score.stabilization', 'Stabilization component'), value: score.stabilizationScore, note: t('comfortConsistency.score.stabilizationWeight', '10% weight; zero at {{value}}', { value: formatDuration(score.stabilizationZeroS) }) },
+                { key: 'sample-confidence', label: t('comfortConsistency.score.sampleConfidence', 'Sample confidence'), value: score.sampleConfidence, note: t('comfortConsistency.score.sampleConfidenceHint', 'full support at {{count}} active samples', { count: score.fullSampleConfidenceAt }) },
+                { key: 'window-confidence', label: t('comfortConsistency.score.windowConfidence', 'Window confidence'), value: score.windowConfidence, note: t('comfortConsistency.score.windowConfidenceHint', 'full support at {{count}} outside-band fragments', { count: score.fullWindowConfidenceAt }) },
+              ].map(fact => ({
+                metricId: 'percent' as const, occurrenceId: fact.key, label: fact.label,
+                rawValue: fact.value != null ? fact.value * 100 : null, description: fact.note,
+                display: { formatter: (raw: number) => ({ value: fmtPercent(raw), unit: '' }) },
+              })),
+              ...[
+                { key: 'raw', label: t('comfortConsistency.score.raw', 'Raw blended score'), value: score.rawScore, note: t('comfortConsistency.score.rawHint', 'before confidence shrinkage') },
+                { key: 'adjusted', label: t('comfortConsistency.score.adjusted', 'Published adjusted score'), value: score.adjustedScore, note: t('comfortConsistency.score.adjustedHint', 'shrunk toward neutral 50') },
+              ].map(fact => ({
+                metricId: 'number' as const, occurrenceId: fact.key, label: fact.label,
+                rawValue: fact.value, description: fact.note,
+                display: { formatter: (raw: number) => ({ value: fmtNumber(raw), unit: '' }) },
+              })),
+            ]}
+          />
           <Text as="p" variant="caption" className="mt-3">
             {t(
               'comfortConsistency.score.notice',

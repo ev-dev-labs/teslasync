@@ -186,6 +186,26 @@ beforeEach(() => {
   mockUseSiteInfo.mockClear();
 });
 
+it('uses the canonical responsive details while preserving all four complete source values', () => {
+  const firmware = '2026.40.5-complete-energy-gateway-firmware-identity';
+  const timezone = 'America/Argentina/ComodRivadavia';
+  const { container } = renderWidget(FULL, {
+    sites: sitesQuery({ data: [site(42)] }),
+    info: infoQuery({ data: infoResponse({
+      nameplate_power: 10500, nameplate_energy: 27000, battery_count: 2,
+      version: firmware, installation_time_zone: timezone,
+    }) }),
+  });
+  const list = container.querySelector('dl');
+  expect(list).toHaveClass('@container/kv-list');
+  expect(list?.querySelectorAll('dt')).toHaveLength(4);
+  expect(list?.querySelectorAll('dd')).toHaveLength(4);
+  expect(screen.getByText(firmware)).not.toHaveClass('truncate');
+  expect(screen.getByText(timezone)).toBeInTheDocument();
+  expect(screen.getByText(/27\.00 kWh/)).toBeInTheDocument();
+  expect(mockUseSiteInfo).toHaveBeenCalledWith(42);
+});
+
 afterEach(() => {
   cleanup();
 });

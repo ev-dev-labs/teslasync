@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  MapPin, Compass, Gauge, Clock, Home, Briefcase,
+  MapPin, Clock, Home, Briefcase,
   Link2, Navigation, Route, Fence, LocateFixed,
 } from 'lucide-react';
 
@@ -12,7 +12,8 @@ import { deriveDataState } from '@/api/dataState';
 import {
   GlassPanel, Badge, Button, DataTable, Text, type Column,
 } from '@/components/ui';
-import { MetricCard, TimeStamp } from '@/components/data-display';
+import { TimeStamp } from '@/components/data-display';
+import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import { Skeleton, EmptyState, QueryError, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -204,6 +205,14 @@ export default function MapOverviewPage() {
   const atHome = locationDetails?.located_at_home ?? locationDetails?.locatedAtHome;
   const atWork = locationDetails?.located_at_work ?? locationDetails?.locatedAtWork;
   const homelinkNearby = locationDetails?.homelink_nearby ?? false;
+  const briefScope = t('mapOverview.brief.scope', 'Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.');
+  const briefMetrics = [
+    { metricId: 'speed', occurrenceId: 'overview-speed', rawValue: latest?.speed, label: t('mapOverview.currentSpeed', 'Current speed'), description: briefScope, display: { formatter: (raw: number) => ({ value: formatSpeed(raw), unit: '' }) } },
+    { metricId: 'number', occurrenceId: 'overview-heading', rawValue: latest?.heading, label: t('mapOverview.heading', 'Heading'), description: t('mapOverview.brief.heading', 'Reported heading in degrees.'), display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}°`, unit: '' }) } },
+    { metricId: 'number', occurrenceId: 'overview-latitude', rawValue: hasValidLocation ? latest?.latitude : null, label: t('mapOverview.colLat', 'Lat'), description: t('mapOverview.latLon', 'Lat / lon'), context: hasValidLocation && latest ? `${fmtScientificNumber(latest.latitude, 4)}, ${fmtScientificNumber(latest.longitude, 4)}` : undefined, display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
+    { metricId: 'number', occurrenceId: 'overview-longitude', rawValue: hasValidLocation ? latest?.longitude : null, label: t('mapOverview.colLon', 'Lon'), description: t('mapOverview.latLon', 'Lat / lon'), display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
+    { metricId: 'text', occurrenceId: 'overview-updated', rawValue: latest?.created_at ? formatDateTime(latest.created_at) : null, label: t('mapOverview.lastUpdated', 'Last updated'), description: t('mapOverview.autoRefresh', 'Auto-refreshes every 15 s') },
+  ] as const;
 
   const triLabel = (v: boolean | undefined): string =>
     v === true ? t('mapOverview.yes', 'Yes')
@@ -298,43 +307,14 @@ export default function MapOverviewPage() {
 
       {/* 1 — KPI band: live vehicle status, full-width responsive metric grid. */}
       <FadeIn>
-        <section
-          aria-label={t('mapOverview.kpis', 'Vehicle status')}
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-        >
-          {latestLoading && !latest ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={92} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('mapOverview.currentSpeed', 'Current speed')}
-                value={formatSpeed(latest?.speed ?? null)}
-                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('mapOverview.heading', 'Heading')}
-                value={latest?.heading != null ? `${fmtNumber(latest.heading)}°` : '—'}
-                icon={<Compass className="h-4 w-4" aria-hidden="true" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('mapOverview.latLon', 'Lat / lon')}
-                value={hasValidLocation && latest ? `${fmtScientificNumber(latest.latitude, 4)}, ${fmtScientificNumber(latest.longitude, 4)}` : '—'}
-                icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('mapOverview.lastUpdated', 'Last updated')}
-                value={latest?.created_at ? formatDateTime(latest.created_at) : '—'}
-                icon={<Clock className="h-4 w-4" aria-hidden="true" />}
-                subtitle={t('mapOverview.autoRefresh', 'Auto-refreshes every 15 s')}
-              />
-            </>
-          )}
-        </section>
+        <MapsOperationalBrief
+          title={t('mapOverview.kpis', 'Vehicle status')}
+          description={t('mapOverview.brief.description', 'Reported motion and coordinates from the latest position; missing GPS is not a measured zero.')}
+          scope={briefScope}
+          metrics={briefMetrics}
+          sources={[{ label: t('mapOverview.mapRegion', 'Live location map'), state: latestState }]}
+          loading={latestLoading}
+        />
       </FadeIn>
 
       {/* 2 — Hero: live map spanning most of the width + side context column. */}

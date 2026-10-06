@@ -293,10 +293,8 @@ function renderPage() {
 /** Read the canonical stat tile's complete displayed value by its label. */
 function metricValue(label: string): string {
   const labelSpan = screen.getByText(label);
-  const card = labelSpan.closest('[data-stat]');
-  const value = card?.querySelector('[data-stat-value]')?.textContent ?? '';
-  const unit = card?.querySelector('[data-stat-unit]')?.textContent ?? '';
-  return `${value}${unit ? ` ${unit}` : ''}`;
+  const card = labelSpan.closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {

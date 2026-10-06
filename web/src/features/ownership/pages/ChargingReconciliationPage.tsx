@@ -32,9 +32,10 @@ import {
   MoneyInput,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatPct, formatSpan, fromDateInput, toDateInput } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -702,63 +703,81 @@ export default function ChargingReconciliationPage() {
             'Net variance is what the provider owes you (positive) or what you under-paid (negative).',
           )}
           empty={!report}
+          preserveSummary
           emptyMessage={t(
             'ownership.reconcile.audit.empty',
             'Select a statement above to run the audit.',
           )}
         >
-          <StatGrid
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.reconcile.brief.title', 'Statement amounts and variance')}
+            description={t('ownership.reconcile.audit.subtitle', 'Net variance is what the provider owes you (positive) or what you under-paid (negative).')}
+            scope={t('ownership.reconcile.brief.scope', 'Selected statement and matched telemetry; amounts retain the statement currency')}
+            source={reportQuery} enabled={activeInvoice != null}
+            window={report ? { from: report.invoice.period_start, to: report.invoice.period_end } : undefined}
+            metrics={[
               {
-                key: 'billed',
+                occurrenceId: 'billed', metricId: 'currency',
                 label: t('ownership.reconcile.stat.billed', 'Billed total'),
-                value: money(report?.billed_total_minor),
+                rawValue: report?.billed_total_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'expected',
+                occurrenceId: 'expected', metricId: 'currency',
                 label: t('ownership.reconcile.stat.expected', 'Expected from telemetry'),
-                value: money(report?.expected_total_minor),
+                rawValue: report?.expected_total_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'variance',
+                occurrenceId: 'variance', metricId: 'currency',
                 label: t('ownership.reconcile.stat.variance', 'Net variance'),
-                value: money(report?.net_variance_minor),
+                rawValue: report?.net_variance_minor,
+                display: specialistDisplay(money),
                 tone: (report?.net_variance_minor ?? 0) > 0 ? 'critical' : 'positive',
               },
               {
-                key: 'recoverable',
+                occurrenceId: 'recoverable', metricId: 'currency',
                 label: t('ownership.reconcile.stat.recoverable', 'Disputable amount'),
-                value: money(report?.recoverable_minor),
+                rawValue: report?.recoverable_minor,
+                display: specialistDisplay(money),
                 tone: (report?.recoverable_minor ?? 0) > 0 ? 'warning' : 'default',
               },
             ]}
           />
           <div className="mt-3">
-            <StatGrid
-              columns={4}
-              stats={[
+            <OwnershipBrief
+              title={t('ownership.reconcile.energyBrief.title', 'Statement matching and energy')}
+              description={t('ownership.reconcile.energyBrief.description', 'Matched and unmatched lines remain separate; measured energy is retained beside the energy variance.')}
+              scope={t('ownership.reconcile.brief.scope', 'Selected statement and matched telemetry; amounts retain the statement currency')}
+              source={reportQuery} enabled={activeInvoice != null}
+              window={report ? { from: report.invoice.period_start, to: report.invoice.period_end } : undefined}
+              metrics={[
                 {
-                  key: 'matched',
+                  occurrenceId: 'matched', metricId: 'count',
                   label: t('ownership.reconcile.stat.matched', 'Matched lines'),
-                  value: fmtInt(report?.matched_line_count ?? 0),
+                  rawValue: report?.matched_line_count,
+                  display: specialistDisplay(fmtInt),
                   tone: 'positive',
                 },
                 {
-                  key: 'unmatched',
+                  occurrenceId: 'unmatched', metricId: 'count',
                   label: t('ownership.reconcile.stat.unmatched', 'Unmatched lines'),
-                  value: fmtInt(report?.unmatched_line_count ?? 0),
+                  rawValue: report?.unmatched_line_count,
+                  display: specialistDisplay(fmtInt),
                   tone: (report?.unmatched_line_count ?? 0) > 0 ? 'warning' : 'default',
                 },
                 {
-                  key: 'billedEnergy',
+                  occurrenceId: 'billedEnergy', metricId: 'energy',
                   label: t('ownership.reconcile.stat.billedEnergy', 'Billed energy'),
-                  value: units.formatEnergy(report?.billed_energy_wh ?? 0),
+                  rawValue: report?.billed_energy_wh,
+                  display: specialistDisplay(units.formatEnergy),
                 },
                 {
-                  key: 'energyVariance',
+                  occurrenceId: 'energyVariance', metricId: 'energy',
                   label: t('ownership.reconcile.stat.energyVariance', 'Energy variance'),
-                  value: units.formatEnergy(report?.energy_variance_wh ?? 0),
-                  hint: units.formatEnergy(report?.measured_energy_wh ?? 0),
+                  rawValue: report?.energy_variance_wh,
+                  display: specialistDisplay(units.formatEnergy),
+                  context: report?.measured_energy_wh == null ? '—' : units.formatEnergy(report.measured_energy_wh),
                 },
               ]}
             />

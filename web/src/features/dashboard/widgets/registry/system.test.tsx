@@ -418,10 +418,12 @@ describe('system-health — lazy component wiring', () => {
     mockUseConnectionPool.mockReturnValue(makeQuery({ data: { inUse: 5, maxOpen: 25 } }));
     const { container } = await renderWidget('system-health', { cols: 2, rows: 4 });
 
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.getByText('128 MB')).toBeInTheDocument();
     expect(screen.getByText('5/25')).toBeInTheDocument();
-    expect(screen.getByText('No system health data')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Services' })).toBeInTheDocument();
+    expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
   });
 
   it('surfaces a genuine load error as an error panel instead of a misleading empty state', async () => {

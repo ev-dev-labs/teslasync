@@ -15,7 +15,7 @@ import {
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
 import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
-import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
+import { AIWatchFaceNLResponse } from '@/components/ai';
 
 /**
  * Watch-optimized page for Apple Watch / Wear OS.
@@ -87,9 +87,16 @@ export default function WatchFacePage() {
     );
   } else if (source.fatalError || !data) {
     watchContent = (
-      <Text as="p" variant="bodySm" className="px-4 text-center text-[var(--text-on-accent)]">
-        {source.fatalError ? String(source.fatalError) : t('watch.noVehicle', 'No vehicle found')}
-      </Text>
+      <div className="min-w-0 space-y-2 px-4 text-center">
+        <Text as="p" variant="bodySm" className="break-words text-[var(--text-on-accent)] [overflow-wrap:anywhere]">
+          {source.fatalError ? String(source.fatalError) : t('watch.noVehicle', 'No vehicle found')}
+        </Text>
+        {source.fatalError && source.retry ? (
+          <ControlButton wrapLabel variant="secondary" size="sm" onClick={source.retry}>
+            {t('error.retry', 'Retry')}
+          </ControlButton>
+        ) : null}
+      </div>
     );
   } else {
     // SI boundary: backend `range_km` is in km, derived in
@@ -105,7 +112,7 @@ export default function WatchFacePage() {
     watchContent = (
       <>
         {/* Vehicle name */}
-        <Text variant="caption" className="px-2 text-center text-[var(--text-on-accent)]">
+        <Text variant="caption" className="min-w-0 break-words px-2 text-center text-[var(--text-on-accent)] [overflow-wrap:anywhere]">
           {data.vehicle_name}
         </Text>
         {source.refreshError && (
@@ -129,13 +136,15 @@ export default function WatchFacePage() {
 
           {/* Charging status */}
           {data.is_charging && (
-            <div className="mt-2 flex items-center gap-1 text-emerald-400 text-xs">
-              <Zap className="h-3 w-3" />
-              <span>
-                {t('watch.timeToFull', '{{minutes}}m to full', {
-                  minutes: Math.round(data.time_to_full ?? 0),
-                })}
-              </span>
+            <div className="mt-2 flex min-w-0 items-center gap-1">
+              <Zap className="h-3 w-3 shrink-0 text-emerald-400" aria-hidden="true" />
+              <Text variant="caption" className="min-w-0 break-words text-emerald-300">
+                {data.time_to_full != null && Number.isFinite(data.time_to_full)
+                  ? t('watch.timeToFull', '{{minutes}}m to full', {
+                      minutes: Math.round(data.time_to_full),
+                    })
+                  : t('watch.timeToFullUnknown', 'Time to full unknown')}
+              </Text>
             </div>
           )}
 
@@ -143,9 +152,9 @@ export default function WatchFacePage() {
           <Badge
             variant={watchStateVariant(data.state)}
             size="sm"
-            className={cn('mt-2 text-2xs font-medium', watchStateClassName(data.state))}
+            className={cn('mt-2', watchStateClassName(data.state))}
           >
-            {data.state}
+            {t(`watch.state.${data.state}`, data.state)}
           </Badge>
         </div>
 
@@ -192,9 +201,9 @@ export default function WatchFacePage() {
         </div>
 
         {/* Last updated */}
-        <div className="text-2xs text-[var(--text-muted)] text-center">
-          {formatRelativeTime(data.last_updated)}
-        </div>
+        <Text as="div" variant="caption" className="text-center">
+          {formatRelativeTime(data.last_updated, (key, fallback, count) => t(key, fallback, { count }))}
+        </Text>
 
         {/* PWA meta tags (injected via effect) */}
         <WatchPWAMeta />
@@ -304,7 +313,7 @@ export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClic
       aria-label={ariaLabel ?? label}
     >
       <Icon className="h-4 w-4" />
-      {label && <span className="text-2xs mt-0.5" aria-hidden="true">{label}</span>}
+      {label && <Text variant="caption" className="mt-0.5" aria-hidden="true">{label}</Text>}
     </ControlButton>
   );
 }
@@ -392,15 +401,25 @@ export function watchStateClassName(state: string): string {
   }
 }
 
-export function formatRelativeTime(isoTimestamp: string): string {
+export function formatRelativeTime(
+  isoTimestamp: string,
+  translate?: (key: string, fallback: string, count?: number) => string,
+): string {
   if (!isoTimestamp) return '';
   const now = Date.now();
   const then = new Date(isoTimestamp).getTime();
   if (Number.isNaN(then)) return '';
   const diffSec = Math.floor((now - then) / 1000);
 
-  if (diffSec < 60) return 'just now';
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
+  if (diffSec < 60) return translate?.('watch.updated.justNow', 'just now') ?? 'just now';
+  if (diffSec < 3600) {
+    const count = Math.floor(diffSec / 60);
+    return translate?.('watch.updated.minutesAgo', '{{count}}m ago', count) ?? `${count}m ago`;
+  }
+  if (diffSec < 86400) {
+    const count = Math.floor(diffSec / 3600);
+    return translate?.('watch.updated.hoursAgo', '{{count}}h ago', count) ?? `${count}h ago`;
+  }
+  const count = Math.floor(diffSec / 86400);
+  return translate?.('watch.updated.daysAgo', '{{count}}d ago', count) ?? `${count}d ago`;
 }

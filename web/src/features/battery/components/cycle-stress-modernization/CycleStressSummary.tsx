@@ -1,6 +1,7 @@
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import {
@@ -45,43 +46,43 @@ export function CycleStressSummary({
     reason: t('cycleStress.modernization.provenance',
       'Reconstructed from up to 1,000 drives and 1,000 charging sessions. Source spans may differ; this is not a selected-date-window or full-history total.'),
   };
-  // Specialist formatted text intentionally retains the existing Intl locale,
-  // global precision, literal percent and /100 contracts. No generic score or
-  // count formatter is allowed to silently round or recast these source values.
-  const metric = (occurrenceId: string, label: string, value: string, context: string): StatMetric => ({
-    metricId: 'text', occurrenceId, label, description: context, context,
-    rawValue: resolved && value !== '—' ? value : null,
+  // Keep fractional cycles and source support separate from integer counts.
+  const metric = (occurrenceId: string, label: string, value: number | null, context: string,
+    formatter: (raw: number) => string): StatMetric => ({
+    metricId: 'number', occurrenceId, label, description: context, context,
+    rawValue: resolved ? value : null,
     missingReason: unresolvedSubtitle ?? undefined,
+    display: { formatter: raw => ({ value: formatter(raw), unit: '' }) },
   });
   const metrics: StatMetric[] = [
     metric('cycle-stress:intervals',
       t('cycleStress.kpis.intervals', 'Accepted intervals'),
-      cycleStressNumber(result.continuity.acceptedIntervals, locale),
+      result.continuity.acceptedIntervals,
       unresolvedSubtitle ?? t('cycleStress.kpis.returned', '{{count}} total rows returned', {
         count: result.driveAccounting.returnedRows + result.chargingAccounting.returnedRows,
-      })),
+      }), raw => cycleStressNumber(raw, locale)),
     metric('cycle-stress:efc',
       t('cycleStress.kpis.efc', 'Equivalent full cycles'),
-      cycleStressNumber(result.summary.equivalentFullCycles, locale),
-      unresolvedSubtitle ?? t('cycleStress.kpis.efcHint', 'sum of count x depth fraction')),
+      result.summary.equivalentFullCycles,
+      unresolvedSubtitle ?? t('cycleStress.kpis.efcHint', 'sum of count x depth fraction'), raw => cycleStressNumber(raw, locale)),
     metric('cycle-stress:depth-index',
       t('cycleStress.kpis.depthIndex', 'Depth-weighted index'),
-      cycleStressNumber(result.summary.depthWeightedIndex, locale),
+      result.summary.depthWeightedIndex,
       unresolvedSubtitle ?? t('cycleStress.kpis.indexHint', 'illustrative exponent {{value}}', {
         value: result.config.exponent,
-      })),
+      }), raw => cycleStressNumber(raw, locale)),
     metric('cycle-stress:median-depth',
       t('cycleStress.kpis.medianDepth', 'Median depth'),
-      cycleStressPercent(result.summary.medianDepthPct, locale),
-      unresolvedSubtitle ?? t('cycleStress.kpis.weightedMedian', 'cycle-count-weighted nearest rank')),
+      result.summary.medianDepthPct,
+      unresolvedSubtitle ?? t('cycleStress.kpis.weightedMedian', 'cycle-count-weighted nearest rank'), raw => cycleStressPercent(raw, locale)),
     metric('cycle-stress:deep-share',
       t('cycleStress.kpis.deepShare', '{{value}}%+ cycle share', { value: deepThresholdPct }),
-      cycleStressShare(result.summary.deepCycleShare, locale),
-      unresolvedSubtitle ?? t('cycleStress.kpis.descriptiveThreshold', 'descriptive threshold sensitivity')),
+      result.summary.deepCycleShare,
+      unresolvedSubtitle ?? t('cycleStress.kpis.descriptiveThreshold', 'descriptive threshold sensitivity'), raw => cycleStressShare(raw, locale)),
     metric('cycle-stress:support',
       t('cycleStress.kpis.support', 'Evidence support'),
-      `${cycleStressNumber(result.coverage.support.index, locale)}/100`,
-      unresolvedSubtitle ?? cycleStressBandLabel(t, result.coverage.support.band)),
+      result.coverage.support.index,
+      unresolvedSubtitle ?? cycleStressBandLabel(t, result.coverage.support.band), raw => `${cycleStressNumber(raw, locale)}/100`),
   ];
 
   return (
@@ -118,8 +119,8 @@ export function CycleStressSummary({
               onChange={event => onExponentChange(Number(event.target.value))} />
           </div>
         </div>
-        <StatStrip id="cycle-stress-summary" metrics={metrics} period={period}
-          variant="embedded" loading={state.isLoading}
+        <BatteryEvidenceBrief id="cycle-stress-summary" title={t('cycleStress.kpis.title', 'Reconstructed cycle evidence')} metrics={metrics} period={period}
+          loading={state.isLoading}
           retained={trust.sources.some(source => source.trust.hasData
             && Boolean(source.trust.refreshError || source.trust.isRefreshBlocked))} />
         <CycleStressSourceStatus result={result} trust={trust} />

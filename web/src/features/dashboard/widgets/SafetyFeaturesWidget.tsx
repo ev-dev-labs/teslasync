@@ -133,8 +133,9 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
   );
 
   const handleRefresh = useCallback(() => {
-    void refetch();
-  }, [refetch]);
+    if (vid > 0) void refetch();
+    else void vehicleQuery.refetch();
+  }, [refetch, vid, vehicleQuery.refetch]);
 
   return (
     <WidgetShell

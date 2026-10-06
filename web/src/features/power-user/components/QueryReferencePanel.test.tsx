@@ -101,25 +101,26 @@ describe('QueryReferencePanel', () => {
       name: /working with queries/i,
     });
 
-    it('keeps the complete SQL example selectable after denial and retries the exact payload', async () => {
-      const writeText = vi.fn()
-        .mockRejectedValueOnce(new Error('permission denied'))
-        .mockResolvedValueOnce(undefined);
-      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
-      const { container } = render(<QueryReferencePanel />);
-      fireEvent.click(screen.getByRole('button'));
-      expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
-      expect(container.querySelector('pre')?.textContent).toBe(EXPECTED_SQL);
-      fireEvent.click(screen.getByRole('button'));
-      await waitFor(() => expect(screen.queryByText(/Select the text manually/)).toBeNull());
-      expect(writeText.mock.calls).toEqual([[EXPECTED_SQL], [EXPECTED_SQL]]);
-    });
     expect(heading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
 
     // Title icon + four bullet markers (+ callout icon wrapper) are all hidden.
     expect(
       container.querySelectorAll('[aria-hidden="true"]').length,
     ).toBeGreaterThanOrEqual(5);
+  });
+
+  it('keeps the complete SQL example selectable after denial and retries the exact payload', async () => {
+    const writeText = vi.fn()
+      .mockRejectedValueOnce(new Error('permission denied'))
+      .mockResolvedValueOnce(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const { container } = render(<QueryReferencePanel />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
+    expect(container.querySelector('pre')?.textContent).toBe(EXPECTED_SQL);
+    fireEvent.click(screen.getByRole('button'));
+    await waitFor(() => expect(screen.queryByText(/Select the text manually/)).toBeNull());
+    expect(writeText.mock.calls).toEqual([[EXPECTED_SQL], [EXPECTED_SQL]]);
   });
 
   it('routes visible copy through i18n so locale overrides win over the English fallback', () => {

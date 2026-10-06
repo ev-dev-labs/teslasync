@@ -36,7 +36,7 @@ describe('statistics modernization source contracts', () => {
   });
 
   it('keeps chart series, legend state, export identities and source aggregation', () => {
-    expect(page.match(/<ChartContainer\b/g)).toHaveLength(2);
+    expect(page.match(/<ChartCard\b/g)).toHaveLength(2);
     expect(page).toContain('Math.round((minutes / Math.max(total, 1)) * 100)');
     expect(page).toContain('Math.round(fromKm(v.distance))');
     expect(page).toContain('Math.round(v.energy)');

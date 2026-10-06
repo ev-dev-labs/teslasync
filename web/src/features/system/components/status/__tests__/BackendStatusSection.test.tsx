@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -274,11 +274,19 @@ describe('BackendStatusSection', () => {
 
     // Click collapses the body.
     fireEvent.click(header)
-    expect(screen.queryByText('Component health')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Component health')).not.toBeInTheDocument())
     expect(screen.getByRole('button', { expanded: false })).toHaveAttribute('aria-expanded', 'false')
 
-    // Enter re-opens it (keyboard operability).
-    fireEvent.keyDown(screen.getByRole('button', { expanded: false }), { key: 'Enter' })
+    // Native buttons receive a browser-generated click after Enter; jsdom does not synthesize it.
+    const collapsedHeader = screen.getByRole('button', { expanded: false })
+    expect(collapsedHeader.tagName).toBe('BUTTON')
+    expect(collapsedHeader).toHaveAttribute('type', 'button')
+    collapsedHeader.focus()
+    expect(collapsedHeader).toHaveFocus()
+    expect(fireEvent.keyDown(collapsedHeader, { key: 'Enter' })).toBe(true)
+    fireEvent.keyUp(collapsedHeader, { key: 'Enter' })
+    fireEvent.click(collapsedHeader)
+    expect(collapsedHeader).toHaveAttribute('aria-expanded', 'true')
     expect(await screen.findByText('Component health')).toBeInTheDocument()
   })
 })

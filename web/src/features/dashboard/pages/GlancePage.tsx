@@ -6,7 +6,6 @@ import {
   BatteryCharging,
   Thermometer,
   ThermometerSun,
-  Gauge,
   Lock,
   Unlock,
   MapPin,
@@ -32,7 +31,9 @@ import {
   Caption,
 } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
-import { FreshnessIndicator, MetricCard, KVList } from '@/components/data-display';
+import { FreshnessIndicator, KVList } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { PageLayout, Section, SourceContent } from '@/components/layout';
@@ -197,6 +198,26 @@ export default function GlancePage() {
     () => (dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : null),
     [dataUpdatedAt],
   );
+  const overviewMetrics: readonly StatMetric[] = [
+    { metricId: 'percent', rawValue: state?.battery_level, label: t('glance.battery', 'Battery'),
+      description: t('glance.summary.batteryHelp', 'Reported battery state of charge, on the 0–100 percent scale.'),
+      display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+    { metricId: 'distance', rawValue: state?.rated_range, label: t('glance.range', 'Range'),
+      description: t('glance.summary.rangeHelp', 'Reported rated range in metres, converted only for display.'),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+    { metricId: 'temperature', rawValue: state?.inside_temp, label: t('glance.temp', 'Interior'),
+      description: t('glance.summary.interiorHelp', 'Reported cabin temperature in degrees Celsius.'),
+      display: { formatter: raw => ({ value: formatTemperature(raw), unit: '' }) } },
+    { metricId: 'temperature', rawValue: state?.outside_temp, label: t('glance.outsideTemp', 'Exterior'),
+      description: t('glance.summary.exteriorHelp', 'Reported exterior temperature in degrees Celsius.'),
+      display: { formatter: raw => ({ value: formatTemperature(raw), unit: '' }) } },
+    { metricId: 'distance', rawValue: state?.odometer, label: t('glance.odometer', 'Odometer'),
+      description: t('glance.summary.odometerHelp', 'Reported odometer in metres; lifetime reading, not distance in a selected window.'),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+    { metricId: 'speed', rawValue: state?.speed, label: t('glance.speed', 'Speed'),
+      description: t('glance.summary.speedHelp', 'Reported speed in metres per second. Missing speed is not a measured stop.'),
+      display: { formatter: raw => ({ value: formatSpeed(raw), unit: '' }) } },
+  ];
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -270,56 +291,23 @@ export default function GlancePage() {
         </GlassPanel>
       ) : (
         <>
-          {/* 1 — Overview KPI band: full-width responsive metric grid */}
+          {/* 1 — Overview summary, independently retained from live detail panels. */}
           <FadeIn>
             <section
               aria-label={t('glance.overviewAria', 'Vehicle overview')}
-              className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-6"
+              className="min-w-0"
             >
-              {stateLoading && !state ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} height={92} />
-                ))
-              ) : (
-                <>
-                  <MetricCard
-                    label={t('glance.battery', 'Battery')}
-                    value={state?.battery_level != null && Number.isFinite(state.battery_level) ? `${fmtNumber(state.battery_level)}%` : '—'}
-                    icon={<Battery className="h-5 w-5" />}
-                    color={batteryNeon(state?.battery_level)}
-                  />
-                  <MetricCard
-                    label={t('glance.range', 'Range')}
-                    value={state ? formatDistance(state.rated_range) : '—'}
-                    icon={<Gauge className="h-5 w-5" />}
-                    color="green"
-                  />
-                  <MetricCard
-                    label={t('glance.temp', 'Interior')}
-                    value={state ? formatTemperature(state.inside_temp) : '—'}
-                    icon={<Thermometer className="h-5 w-5" />}
-                    color="amber"
-                  />
-                  <MetricCard
-                    label={t('glance.outsideTemp', 'Exterior')}
-                    value={state ? formatTemperature(state.outside_temp) : '—'}
-                    icon={<ThermometerSun className="h-5 w-5" />}
-                    color="cyan"
-                  />
-                  <MetricCard
-                    label={t('glance.odometer', 'Odometer')}
-                    value={state ? formatDistance(state.odometer) : '—'}
-                    icon={<Route className="h-5 w-5" />}
-                    color="purple"
-                  />
-                  <MetricCard
-                    label={t('glance.speed', 'Speed')}
-                    value={state ? formatSpeed(state.speed) : '—'}
-                    icon={<Navigation className="h-5 w-5" />}
-                    color="blue"
-                  />
-                </>
-              )}
+              <DashboardSourceBrief
+                metrics={overviewMetrics}
+                state={stateTrust}
+                eyebrow={t('glance.summary.eyebrow', 'Vehicle telemetry')}
+                title={t('glance.summary.title', 'Vehicle operating summary')}
+                description={t('glance.summary.description', 'Latest returned measurements for the selected vehicle. Poll completion is not a verified observation time for each signal; location has an independent source.')}
+                scope={vehicleName}
+                freshness={<FreshnessIndicator timestamp={freshnessTimestamp} size="sm" />}
+                loading={stateLoading && !state}
+                testId="glance-operational-brief"
+              />
             </section>
           </FadeIn>
 

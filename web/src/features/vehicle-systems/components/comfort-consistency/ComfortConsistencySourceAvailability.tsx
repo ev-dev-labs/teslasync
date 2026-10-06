@@ -1,43 +1,16 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { SourceAvailabilityBrief } from '../operationalbrief-all/SourceAvailabilityBrief';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencySourceAvailabilityProps {
   summary: ComfortConsistencySummary;
   state: ComfortConsistencyQueryState;
-}
-
-function AvailabilityCard({
-  label,
-  count,
-  denominator,
-  note,
-}: {
-  label: string;
-  count: number;
-  denominator: number;
-  note?: string;
-}) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
-  return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="body" className="mt-1">
-        {fmtInt(count)}
-        {' · '}
-        {denominator > 0
-          ? fmtPercent((count / denominator) * 100)
-          : '—'}
-      </Text>
-      {note ? <Text as="p" variant="caption" className="mt-1">{note}</Text> : null}
-    </div>
-  );
 }
 
 export function ComfortConsistencySourceAvailability({
@@ -57,52 +30,24 @@ export function ComfortConsistencySourceAvailability({
           )}
         </Text>
         <ComfortConsistencySectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, lg: 4 }} gap={3}>
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.inside', 'Cabin temperature')}
-              count={source.insideTempRows}
-              denominator={source.denominatorRows}
-            />
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.driver', 'Driver setpoint')}
-              count={source.driverSetpointRows}
-              denominator={source.denominatorRows}
-            />
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.passenger', 'Passenger setpoint')}
-              count={source.passengerSetpointRows}
-              denominator={source.denominatorRows}
-            />
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.anyTarget', 'Any front-row setpoint')}
-              count={source.anySetpointRows}
-              denominator={source.denominatorRows}
-            />
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.paired', 'Paired front-row setpoints')}
-              count={source.pairedSetpointRows}
-              denominator={source.denominatorRows}
-            />
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.knownHvac', 'Known HVAC state')}
-              count={source.knownHvacRows}
-              denominator={source.denominatorRows}
-            />
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.activeHvac', 'Observed active HVAC')}
-              count={source.activeHvacRows}
-              denominator={source.denominatorRows}
-            />
-            <AvailabilityCard
-              label={t('comfortConsistency.sources.complete', 'Thermally complete rows')}
-              count={source.thermallyCompleteRows}
-              denominator={source.denominatorRows}
-              note={t(
-                'comfortConsistency.sources.completeHint',
-                'Cabin temperature plus at least one setpoint',
-              )}
-            />
-          </Grid>
+          <SourceAvailabilityBrief id="comfort-consistency-source-summary"
+            title={t('comfortConsistency.sources.title', 'Source and field availability')}
+            denominator={source.denominatorRows}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('comfortConsistency.sources.subtitle', 'Field presence among unique timestamp-valid rows; forward-filled values are timeline evidence, not independent measurements.') }}
+            items={[
+              { id: 'inside', label: t('comfortConsistency.sources.inside', 'Cabin temperature'), count: source.insideTempRows },
+              { id: 'driver', label: t('comfortConsistency.sources.driver', 'Driver setpoint'), count: source.driverSetpointRows },
+              { id: 'passenger', label: t('comfortConsistency.sources.passenger', 'Passenger setpoint'), count: source.passengerSetpointRows },
+              { id: 'any-target', label: t('comfortConsistency.sources.anyTarget', 'Any front-row setpoint'), count: source.anySetpointRows },
+              { id: 'paired', label: t('comfortConsistency.sources.paired', 'Paired front-row setpoints'), count: source.pairedSetpointRows },
+              { id: 'known-hvac', label: t('comfortConsistency.sources.knownHvac', 'Known HVAC state'), count: source.knownHvacRows },
+              { id: 'active-hvac', label: t('comfortConsistency.sources.activeHvac', 'Observed active HVAC'), count: source.activeHvacRows },
+              { id: 'complete', label: t('comfortConsistency.sources.complete', 'Thermally complete rows'), count: source.thermallyCompleteRows,
+                note: t('comfortConsistency.sources.completeHint', 'Cabin temperature plus at least one setpoint') },
+            ]}
+          />
         </ComfortConsistencySectionBody>
       </LayoutCard>
     </section>

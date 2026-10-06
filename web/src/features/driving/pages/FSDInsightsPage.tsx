@@ -9,6 +9,7 @@ import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -19,13 +20,13 @@ import {
   FsdConfidencePanel,
   FsdDistanceTrend,
   FsdDriveAnalyticsPanels,
-  FsdKpiBand,
   FsdObservatoryPanel,
   FsdShareTrend,
   FsdTopDays,
   FsdWeekdayPattern,
   type FsdSectionState,
 } from '../components/fsd-insights';
+import { FsdEvidenceBrief } from '../components/operationalbrief-a-m/FsdEvidenceBrief';
 
 const SPLIT_COLUMNS = { default: 1, xl: 2 } as const;
 const LEGACY_PERIOD_PRESETS: Record<string, string> = {
@@ -52,6 +53,7 @@ const LEGACY_PERIOD_PRESETS: Record<string, string> = {
  */
 export default function FSDInsightsPage() {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   usePageTitle(t('fsd.title', 'FSD Insights'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -105,8 +107,8 @@ export default function FSDInsightsPage() {
     if (insightsState.status === 'initial') return;
     const id = window.location.hash.replace(/^#/, '');
     if (!id) return;
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [insightsState.status, insightsState.data]);
+    document.getElementById(id)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }, [insightsState.status, insightsState.data, reduce]);
 
   const sectionState: FsdSectionState = {
     // `initial` is the only status with nothing retained AND no failure, so it
@@ -140,7 +142,11 @@ export default function FSDInsightsPage() {
       <StaleRefreshWarning state={insightsState} label={t('fsd.title', 'FSD Insights')} />
 
       <FadeIn>
-        <FsdKpiBand insights={insightsState.data} state={sectionState} />
+        <FsdEvidenceBrief insights={insightsState.data} state={sectionState}
+          scope={t('fsd.brief.window', '{{start}}–{{end}} (exclusive end) · {{timezone}}', {
+            start: startInstant, end: endInstantExclusive, timezone,
+          })}
+          retained={insightsState.status === 'stale' || insightsState.refreshError != null} />
       </FadeIn>
 
       <FadeIn delay={0.04}>

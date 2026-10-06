@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { StatStrip } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { summarizeItems, type MaintenanceItem } from './maintenanceModel';
 
 /** Snapshot counts have no analysis/lifetime completeness assertion.
@@ -25,31 +24,28 @@ export function MaintenanceSummary({
     { key: 'categories', label: t('maintenance.kpi.categories', 'Categories'), value: categories },
   ];
   return (
-    <section aria-label={t('maintenance.kpis', 'Maintenance summary')} className="w-full min-w-0">
-      {!source.hasData && !source.fatalError && enabled && !source.isRefreshBlocked ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
-          {[0, 1, 2, 3, 4, 5].map(key => <Skeleton key={key} className="h-24 rounded-xl" />)}
-        </div>
-      ) : (
-        <StatStrip
+    <div className="w-full min-w-0">
+        <VehicleOperationalBrief
           id="maintenance-summary"
+          title={t('maintenance.kpis', 'Maintenance summary')}
+          available={enabled && source.hasData}
+          loading={!source.hasData && !source.fatalError && enabled && !source.isRefreshBlocked}
           period={{
             kind: 'snapshot',
             label: t('dataSources.labels.maintenanceItems', 'Maintenance items'),
             observedAt: source.updatedAt != null ? new Date(source.updatedAt).toISOString() : null,
             provenance: t('maintenance.summary.provenance', 'Counts use all returned maintenance items, before category filtering.'),
           }}
-          retained={source.status === 'stale' && source.hasData}
+          retained={source.hasData && (source.status === 'stale' || source.isRefreshBlocked || source.refreshError != null)}
           error={source.fatalError?.message ?? source.refreshError?.message ?? null}
           metrics={metrics.map(metric => ({
-            metricId: 'count',
+            metricId: 'count' as const,
             occurrenceId: `maintenance-${metric.key}`,
-            rawValue: metric.value,
+            rawValue: enabled ? metric.value : null,
             label: metric.label,
             description: metric.label,
           }))}
         />
-      )}
-    </section>
+    </div>
   );
 }

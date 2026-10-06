@@ -29,7 +29,8 @@ import {
 
 import { PageLayout, SourceContent, Masonry } from '@/components/layout'
 import { Skeleton, StaleRefreshWarning } from '@/components/feedback'
-import { GlassPanel, Button, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
+import { GlassPanel, Button, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
+import { KVList } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
 import {
   StatusHero, type HeroStatus,
@@ -202,10 +203,10 @@ export default function SystemStatusPage() {
   const lastCheckedLabel = useMemo(() => {
     if (!dataUpdatedAt) return undefined
     const secs = Math.max(0, Math.floor((now - dataUpdatedAt) / 1000))
-    if (secs < 60) return `${secs}s ago`
-    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`
-    return `${Math.floor(secs / 3600)}h ago`
-  }, [now, dataUpdatedAt])
+    if (secs < 60) return t('systemStatus.pipelineTime.secondsAgo', '{{count}}s ago', { count: secs })
+    if (secs < 3600) return t('systemStatus.summary.minutesAgo', '{{count}}m ago', { count: Math.floor(secs / 60) })
+    return t('systemStatus.pipelineTime.hoursAgo', '{{count}}h ago', { count: Math.floor(secs / 3600) })
+  }, [now, dataUpdatedAt, t])
 
   // ── refresh action ──────────────────────────────────────────────
   const handleRefresh = useCallback(() => {
@@ -301,10 +302,11 @@ export default function SystemStatusPage() {
     : 'unknown'
 
   const teslaAuthSummary =
-    teslaTokenWarn?.severity === 'error' ? 'Token expired'
-    : teslaTokenWarn?.severity === 'warn' ? `Expires in ${teslaTokenWarn.days}d`
-    : auth?.authenticated ? 'Connected'
-    : 'Not connected'
+    teslaTokenWarn?.severity === 'error' ? t('systemStatus.summary.tokenExpired', 'Token expired')
+    : teslaTokenWarn?.severity === 'warn' ? t('systemStatus.summary.tokenExpires', 'Expires in {{days}}d', { days: teslaTokenWarn.days })
+    : auth?.authenticated ? t('systemStatus.summary.connected', 'Connected')
+    : auth?.authenticated === false ? t('systemStatus.summary.notConnected', 'Not connected')
+    : t('systemStatus.pipelineStates.unknown', 'unknown')
 
   const totalRows = useMemo(() => {
     if (!backupStats?.row_counts) return null
@@ -337,9 +339,9 @@ export default function SystemStatusPage() {
         ? total
         : acquired != null && idle != null ? acquired + idle : null
       rows.push({
-        label: 'DB connections',
+        label: t('systemStatus.resourcesCopy.dbConnections', 'DB connections'),
         valueText: acquired != null ? `${acquired}` : '—',
-        metaText: max != null && max > 0 ? `of ${max} in use` : undefined,
+        metaText: max != null && max > 0 ? t('systemStatus.resourcesCopy.inUse', 'of {{count}} in use', { count: max }) : undefined,
         percent: acquired != null && max != null && max > 0 ? (acquired / max) * 100 : undefined,
         icon: <Database className="h-4 w-4" />,
       })
@@ -347,36 +349,36 @@ export default function SystemStatusPage() {
 
     if (backupStats?.database_size) {
       rows.push({
-        label: 'Storage used',
+        label: t('systemStatus.storageUsed', 'Storage used'),
         valueText: backupStats.database_size,
-        metaText: backupStats.table_count != null ? `across ${backupStats.table_count} tables` : undefined,
+        metaText: backupStats.table_count != null ? t('systemStatus.resourcesCopy.tables', 'across {{count}} tables', { count: backupStats.table_count }) : undefined,
         icon: <HardDrive className="h-4 w-4" />,
       })
     }
 
     if (totalRows != null) {
       rows.push({
-        label: 'Total rows',
+        label: t('systemStatus.totalRows', 'Total rows'),
         valueText: fmtInt(totalRows),
-        metaText: positionCount != null && positionCount > 0 ? `${fmtInt(positionCount)} positions` : undefined,
+        metaText: positionCount != null && positionCount > 0 ? t('systemStatus.resourcesCopy.positions', '{{displayCount}} positions', { count: positionCount, displayCount: fmtInt(positionCount) }) : undefined,
         icon: <Boxes className="h-4 w-4" />,
       })
     }
 
     if (extendedSystem?.goroutines != null) {
       rows.push({
-        label: 'Runtime threads',
+        label: t('systemStatus.resourcesCopy.runtimeThreads', 'Runtime threads'),
         valueText: fmtInt(extendedSystem.goroutines),
-        metaText: 'goroutines',
+        metaText: t('systemStatus.resourcesCopy.goroutines', 'goroutines'),
         icon: <Cpu className="h-4 w-4" />,
       })
     }
 
     if (workers) {
       rows.push({
-        label: 'Workers',
+        label: t('systemStatus.workers', 'Workers'),
         valueText: `${workers.healthy_count} / ${workers.total}`,
-        metaText: 'healthy',
+        metaText: t('systemStatus.statusLabels.healthy', 'healthy'),
         percent: workers.total > 0 ? (workers.healthy_count / workers.total) * 100 : undefined,
         icon: <Server className="h-4 w-4" />,
       })
@@ -384,13 +386,13 @@ export default function SystemStatusPage() {
 
     if (version?.uptime_seconds != null && version.uptime_seconds > 0) {
       rows.push({
-        label: 'Uptime',
+        label: t('systemStatus.resourcesCopy.uptime', 'Uptime'),
         valueText: formatUptime(version.uptime_seconds),
         icon: <Clock className="h-4 w-4" />,
       })
     } else if (extendedSystem?.uptime_seconds != null) {
       rows.push({
-        label: 'Uptime',
+        label: t('systemStatus.resourcesCopy.uptime', 'Uptime'),
         valueText: formatUptime(extendedSystem.uptime_seconds),
         icon: <Clock className="h-4 w-4" />,
       })
@@ -404,7 +406,7 @@ export default function SystemStatusPage() {
     positionCount,
     totalRows,
     version,
-    workers, fmtInt,
+    workers, fmtInt, t,
   ])
 
   // Action item flags
@@ -420,28 +422,34 @@ export default function SystemStatusPage() {
   // we haven't received fresh data in over 2 minutes.
   const healthStale = !!error || (dataUpdatedAt > 0 && now - dataUpdatedAt > 2 * 60_000)
   const heroSubline = error
-    ? `Health check failed — ${error instanceof Error ? error.message : String(error)}`
+    ? t('systemStatus.summary.healthFailed', 'Health check failed — {{error}}', { error: error instanceof Error ? error.message : String(error) })
     : healthStale
-      ? `Last checked ${lastCheckedLabel ?? 'unknown'} (stale)`
+      ? t('systemStatus.summary.checkedStale', 'Last checked {{time}} (stale)', { time: lastCheckedLabel ?? t('systemStatus.pipelineStates.unknown', 'unknown') })
       : lastCheckedLabel
-        ? `Last checked ${lastCheckedLabel}`
-        : 'Awaiting first check'
+        ? t('systemStatus.summary.checked', 'Last checked {{time}}', { time: lastCheckedLabel })
+        : t('systemStatus.summary.awaitingCheck', 'Awaiting first check')
 
   // Health-row contextual summaries
   const servicesSummary =
-    totalCount === 0 ? 'no data' : `${okCount} / ${totalCount} healthy`
+    totalCount === 0
+      ? t('systemStatus.summary.noData', 'no data')
+      : t('systemStatus.summary.healthy', '{{healthy}} / {{total}} healthy', { healthy: okCount, total: totalCount })
   const databaseSummary =
     dbLatency != null
       ? `${Math.round(dbLatency)}ms · ${backupStats?.database_size ?? '—'}`
-      : backupStats?.database_size ?? 'connected'
+      : backupStats?.database_size ?? (dbStatus === 'unknown'
+        ? t('systemStatus.pipelineStates.unknown', 'unknown')
+        : t('systemStatus.summary.databaseConnected', 'connected'))
   const telemetrySummary =
     vehicleCount > 0
-      ? `${vehicleCount} vehicle${vehicleCount === 1 ? '' : 's'} · ${positionCount != null ? fmtInt(positionCount) : '—'} positions`
+      ? vehicleCount === 1
+        ? t('systemStatus.summary.vehicleTelemetry', '{{count}} vehicle · {{positions}} positions', { count: vehicleCount, positions: positionCount != null ? fmtInt(positionCount) : '—' })
+        : t('systemStatus.summary.vehiclesTelemetry', '{{count}} vehicles · {{positions}} positions', { count: vehicleCount, positions: positionCount != null ? fmtInt(positionCount) : '—' })
       : t('systemStatus.telemetryUnknown', 'No vehicle telemetry to assess')
   const workersSummary =
     workers
-      ? `${workers.healthy_count} / ${workers.total} healthy`
-      : 'unknown'
+      ? t('systemStatus.summary.healthy', '{{healthy}} / {{total}} healthy', { healthy: workers.healthy_count, total: workers.total })
+      : t('systemStatus.pipelineStates.unknown', 'unknown')
 
   return (
     <PageLayout
@@ -460,7 +468,8 @@ export default function SystemStatusPage() {
             className="gap-2"
             aria-label={t('systemStatus.refreshAria', 'Refresh (r)')}
             aria-busy={isFetching}
-            title="Press r to refresh"
+            title={t('systemStatus.refreshHint', 'Press r to refresh')}
+            wrapLabel
           >
             <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
             {t('common.refresh', 'Refresh')}
@@ -546,7 +555,7 @@ export default function SystemStatusPage() {
                     <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {components.map(([name, comp]) => (
                         <li key={name} className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
-                          <Text size="sm" weight="medium" color="primary" className="min-w-0 truncate">{name}</Text>
+                          <Text size="sm" weight="medium" color="primary" className="min-w-0 break-words">{name}</Text>
                           <StatusBadge status={resolveCompStatus(comp.status)} />
                         </li>
                       ))}
@@ -625,7 +634,7 @@ export default function SystemStatusPage() {
                     {workers && workers.healthy_count < workers.total && (
                       <ActionItem
                         severity="error"
-                        title={t('{{down}} of {{total}} workers unhealthy', {
+                        title={t('systemStatus.summary.unhealthyWorkers', '{{down}} of {{total}} workers unhealthy', {
                           down: workers.total - workers.healthy_count,
                           total: workers.total,
                         })}
@@ -649,7 +658,7 @@ export default function SystemStatusPage() {
             <details ref={operatorDetails} id="operator-details" className="group rounded-panel border border-[var(--glass-border)] bg-[var(--surface-1)]">
               <summary className="cursor-pointer px-4 py-4 text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:px-5">
                 <Text as="span" weight="semibold">{t('systemStatus.operatorDetails', 'Operator diagnostics')}</Text>
-                <Caption className="ml-2">{t('systemStatus.operatorDetailsHint', 'Resources, workers, telemetry, maintenance and system details')}</Caption>
+                <Caption className="ms-2">{t('systemStatus.operatorDetailsHint', 'Resources, workers, telemetry, maintenance and system details')}</Caption>
               </summary>
               <div className="space-y-6 border-t border-[var(--glass-border)] p-4 sm:p-5">
             {/* ══ Band A ─ Health & triage (full-width bento) ══════════ */}
@@ -709,7 +718,7 @@ export default function SystemStatusPage() {
             </section>
 
         {/* 5 ─ Resources ───────────────────────────────────────── */}
-        <section id="resources" aria-label="Server resources">
+        <section id="resources" aria-label={t('systemStatus.resourcesCopy.title', 'Server resources')}>
           <ResourcesPanel
             rows={resourceRows}
           />
@@ -765,12 +774,13 @@ export default function SystemStatusPage() {
               chargingSessionsCount={backupStats?.row_counts?.charging_sessions}
               signalLogCount={backupStats?.row_counts?.signal_log}
               now={now}
+              retained={(vehiclesState.hasData && vehiclesQuery.isError) || (backupStatsState.hasData && backupStatsQuery.isError)}
             />
           </AccordionSection>
         </section>
 
         {/* 8b ─ Tesla auth (dedicated card) ─────────────────────── */}
-        <section id="tesla-auth" aria-label="Tesla account authentication">
+        <section id="tesla-auth" aria-label={t('systemStatus.authAria', 'Tesla account authentication')}>
           <TeslaAuthCard
             authenticated={auth?.authenticated}
             expiresAt={auth?.expires_at}
@@ -787,7 +797,9 @@ export default function SystemStatusPage() {
             defaultOpen
             badges={<StatusBadge status={workersStatus} />}
           >
-            <BackgroundWorkersCard health={workers} />
+            <BackgroundWorkersCard health={workers}
+              retained={workersState.hasData && workersQuery.isError}
+              loading={workersQuery.isLoading && !workersState.hasData} />
           </AccordionSection>
         </section>
 
@@ -799,7 +811,7 @@ export default function SystemStatusPage() {
             description={t('systemStatus.systemInfoDesc', 'Version, build, runtime')}
             defaultOpen
           >
-            <SystemInfoRows version={version} system={extendedSystem} />
+            <SystemInfoRows version={version} system={extendedSystem} loading={versionQuery.isLoading && !versionState.hasData} />
           </AccordionSection>
         </section>
 
@@ -838,7 +850,7 @@ export default function SystemStatusPage() {
               <div className={cn('flex justify-center pt-1 pb-4', typography.size.xs, typography.color.muted)} data-status-print-hide>
                 <Link
                   to="/docs/status-api"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
                 >
                   {t('systemStatus.stableStatusApi', 'Stable status API for your own dashboards')} →
                 </Link>
@@ -853,38 +865,22 @@ export default function SystemStatusPage() {
 
 // ── Local helper components ───────────────────────────────────────
 
-const DOT_FOR_STATUS: Record<HeroStatus, string> = {
-  healthy:     'bg-green-400',
-  degraded:    'bg-amber-400',
-  unhealthy:   'bg-red-400',
-  unknown:     'bg-zinc-400',
-  maintenance: 'bg-blue-400',
-}
-
-const TEXT_FOR_STATUS: Record<HeroStatus, string> = {
-  healthy:     'text-green-300',
-  degraded:    'text-amber-300',
-  unhealthy:   'text-red-300',
-  unknown:     'text-zinc-300',
-  maintenance: 'text-blue-300',
-}
-
-function StatusDot({ status }: { status: HeroStatus }) {
-  return <span className={cn('inline-block h-2.5 w-2.5 shrink-0 rounded-full', DOT_FOR_STATUS[status])} aria-hidden />
-}
-
 function StatusBadge({ status }: { status: HeroStatus }) {
-  const label =
-    status === 'healthy' ? 'healthy'
-    : status === 'degraded' ? 'degraded'
-    : status === 'unhealthy' ? 'down'
-    : status === 'maintenance' ? 'maintenance'
-    : 'unknown'
+  const { t } = useTranslation()
+  const labels: Record<HeroStatus, string> = {
+    healthy: t('systemStatus.statusLabels.healthy', 'healthy'),
+    degraded: t('systemStatus.statusLabels.degraded', 'degraded'),
+    unhealthy: t('systemStatus.statusLabels.down', 'down'),
+    maintenance: t('systemStatus.statusLabels.maintenance', 'maintenance'),
+    unknown: t('systemStatus.pipelineStates.unknown', 'unknown'),
+  }
+  const variants: Record<HeroStatus, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
+    healthy: 'success', degraded: 'warning', unhealthy: 'danger', maintenance: 'info', unknown: 'neutral',
+  }
   return (
-    <Text as="span" size="xs" className={cn('inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2 py-0.5', TEXT_FOR_STATUS[status])}>
-      <StatusDot status={status} />
-      {label}
-    </Text>
+    <Badge variant={variants[status]} dot className="shrink-0 whitespace-normal">
+      {labels[status]}
+    </Badge>
   )
 }
 
@@ -901,7 +897,7 @@ function DetailLink({ to, label }: { to: string; label: string }) {
       <Link
         to={to}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-cyan-200 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+          'inline-flex min-h-11 items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-cyan-300 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
           typography.size.xs,
           typography.weight.medium,
         )}
@@ -914,41 +910,41 @@ function DetailLink({ to, label }: { to: string; label: string }) {
 
 interface DefListRow { label: string; value: ReactNode }
 function DefList({ rows }: { rows: DefListRow[] }) {
-  return (
-    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
-      {rows.map((r) => (
-        <div key={r.label} className="flex items-center justify-between gap-2">
-          <Text as="dt" size="sm" color="secondary">{r.label}</Text>
-          <Text as="dd" size="sm" weight="medium" color="primary" className="tabular-nums">{r.value}</Text>
-        </div>
-      ))}
-    </dl>
-  )
+  return <KVList items={rows} layout="responsive" wrap className="tabular-nums" />
 }
 
 // ── Helper: system info rows ────────────────────────────────────────
 function SystemInfoRows({
   version,
   system,
+  loading,
 }: {
   version?: { app_version: string; chart_version: string; go_version: string; os: string; arch: string; uptime_seconds: number }
   system?: { goroutines: number; uptime_seconds: number; go_version: string }
+  loading: boolean
 }) {
   const { fmtInt } = useNumberFormatting();
-  if (!version) {
-    return <Text as="div" size="sm" color="muted">Loading system info…</Text>
-  }
+  const { t } = useTranslation()
 
   const rows: DefListRow[] = [
-    { label: 'App version', value: version.app_version },
-    { label: 'Chart version', value: version.chart_version },
-    { label: 'Go runtime', value: version.go_version },
-    { label: 'OS / arch', value: `${version.os}/${version.arch}` },
-    { label: 'Uptime', value: formatUptime(version.uptime_seconds) },
+    { label: t('systemStatus.systemInfoCopy.appVersion', 'App version'), value: version?.app_version ?? '—' },
+    { label: t('systemStatus.systemInfoCopy.chartVersion', 'Chart version'), value: version?.chart_version ?? '—' },
+    { label: t('systemStatus.systemInfoCopy.goRuntime', 'Go runtime'), value: version?.go_version ?? '—' },
+    { label: t('systemStatus.systemInfoCopy.platform', 'OS / arch'), value: version ? `${version.os}/${version.arch}` : '—' },
+    { label: t('systemStatus.resourcesCopy.uptime', 'Uptime'), value: version ? formatUptime(version.uptime_seconds) : '—' },
   ]
   if (system?.goroutines != null) {
-    rows.push({ label: 'Goroutines', value: fmtInt(system.goroutines) })
+    rows.push({ label: t('systemStatus.systemInfoCopy.goroutines', 'Goroutines'), value: fmtInt(system.goroutines) })
   }
 
-  return <DefList rows={rows} />
+  return (
+    <>
+      {!version && <Text as="p" variant="caption" role={loading ? 'status' : undefined}>
+        {loading
+          ? t('systemStatus.systemInfoCopy.loading', 'Loading system info…')
+          : t('systemStatus.systemInfoCopy.unavailable', 'System info is unavailable.')}
+      </Text>}
+      <DefList rows={rows} />
+    </>
+  )
 }

@@ -11,6 +11,7 @@ import {
   type MaintenanceItem, type ServiceRecord,
 } from '../index';
 import MaintenancePage from '../../../pages/MaintenancePage';
+import { MaintenanceSource } from '../MaintenanceSource';
 import { item, record } from './fixtures';
 
 const h = vi.hoisted(() => ({
@@ -142,6 +143,29 @@ afterEach(() => {
 });
 
 describe('complete maintenance presenters', () => {
+  it('keeps resolved null evidence empty and retains real children through refresh failure', () => {
+    const empty = <span>No resolved maintenance evidence</span>;
+    const children = <span>Measured maintenance evidence</span>;
+    const { rerender } = mount(
+      <MaintenanceSource source={deriveDataState(query<MaintenanceItem[] | null>(null))} enabled empty={empty}>
+        {children}
+      </MaintenanceSource>,
+    );
+    expect(screen.getByText('No resolved maintenance evidence')).toBeInTheDocument();
+    expect(screen.queryByText('Measured maintenance evidence')).not.toBeInTheDocument();
+    rerender(
+      <MaintenanceSource source={deriveDataState(query([item()], {
+        isError: true, error: new Error('Refresh failed'),
+      }))} enabled empty={empty}>
+        {children}
+      </MaintenanceSource>,
+    );
+    expect(screen.getByText('Measured maintenance evidence')).toBeInTheDocument();
+    expect(screen.queryByText('No resolved maintenance evidence')).not.toBeInTheDocument();
+    expect(screen.getByText('Showing retained measurements')).toBeInTheDocument();
+    expect(h.request).not.toHaveBeenCalled();
+  });
+
   it('wires empty projection/category and cost/record recovery to their independent read sources', () => {
     mount(<MaintenancePage />);
     for (const message of [

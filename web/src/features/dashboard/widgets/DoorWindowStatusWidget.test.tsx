@@ -51,7 +51,8 @@ vi.mock('react-i18next', () => ({
 // above them safely). Only the two hooks the widget reads are overridden — the
 // rest of the real module is preserved so transitive importers keep working.
 const mockUseSecurityLatest = vi.fn((_id: number, _interval?: number) => MOCK_SECURITY);
-let MOCK_VEHICLES: { data: Vehicle[] | undefined };
+let MOCK_VEHICLES: { data: Vehicle[] | undefined; refetch: () => void };
+const refetchVehicles = vi.fn();
 let MOCK_SECURITY: SecurityQuery;
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useVehicles')>();
@@ -134,7 +135,7 @@ interface RenderOpts {
 
 function renderWidget(size: WidgetSize, opts: RenderOpts = {}) {
   MOCK_SECURITY = opts.query ?? makeQuery();
-  MOCK_VEHICLES = { data: opts.vehicles ?? [] };
+  MOCK_VEHICLES = { data: opts.vehicles ?? [], refetch: refetchVehicles };
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
@@ -153,7 +154,8 @@ function sectionOf(heading: string): HTMLElement {
 }
 
 beforeEach(() => {
-  MOCK_VEHICLES = { data: [] };
+  MOCK_VEHICLES = { data: [], refetch: refetchVehicles };
+  refetchVehicles.mockClear();
   MOCK_SECURITY = makeQuery();
   mockUseSecurityLatest.mockClear();
 });
@@ -429,9 +431,17 @@ describe('DoorWindowStatusWidget — vehicle resolution + refresh', () => {
 
   it('refetches when the accessible "Refresh" freshness control is activated', () => {
     const refetch = vi.fn();
-    renderWidget(FULL, { query: makeQuery({ refetch, isFetching: false }) });
+    renderWidget(FULL, { vehicleId: 1, query: makeQuery({ refetch, isFetching: false }) });
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes vehicle discovery rather than the disabled security query when no vehicle is selected', () => {
+    const refetch = vi.fn();
+    renderWidget(FULL, { vehicles: [], query: makeQuery({ data: undefined, refetch }) });
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetchVehicles).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
   });
 });

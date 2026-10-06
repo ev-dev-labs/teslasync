@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wrench, CheckCircle2, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, Subhead } from '@/components/ui';
+import { SourceContent } from '@/components/layout';
 import { Timeline } from '@/components/data-display';
 import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useMaintenance, useServiceRecords, useMaintenanceForecast } from '@/api/hooks/useVehicleSystems';
@@ -13,7 +14,6 @@ import { combineDataStates } from '@/api/dataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -160,13 +160,21 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
     onRefresh: handleRefresh,
   };
 
-  // ── Compact layout (1×2): days until next + item name ──
+  // ── Compact layout (1×2): configured interval + item name ──
   if (isCompact) {
     return (
       <WidgetShell
         {...shellProps}
       >
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
+          <SourceContent
+            state={maintenanceTrust.fatalError ? 'error' : !maintenanceTrust.hasData && maintLoading ? 'loading' : 'ready'}
+            label={t('widget.maintenance.title', 'Maintenance')}
+            emptyMessage={t('widget.maintenance.noData', 'No maintenance data')}
+            errorMessage={t('widget.maintenance.itemsError', 'Configured maintenance could not be loaded.')}
+            error={maintenanceTrust.fatalError}
+            errorRecovery={{ onRetry: maintenanceTrust.retry ?? undefined }}
+          >
           {nextItem ? (
             <>
               <Wrench className="h-4 w-4 text-amber-400" />
@@ -176,14 +184,15 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
                 label={t('widget.maintenance.configuredInterval', 'Configured interval')}
                 align="center"
               />
-              <span className={`${dashboardTokens.metricLabel} max-w-full break-words px-2 text-center`}>
+              <Caption className="max-w-full break-words px-2 text-center">
                 {nextItem.name ?? '—'}
-              </span>
+              </Caption>
             </>
           ) : (
             <WidgetBigNumber value={null} label={t('widget.maintenance.noData', 'No maintenance data')} />
           )}
-          <p className={dashboardTokens.metricLabel}>{t('widget.maintenance.intervalCaveat', 'Intervals are recommendations, not time remaining.')}</p>
+          </SourceContent>
+          <Caption className="block break-words">{t('widget.maintenance.intervalCaveat', 'Intervals are recommendations, not time remaining.')}</Caption>
         </div>
       </WidgetShell>
     );
@@ -197,34 +206,44 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
     >
         <div className="h-full flex flex-col gap-3 overflow-y-auto">
           {/* Top: Next upcoming maintenance */}
+            <SourceContent
+              state={maintenanceTrust.fatalError ? 'error' : !maintenanceTrust.hasData && maintLoading ? 'loading' : maintenanceTrust.refreshError ? 'retained' : 'ready'}
+              label={t('widget.maintenance.title', 'Maintenance')}
+              emptyMessage={t('widget.maintenance.noData', 'No maintenance data')}
+              errorMessage={t('widget.maintenance.itemsError', 'Configured maintenance could not be loaded.')}
+              error={maintenanceTrust.fatalError}
+              errorRecovery={{ onRetry: maintenanceTrust.retry ?? undefined }}
+              retainedMessage={t('widget.maintenance.itemsRetained', 'Previously loaded maintenance intervals remain visible while they refresh.')}
+            >
             <div className="border-b border-[var(--border-subtle)] pb-3">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className={dashboardTokens.metricLabel}>
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-2 mb-1.5">
+                <Subhead className="break-words">
                   {t('widget.maintenance.shortestInterval', 'Shortest configured interval')}
-                </span>
+                </Subhead>
                 <Badge variant={nextUrgency ? urgencyBadgeVariant(nextUrgency) : 'neutral'} size="sm" dot>
                   {nextUrgency ? urgencyLabel(nextUrgency, t) : t('widget.status.unknown', 'Unknown')}
                 </Badge>
               </div>
-              <p className={dashboardTokens.metricLabel}>
+              <Caption className="block break-words">
                 {nextItem?.name ?? '—'}
-              </p>
-              <div className={`flex flex-wrap items-center gap-3 mt-1.5 ${dashboardTokens.metricLabel}`}>
-                <span className="flex items-center gap-1">
+              </Caption>
+              <div className="flex min-w-0 flex-wrap items-center gap-3 mt-1.5">
+                <Caption className="flex min-w-0 flex-wrap items-center gap-1">
                   <Clock className="h-3 w-3 shrink-0" />
                   {t('widget.maintenance.every', 'Every')}{' '}
                   {nextItem?.intervalMonths == null ? '—' : fmtInt(nextItem.intervalMonths)}{' '}
                   {t('widget.maintenance.months', 'mo')}
-                </span>
-                <span className="flex items-center gap-1">
+                </Caption>
+                <Caption className="break-words">
                   {nextItem?.intervalKm == null ? '—' : `${fmtNumber(toDistanceDisplay(nextItem.intervalKm))} ${distanceUnit}`}
-                </span>
+                </Caption>
                 {nextItem?.estimatedCostUsd != null && (
-                  <span>{formatCurrency(nextItem.estimatedCostUsd)}</span>
+                  <Caption>{formatCurrency(nextItem.estimatedCostUsd)}</Caption>
                 )}
               </div>
-              <p className={dashboardTokens.metricLabel}>{t('widget.maintenance.intervalCaveat', 'Intervals are recommendations, not time remaining.')}</p>
+              <Caption className="block break-words">{t('widget.maintenance.intervalCaveat', 'Intervals are recommendations, not time remaining.')}</Caption>
             </div>
+            </SourceContent>
 
           {/* Wear forecast banner: mileage/time-aware due counts */}
             <div
@@ -239,9 +258,9 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
                 { label: t('widget.maintenance.soon', 'Soon'), value: forecast?.due_soon_count == null ? null : fmtInt(forecast.due_soon_count) },
                 { label: t('widget.maintenance.dailyDistance', 'Daily distance'), value: forecast?.km_per_day == null ? null : fmtNumber(toDistanceDisplay(forecast.km_per_day)), unit: forecast?.km_per_day == null ? undefined : `${distanceUnit}/${t('widget.maintenance.dayUnit', 'day')}` },
               ]} />
-              <p className={dashboardTokens.metricLabel}>
+              <Caption className="block break-words">
                 {t('widget.maintenance.forecastCaveat', 'Forecast depends on recorded service history and mileage.')}
-              </p>
+              </Caption>
               <WidgetStatusGrid cells={[{
                 id: 'forecast-source',
                 label: t('widget.maintenance.forecastVehicle', 'Forecast vehicle'),
@@ -252,21 +271,23 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
             </div>
 
           {/* Bottom: Recent service records */}
-          {recentRecords.length > 0 ? (
             <div className="flex-1 min-h-0">
-              <span className={`${dashboardTokens.metricLabel} block mb-2`}>
+              <Subhead className="mb-2 break-words">
                 {t('widget.maintenance.recentService', 'Recent service')}
-              </span>
-              <Timeline items={timelineItems} />
+              </Subhead>
+              <SourceContent
+                state={recordsTrust.fatalError ? 'error' : !recordsTrust.hasData && recordsLoading ? 'loading' : recentRecords.length === 0 ? 'empty' : recordsTrust.refreshError ? 'retained' : 'ready'}
+                label={t('widget.maintenance.recentService', 'Recent service')}
+                emptyMessage={t('widget.maintenance.noRecords', 'No service records yet')}
+                errorMessage={t('widget.maintenance.recordsError', 'Service records could not be loaded.')}
+                error={recordsTrust.fatalError}
+                errorRecovery={{ onRetry: recordsTrust.retry ?? undefined }}
+                retainedMessage={t('widget.maintenance.recordsRetained', 'Previously loaded service records remain visible while they refresh.')}
+              >
+                <Timeline items={timelineItems} label={t('widget.maintenance.recentService', 'Recent service')} chronology="newest-first" />
+              </SourceContent>
             </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <span className={dashboardTokens.metricLabel}>
-                {t('widget.maintenance.noRecords', 'No service records yet')}
-              </span>
-            </div>
-          )}
-          {!hasData && <p className={dashboardTokens.metricLabel}>{t('widget.maintenance.noData', 'No maintenance data')}</p>}
+          {!hasData && <Caption className="block break-words">{t('widget.maintenance.noData', 'No maintenance data')}</Caption>}
         </div>
     </WidgetShell>
   );

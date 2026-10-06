@@ -13,7 +13,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { isValidYmd, todayYmd } from '../lib/daylog';
 import { DayLogControls } from '../components/daylog/DayLogControls';
-import { DayLogSummary } from '../components/daylog/DayLogSummary';
+import { DayLogOperationalSummary } from '../components/operationalbrief-a-m/DayLogOperationalSummary';
 import { DayLogTimeline } from '../components/daylog/DayLogTimeline';
 import { DayLogSources } from '../components/daylog/DayLogSources';
 
@@ -43,7 +43,7 @@ export default function DayLogPage() {
 
   // No layers param: the server defaults to the complete history.
   const dayLogQuery = useDayLog({ vehicleId, date, timezone });
-  const state = useDataState(dayLogQuery);
+  const state = useDataState(dayLogQuery, { provenance: 'historical' });
 
   const setDate = useCallback(
     (next: string) => {
@@ -82,7 +82,15 @@ export default function DayLogPage() {
     >
       <StaleRefreshWarning state={state} label={title} />
       <FadeIn delay={0.05}>
-        <DayLogSummary summary={data?.summary ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
+        <DayLogOperationalSummary
+          data={data}
+          date={date}
+          timezone={timezone}
+          isLoading={isLoading}
+          error={fatalError}
+          status={state.status}
+          onRetry={retry}
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>

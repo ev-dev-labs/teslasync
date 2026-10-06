@@ -13,7 +13,7 @@ import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Button, Input, Select, Badge, SectionTitle, Text, Caption,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { AutomationRulesBrief } from '../components/operationalbrief-all/AutomationRulesBrief';
 import {
   AlertBanner,
   EmptyState,
@@ -43,7 +43,7 @@ import { PresetGallery } from './PresetGallery';
 import { ComfortPanel } from '../components/ComfortPanel';
 import {
   Zap, Plus, Upload, ListFilter, AlertTriangle,
-  Pause, Power, ShieldOff, Sparkles, ChevronRight,
+  Sparkles, ChevronRight,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
 
@@ -324,36 +324,15 @@ export default function AutomationsListPage() {
       />
       <StaleRefreshWarning state={automationsState} label={t('automations.title', 'Automations')} />
 
-      {/* 1 — KPI band: full-width responsive metric grid */}
+      {/* 1 — Compact summary of the full loaded rule set */}
       <FadeIn>
         <section
           aria-label={t('automations.stats.aria', 'Automation summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
-          <MetricCard
-            label={t('automations.stats.total', 'Total')}
-            value={automationsState.hasData ? stats.total : '—'}
-            icon={<ListFilter className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('automations.stats.active', 'Active')}
-            value={automationsState.hasData ? stats.active : '—'}
-            icon={<Power className="h-5 w-5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('automations.stats.disabled', 'Disabled')}
-            value={automationsState.hasData ? stats.disabled : '—'}
-            icon={<Pause className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('automations.stats.autoDisabled', 'Auto-disabled')}
-            value={automationsState.hasData ? stats.autoDisabled : '—'}
-            icon={<ShieldOff className="h-5 w-5" />}
-            color="red"
-            className={stats.autoDisabled > 0 ? 'border-neon-red/30' : undefined}
+          <AutomationRulesBrief
+            stats={stats} hasData={automationsState.hasData}
+            loading={isLoading}
+            retained={Boolean(automationsState.refreshError || automationsState.isRefreshBlocked)}
           />
         </section>
       </FadeIn>

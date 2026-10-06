@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Fuel, Lightbulb, Zap } from 'lucide-react';
 import { Text } from '@/components/ui';
-import { StatGroup } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import {
   ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell, Tooltip, EmbeddedChart,
 } from '@/components/charts';
@@ -74,7 +74,8 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry, perio
                 </PieChart>
               </ResponsiveContainer>
             </EmbeddedChart>
-            <StatGroup period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+            <ChargingSummaryBrief title={t('costAnalysis.forecast.breakdown', 'Charging Breakdown')}
+              period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
               className="mt-2 w-full"
               metrics={[
                 {
@@ -103,7 +104,8 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry, perio
         emptyMessage={t('costAnalysis.forecast.noSavings', 'Savings data will appear once driving history is available.')}
         skeletonHeight={180}>
         {periodHeaderId => (
-          <StatGroup period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+          <ChargingSummaryBrief title={t('costAnalysis.forecast.savings', 'Gas vs EV Savings')}
+            period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
             metrics={[
               {
                 metricId: 'currency',

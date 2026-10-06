@@ -193,13 +193,11 @@ describe('FleetStatsBarWidget', () => {
     expect(screen.getByText('3')).toBeInTheDocument(); // online now
 
     // Corrected distance: 1234 km → "1,234.0" km (NOT the 1000×-off "1.2").
-    expect(screen.getByText('1,234.00')).toBeInTheDocument();
-    expect(screen.getByText('km')).toBeInTheDocument();
+    expect(screen.getByText('1,234.00 km')).toBeInTheDocument();
     expect(screen.queryByText('1.2')).not.toBeInTheDocument();
 
     // Energy passes through unconverted.
-    expect(screen.getByText('250.00')).toBeInTheDocument();
-    expect(screen.getByText('kWh')).toBeInTheDocument();
+    expect(screen.getByText('250.00 kWh')).toBeInTheDocument();
 
     // Not the empty state.
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
@@ -249,7 +247,7 @@ describe('FleetStatsBarWidget', () => {
 
     renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('1,234.00')).toBeInTheDocument();
+    expect(screen.getByText('1,234.00 km')).toBeInTheDocument();
     // Both counts collapse to zero with an empty fleet…
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
     // …and the online-percentage caption is suppressed (no vehicles to divide by).
@@ -265,8 +263,8 @@ describe('FleetStatsBarWidget', () => {
     expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(within(screen.getByText('Distance (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
-    expect(within(screen.getByText('Energy (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(screen.getByText('Distance (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(screen.getByText('Energy (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
@@ -281,8 +279,8 @@ describe('FleetStatsBarWidget', () => {
     // The affected source is partial; retained vehicle metrics remain readable.
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
-    expect(within(screen.getByText('Distance (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
-    expect(within(screen.getByText('Energy (30d)').closest('.flex-col') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(screen.getByText('Distance (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(screen.getByText('Energy (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
@@ -295,7 +293,20 @@ describe('FleetStatsBarWidget', () => {
     expect(screen.getByText('Online now')).toBeInTheDocument();
     expect(screen.getByText('Distance (30d)')).toBeInTheDocument();
     expect(screen.getByText('Energy (30d)')).toBeInTheDocument();
-    expect(screen.getByText('1,234.00')).toBeInTheDocument();
+    expect(screen.getByText('1,234.00 km')).toBeInTheDocument();
+  });
+
+  it('reviews actual source metrics without replacing registry coverage with live confidence', () => {
+    renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
+    const brief = screen.getByTestId('fleet-stats-bar-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('1,234.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('250.00 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText('3 online')).toBeInTheDocument();
+    expect(within(drawer).getByText('75.00%')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not verified live-state coverage/)).toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

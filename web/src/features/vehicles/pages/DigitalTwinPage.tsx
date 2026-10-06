@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, AppWindow, Car, DoorOpen, Info, Lightbulb, Lock, PlugZap, ShieldCheck,
+  Activity, AppWindow, Car, DoorOpen, Info, Lightbulb, ShieldCheck,
 } from 'lucide-react';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -12,9 +12,11 @@ import {
 } from '@/api/hooks/useVehicles';
 import { PageLayout, Section } from '@/components/layout';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { StatStrip, StatusBadge } from '@/components/data-display';
+import { OperationalBrief, StatusBadge } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { FadeIn } from '@/components/motion';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
 
@@ -201,6 +203,46 @@ export default function DigitalTwinPage() {
   };
 
   const freshnessQueries = vehicleId > 0 ? [securityQ, stateQ, chargingQ] : undefined;
+  const knownOpenings = openings.filter((opening) => opening !== null).length;
+  const knownWindows = windowStates.filter((window) => window !== null).length;
+  const summaryMetrics: readonly StatMetric[] = [
+    { metricId: 'text', occurrenceId: 'twin-status', label: t('digitalTwin.kpiStatus', 'Status'),
+      rawValue: statusText,
+      description: t('digitalTwin.brief.statusBasis', 'Charging and driving take priority, then vehicle state and available streams; offline is the fallback when no source reports activity.') },
+    { metricId: 'text', occurrenceId: 'twin-lock', label: t('digitalTwin.kpiLock', 'Lock'),
+      rawValue: twinState.locked === null ? null : lockValue,
+      description: t('digitalTwin.brief.lockBasis', 'Latest reported lock state; an unknown state is not unlocked.') },
+    { metricId: 'count', occurrenceId: 'twin-doors', label: t('digitalTwin.kpiDoorsOpen', 'Doors open'),
+      rawValue: openingsKnown ? openCount : null,
+      description: t('digitalTwin.brief.doorsBasis', 'Reported open doors, frunk and trunk. Unreported openings are not assumed closed.'),
+      context: <><span>{t('digitalTwin.ofOpenings', 'of 6 openings')}</span> · <span>{t('digitalTwin.brief.openingsKnown', '{{count}} of 6 states known', { count: knownOpenings })}</span></> },
+    { metricId: 'count', occurrenceId: 'twin-windows', label: t('digitalTwin.kpiWindowsOpen', 'Windows open'),
+      rawValue: windowsKnown ? windowsOpenCount : null,
+      description: t('digitalTwin.brief.windowsBasis', 'Open and partially open windows are counted together; unreported windows remain unknown.'),
+      context: <><span>{t('digitalTwin.ofWindows', 'of 4 windows')}</span> · <span>{t('digitalTwin.brief.windowsKnown', '{{count}} of 4 states known', { count: knownWindows })}</span></> },
+    { metricId: 'text', occurrenceId: 'twin-sentry', label: t('digitalTwin.kpiSentry', 'Sentry mode'),
+      rawValue: twinState.sentryMode === null ? null : sentryValue,
+      description: t('digitalTwin.brief.sentryBasis', 'Latest reported sentry state; inactive differs from unknown.') },
+    { metricId: 'text', occurrenceId: 'twin-port', label: t('digitalTwin.kpiChargePort', 'Charge port'),
+      rawValue: !twinState.isCharging && twinState.chargePortOpen === null ? null : chargePortValue,
+      description: t('digitalTwin.brief.portBasis', 'Charging takes priority over the reported charge-port door state.') },
+  ];
+  const operationalMetrics = useOperationalMetrics(summaryMetrics);
+  const sourceStates = [securityState, stateState, chargingState];
+  const summaryStatus = combinedLoading ? 'loading'
+    : sourceStates.some((source) => source.status === 'stale') ? 'stale'
+    : !anyLiveData && combinedError ? 'failed'
+    : !anyLiveData ? 'unavailable'
+    : !securityData || !vehicleState || !chargingData ? 'partial'
+    : 'ready';
+  const summaryStatusLabels = {
+    loading: t('digitalTwin.brief.status.loading', 'Loading source snapshots'),
+    stale: t('digitalTwin.brief.status.stale', 'Retained source snapshots'),
+    failed: t('digitalTwin.brief.status.failed', 'Source request failed'),
+    unavailable: t('digitalTwin.brief.status.unavailable', 'No source snapshots'),
+    partial: t('digitalTwin.brief.status.partial', 'Mixed source availability'),
+    ready: t('digitalTwin.brief.status.ready', 'Source snapshots available'),
+  };
 
   return (
     <PageLayout
@@ -227,22 +269,30 @@ export default function DigitalTwinPage() {
             <section
               aria-label={t('digitalTwin.overview', 'Overview')}
             >
-              <StatStrip id="digital-twin-summary"
-                period={{ kind: 'snapshot', label: t('digitalTwin.snapshot', 'Latest vehicle signals'),
-                  observedAt: typeof twinState.lastUpdated === 'string' ? twinState.lastUpdated : null,
-                  provenance: t('dataSources.labels.liveVehicleState', 'Live vehicle state') }}
-                metrics={[
-                  { metricId: 'text', occurrenceId: 'twin-status', label: t('digitalTwin.kpiStatus', 'Status'), rawValue: statusText },
-                  { metricId: 'text', occurrenceId: 'twin-lock', label: t('digitalTwin.kpiLock', 'Lock'), rawValue: twinState.locked === null ? null : lockValue },
-                  { metricId: 'count', occurrenceId: 'twin-doors', label: t('digitalTwin.kpiDoorsOpen', 'Doors open'), rawValue: openingsKnown ? openCount : null,
-                    context: t('digitalTwin.ofOpenings', 'of 6 openings') },
-                  { metricId: 'count', occurrenceId: 'twin-windows', label: t('digitalTwin.kpiWindowsOpen', 'Windows open'), rawValue: windowsKnown ? windowsOpenCount : null,
-                    context: t('digitalTwin.ofWindows', 'of 4 windows') },
-                  { metricId: 'text', occurrenceId: 'twin-sentry', label: t('digitalTwin.kpiSentry', 'Sentry mode'),
-                    rawValue: twinState.sentryMode === null ? null : sentryValue },
-                  { metricId: 'text', occurrenceId: 'twin-port', label: t('digitalTwin.kpiChargePort', 'Charge port'),
-                    rawValue: !twinState.isCharging && twinState.chargePortOpen === null ? null : chargePortValue },
-                ]}
+              <OperationalBrief
+                compact
+                testId="digital-twin-summary"
+                eyebrow={t('digitalTwin.brief.eyebrow', 'Vehicle physical state')}
+                title={t('digitalTwin.brief.title', 'Physical-state summary')}
+                description={t('digitalTwin.brief.description', 'Latest polled security, vehicle-state and charging signals. Source snapshots may differ in time; unknown component states remain unknown.')}
+                statusLabel={summaryStatusLabels[summaryStatus]}
+                statusTone={summaryStatus === 'stale' || summaryStatus === 'partial' || summaryStatus === 'failed' ? 'warning' : 'neutral'}
+                loading={combinedLoading}
+                metrics={operationalMetrics}
+                scope={<Text as="span" variant="caption">{vehicle?.display_name ?? '—'} · {t('digitalTwin.snapshot', 'Latest vehicle signals')}</Text>}
+                freshness={<Text as="span" variant="caption">
+                  {typeof twinState.lastUpdated === 'string'
+                    ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(twinState.lastUpdated) })
+                    : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown')}
+                </Text>}
+                provenance={[
+                  t('digitalTwin.brief.provenance', 'Security, vehicle-state and charging snapshots; retained values remain visible after a refresh failure.'),
+                  vehicle?.display_name ?? '—',
+                  t('digitalTwin.snapshot', 'Latest vehicle signals'),
+                  typeof twinState.lastUpdated === 'string'
+                    ? twinState.lastUpdated
+                    : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown'),
+                ].join(' · ')}
               />
             </section>
           </FadeIn>

@@ -108,9 +108,9 @@ export function RepairCaseWorkspaceHeader({
             onRetry={onRetryStatistics}
           />
         </div>
-      ) : (
-        <RepairCaseStats statistics={statistics} loading={statisticsLoading} />
-      )}
+      ) : null}
+      <RepairCaseStats statistics={statistics} loading={statisticsLoading}
+        retained={statisticsState.hasData && !!statisticsState.refreshError} />
     </GlassPanel>
   );
 }

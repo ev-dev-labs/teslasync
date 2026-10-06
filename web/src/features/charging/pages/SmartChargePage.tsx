@@ -22,7 +22,8 @@ import {
   type Column,
 } from '@/components/ui';
 import { UnitInput, FormSection } from '@/components/forms';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -42,7 +43,7 @@ import {
 import { RateTimeline } from '../components/smart-charge-modernization/RateTimeline';
 import { AutopilotCard } from '../components/smart-charge-modernization/AutopilotCard';
 import { ChargePointsCard } from '../components/smart-charge-modernization/ChargePointsCard';
-import { AISmartChargeScheduleSuggestion } from '@/components/ai/AISmartChargeScheduleSuggestion';
+import { AISmartChargeScheduleSuggestion } from '@/components/ai';
 import type { ChargePlan, OptimizeChargeResponse } from '@/types/charging';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
@@ -269,29 +270,33 @@ export default function SmartChargePage() {
   // wire contract is not a canonical SI metric contract.
   const costMetrics: StatMetric[] = [
     {
-      metricId: 'text', occurrenceId: 'charge-now',
+      metricId: 'currency', occurrenceId: 'charge-now',
       label: t('chargePlanner.chargeNowCost', 'Charge now'),
-      rawValue: comparison && knownNumber(comparison.charge_now_cost) != null ? formatCurrency(comparison.charge_now_cost) : null,
+      rawValue: comparison ? knownNumber(comparison.charge_now_cost) : null,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
       description: t('chargePlanner.currentRate', 'At current rates'),
       context: t('chargePlanner.currentRate', 'At current rates'),
     },
     {
-      metricId: 'text', occurrenceId: 'optimized-cost',
+      metricId: 'currency', occurrenceId: 'optimized-cost',
       label: t('chargePlanner.optimizedCost', 'Optimized cost'),
-      rawValue: comparison && knownNumber(comparison.optimized_cost) != null ? formatCurrency(comparison.optimized_cost) : null,
+      rawValue: comparison ? knownNumber(comparison.optimized_cost) : null,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
       context: result ? `${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh)}¢/kWh` : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'savings',
+      metricId: 'currency', occurrenceId: 'savings',
       label: t('chargePlanner.savings', 'Savings'),
-      rawValue: comparison && knownNumber(comparison.savings) != null ? formatCurrency(comparison.savings) : null,
+      rawValue: comparison ? knownNumber(comparison.savings) : null,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
       comparisonContent: comparison && savingsPositive && knownNumber(comparison.savings_percent) != null
         ? <Text variant="bodySm">{fmtPercent(comparison.savings_percent)}</Text> : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'energy-needed',
+      metricId: 'energy', occurrenceId: 'energy-needed',
       label: t('chargePlanner.energyNeeded', 'Energy needed'),
-      rawValue: result && knownNumber(result.kwh_needed) != null ? `${fmtNumber(result.kwh_needed)} kWh` : null,
+      rawValue: result && knownNumber(result.kwh_needed) != null ? result.kwh_needed * 1000 : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
       context: result && knownNumber(result.estimated_duration_hours) != null
         ? t('chargePlanner.estDuration', '~{{hours}}h', { hours: fmtNumber(result.estimated_duration_hours) }) : undefined,
     },
@@ -397,7 +402,7 @@ export default function SmartChargePage() {
           <section
             aria-label={t('chargePlanner.costComparison', 'Cost comparison')}
           >
-            <StatStrip
+            <ChargingSummaryBrief
               id="smart-charge-cost-comparison"
               metrics={costMetrics}
               period={{

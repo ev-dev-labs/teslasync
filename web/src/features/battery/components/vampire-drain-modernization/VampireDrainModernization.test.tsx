@@ -6,12 +6,17 @@ import type { PropsWithChildren } from 'react';
 import VampireDrainPage from '../../pages/VampireDrainPage';
 import { request } from '@/api/client';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { ToastProvider } from '@/components/feedback';
 
 // Keep the production frame/exports/table owner; reuse the repository tooltip/legend doubles.
 vi.mock('@/components/charts', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual,
+    ChartLegend: chartTestDoubles.ChartLegend,
+    ChartTooltip: chartTestDoubles.ChartTooltip,
+  };
 });
 vi.mock('@/components/motion', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/motion')>();
@@ -69,10 +74,19 @@ function mount() {
   // The same actual Router persists through rerender; never rerender an unwrapped page.
   function Wrapper({ children }: PropsWithChildren) {
     return <MemoryRouter initialEntries={['/vampire-drain']}>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}><ToastProvider>{children}</ToastProvider></QueryClientProvider>
     </MemoryRouter>;
   }
   return { client, ...render(<VampireDrainPage />, { wrapper: Wrapper }) };
+}
+
+function chartCard(title: string): HTMLElement {
+  const cards = screen.getAllByRole('heading', { name: title, exact: true })
+    .map(heading => heading.closest('[data-card]'));
+  expect(new Set(cards).size).toBe(1);
+  const card = cards[0];
+  if (!(card instanceof HTMLElement)) throw new Error(`Missing chart card: ${title}`);
+  return card;
 }
 
 beforeEach(() => {
@@ -121,7 +135,7 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     expect(screen.queryByText(/private server stack/)).not.toBeInTheDocument();
   });
 
-  it('retains the cache operands, cancellation, both named figures and all seven desktop columns', async () => {
+  it('retains the cache operands, cancellation, both named embedded charts and all seven desktop columns', async () => {
     const { client } = mount();
     const table = await screen.findByRole('table', { name: 'Drain sessions' });
     for (const name of ['Started', 'Duration', 'Start %', 'End %', 'Loss %', 'Rate %/day', 'Ambient']) {
@@ -131,12 +145,16 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     expect(client.getQueryData(['vampire-drain-events', '7'])).toEqual({ vehicle_id: 7, events: [event] });
     const call = mockedRequest.mock.calls.find(([path]) => path === '/vampire-drain?vehicle_id=7&limit=200');
     expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
-    const trend = screen.getByRole('figure', { name: 'Drain rate trend' });
-    const daily = screen.getByRole('figure', { name: 'Daily drain while parked' });
+    const trend = chartCard('Drain rate trend');
+    const daily = chartCard('Daily drain while parked');
+    expect(within(trend).getByRole('group', { name: 'Daily vampire drain rate over parked sessions' })).toBeInTheDocument();
+    expect(within(daily).getByRole('group', { name: 'Daily battery loss and parked hours' })).toBeInTheDocument();
     expect(within(trend).getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
     expect(within(daily).getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
-    expect(within(trend).getByRole('heading', { name: 'Drain rate trend' })).toBeInTheDocument();
-    expect(within(daily).getByRole('heading', { name: 'Daily drain while parked' })).toBeInTheDocument();
+    expect(within(trend).getByText('Drain rate trend', { selector: '[data-card-title]' })).toBeInTheDocument();
+    expect(within(daily).getByText('Daily drain while parked', { selector: '[data-card-title]' })).toBeInTheDocument();
+    expect(within(trend).getByRole('figure', { name: 'Drain rate trend' })).toBeInTheDocument();
+    expect(within(daily).getByRole('figure', { name: 'Daily drain while parked' })).toBeInTheDocument();
   });
 
   it('keeps cached stats, charts and table visible after a failed refresh with source-specific recovery', async () => {
@@ -146,7 +164,9 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh vampire drain' }));
     await screen.findByRole('button', { name: 'Retry Vampire-drain statistics' });
     expect(screen.getByRole('table', { name: 'Drain sessions' })).toBeInTheDocument();
-    expect(screen.getByRole('figure', { name: 'Drain rate trend' })).toBeInTheDocument();
+    expect(within(chartCard('Drain rate trend')).getByRole('group', {
+      name: 'Daily vampire drain rate over parked sessions',
+    })).toBeInTheDocument();
     const summary = screen.getByRole('region', { name: 'Drain summary' });
     expect(within(summary).getByText('2.34')).toBeInTheDocument();
     expect(screen.queryByText(/private server stack/)).not.toBeInTheDocument();
@@ -212,8 +232,8 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     await screen.findByRole('table', { name: 'Drain sessions' });
     const summary = screen.getByRole('region', { name: 'Drain summary' });
     const observed = within(summary).getByText('Observed hours');
-    const tile = observed.closest('[data-stat]');
-    expect(tile?.querySelector('[data-stat-context]')).toHaveTextContent('1 sessions');
+    const tile = observed.closest('[data-operational-metric]');
+    expect(tile?.querySelector('[data-battery-detail-context]')).toHaveTextContent('1 sessions');
     fireEvent.focus(observed);
     const tooltip = within(observed.parentElement as HTMLElement).getByRole('tooltip');
     expect(tooltip).toHaveTextContent('Total parked, non-charging hours sampled for the drain statistics.');

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Activity, MapPin, Plug, Zap } from 'lucide-react';
-import { StatStrip, type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { Badge, Text } from '@/components/ui';
 import type { DataState } from '@/api/dataState';
 import type { ChargerHealthSummary } from '../../lib/chargerHealth';
@@ -86,7 +87,7 @@ export function ChargerHealthStats({ summary, state, loading }: ChargerHealthSta
       </span>,
     },
   ];
-  return <StatStrip
+  return <ChargingSummaryBrief
     id="charger-health-metrics"
     title={t('chargerHealth.kpis', 'Charger health metrics')}
     metrics={metrics}

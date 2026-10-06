@@ -23,7 +23,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import {
   usePressurePageLatest, usePressurePageHistory, type TirePressureReading,
 } from '@/api/hooks/usePressurePage';
-import { AITirePressureTrendReasoning } from '@/components/ai/AITirePressureTrendReasoning';
+import { AITirePressureTrendReasoning } from '@/components/ai';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */

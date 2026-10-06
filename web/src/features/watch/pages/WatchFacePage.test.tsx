@@ -46,8 +46,21 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 const hooks = vi.hoisted(() => ({
-  summary: { data: undefined as unknown, isLoading: false, error: null as unknown },
+  summary: { data: undefined, isLoading: false, error: null } as {
+    data: unknown
+    isLoading: boolean
+    error: unknown
+    refetch?: () => unknown
+  },
   command: { mutate: vi.fn(), isPending: false },
+  operational: {
+    mode: 'live' as 'live' | 'cached' | 'as_of',
+    label: 'Live',
+    description: 'Live vehicle data',
+    canWrite: true,
+    isReadOnly: false,
+    writeBlockReason: null as string | null,
+  },
   unitPrefs: { distance: 'km', temperature: '°C' } as {
     distance: 'km' | 'mi' | 'ft'
     temperature: '°C' | '°F'
@@ -61,6 +74,10 @@ vi.mock('@/api/hooks/useWatch', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: hooks.unitPrefs }),
+}))
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => hooks.operational,
 }))
 
 vi.mock('react-i18next', async () => {
@@ -127,6 +144,10 @@ beforeEach(() => {
   hooks.summary = { data: undefined, isLoading: false, error: null }
   hooks.command = { mutate: vi.fn(), isPending: false }
   hooks.unitPrefs = { distance: 'km', temperature: '°C' }
+  hooks.operational = {
+    mode: 'live', label: 'Live', description: 'Live vehicle data',
+    canWrite: true, isReadOnly: false, writeBlockReason: null,
+  }
 })
 
 afterEach(() => {
@@ -291,6 +312,56 @@ describe('WatchFacePage', () => {
     expect(screen.getByRole('img', { name: 'Battery Unknown; range —' })).toBeInTheDocument()
     expect(document.body.textContent).not.toContain('NaN')
   })
+
+  it('keeps summary, gauge and controls during a failed refresh and dispatches only the selected vehicle command', () => {
+    hooks.summary = { data: makeSummary(), isLoading: false, error: new Error('refresh failed') }
+    renderPage('/watch?vehicle_id=9')
+    expect(screen.getByText('Cached')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Battery 72%; range 300 km' })).toBeInTheDocument()
+    expect(screen.getByText('My Model 3')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock vehicle' }))
+    expect(hooks.command.mutate).toHaveBeenCalledWith({ vehicleId: 9, command: 'unlock' })
+  })
+
+  it('retains read-only status and command disablement without replacing the wearable face', () => {
+    hooks.operational = {
+      mode: 'cached', label: 'Cached', description: 'Cached vehicle data',
+      canWrite: false, isReadOnly: true, writeBlockReason: 'Live mode is required',
+    }
+    hooks.summary = { data: makeSummary(), isLoading: false, error: null }
+    renderPage('/watch?vehicle_id=7')
+    expect(screen.getByText('72%')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Cached vehicle data' })).toBeInTheDocument()
+    const unlock = screen.getByRole('button', { name: 'Unlock vehicle' })
+    expect(unlock).toBeDisabled()
+    expect(unlock).toHaveAttribute('title', 'Live mode is required')
+    fireEvent.click(unlock)
+    fireEvent.click(screen.getByRole('button', { name: 'Turn climate on' }))
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('offers read-only summary recovery after initial failure without sending any vehicle command', () => {
+    const refetch = vi.fn()
+    hooks.summary = { data: undefined, isLoading: false, error: new Error('watch unavailable'), refetch }
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('distinguishes missing charging time from a measured zero without changing measured rounding', () => {
+    hooks.summary = {
+      data: { ...makeSummary({ is_charging: true }), time_to_full: null },
+      isLoading: false, error: null,
+    }
+    const { unmount } = renderPage()
+    expect(screen.getByText('Time to full unknown')).toBeInTheDocument()
+    expect(screen.queryByText('0m to full')).not.toBeInTheDocument()
+    unmount()
+    hooks.summary = { data: makeSummary({ is_charging: true, time_to_full: 0 }), isLoading: false, error: null }
+    renderPage()
+    expect(screen.getByText('0m to full')).toBeInTheDocument()
+  })
 })
 
 describe('BatteryGauge', () => {
@@ -445,5 +516,19 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime(ago(5 * 60 * 1000))).toBe('5m ago')
     expect(formatRelativeTime(ago(3 * 60 * 60 * 1000))).toBe('3h ago')
     expect(formatRelativeTime(ago(2 * 24 * 60 * 60 * 1000))).toBe('2d ago')
+  })
+
+  it('localizes the existing relative-time buckets without changing their counts', () => {
+    const translate = vi.fn((key: string, _fallback: string, count?: number) => `${key}:${count ?? ''}`)
+    expect(formatRelativeTime(new Date().toISOString(), translate)).toBe('watch.updated.justNow:')
+    expect(formatRelativeTime(new Date(Date.now() - 5 * 60_000).toISOString(), translate))
+      .toBe('watch.updated.minutesAgo:5')
+    expect(formatRelativeTime(new Date(Date.now() - 3 * 3600_000).toISOString(), translate))
+      .toBe('watch.updated.hoursAgo:3')
+    expect(formatRelativeTime(new Date(Date.now() - 2 * 86400_000).toISOString(), translate))
+      .toBe('watch.updated.daysAgo:2')
+    translate.mockClear()
+    expect(formatRelativeTime('not-a-date', translate)).toBe('')
+    expect(translate).not.toHaveBeenCalled()
   })
 })

@@ -2,11 +2,10 @@ import { Fingerprint } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
+import { LayoutCard } from '@/components/layout';
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
   Table,
   Text,
 } from '@/components/ui';
@@ -33,11 +32,10 @@ export function ArchetypeProfiles({
 
   return (
     <section data-testid="drive-archetypes-profiles">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <Fingerprint className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('archetypes.profiles.title', 'Detailed archetype profiles')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('archetypes.profiles.title', 'Detailed archetype profiles')}
+        actions={<Fingerprint className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'archetypes.profiles.subtitle',
@@ -126,7 +124,7 @@ export function ArchetypeProfiles({
             })}
           </ul>
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

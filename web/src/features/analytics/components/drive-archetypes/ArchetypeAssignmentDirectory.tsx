@@ -1,11 +1,10 @@
 import { MapPin, Route } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { LayoutCard } from '@/components/layout';
 
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
   Table,
   Text,
 } from '@/components/ui';
@@ -33,31 +32,25 @@ export function ArchetypeAssignmentDirectory({
 
   return (
     <section data-testid="drive-archetypes-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <PanelTitle className="flex items-center gap-2">
-              <Route className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-              {t('archetypes.directory.title', 'Representative and recent assignment directory')}
-            </PanelTitle>
-            <Text as="p" variant="caption" className="mt-1">
-              {t(
-                'archetypes.directory.subtitle',
-                'Newest-first eligible assignments, capped for display without changing assignment totals.',
-              )}
-            </Text>
-          </div>
-          <Badge variant="info">
-            {t(
-              'archetypes.directory.badge',
-              '{{displayed}} of {{total}} shown',
-              {
-                displayed: fmtInt(summary.directory.displayed),
-                total: fmtInt(summary.directory.total),
-              },
-            )}
-          </Badge>
-        </div>
+      <LayoutCard
+        title={t('archetypes.directory.title', 'Representative and recent assignment directory')}
+        actions={(
+          <>
+            <Route className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <Badge variant="info">
+              {state.isResolved && !state.error
+                ? t('archetypes.directory.badge', '{{displayed}} of {{total}} shown', {
+                  displayed: fmtInt(summary.directory.displayed),
+                  total: fmtInt(summary.directory.total),
+                })
+                : t('archetypes.kpis.awaiting', 'Awaiting drive evidence')}
+            </Badge>
+          </>
+        )}
+      >
+        <Text as="p" variant="caption" className="mt-1">
+          {t('archetypes.directory.subtitle', 'Newest-first eligible assignments, capped for display without changing assignment totals.')}
+        </Text>
         <ArchetypeSectionBody summary={summary} state={state} requirement="directory">
           <ul className="space-y-3">
             {items.map((assignment) => {
@@ -153,7 +146,7 @@ export function ArchetypeAssignmentDirectory({
             </Text>
           )}
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

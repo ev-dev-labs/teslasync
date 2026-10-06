@@ -51,7 +51,7 @@
  * `fireEvent` — the established convention across the sibling widget tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { VehicleDriver, VehicleInvitation } from '@/api/types';
@@ -93,6 +93,35 @@ vi.mock('react-i18next', async () => {
 });
 
 describe('VehicleAccessWidget independent source trust', () => {
+  it('keeps complete drivers and disabled mobile evidence while invitations load independently', () => {
+    const name = 'Authorized driver with a full unabridged and localized long display name';
+    setDrivers({ data: [makeDriver({ driver_name: name })] });
+    setInvitations({ data: undefined, isLoading: true });
+    setMobile({ data: makeMobileEnvelope(false) });
+    const { container } = renderWidget(FULL);
+    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(screen.getByText('Disabled')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Authorized drivers' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pending invitations' })).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(screen.queryByText('No pending invitations')).not.toBeInTheDocument();
+  });
+
+  it('retries the failed invitation source without repeating independent driver or mobile reads', () => {
+    const drivers = setDrivers({ data: [makeDriver()] });
+    const invitations = setInvitations({ isError: true });
+    const mobile = setMobile({ data: makeMobileEnvelope(true) });
+    renderWidget(FULL);
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Enabled')).toBeInTheDocument();
+    const failure = screen.getByText('Unable to load pending invitations').closest('[role="alert"]');
+    expect(failure).not.toBeNull();
+    fireEvent.click(within(failure as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(invitations.refetch).toHaveBeenCalledOnce();
+    expect(drivers.refetch).not.toHaveBeenCalled();
+    expect(mobile.refetch).not.toHaveBeenCalled();
+  });
+
   it('does not turn missing drivers into zero authorized drivers in compact mode', () => {
     setDrivers({ data: undefined, isError: true });
     setMobile({ data: makeMobileEnvelope(false) });

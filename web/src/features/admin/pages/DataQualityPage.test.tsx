@@ -85,10 +85,10 @@ vi.mock('@/api/hooks/useOperatorConfidence', async () => {
 
 // Stub ONLY the three data sections; keep the real helpers so the page's own
 // derivation logic still runs.
-vi.mock('../components/data-quality', async () => {
+vi.mock('../components/continuation-admin-2/dataQuality', async () => {
   const actual = await vi.importActual<
-    typeof import('../components/data-quality')
-  >('../components/data-quality');
+    typeof import('../components/continuation-admin-2/dataQuality')
+  >('../components/continuation-admin-2/dataQuality');
   const React = await vi.importActual<typeof import('react')>('react');
   const makeStub = (name: string, testid: string) =>
     function Stub(props: Record<string, unknown>) {
@@ -245,6 +245,10 @@ describe('DataQualityPage', () => {
     expect(captured.versions.normalization).toBe(SNAPSHOT.normalization);
     expect(captured.fields.fields).toBe(SNAPSHOT.fields);
     expect(captured.kpis.windowMins).toBe(60);
+    expect(captured.kpis.windowStart).toBe(SNAPSHOT.window_start);
+    expect(captured.kpis.windowEnd).toBe(SNAPSHOT.window_end);
+    expect(captured.kpis.retained).toBe(false);
+    expect(captured.kpis.sourceStatus).toBe('ok');
     expect(captured.kpis.error).toBeNull();
   });
 
@@ -288,6 +292,7 @@ describe('DataQualityPage', () => {
     expect(captured.kpis.error).toBeNull();
     expect(captured.versions.error).toBeNull();
     expect(captured.fields.error).toBeNull();
+    expect(captured.kpis.sourceStatus).toBe('initialFailure');
     // Panels remain mounted behind the notice.
     expect(screen.getByTestId('stub-fields')).toBeInTheDocument();
   });
@@ -327,5 +332,21 @@ describe('DataQualityPage', () => {
     (captured.versions.onRetry as () => void)();
     (captured.fields.onRetry as () => void)();
     expect(query.refetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('retains all three section payloads after a failed refresh, including a 503', () => {
+    useDataQualityMock.mockReturnValue(makeQuery({
+      data: SNAPSHOT, error: new ApiError('temporarily unavailable', 503), isError: true,
+    }));
+    renderPage();
+    expect(captured.kpis.normalization).toBe(SNAPSHOT.normalization);
+    expect(captured.versions.normalization).toBe(SNAPSHOT.normalization);
+    expect(captured.fields.fields).toBe(SNAPSHOT.fields);
+    expect(captured.kpis.hasSnapshot).toBe(true);
+    expect(captured.kpis.retained).toBe(true);
+    expect(captured.kpis.error).toBeNull();
+    expect(captured.versions.error).toBeNull();
+    expect(captured.fields.error).toBeNull();
+    expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
   });
 });

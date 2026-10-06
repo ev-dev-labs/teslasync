@@ -18,7 +18,8 @@ import { useSettings } from '@/api/hooks/useSettings'
 import { useFont } from '@/components/ui/FontProvider'
 import { PageLayout } from '@/components/layout'
 import { Button, SectionTitle, Text } from '@/components/ui'
-import { StatCard } from '@/components/data-display'
+import type { StatMetric } from '@/components/data-display'
+import { SettingsSummaryBrief } from '../components/operationalbrief-all/SettingsSummaryBrief'
 import { FadeIn } from '@/components/motion'
 import { DataStateNotice, EditConflictBanner, QueryError } from '@/components/feedback'
 import { deriveDataState } from '@/api/dataState'
@@ -63,15 +64,17 @@ const LANGUAGE_LABELS: Record<string, string> = {
 interface OverviewCard {
   icon: ReactNode
   label: string
-  value: string
+  value: string | number | null | undefined
   sublabel?: string
+  metricId?: StatMetric['metricId']
+  display?: StatMetric['display']
 }
 
 /**
  * Coalesce a unit string to an em-dash when it is null, undefined, or blank.
  * The KPI band must never render an empty value cell — an absent/blank unit
  * shows "—" exactly like the loading / no-settings placeholder instead of a
- * visually empty StatCard.
+ * visually empty summary value.
  */
 function orDash(value: string | null | undefined): string {
   return value && value.trim() !== '' ? value : '—'
@@ -184,7 +187,9 @@ export default function SettingsPage() {
       {
         icon: <Zap className="h-5 w-5" aria-hidden="true" />,
         label: t('overview.energyCost', 'Energy cost'),
-        value: settings ? `${currencySymbol}${fmtNumber((settings.base_cost_per_kwh ?? 0))}` : '—',
+        value: settings?.base_cost_per_kwh,
+        metricId: 'rate',
+        display: { formatter: raw => ({ value: `${currencySymbol}${fmtNumber(raw)}`, unit: '' }) },
         sublabel: t('overview.perKwh', 'per kWh'),
       },
       {
@@ -195,6 +200,14 @@ export default function SettingsPage() {
       },
     ]
   }, [settings, fontPrefs, t, displayPrecision, displayLocale, fmtNumber])
+  const overviewMetrics: readonly StatMetric[] = overviewCards.map((card, index) => ({
+    metricId: card.metricId ?? 'text',
+    occurrenceId: `settings-preference-${index}`,
+    label: card.label,
+    rawValue: card.value === '—' ? null : card.value,
+    display: card.display,
+    context: <>{card.icon}{card.sublabel}</>,
+  }))
 
   return (
     <PageLayout
@@ -224,19 +237,14 @@ export default function SettingsPage() {
               <FadeIn>
                 <section
                   aria-label={t('overview.aria', 'Current preferences overview')}
-                  className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3"
                 >
-                  {overviewCards.map((card) => (
-                    <StatCard
-                      key={card.label}
-                      className="min-w-0 [overflow-wrap:anywhere]"
-                      label={card.label}
-                      value={card.value}
-                      sublabel={card.sublabel}
-                      icon={card.icon}
-                      loading={isLoading}
-                    />
-                  ))}
+                  <SettingsSummaryBrief title={t('overview.brief.title', 'Preferences at a glance')}
+                    description={t('overview.brief.description', 'Current measurement, language, currency, comparison-cost and typography preferences. These are configuration choices, not vehicle measurements.')}
+                    source={t('overview.brief.source', 'Saved settings and browser font preferences')}
+                    scope={t('overview.brief.scope', 'Latest saved configuration · browser typography has an independent local source')}
+                    metrics={overviewMetrics} loading={isLoading && !settings}
+                    unavailable={!settings && !isLoading} retained={settingsState.status === 'stale'}
+                    testId="settings-preferences-summary" />
                 </section>
               </FadeIn>
 

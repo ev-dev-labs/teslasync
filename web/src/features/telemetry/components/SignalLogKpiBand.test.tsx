@@ -2,24 +2,24 @@
  * SignalLogKpiBand — behaviour + hardening coverage.
  *
  * The band is a pure presenter: it receives the already-derived
- * `SignalLogSummary` and renders a six-tile MetricCard grid. It owns three
+ * `SignalLogSummary` and renders the actual six-metric OperationalBrief. Three
  * facets worth pinning:
- *   - the LOADING guard (`loading && totalRecords === 0`) → six skeletons and
- *     no metric copy; a refetch that already has rows keeps showing the data;
- *   - the six honest-zero placeholders before a query runs, plus locale-grouped
+ *   - initial loading exposes aria-busy without fabricated measured values;
+ *     a refetch that already has rows keeps showing the data;
+ *   - unknown values before a query runs, distinct from successful empty
+ *     results, plus locale-grouped
  *     `fmtInt` values, the "{{count}} with data" subtitle interpolation, and the
- *     accessible region / decorative-icon contract;
+ *     accessible region / metric-marker contract;
  *   - the private `formatSpan` helper, exercised end-to-end through the rendered
  *     "Time Span" tile across every unit boundary (seconds → days) and its
  *     defensive branches (null, reversed, unparseable).
  *
  * A hardening facet is also covered: a caller that passes `undefined` for the
  * summary (an async boundary before `summarizeSignalLog` runs) must degrade to
- * the zero grid rather than crash on `summary.totalRecords`.
+ * missing measurements rather than crash on `summary.totalRecords`.
  *
- * The real shared components (MetricCard, Skeleton, FadeIn) are kept so the
- * accessible DOM — the labelled <section> region, the value paragraphs, the
- * aria-hidden lucide icons — is exercised for real. No network is involved; the
+ * The real shared bridge and OperationalBrief are kept so the accessible DOM
+ * and raw value states are exercised for real. No network is involved; the
  * band takes its data purely via props. `react-i18next` is stubbed to the
  * English fallback with {{placeholder}} interpolation so visible copy is
  * asserted directly.
@@ -27,6 +27,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import './operationalbrief-all/metricPreferencesTestSetup';
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion via <FadeIn>).
 if (!window.matchMedia) {
@@ -105,8 +106,8 @@ const LABELS = [
  * `<p>`, so the value is the label paragraph's next sibling.
  */
 function metricValue(label: string): string {
-  const labelP = screen.getByText(label).closest('p');
-  return labelP?.nextElementSibling?.textContent ?? '';
+  return screen.getByText(label).closest('[data-operational-metric]')
+    ?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 /** ISO string `seconds` after a fixed epoch base. */
@@ -125,15 +126,17 @@ describe('SignalLogKpiBand', () => {
     expect(metricValue('Signals')).toBe('3');
     expect(screen.queryByText('0 with data')).toBeNull();
   });
-  it('renders six skeletons and no metric copy while the first batch loads', () => {
+  it('renders six loading cells without leaking measured values while the first batch loads', () => {
     const { container } = render(<SignalLogKpiBand summary={makeSummary()} loading />);
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(screen.getByTestId('signal-log-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     // The labelled region is still announced during loading…
     expect(screen.getByRole('region', { name: 'Query summary' })).toBeInTheDocument();
     // …but none of the metric tiles have rendered yet.
-    expect(screen.queryByText('Total records')).not.toBeInTheDocument();
-    expect(screen.queryByText('Time span')).not.toBeInTheDocument();
+    expect(screen.getByText('Total records')).toBeInTheDocument();
+    expect(screen.getByText('Time span')).toBeInTheDocument();
   });
 
   it('keeps showing data (not skeletons) when a refetch loads over existing rows', () => {
@@ -192,11 +195,12 @@ describe('SignalLogKpiBand', () => {
 
     expect(screen.getByRole('region', { name: 'Query summary' })).toBeInTheDocument();
     // Six lucide icons, one per tile, all hidden from the a11y tree.
-    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1);
   });
 
   // ── Hardening: a missing summary must never crash the band ──────────
-  it('degrades to the zero grid when summary is undefined instead of crashing', () => {
+  it('degrades to unknown source values when summary is undefined instead of crashing', () => {
     render(
       <SignalLogKpiBand
         summary={undefined as unknown as SignalLogSummary}
@@ -204,9 +208,9 @@ describe('SignalLogKpiBand', () => {
     );
 
     expect(screen.getByText('Total records')).toBeInTheDocument();
-    expect(metricValue('Total records')).toBe('0');
+    expect(metricValue('Total records')).toBe('—');
     expect(metricValue('Time span')).toBe('—');
-    expect(screen.getByText('0 with data')).toBeInTheDocument();
+    expect(screen.queryByText('0 with data')).toBeNull();
   });
 
   it('still renders skeletons (no crash) when summary is undefined while loading', () => {
@@ -214,8 +218,10 @@ describe('SignalLogKpiBand', () => {
       <SignalLogKpiBand summary={undefined as unknown as SignalLogSummary} loading />,
     );
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
-    expect(screen.queryByText('Total records')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(screen.getByTestId('signal-log-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(screen.getByText('Total records')).toBeInTheDocument();
   });
 
   // ── formatSpan: exercised through the rendered "Time Span" tile ─────

@@ -45,11 +45,11 @@ import {
 } from '@/lib/cookieConsent'
 
 import {
-  PrivacyKpiCards,
   RecentPagesPanel,
   ConsentControlPanel,
   PrivacyGuaranteesPanel,
 } from '../components/privacy'
+import { PrivacyOperationalBrief } from '../components/statstrip-privacy/PrivacyOperationalBrief'
 
 /** Stable id for the "Don't ask again" opt-out on the clear-history dialog. */
 const CONFIRM_SILENCE_KEY = 'clear-recent-pages'
@@ -67,6 +67,7 @@ export default function PrivacyPage() {
   const versionQuery = useVersionInfo()
   const policyState = deriveDataState(versionQuery)
   const { refetch: refetchVersion } = versionQuery
+  const policyKnown = typeof versionQuery.data?.require_cookie_consent === 'boolean'
   const requireConsent = Boolean(versionQuery.data?.require_cookie_consent)
 
   // Single stable retry shared by the KPI band and the consent panel — both
@@ -126,13 +127,13 @@ export default function PrivacyPage() {
       {policyState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       <div className="space-y-6" data-testid="privacy-section">
         <FadeIn>
-          <PrivacyKpiCards
+          <PrivacyOperationalBrief
             recentCount={count}
             consent={consent}
-            requireConsent={requireConsent}
-            isLoading={policyState.status === 'initial'}
-            isError={policyState.fatalError != null}
-            error={policyState.fatalError}
+            requireConsent={policyKnown ? requireConsent : null}
+            policyLoading={policyState.status === 'initial'}
+            policyError={policyState.fatalError}
+            retained={policyState.status === 'stale'}
             onRetry={handleRetry}
           />
         </FadeIn>
@@ -147,7 +148,7 @@ export default function PrivacyPage() {
               consent={consent}
               requireConsent={requireConsent}
               isLoading={policyState.status === 'initial'}
-              isError={policyState.fatalError != null}
+              isError={policyState.fatalError != null || (policyState.status !== 'initial' && !policyKnown)}
               onRetry={handleRetry}
               onAccept={handleAcceptConsent}
               onDecline={handleDeclineConsent}

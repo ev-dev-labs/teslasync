@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useSignalEvidenceBundle } from '@/api/hooks/useTelemetry';
+import { useSignalEvidenceBundle, type SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
 import { resolveClipEpochMs, alignSignalHistoryToClip, type ReconstructionResult } from '../lib/timelineAlignment';
 import type { ClipRecord, DashcamSettings } from '../lib/types';
 
@@ -11,6 +11,8 @@ export interface UseReconstructionResult {
   reconstruction: ReconstructionResult | null;
   /** Alignment is computed before requests resolve; a received signal response is the retained-source boundary. */
   hasRetainedHistory: boolean;
+  /** Complete normalized identities and their original historical trust/recovery state. */
+  sources: SignalEvidenceBundleSource[];
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
@@ -67,6 +69,7 @@ export function useReconstruction(
     lookbackHours,
     reconstruction,
     hasRetainedHistory: bundle.data.length > 0,
+    sources: bundle.sources,
     isLoading: bundle.isLoading,
     isError: bundle.isError,
     error: bundle.error,

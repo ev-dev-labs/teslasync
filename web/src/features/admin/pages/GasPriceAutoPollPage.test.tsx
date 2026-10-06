@@ -165,7 +165,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  return render(
+  const rendered = render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -174,6 +174,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...rendered, qc }
 }
 
 const statusCallCount = () =>
@@ -185,7 +186,38 @@ beforeEach(() => {
   mockedRequest.mockReset()
 })
 
+describe('GasPriceAutoPollPage retained sources', () => {
+  it('keeps status, configuration, history and trend after both feeds fail to refresh', async () => {
+    install()
+    const { qc } = renderPage()
+    await screen.findByText('Configuration')
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeInTheDocument())
+    install({ statusError: true, historyError: true })
+    await qc.invalidateQueries()
+    await waitFor(() => expect(qc.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
+    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: 'Price trend' }).filter(heading => heading.hasAttribute('data-card-title'))).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Poll now' })).toBeEnabled()
+  })
+})
+
 describe('GasPriceAutoPollPage — full render', () => {
+  it('uses a real price brief retaining source denominations, help and polling controls', async () => {
+    install()
+    renderPage()
+    const summary = screen.getByTestId('gas-price-summary')
+    await within(summary).findByText('Running')
+    expect(summary).toHaveAttribute('data-operational-brief')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
+    expect(summary).toHaveTextContent('per gal')
+    expect(summary).toHaveTextContent('per kWh')
+    expect(summary).toHaveTextContent('Gasoline cost expressed as an equivalent price')
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('history chart is a separate source')
+    expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
+  })
+
   it('renders the header, poll action, and all four sections from live data', async () => {
     install()
     renderPage()

@@ -18,22 +18,20 @@ import {
   Activity,
   BatteryCharging,
   Bell,
-  Building2,
   Car,
   Clock,
   Eye,
   Hash,
   MapPin,
-  Navigation,
   Route,
-  Trophy,
   Wrench,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { Button, GlassPanel, Pagination, Text } from '@/components/ui';
-import { EntityPreviewDrawer, MetricCard } from '@/components/data-display';
+import { EntityPreviewDrawer } from '@/components/data-display';
+import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
@@ -49,7 +47,7 @@ import { formatDate } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { request } from '@/api/client';
-import { AIAutoNameUnnamedLocations } from '@/components/ai/AIAutoNameUnnamedLocations';
+import { AIAutoNameUnnamedLocations } from '@/components/ai';
 import { LocationLeaderboardPanel, type LeaderboardDatum } from '../components/LocationLeaderboardPanel';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -207,6 +205,16 @@ export default function LocationsPage() {
 
   const shownCount = locations?.length ?? 0;
   const hasLocations = shownCount > 0;
+  const briefScope = t('locations.brief.scope', 'Selected vehicle · {{from}} to {{to}} (exclusive) · loaded page {{page}}, up to {{limit}} places; not server-wide totals.', { from: startInstant, to: endInstantExclusive, page, limit: pageSize });
+  const durationDisplay = { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) };
+  const briefMetrics = [
+    { metricId: 'count', occurrenceId: 'locations-places', rawValue: source.hasData ? uniquePlaces : null, label: t('locations.uniquePlaces', 'Unique places'), description: briefScope },
+    { metricId: 'count', occurrenceId: 'locations-cities', rawValue: source.hasData ? uniqueCities : null, label: t('locations.uniqueCities', 'Unique cities'), description: t('locations.brief.cities', 'Distinct final address segments on the loaded page; unnamed and coordinate-only labels excluded.') },
+    { metricId: 'count', occurrenceId: 'locations-visits', rawValue: source.hasData ? totalVisits : null, label: t('locations.totalVisits', 'Total visits'), description: briefScope },
+    { metricId: 'duration', occurrenceId: 'locations-time', rawValue: source.hasData ? totalTime : null, label: t('locations.totalTime', 'Total time'), description: briefScope, display: durationDisplay },
+    { metricId: 'text', occurrenceId: 'locations-top', rawValue: topLocation?.address_name, label: t('locations.mostVisited', 'Most visited'), description: t('locations.brief.top', 'First returned location in the visit-ranked loaded page; search does not recalculate the summary.') },
+    { metricId: 'duration', occurrenceId: 'locations-average', rawValue: source.hasData ? avgDurationS : null, label: t('locations.avgVisit', 'Avg visit'), description: t('locations.brief.average', 'Loaded-page total duration divided by loaded-page visits; zero when the successful page contains no visits.'), display: durationDisplay },
+  ] as const;
 
 
   return (
@@ -218,29 +226,15 @@ export default function LocationsPage() {
     >
       {/* ── 1. KPI band ───────────────────────────────────────────── */}
       <FadeIn>
-        <section
-          aria-label={t('locations.kpis', 'Location summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6"
-        >
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))
-          ) : isError ? (
-            <div className="col-span-full">
-              <QueryError error={error} onRetry={() => refetch()} />
-            </div>
-          ) : (
-            <>
-              <MetricCard label={t('locations.uniquePlaces', 'Unique places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
-              <MetricCard label={t('locations.uniqueCities', 'Unique cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
-              <MetricCard label={t('locations.totalVisits', 'Total visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
-              <MetricCard label={t('locations.totalTime', 'Total time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
-              <MetricCard label={t('locations.mostVisited', 'Most visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
-              <MetricCard label={t('locations.avgVisit', 'Avg visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
-            </>
-          )}
-        </section>
+        <MapsOperationalBrief
+          title={t('locations.kpis', 'Location summary')}
+          description={t('locations.brief.description', 'Visit frequency and dwell time describe the returned page, while the leaderboards and place actions remain below.')}
+          scope={briefScope}
+          metrics={briefMetrics}
+          sources={[{ label: t('locations.title', 'Visited locations'), state: source }]}
+          loading={isLoading}
+          onRetry={isError ? () => void refetch() : undefined}
+        />
       </FadeIn>
 
       {/* ── 2. Charts bento — leaderboards side-by-side on wide screens ─ */}

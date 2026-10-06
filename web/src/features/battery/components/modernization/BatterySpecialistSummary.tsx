@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
-import { StatStrip } from '@/components/data-display/stat-reference';
+import type { MetricId, MetricRaw } from '@/lib/metric-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 
 export interface BatterySummaryMetric {
   key: string;
   label: string;
   value: string;
+  rawValue: MetricRaw;
+  metricId: MetricId;
   icon?: ReactNode;
 }
 
@@ -18,26 +21,25 @@ export interface BatterySpecialistSummaryProps {
   testId: string;
 }
 
-/** These are specialist display overrides, not new numeric calculations.
- * Cost denominators, lower bounds, mixed business periods, missing measurements,
- * battery age and BMS status cannot be reinterpreted by a generic formatter.
- * Typed text preserves the authoritative page formatter and occurrence identity. */
+/** Preserve proven source displays while validating the raw numerical input. */
 export function BatterySpecialistSummary({
   metrics, title, period, loading, retained, testId,
 }: BatterySpecialistSummaryProps) {
   return (
-    <section aria-label={title} className="min-w-0 w-full">
-    <StatStrip
+    <section className="min-w-0 w-full">
+    <BatteryEvidenceBrief
       title={title}
       period={period}
       loading={loading}
       retained={retained}
-      testId={testId}
+      id={testId}
       metrics={metrics.map(metric => ({
-        metricId: 'text',
+        metricId: metric.metricId,
         occurrenceId: metric.key,
-        rawValue: metric.value,
+        rawValue: metric.rawValue,
         label: metric.label,
+        display: metric.metricId === 'status' || metric.metricId === 'text'
+          ? undefined : { formatter: () => ({ value: metric.value, unit: '' }) },
         context: metric.icon && <span aria-hidden="true">{metric.icon}</span>,
       }))}
     />

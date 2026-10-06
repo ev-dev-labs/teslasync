@@ -13,15 +13,21 @@ export function ClimateSourceBoundary<T>({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const retained = state.refreshError != null || (state.hasData && state.isRefreshBlocked);
+  const retainedReason = state.refreshError
+    ? getErrorMessage(state.refreshError)
+    : state.isRefreshBlocked
+      ? t('dataState.refreshBlocked.message', 'The device is offline, so this section is showing the last values it received.')
+      : null;
   return (
     <div className="min-w-0 space-y-3" data-climate-source={label}>
       <SourceContent
-        state={state.fatalError ? 'error' : state.refreshError ? 'retained' : 'ready'}
+        state={state.fatalError ? 'error' : retained ? 'retained' : 'ready'}
         label={label}
         error={state.fatalError}
         errorMessage={`${t('climate.page.loadFailed', 'Failed to load climate data')}: ${label}`}
         emptyMessage={label}
-        retainedMessage={`${t('developerReference.stats.state.retained', 'Showing retained measurements')} · ${label}: ${getErrorMessage(state.refreshError)}`}
+        retainedMessage={`${t('developerReference.stats.state.retained', 'Showing retained measurements')} · ${label}${retainedReason ? `: ${retainedReason}` : ''}`}
         errorRecovery={{ onRetry: state.retry ?? undefined, resourceName: label }}
       >
         {children}

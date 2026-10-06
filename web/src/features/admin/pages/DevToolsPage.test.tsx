@@ -33,6 +33,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>()
+  const { summaryTestPreferences } = await import('../components/operationalbrief-a-g/summaryTestPreferences')
+  return { ...actual, useSettings: summaryTestPreferences }
+})
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
@@ -190,6 +195,20 @@ beforeEach(() => {
 })
 
 describe('DevToolsPage', () => {
+  it('separates independent live metrics from bundled catalog counts in actual reviewable briefs', async () => {
+    installResolved(makeErrorVins(2), makeVehicles(9))
+    renderPage()
+    const live = screen.getByTestId('devtools-live-summary')
+    await within(live).findByText('9')
+    const catalog = screen.getByTestId('devtools-catalog-summary')
+    expect(live.querySelectorAll('[data-operational-metric]')).toHaveLength(2)
+    expect(catalog.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3)
+    expect(catalog).toHaveTextContent('not measured live coverage')
+    fireEvent.click(within(live).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('independent vehicle inventory')
+    expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
+  })
+
   it('renders truthful live KPI counts and mounts the default Fleet API section', async () => {
     installResolved(makeErrorVins(2), makeVehicles(3))
     renderPage()
@@ -230,10 +249,10 @@ describe('DevToolsPage', () => {
 
     renderPage()
 
-    // Both live KPIs are unknown → exactly two em-dash placeholders.
-    await waitFor(() =>
-      expect(within(overviewRegion()).getAllByText('—')).toHaveLength(2),
-    )
+    expect(screen.getByTestId('devtools-live-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('devtools-live-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(2)
+    expect(screen.getByTestId('devtools-live-summary').querySelector('[data-operational-value]')).toBeNull()
+    expect(screen.getByTestId('devtools-catalog-summary').querySelectorAll('[data-operational-value]')).toHaveLength(3)
     // The toolbar button reflects the in-flight fetch.
     expect(refreshButton()).toHaveAttribute('aria-busy', 'true')
 

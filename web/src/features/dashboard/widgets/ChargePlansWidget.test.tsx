@@ -27,7 +27,7 @@
  *     disabled (undefined id) query when no vehicle exists.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { ChargePlan, RatePlanInfo } from '@/types/charging';
 
@@ -185,6 +185,38 @@ beforeEach(() => {
 });
 
 describe('ChargePlansWidget shared data trust', () => {
+  it('keeps complete plan details when rate discovery fails and retries that source alone', () => {
+    const plansRetry = vi.fn();
+    const ratesRetry = vi.fn();
+    setup({
+      plans: makeQuery({ data: [makePlan()], refetch: plansRetry }),
+      rates: makeQuery({ isError: true, error: new Error('rates failed'), refetch: ratesRetry }),
+    });
+    render(<MemoryRouter><ChargePlansWidget vehicleId={42} size={{ cols: 4, rows: 4 }} /></MemoryRouter>);
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    expect(screen.getByText('42.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('2026-06-01 06:30')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Rate plans' })).toBeInTheDocument();
+    const failure = screen.getByText('Unable to load rate plans').closest('[role="alert"]');
+    expect(failure).not.toBeNull();
+    fireEvent.click(within(failure as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(ratesRetry).toHaveBeenCalledOnce();
+    expect(plansRetry).not.toHaveBeenCalled();
+  });
+
+  it('keeps full independent rate values while the selected plan is loading', () => {
+    const name = 'Extended off-peak charging tariff with a complete unabridged plan name';
+    setup({
+      plans: makeQuery({ isLoading: true }),
+      rates: makeQuery({ data: [{ ...RATE, name }] }),
+    });
+    const { container } = render(<MemoryRouter><ChargePlansWidget size={STANDARD} /></MemoryRouter>);
+    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(screen.getByText('PG&E')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(screen.queryByText('No charge plans')).not.toBeInTheDocument();
+  });
+
   it('reacts to format preference changes in SOC and estimated energy', () => {
     const plan = makePlan();
     setup({ plans: makeQuery({ data: [plan] }) });

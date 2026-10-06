@@ -1,9 +1,9 @@
 import { Receipt } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { DataProvenanceBadge, MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { Badge, GlassPanel, Text } from '@/components/ui';
+import { DataProvenanceBadge, type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from './operationalbrief-all/ChargingSummaryBrief';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
@@ -68,63 +68,42 @@ export function ChargeBillTruthPanel({ session }: { session: ChargingSession }) 
     value == null
       ? '—'
       : `${truth.currency ?? session.cost_currency ?? '$'}${fmtNumber(value)}`;
+  const metrics: StatMetric[] = [
+    { metricId: 'energy', occurrenceId: 'billed', rawValue: truth.billedEnergyWh,
+      label: t('charging.billTruth.billed', 'Billed'),
+      display: { formatter: raw => ({ value: energy(raw), unit: '' }) }, context: money(truth.billedCost) },
+    { metricId: 'energy', occurrenceId: 'pack', rawValue: truth.measuredEnergyWh,
+      label: t('charging.billTruth.pack', 'Pack added'),
+      display: { formatter: raw => ({ value: energy(raw), unit: '' }) }, context: money(truth.measuredCost) },
+    { metricId: 'energy', occurrenceId: 'delta', rawValue: truth.energyDeltaWh,
+      label: t('charging.billTruth.delta', 'Cabinet − pack'),
+      display: { formatter: raw => ({ value: energy(raw), unit: '' }) },
+      context: truth.energyDeltaPct == null ? '—' : t('charging.billTruth.deltaPct', '{{pct}}% of invoice', {
+        pct: fmtNumber(truth.energyDeltaPct),
+      }) },
+    { metricId: 'currency', occurrenceId: 'fees', rawValue: truth.unexplainedCost,
+      label: t('charging.billTruth.fees', 'Idle / tax remainder'),
+      display: { formatter: raw => ({ value: money(raw), unit: '' }) },
+      context: truth.impliedEnergyCost == null ? t('charging.billTruth.feesUnknown', 'Need invoice rate')
+        : t('charging.billTruth.energyPortion', 'Energy portion {{amount}}', { amount: money(truth.impliedEnergyCost) }) },
+  ];
 
   return (
     <GlassPanel className="space-y-4 p-4 sm:p-5" data-testid="charge-bill-truth">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <PanelTitle className="mb-0 flex items-center gap-2">
-          <Receipt className="h-4 w-4 text-amber-300" aria-hidden="true" />
-          {t('charging.billTruth.title', 'Bill vs pack')}
-        </PanelTitle>
+        <Receipt className="h-4 w-4 text-amber-300" aria-hidden="true" />
         <DataProvenanceBadge provenance={truth.honesty === 'live' ? 'historical' : truth.honesty === 'guessed' ? 'inferred' : 'unknown'} />
       </div>
-      <Text as="p" variant="caption">
-        {t(
-          'charging.billTruth.subtitle',
-          'Invoice, pack, and why they differ. Dashboards do not pay the Supercharger bill.',
-        )}
-      </Text>
       {truth.site && (
         <Badge variant="neutral" size="sm">{truth.site}</Badge>
       )}
-      <Grid cols={{ default: 2, lg: 4 }} gap={3}>
-        <MetricCard
-          label={t('charging.billTruth.billed', 'Billed')}
-          value={energy(truth.billedEnergyWh)}
-          subtitle={money(truth.billedCost)}
-          color="amber"
-        />
-        <MetricCard
-          label={t('charging.billTruth.pack', 'Pack added')}
-          value={energy(truth.measuredEnergyWh)}
-          subtitle={money(truth.measuredCost)}
-          color="cyan"
-        />
-        <MetricCard
-          label={t('charging.billTruth.delta', 'Cabinet − pack')}
-          value={energy(truth.energyDeltaWh)}
-          subtitle={
-            truth.energyDeltaPct == null
-              ? '—'
-              : t('charging.billTruth.deltaPct', '{{pct}}% of invoice', {
-                  pct: fmtNumber(truth.energyDeltaPct),
-                })
-          }
-          color="purple"
-        />
-        <MetricCard
-          label={t('charging.billTruth.fees', 'Idle / tax remainder')}
-          value={money(truth.unexplainedCost)}
-          subtitle={
-            truth.impliedEnergyCost == null
-              ? t('charging.billTruth.feesUnknown', 'Need invoice rate')
-              : t('charging.billTruth.energyPortion', 'Energy portion {{amount}}', {
-                  amount: money(truth.impliedEnergyCost),
-                })
-          }
-          color="red"
-        />
-      </Grid>
+      <ChargingSummaryBrief metrics={metrics}
+        title={t('charging.billTruth.title', 'Bill vs pack')}
+        description={t('charging.billTruth.subtitle', 'Invoice, pack, and why they differ. Dashboards do not pay the Supercharger bill.')}
+        period={{ kind: 'event', eventId: String(session.id), start: session.started_at,
+          end: session.ended_at ?? null, label: `${t('charging.detail.title', 'Charge Session')} #${session.id}`,
+          provenance: t('charging.detail.billedEnergyHelp',
+            'Tesla Supercharger invoices meter energy at the cabinet. Vehicle telemetry is energy into the pack and is often a few percent lower.') }} />
       {truth.reasons.length === 0 ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Receipt className="h-8 w-8" aria-hidden="true" />}

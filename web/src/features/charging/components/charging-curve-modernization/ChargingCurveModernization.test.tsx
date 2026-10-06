@@ -138,7 +138,7 @@ describe('charging curve production orchestration', () => {
     expect(h.queryCall).toHaveBeenLastCalledWith(7, {
       limit: 200, start: '2024-05-01', end: '2024-05-31',
     });
-    const tiles = container.querySelectorAll('[data-stat]');
+    const tiles = container.querySelectorAll('[data-operational-metric]');
     expect(tiles).toHaveLength(6);
     const expected = [
       ['Total Sessions', '2'], ['Total Energy', '80.00 kWh'],
@@ -146,7 +146,8 @@ describe('charging curve production orchestration', () => {
       ['Avg Duration', '200 min'], ['Total Cost', '$16.75'],
     ];
     expected.forEach(([label, value], index) => {
-      expect(tiles[index]).toHaveAttribute('aria-label', `${label}: ${value}`);
+      expect(tiles[index]?.firstElementChild?.firstElementChild).toHaveTextContent(label);
+      expect(tiles[index]?.querySelector('[data-operational-value]')).toHaveTextContent(value);
     });
     for (const id of ['comparison', 'charger', 'speed', 'ttc']) {
       expect(screen.getByTestId(id)).toHaveAttribute('data-ids', '101,102');
@@ -170,7 +171,7 @@ describe('charging curve production orchestration', () => {
     expect(screen.getByTestId('curve')).toHaveAttribute('data-points', '61');
     expect(screen.getByTestId('details')).toHaveAttribute('data-session', '101');
     for (const id of ['comparison', 'charger', 'speed', 'ttc']) expect(screen.getByTestId(id)).toBeInTheDocument();
-    expect(mounted.container.querySelectorAll('[data-state="value"]')).toHaveLength(6);
+    expect(mounted.container.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(h.refetch).toHaveBeenCalledTimes(1);
   });
@@ -195,7 +196,9 @@ describe('charging curve production orchestration', () => {
     h.query = { ...h.query, data: undefined, isLoading: true, fetchStatus: 'fetching' };
     const { container } = mountPage();
     expect(container.querySelectorAll('[data-card]')).toHaveLength(8);
-    expect(container.querySelectorAll('[data-state="loading"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     for (const id of ['curve', 'details', 'comparison', 'charger', 'speed', 'ttc']) {
       expect(screen.queryByTestId(id)).not.toBeInTheDocument();
     }
@@ -206,7 +209,7 @@ describe('charging curve production orchestration', () => {
     h.query = { ...h.query, data: undefined, isError: true, error: new Error('Request failed') };
     const { container } = mountPage();
     expect(container.querySelectorAll('[data-card]')).toHaveLength(8);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     const retry = screen.getAllByRole('button', { name: /retry|try again/i });
     expect(retry).toHaveLength(7);
     fireEvent.click(retry[0]);
@@ -218,8 +221,8 @@ describe('charging curve production orchestration', () => {
     h.query = { ...h.query, data: [] };
     const { container } = mountPage();
     expect(container.querySelectorAll('[data-card]')).toHaveLength(8);
-    expect(container.querySelectorAll('[data-state="missing"]')).toHaveLength(5);
-    expect(container.querySelector('[data-metric="charge.sessions"]')).toHaveAttribute('aria-label', 'Total Sessions: 0');
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    expect(container.querySelector('[data-operational-metric="totalSessions"] [data-operational-value]')).toHaveTextContent('0');
     expect(screen.getAllByRole('button', { name: 'Reset date range' })).toHaveLength(6);
     expect(screen.getByRole('combobox', { name: 'Inspect session' })).toBeDisabled();
   });
@@ -232,8 +235,8 @@ describe('charging curve production orchestration', () => {
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(/offline/);
     h.query = { ...h.query, data: undefined };
     mounted.refresh();
-    expect(mounted.container.querySelectorAll('[data-state="loading"]')).toHaveLength(0);
-    expect(mounted.container.querySelectorAll('[data-state="missing"]')).toHaveLength(6);
+    expect(mounted.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy', 'true');
+    expect(mounted.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
     expect(screen.getAllByText('Charging sessions are waiting for a connection.')).toHaveLength(6);
   });
 
@@ -243,13 +246,13 @@ describe('charging curve production orchestration', () => {
     })] };
     const mounted = mountPage();
     const summary = screen.getByTestId('charging-curve-summary');
-    expect(summary.querySelectorAll('[data-state="missing"]')).toHaveLength(4);
+    expect(summary.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(/incomplete/);
     expect(screen.getByTestId('comparison')).toHaveAttribute('data-ids', '101');
     h.query = { ...h.query, data: [session({ peak_power_w: 0, total_energy_added_wh: 0, cost_decimal: 0 })] };
     mounted.refresh();
-    expect(summary.querySelectorAll('[data-state="missing"]')).toHaveLength(0);
-    expect(summary.querySelector('[data-metric="charge.peakPower"]')).toHaveAttribute('aria-label', 'Peak Rate: 0.00 kW');
+    expect(summary.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    expect(summary.querySelector('[data-operational-metric="peakRate"] [data-operational-value]')).toHaveTextContent('0.00 kW');
   });
 
   it('leaves vehicle scope solely in the workspace header and does not invent a disabled-query loading state', () => {
@@ -259,8 +262,8 @@ describe('charging curve production orchestration', () => {
     expect(h.queryCall).toHaveBeenLastCalledWith(null, {
       limit: 200, start: '2024-05-01', end: '2024-05-31',
     });
-    expect(container.querySelectorAll('[data-state="missing"]')).toHaveLength(6);
-    expect(container.querySelectorAll('[data-state="loading"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy', 'true');
     expect(screen.getAllByText('Choose a vehicle in the workspace header to view charging sessions.')).toHaveLength(6);
     expect(screen.getByTestId('fingerprint')).toHaveAttribute('data-vehicle', '');
     expect(screen.getByTestId('ml')).toHaveAttribute('data-vehicle', '');

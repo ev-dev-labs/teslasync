@@ -12,8 +12,9 @@ import { VehiclePanelGrid } from './VehiclePanelGrid';
 import { VehicleSourcePanel } from './VehicleSourcePanel';
 import { VehicleSecurityPanel } from './VehicleSecurityPanel';
 
-export function VehicleDetailSystems({ state, motorQuery, climateQuery, securityQuery, tireQuery, chargingTelemetryQuery }: {
+export function VehicleDetailSystems({ state, stateQuery, motorQuery, climateQuery, securityQuery, tireQuery, chargingTelemetryQuery }: {
   state: VehicleState | undefined;
+  stateQuery?: DataStateSource<unknown>;
   motorQuery: DataStateSource<MotorSnapshot | null>;
   climateQuery: DataStateSource<ClimateSnapshot | null>;
   securityQuery: DataStateSource<SecurityEvent | null>;
@@ -30,7 +31,7 @@ export function VehicleDetailSystems({ state, motorQuery, climateQuery, security
               <VehicleSourcePanel query={motorQuery} label={t('vehicles.detail.motor', 'Powertrain')}
                 emptyMessage={t('vehicles.detail.noMotorData', 'No motor data available')}
                 errorMessage={t('vehicles.detail.section.motorFailed', 'Motor section failed to load')}>
-                <MotorSection motorData={motorQuery.data} />
+                <MotorSection motorData={motorQuery.data} sourceQuery={motorQuery} />
               </VehicleSourcePanel>
             </SectionErrorBoundary>
           },
@@ -39,7 +40,7 @@ export function VehicleDetailSystems({ state, motorQuery, climateQuery, security
               <VehicleSourcePanel query={climateQuery} label={t('vehicles.detail.climate', 'Climate')}
                 emptyMessage={t('vehicles.detail.noClimateData', 'No climate data available')}
                 errorMessage={t('vehicles.detail.section.climateFailed', 'Climate section failed to load')}>
-                <ClimateSection climateData={climateQuery.data} />
+                <ClimateSection climateData={climateQuery.data} sourceQuery={climateQuery} />
               </VehicleSourcePanel>
             </SectionErrorBoundary>
           },
@@ -57,7 +58,7 @@ export function VehicleDetailSystems({ state, motorQuery, climateQuery, security
               <VehicleSourcePanel query={securityQuery} label={t('vehicles.detail.security', 'Security')}
                 emptyMessage={t('vehicles.detail.noSecurityData', 'No security data available')}
                 errorMessage={t('vehicles.detail.section.securityFailed', 'Security section failed to load')}>
-                <VehicleSecurityPanel securityData={securityQuery.data} state={state} />
+                <VehicleSecurityPanel securityData={securityQuery.data} state={state} sourceQuery={securityQuery} liveStateQuery={stateQuery} />
               </VehicleSourcePanel>
             </SectionErrorBoundary>
           },
@@ -66,7 +67,7 @@ export function VehicleDetailSystems({ state, motorQuery, climateQuery, security
               <VehicleSourcePanel query={tireQuery} label={t('vehicles.detail.tirePressure', 'Tire pressure')}
                 emptyMessage={t('vehicles.detail.noTireData', 'No tire pressure data available')}
                 errorMessage={t('vehicles.detail.section.tireFailed', 'Tire pressure section failed to load')}>
-                <TirePressureSection tireData={tireQuery.data} />
+                <TirePressureSection tireData={tireQuery.data} sourceQuery={tireQuery} />
               </VehicleSourcePanel>
             </SectionErrorBoundary>
           },

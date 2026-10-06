@@ -27,12 +27,14 @@ const {
   selectedVehicleMock,
   useFsdInsightsMock,
   staleWarningMock,
+  motionPreferenceMock,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   sectionPropsMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   useFsdInsightsMock: vi.fn(),
   staleWarningMock: vi.fn(),
+  motionPreferenceMock: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -55,6 +57,10 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 
 vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: (title: string) => pageTitleMock(title),
+}));
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => motionPreferenceMock(),
 }));
 
 vi.mock('@/components/feedback', () => ({
@@ -127,6 +133,10 @@ vi.mock('../components/fsd-insights', async () => {
   };
 });
 
+vi.mock('../components/operationalbrief-a-m/FsdEvidenceBrief', async () => ({
+  FsdEvidenceBrief: (await import('../components/fsd-insights')).FsdKpiBand,
+}));
+
 import FSDInsightsPage from './FSDInsightsPage';
 
 const SECTION_IDS = [
@@ -194,9 +204,32 @@ beforeEach(() => {
   window.localStorage.clear();
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
   useFsdInsightsMock.mockReturnValue(loaded());
+  motionPreferenceMock.mockReturnValue({ reduce: false });
 });
 
 describe('FSDInsightsPage', () => {
+  it.each([true, false])('preserves hash-target navigation with reduced motion=%s', (reduce) => {
+    motionPreferenceMock.mockReturnValue({ reduce });
+    const scrollIntoView = vi.fn();
+    const getElement = vi.spyOn(document, 'getElementById');
+    const target = document.createElement('section');
+    target.scrollIntoView = scrollIntoView;
+    getElement.mockReturnValue(target);
+    const previousHash = window.location.hash;
+    window.location.hash = '#fsd-observatory';
+    try {
+      renderPage();
+      expect(getElement).toHaveBeenCalledWith('fsd-observatory');
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: reduce ? 'auto' : 'smooth', block: 'start',
+      });
+      for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+    } finally {
+      window.location.hash = previousHash;
+      getElement.mockRestore();
+    }
+  });
+
   it('mounts every panel and requests the shared default range', () => {
     renderPage();
 

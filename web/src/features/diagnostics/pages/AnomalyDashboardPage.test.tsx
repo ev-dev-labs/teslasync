@@ -220,6 +220,55 @@ beforeEach(() => {
 });
 
 describe('AnomalyDashboardPage', () => {
+  it('opens the real operational review drawer with the independent detector and anomaly windows intact', async () => {
+    mockedRequest.mockResolvedValue(makeData());
+    renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await within(summary).findByText('42');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Signals monitored')).toBeInTheDocument();
+    expect(within(drawer).getByText('Anomalies (7d)')).toBeInTheDocument();
+    expect(within(drawer).getByText('Anomalies (24h)')).toBeInTheDocument();
+    expect(drawer).toHaveTextContent('Last 7 days');
+    expect(drawer).toHaveTextContent('Last 24 hours');
+    expect(drawer).toHaveTextContent('Current detector snapshot');
+    expect(drawer).toHaveTextContent('Coverage and health categories describe the current detector snapshot.');
+  });
+
+  it('uses four canonical typed counts with independent snapshot, seven-day and daily scopes', async () => {
+    mockedRequest.mockResolvedValue(makeData({ signals_monitored: 12345 }));
+    const { container } = renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await within(summary).findByText('12345');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(within(summary).getByText('Current snapshot · last 7 days · last 24 hours')).toBeInTheDocument();
+    expect(within(summary).getAllByText('Current detector snapshot')).toHaveLength(2);
+    expect(within(summary).getByText('Last 7 days')).toBeInTheDocument();
+    expect(within(summary).getByText('Last 24 hours')).toBeInTheDocument();
+    expect(container.querySelector('[data-role="metric-card"]')).toBeNull();
+    expect(container.querySelector('[data-stat-strip]')).toBeNull();
+    expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('health-card')).toHaveLength(3);
+  });
+
+  it('distinguishes absent source counts from reported zero without removing any summary label', async () => {
+    selectVehicle(null, []);
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('anomaly-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    unmount();
+    selectVehicle(7);
+    mockedRequest.mockResolvedValue(makeData({
+      signals_monitored: 0, anomalies_last_7d: 0, anomalies_last_24h: 0, health_summary: {},
+    }));
+    renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await waitFor(() => expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4));
+    expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    for (const value of summary.querySelectorAll('[data-operational-value]')) expect(value).toHaveTextContent(/^0$/);
+  });
+
   it('preserves frequency, health and diagnostic cards after a failed refresh', async () => {
     mockedRequest.mockResolvedValueOnce(makeData()).mockRejectedValue(new Error('refresh failed'));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -272,12 +321,15 @@ describe('AnomalyDashboardPage', () => {
     expect(screen.getByTestId('ai-baselines')).toHaveAttribute('data-vehicle-id', 'undefined');
   });
 
-  it('with a vehicle + a pending query: shows the stat-grid skeleton, no empty/chart content, and fires the request', async () => {
+  it('with a vehicle + a pending query: shows canonical strip loading tiles, no empty/chart content, and fires the request', async () => {
     mockedRequest.mockImplementation(() => new Promise(() => {})); // never resolves
 
     renderPage();
 
-    expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument();
+    const summary = screen.getByTestId('anomaly-summary');
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(summary.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryByTestId('freq-bar-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('anomaly-card')).not.toBeInTheDocument();
     // No empty state leaks in while loading.

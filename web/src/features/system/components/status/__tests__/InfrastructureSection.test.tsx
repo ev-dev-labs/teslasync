@@ -293,7 +293,14 @@ describe('InfrastructureSection — accessibility & interaction', () => {
     render(<InfrastructureSection />)
 
     const header = screen.getByRole('button', { name: /Infrastructure/i })
-    fireEvent.keyDown(header, { key: 'Enter' })
+    expect(header.tagName).toBe('BUTTON')
+    expect(header).toHaveAttribute('type', 'button')
+    header.focus()
+    expect(header).toHaveFocus()
+    expect(fireEvent.keyDown(header, { key: 'Enter' })).toBe(true)
+    fireEvent.keyUp(header, { key: 'Enter' })
+    // jsdom needs the activation click that a browser emits for the native button.
+    fireEvent.click(header)
 
     expect(header).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('Polling engine')).toBeInTheDocument()

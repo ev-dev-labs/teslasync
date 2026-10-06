@@ -8,8 +8,10 @@ import {
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { Select } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -21,7 +23,6 @@ import {
   DriveDnaEncodingLegend,
   DriveDnaFingerprintPanel,
   DriveDnaGenomePanel,
-  DriveDnaKpiBand,
   DriveDnaMethodology,
   DriveDnaPowerDistribution,
   DriveDnaSocElevationChart,
@@ -30,6 +31,7 @@ import {
   type DriveDnaSectionState,
 } from '../components/drive-dna';
 import { buildDriveDnaModel } from '../lib/driveDNA';
+import { DriveDnaEvidenceBrief } from '../components/operationalbrief-a-m/DriveDnaEvidenceBrief';
 
 const DRIVE_HISTORY_LIMIT = 1_000;
 const HERO_COLUMNS = { default: 1, xl: 3 } as const;
@@ -43,8 +45,9 @@ export default function DriveDNAPage() {
   const timezone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const hasDriveListData =
-    vehicleId != null && drivesQuery.data !== undefined;
+    vehicleId != null && drivesState.hasData;
   const listIsResolved =
     vehicleId != null && (hasDriveListData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -58,8 +61,9 @@ export default function DriveDNAPage() {
   );
   const activeId = activeDrive ? String(activeDrive.id) : '';
   const telemetryQuery = useDriveTelemetry(activeId);
+  const telemetryState = useDataState(telemetryQuery, { provenance: 'historical' });
   const hasTelemetryData =
-    activeId !== '' && telemetryQuery.data !== undefined;
+    activeId !== '' && telemetryState.hasData;
   const telemetryIsResolved =
     activeId !== '' && (hasTelemetryData || telemetryQuery.isSuccess);
   const telemetryData =
@@ -97,33 +101,23 @@ export default function DriveDNAPage() {
       list: {
         isLoading:
           vehicleId != null &&
-          !hasDriveListData &&
-          drivesQuery.isLoading,
+          drivesState.status === 'initial',
         isResolved: listIsResolved,
         error:
-          drivesQuery.isError && !hasDriveListData
-            ? drivesQuery.error
-            : null,
+          drivesState.fatalError,
         refreshError:
-          drivesQuery.isError && hasDriveListData
-            ? drivesQuery.error
-            : null,
+          drivesState.refreshError,
         onRetry: () => void drivesQuery.refetch(),
       },
       telemetry: {
         isLoading:
           activeId !== '' &&
-          !hasTelemetryData &&
-          telemetryQuery.isLoading,
+          telemetryState.status === 'initial',
         isResolved: telemetryIsResolved,
         error:
-          telemetryQuery.isError && !hasTelemetryData
-            ? telemetryQuery.error
-            : null,
+          telemetryState.fatalError,
         refreshError:
-          telemetryQuery.isError && hasTelemetryData
-            ? telemetryQuery.error
-            : null,
+          telemetryState.refreshError,
         onRetry: () => void telemetryQuery.refetch(),
       },
     }),
@@ -131,23 +125,24 @@ export default function DriveDNAPage() {
       activeDrive,
       activeId,
       drivesQuery,
-      hasDriveListData,
-      hasTelemetryData,
+      drivesState,
+      telemetryState,
       listIsResolved,
       telemetryIsResolved,
       telemetryQuery,
       vehicleId,
     ],
   );
-  const selectorPlaceholder = drivesQuery.isLoading
+  const selectorPlaceholder = drivesState.status === 'initial'
     ? t('driveDna.selector.loading', 'Loading drives…')
-    : drivesQuery.isError && !hasDriveListData
+    : drivesState.fatalError
       ? t('driveDna.selector.error', 'Drive list unavailable')
       : t('driveDna.selector.empty', 'No drives available');
 
   return (
     <PageLayout
       title={t('driveDna.title', 'Drive DNA')}
+      query={[drivesQuery, telemetryQuery]}
       subtitle={t(
         'driveDna.subtitle',
         'Deterministic artwork and sampled evidence from one selected drive’s telemetry emissions',
@@ -176,8 +171,14 @@ export default function DriveDNAPage() {
         </div>
       }
     >
+      {drivesState.isRefreshBlocked && (
+        <StaleRefreshWarning state={drivesState} label={t('driveDna.selector.aria', 'Choose a drive')} />
+      )}
+      {telemetryState.isRefreshBlocked && (
+        <StaleRefreshWarning state={telemetryState} label={driveLabel} />
+      )}
       <FadeIn>
-        <DriveDnaKpiBand drive={activeDrive} model={model} state={state} units={units} capReached={capReached} />
+        <DriveDnaEvidenceBrief drive={activeDrive} model={model} state={state} units={units} capReached={capReached} />
       </FadeIn>
       <FadeIn delay={0.05}>
         <Grid cols={HERO_COLUMNS} gap={4}>

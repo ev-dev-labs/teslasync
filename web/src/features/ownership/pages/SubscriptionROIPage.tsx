@@ -47,9 +47,10 @@ import {
   MoneyInput,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   formatCurrencyMinor,
   formatPct,
@@ -427,40 +428,47 @@ export default function SubscriptionROIPage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.subscription.summary.title', 'Portfolio economics')}
-          source={roiQuery} sourceEnabled={vehicleId != null} empty={!report}>
-          <StatGrid
-            stats={[
+          source={roiQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.subscription.brief.title', 'Subscription commitment and realised value')}
+            description={t('ownership.subscription.notice.body', 'Realised value is measured usage multiplied by the benchmark rate you set — what the same usage would have cost without the subscription. A subscription active for under 30 days is reported as too early to judge, never as a loss.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={roiQuery} enabled={vehicleId != null}
+            window={report?.window}
+            metrics={[
               {
-                key: 'monthly',
+                occurrenceId: 'monthly', metricId: 'currency',
                 label: t('ownership.subscription.stat.monthly', 'Monthly commitment'),
-                value: money(report?.total_monthly_cost_minor),
+                rawValue: report?.total_monthly_cost_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'spend',
+                occurrenceId: 'spend', metricId: 'currency',
                 label: t('ownership.subscription.stat.spend', 'Spent to date'),
-                value: money(report?.total_spend_to_date_minor),
+                rawValue: report?.total_spend_to_date_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'value',
+                occurrenceId: 'value', metricId: 'currency',
                 label: t('ownership.subscription.stat.value', 'Realised value'),
-                value: money(report?.total_realised_value_minor),
+                rawValue: report?.total_realised_value_minor,
+                display: specialistDisplay(money),
                 tone: 'positive',
               },
               {
-                key: 'roi',
+                occurrenceId: 'roi', metricId: 'percent',
                 label: t('ownership.subscription.stat.roi', 'Portfolio ROI'),
-                value:
-                  report?.portfolio_roi_pct != null
-                    ? formatSignedPct(report.portfolio_roi_pct)
-                    : '—',
+                rawValue: report?.portfolio_roi_pct,
+                display: specialistDisplay(formatSignedPct),
                 tone: (report?.portfolio_roi_pct ?? 0) >= 0 ? 'positive' : 'critical',
               },
               {
-                key: 'saving',
+                occurrenceId: 'saving', metricId: 'currency',
                 label: t('ownership.subscription.stat.saving', 'Cancel-candidate saving'),
-                value: money(report?.cancel_candidate_saving_minor),
+                rawValue: report?.cancel_candidate_saving_minor,
+                display: specialistDisplay(money),
                 tone: (report?.cancel_candidate_saving_minor ?? 0) > 0 ? 'warning' : 'default',
-                hint: t('ownership.subscription.stat.savingHint', 'per month, if all cancelled'),
+                context: t('ownership.subscription.stat.savingHint', 'per month, if all cancelled'),
               },
             ]}
           />

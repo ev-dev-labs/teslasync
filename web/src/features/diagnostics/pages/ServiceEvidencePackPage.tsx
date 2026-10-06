@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, ClipboardList, ListOrdered, PackageCheck } from 'lucide-react';
-
 import { PageLayout } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
+import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
@@ -16,6 +14,9 @@ import { useDataState } from '@/hooks/useDataState';
 import { useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
+import { EvidenceSourceNotice } from '../components/EvidenceSourceNotice';
+import { DiagnosticEvidenceBrief } from '../components/operationalbrief-all/DiagnosticEvidenceBrief';
+import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
 import {
   SignalWindowPicker,
   ServiceEvidenceInventoryTable,
@@ -31,15 +32,6 @@ import {
   CryptoUnavailableError,
   type ServiceEvidencePackDocument,
 } from '../lib/serviceEvidencePack';
-import type { EvidenceQualityBand } from '../lib/rootCauseIntelligence';
-
-/** Mirrors `QualityBadge`'s semantics with the KPI band's `NeonColor` palette. */
-const QUALITY_COLOR: Record<EvidenceQualityBand, 'green' | 'cyan' | 'amber' | 'red'> = {
-  strong: 'green',
-  moderate: 'cyan',
-  weak: 'amber',
-  insufficient: 'red',
-};
 
 function downloadPack(doc: ServiceEvidencePackDocument): void {
   const blob = new Blob([toPrettyJson(doc)], { type: 'application/json' });
@@ -172,6 +164,37 @@ export default function ServiceEvidencePackPage() {
       ? t('serviceEvidencePack.kpis.statusReadyHint', 'Generate below to compute its digest')
       : t('serviceEvidencePack.kpis.statusNotReadyHint', 'Needs stronger evidence first');
 
+  const available = workspace.hasChosenSignal && evidenceState.hasData;
+  const focalAvailable = available && hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal);
+  const metrics: readonly StatMetric[] = [
+    {
+      metricId: 'status', occurrenceId: 'service-evidence-quality',
+      rawValue: available ? qualityLabel : null,
+      label: t('rootCauseIntelligence.kpis.quality', 'Evidence quality'),
+      context: t('serviceEvidencePack.kpis.qualitySubtitle', 'Drives the export gate below'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'service-evidence-signals',
+      rawValue: available ? liveCore.signalEvidence.length : null,
+      label: t('serviceEvidencePack.kpis.signals', 'Signals in pack'),
+      context: t('serviceEvidencePack.kpis.signalsSubtitle', '{{n}} corroborating', { n: available ? corroborating : '—' }),
+      display: { notation: 'source' },
+    },
+    {
+      metricId: 'count', occurrenceId: 'service-evidence-hypotheses',
+      rawValue: focalAvailable ? liveCore.hypotheses.length : null,
+      label: t('serviceEvidencePack.kpis.hypotheses', 'Ranked hypotheses'),
+      context: t('serviceEvidencePack.kpis.hypothesesSubtitle', 'Evidence-ranked, not diagnostic'),
+      display: { notation: 'source' },
+    },
+    {
+      metricId: 'status', occurrenceId: 'service-evidence-pack-status',
+      rawValue: packStatusLabel,
+      label: t('serviceEvidencePack.kpis.status', 'Pack status'),
+      context: packStatusSubtitle,
+    },
+  ];
+
   return (
     <PageLayout
       title={t('serviceEvidencePack.title', 'Service evidence pack')}
@@ -195,7 +218,14 @@ export default function ServiceEvidencePackPage() {
           onWindowHoursChange={workspace.setWindowHours}
         />
       </FadeIn>
-      <StaleRefreshWarning state={evidenceState} label={t('serviceEvidencePack.kpis.signals', 'Signals in pack')} />
+      <EvidenceSourceNotice
+        state={evidenceState}
+        sources={workspace.evidenceBundle.sources}
+        summary={focalAvailable ? liveCore.summary : null}
+        limitations={liveCore.limitations}
+        label={t('serviceEvidencePack.kpis.signals', 'Signals in pack')}
+        hasChosenSignal={workspace.hasChosenSignal}
+      />
       <StaleRefreshWarning state={updatesState} label={t('serviceEvidencePack.softwareUpdates', 'Software update history')} />
       {updatesState.fatalError && (
         <GlassPanel className="p-4 sm:p-5">
@@ -207,46 +237,22 @@ export default function ServiceEvidencePackPage() {
       <FadeIn delay={0.1}>
         <section
           aria-label={t('serviceEvidencePack.kpis.sectionLabel', 'Service evidence pack metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={error} onRetry={onRetry} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={96} className="rounded-xl" />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('rootCauseIntelligence.kpis.quality', 'Evidence quality')}
-                value={workspace.hasChosenSignal ? qualityLabel : '—'}
-                subtitle={t('serviceEvidencePack.kpis.qualitySubtitle', 'Drives the export gate below')}
-                icon={<ShieldCheck className="h-5 w-5" />}
-                color={workspace.hasChosenSignal ? QUALITY_COLOR[liveCore.quality.band] : 'cyan'}
-              />
-              <MetricCard
-                label={t('serviceEvidencePack.kpis.signals', 'Signals in pack')}
-                value={liveCore.signalEvidence.length}
-                subtitle={t('serviceEvidencePack.kpis.signalsSubtitle', '{{n}} corroborating', { n: corroborating })}
-                icon={<ClipboardList className="h-5 w-5" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('serviceEvidencePack.kpis.hypotheses', 'Ranked hypotheses')}
-                value={liveCore.hypotheses.length}
-                subtitle={t('serviceEvidencePack.kpis.hypothesesSubtitle', 'Evidence-ranked, not diagnostic')}
-                icon={<ListOrdered className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('serviceEvidencePack.kpis.status', 'Pack status')}
-                value={packStatusLabel}
-                subtitle={packStatusSubtitle}
-                icon={<PackageCheck className="h-5 w-5" />}
-                color={pack ? 'green' : canGenerate ? 'cyan' : 'amber'}
-              />
-            </>
-          )}
+          <DiagnosticEvidenceBrief
+            testId="service-evidence-summary"
+            eyebrow={t('serviceEvidencePack.title', 'Service evidence pack')}
+            title={t('diagnostics.brief.packTitle', 'Export evidence and readiness')}
+            description={t('serviceEvidencePack.subtitle', 'A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.')}
+            metrics={metrics}
+            state={evidenceState}
+            loading={isLoading}
+            error={error}
+            onRetry={onRetry}
+            focalSignal={workspace.focalSignal}
+            windowHours={workspace.windowHours}
+            hasChosenSignal={workspace.hasChosenSignal}
+            sources={workspace.evidenceBundle.sources}
+          />
         </section>
       </FadeIn>
 
@@ -254,6 +260,7 @@ export default function ServiceEvidencePackPage() {
       <FadeIn delay={0.2}>
         <ServiceEvidenceInventoryTable
           signalEvidence={liveCore.signalEvidence}
+          sources={workspace.evidenceBundle.sources}
           hasChosenSignal={workspace.hasChosenSignal}
           isLoading={isLoading}
           isError={isError}

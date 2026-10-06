@@ -36,10 +36,11 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { TripDetail } from '@/api/types';
+import type { DataState } from '@/api/dataState';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
 
 // ── Child-section prop shapes (mirror the real component contracts) ──────────
-type KpiProps = { trip: TripDetail | undefined; isLoading: boolean };
+type KpiProps = { trip: TripDetail | undefined; isLoading: boolean; source?: DataState<TripDetail> };
 type BandProps = {
   trip: TripDetail | undefined;
   isLoading: boolean;
@@ -287,6 +288,8 @@ describe('TripDetailPage', () => {
 
     // Prop contract: the identical trip object flows to each data section.
     expect(caps.kpi?.trip?.id).toBe(5);
+    expect(caps.kpi?.source?.status).toBe('ok');
+    expect(caps.kpi?.source?.provenance).toBe('historical');
     expect(caps.chart?.trip?.name).toBe('Weekend Getaway');
     expect(caps.overview?.trip?.id).toBe(5);
     expect(caps.table?.trip?.id).toBe(5);
@@ -334,6 +337,9 @@ describe('TripDetailPage', () => {
     const trip = makeTrip();
     h.useTrip.mockReturnValue(makeQuery({ data: trip, isError: true, error: new Error('refresh failed') }));
     renderPage();
+    expect(caps.kpi?.source?.status).toBe('stale');
+    expect(caps.kpi?.source?.fatalError).toBeNull();
+    expect(caps.kpi?.source?.data).toBe(trip);
 
     for (const section of [caps.chart, caps.overview, caps.table]) {
       expect(section?.trip).toBe(trip);

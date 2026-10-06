@@ -10,7 +10,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   LinearGauge, EmbeddedChart,
 } from '@/components/charts';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
@@ -200,10 +201,19 @@ export default function SpeedProfilePage() {
     const value = displaySpeed(mps);
     return value != null ? Math.round(value) : null;
   };
-  const kpiSpeed = (mps: number | null | undefined) => {
-    const value = displaySpeed(mps);
-    return value != null ? fmtNumber(value) : '—';
-  };
+  const summaryMetrics: readonly StatMetric[] = [
+    { metricId: 'speed', occurrenceId: 'average-speed', rawValue: data?.avgSpeedMps,
+      label: t('speedProfile.avgSpeed', 'Avg Speed') },
+    { metricId: 'speed', occurrenceId: 'peak-speed', rawValue: data?.peakSpeedMps,
+      label: t('speedProfile.peakSpeed', 'Peak Speed') },
+    { metricId: 'speed', occurrenceId: 'optimal-speed', rawValue: data?.optimalSpeedMps,
+      label: t('speedProfile.optimalSpeed', 'Optimal Speed') },
+    { metricId: 'count', occurrenceId: 'samples', rawValue: data ? totalReadings : null,
+      label: t('speedProfile.samples', 'Samples'),
+      context: drivesState.hasData
+        ? t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', { count: drives.length })
+        : t('speedProfile.brief.driveCoverageUnknown', 'Drive sample coverage is unavailable independently of the speed profile.') },
+  ];
 
   return (
     <PageLayout
@@ -216,41 +226,18 @@ export default function SpeedProfilePage() {
       <StaleRefreshWarning state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('speedProfile.summaryAria', 'Speed summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 xl:gap-5"
-        >
-          <MetricCard
-            label={t('speedProfile.avgSpeed', 'Avg Speed')}
-            value={kpiSpeed(data?.avgSpeedMps)}
-            subtitle={speedUnit}
-            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('speedProfile.peakSpeed', 'Peak Speed')}
-            value={kpiSpeed(data?.peakSpeedMps)}
-            subtitle={speedUnit}
-            icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
-            color="red"
-          />
-          <MetricCard
-            label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
-            value={kpiSpeed(data?.optimalSpeedMps)}
-            subtitle={speedUnit}
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('speedProfile.samples', 'Samples')}
-            value={data ? fmtInt(totalReadings) : '—'}
-            subtitle={t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', {
-              count: drives.length,
-            })}
-            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-            color="blue"
-          />
-        </section>
+        <DrivingSummaryBrief
+          id="speed-profile-brief"
+          title={t('speedProfile.summaryAria', 'Speed summary metrics')}
+          description={t('speedProfile.brief.description', 'Recorded speed statistics and distribution readings; drive evidence is a separately returned sample.')}
+          metrics={summaryMetrics}
+          scope={`${start} — ${end}`}
+          provenance={t('speedProfile.brief.provenance', 'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.')}
+          loading={isLoading}
+          unavailable={!profileState.hasData}
+          retained={profileState.isRefreshBlocked || drivesState.isRefreshBlocked}
+          actions={error ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
+        />
       </FadeIn>
 
       {/* 2 — Hero bento: distribution chart + speed-envelope gauges */}

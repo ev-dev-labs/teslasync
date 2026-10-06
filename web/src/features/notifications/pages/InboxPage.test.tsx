@@ -255,8 +255,10 @@ describe('InboxPage — summary states', () => {
     renderPage();
     // Page shell is still present around the skeleton.
     expect(screen.getByRole('heading', { level: 1, name: 'Inbox' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading stat cards' })).toBeInTheDocument();
-    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('notification-backlog-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('surfaces a retryable error state and invokes refetch on retry', () => {

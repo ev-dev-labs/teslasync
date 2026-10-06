@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { useCardPlacement } from '@/components/layout/layout-reference';
 import { formatDateTime } from '@/lib/dateFormat';
 import { PASCALS_PER_KPA, type UnitPref } from '@/lib/unitConversion';
@@ -63,8 +64,8 @@ export function PressureSummary({
     },
   ];
   return (
-    <div role="region" aria-label={t('tirePressure.kpis', 'Tire pressure summary')} className={placement?.className}>
-      <StatStrip
+    <div className={placement?.className}>
+      <VehicleOperationalBrief
         id="tire-pressure-summary"
         title={t('tirePressure.kpis', 'Tire pressure summary')}
         metrics={metrics}

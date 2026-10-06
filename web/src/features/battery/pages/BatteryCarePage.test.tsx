@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 const {
   chargingHistoryMock,
@@ -76,7 +77,8 @@ vi.mock('@/components/layout', async (importOriginal) => ({
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
@@ -100,18 +102,6 @@ vi.mock('../components/battery-care', () => {
     <section data-testid={testId}>{status(state)}</section>
   );
   return {
-    BatteryCareKpiBand: (props: SectionProps) =>
-      section('battery-care-kpis', props.state),
-    CareScoreBreakdown: (props: SectionProps) =>
-      section('battery-care-score', props.state),
-    EndSocDistribution: (props: SectionProps) =>
-      section('battery-care-targets', props.state),
-    ChargingEnergyMix: (props: SectionProps) =>
-      section('battery-care-energy', props.state),
-    ArrivalSocEvidence: (props: SectionProps) =>
-      section('battery-care-arrivals', props.state),
-    MonthlyCareTrend: (props: SectionProps) =>
-      section('battery-care-trend', props.state),
     RankedCareHabits: (props: SectionProps) =>
       section('battery-care-habits', props.state),
     BatteryCareMethodology: (props: SectionProps) =>
@@ -119,7 +109,33 @@ vi.mock('../components/battery-care', () => {
   };
 });
 
+vi.mock('../components/battery-care-modernization', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/battery-care-modernization')>();
+  type State = import('../components/battery-care-modernization/state').CareSectionState;
+  const section = (id: string, state: State) => {
+    const failed = state.sources.some(source => source.state.fatalError);
+    const pending = state.sources.some(source => !source.state.hasData && !source.state.fatalError);
+    const status = state.trust.fatalError ? 'error'
+      : !state.trust.hasData ? 'loading'
+        : failed ? 'partial-error' : pending ? 'partial-loading' : 'ready';
+    return <section data-testid={id}>{status}</section>;
+  };
+  return {
+    ...actual,
+    CareSummary: ({ state }: { state: State }) => section('battery-care-kpis', state),
+    CareRisk: ({ state }: { state: State }) => section('battery-care-score', state),
+    CareEnergy: ({ state }: { state: State }) => section('battery-care-energy', state),
+    CareMonthlyTrend: ({ state }: { state: State }) => section('battery-care-trend', state),
+    SocEvidence: ({ state, kind }: { state: State; kind: 'finish' | 'arrival' }) =>
+      section(kind === 'finish' ? 'battery-care-targets' : 'battery-care-arrivals', state),
+  };
+});
+
 import BatteryCarePage from './BatteryCarePage';
+
+function renderPage() {
+  return render(<MemoryRouter><BatteryCarePage /></MemoryRouter>);
+}
 
 function query(overrides: Record<string, unknown> = {}) {
   return {
@@ -146,23 +162,10 @@ const ALL_SECTIONS = [
   'battery-care-methodology',
 ];
 
-const CHARGING_DEPENDENT = [
+const COMBINED_SECTIONS = [
   'battery-care-kpis',
   'battery-care-score',
-  'battery-care-targets',
-  'battery-care-energy',
   'battery-care-trend',
-  'battery-care-habits',
-  'battery-care-methodology',
-];
-
-const DRIVE_DEPENDENT = [
-  'battery-care-kpis',
-  'battery-care-score',
-  'battery-care-arrivals',
-  'battery-care-trend',
-  'battery-care-habits',
-  'battery-care-methodology',
 ];
 
 beforeEach(() => {
@@ -174,7 +177,7 @@ beforeEach(() => {
 
 describe('BatteryCarePage', () => {
   it('mounts all analytical sections and requests both 1,000-row windows', () => {
-    render(<BatteryCarePage />);
+    renderPage();
 
     expect(
       screen.getByRole('heading', { name: 'Battery Care' }),
@@ -186,26 +189,36 @@ describe('BatteryCarePage', () => {
     expect(driveHistoryMock).toHaveBeenCalledWith('42', 1_000);
   });
 
-  it('propagates charging loading only to charging-dependent sections', () => {
-    chargingHistoryMock.mockReturnValue(query({ isLoading: true }));
-    render(<BatteryCarePage />);
+  it('scopes initial charging loading without hiding independently available drive evidence', () => {
+    chargingHistoryMock.mockReturnValue(query({ data: undefined, isLoading: true }));
+    renderPage();
 
-    for (const testId of CHARGING_DEPENDENT) {
-      expect(screen.getByTestId(testId)).toHaveTextContent('loading');
+    for (const testId of COMBINED_SECTIONS) {
+      expect(screen.getByTestId(testId)).toHaveTextContent('partial-loading');
+    }
+    for (const testId of ['battery-care-targets', 'battery-care-energy']) {
+      expect(screen.getByTestId(testId)).toHaveTextContent(/^loading$/);
+    }
+    for (const testId of ['battery-care-habits', 'battery-care-methodology']) {
+      expect(screen.getByTestId(testId)).toHaveTextContent('ready');
     }
     expect(screen.getByTestId('battery-care-arrivals')).toHaveTextContent(
       'ready',
     );
   });
 
-  it('propagates drive errors only to drive-dependent sections', () => {
+  it('scopes initial drive errors without replacing independent charging evidence', () => {
     driveHistoryMock.mockReturnValue(
-      query({ isError: true, error: new Error('drive unavailable') }),
+      query({ data: undefined, isError: true, error: new Error('drive unavailable') }),
     );
-    render(<BatteryCarePage />);
+    renderPage();
 
-    for (const testId of DRIVE_DEPENDENT) {
-      expect(screen.getByTestId(testId)).toHaveTextContent('error');
+    for (const testId of COMBINED_SECTIONS) {
+      expect(screen.getByTestId(testId)).toHaveTextContent('partial-error');
+    }
+    expect(screen.getByTestId('battery-care-arrivals')).toHaveTextContent(/^error$/);
+    for (const testId of ['battery-care-habits', 'battery-care-methodology']) {
+      expect(screen.getByTestId(testId)).toHaveTextContent('ready');
     }
     expect(screen.getByTestId('battery-care-targets')).toHaveTextContent(
       'ready',
@@ -217,7 +230,7 @@ describe('BatteryCarePage', () => {
 
   it('preserves the no-vehicle selection state', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
-    render(<BatteryCarePage />);
+    renderPage();
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent('Battery Care');
     expect(screen.queryByTestId('battery-care-kpis')).not.toBeInTheDocument();

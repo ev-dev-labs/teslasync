@@ -63,7 +63,8 @@ import {
   useDeleteRetentionPolicy,
 } from '@/api/hooks/useOwnership';
 import DataGovernancePage from './DataGovernancePage';
-import type { RetentionPolicy } from '@/types/ownership';
+import type { GovernanceOverview, RetentionPolicy, RetentionRun } from '@/types/ownership';
+import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockOverview = useGovernanceOverview as unknown as ReturnType<typeof vi.fn>;
@@ -101,6 +102,34 @@ function makeQuery(data: unknown) {
 
 function makeMutation(overrides: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, variables: undefined, ...overrides };
+}
+
+function makeRun(): RetentionRun {
+  return {
+    id: 3, dataset: 'Observed ledger dataset', mode: 'dry_run',
+    rows_scanned: 2000, rows_expiring: 300, rows_downsampling: 400,
+    bytes_reclaimable: 1024, fidelity_loss_pct: 2.5, blocked_by_hold: false,
+    executed_at: '2026-02-01T00:00:00Z',
+  };
+}
+
+function makeOverview(overrides: Partial<GovernanceOverview> = {}): GovernanceOverview {
+  return {
+    as_of: '2026-03-01T00:00:00Z',
+    inventory: [], policies: [makePolicy()],
+    total_bytes: 4 * 1024 ** 2, governed_bytes: 3 * 1024 ** 2,
+    ungoverned_bytes: 1024 ** 2, governed_share_pct: 75,
+    legal_hold_count: 0, plan_only: true,
+    quality: { status: 'limited', sample_count: 1, coverage_pct: 75, window_start: null, window_end: null, reasons: [] },
+    evidence: [],
+    ...overrides,
+  };
+}
+
+function card(title: string): HTMLElement {
+  const element = screen.getByRole('heading', { name: title }).closest('[data-card]');
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing card: ${title}`);
+  return element;
 }
 
 function renderPage() {
@@ -141,6 +170,97 @@ beforeEach(() => {
 });
 
 describe('DataGovernancePage — confirm-gated delete', () => {
+  it('retains all five storage quantities, binary units, policy coverage and legal exemptions in the real brief', () => {
+    mockOverview.mockReturnValue(makeQuery(makeOverview()));
+    renderPage();
+    expectOperationalBand('Storage posture', ['total', 'governed', 'ungoverned', 'holds', 'mode']);
+    expect(summaryMetric('Storage posture', 'total')).toHaveTextContent('4.0 MiB');
+    expect(summaryMetric('Storage posture', 'governed')).toHaveTextContent('3.0 MiB');
+    expect(summaryMetric('Storage posture', 'governed')).toHaveTextContent(/75(?:\.0+)?%/);
+    expect(summaryMetric('Storage posture', 'ungoverned')).toHaveTextContent('1.0 MiB');
+    expect(summaryMetric('Storage posture', 'holds')).toHaveAttribute('data-value-state', 'value');
+    expect(summaryMetric('Storage posture', 'holds').querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(summaryMetric('Storage posture', 'holds')).toHaveTextContent('Exempt from every plan');
+    expect(summaryMetric('Storage posture', 'mode')).toHaveTextContent('Plan only');
+    expect(screen.getByRole('button', { name: 'Run dry-run plan' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Define policy' })).toBeEnabled();
+    expect(removeButton('drives')).toBeEnabled();
+    fireEvent.click(within(card('Storage posture')).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Exempt from every plan');
+    expect(screen.getByRole('dialog')).toHaveTextContent('3.0 MiB');
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])('keeps the source enforcement flag %s separate from the dry-run-only screen', (planOnly) => {
+    mockOverview.mockReturnValue(makeQuery(makeOverview({
+      total_bytes: 0, governed_bytes: 0, ungoverned_bytes: 0, governed_share_pct: 0, plan_only: planOnly,
+    })));
+    renderPage();
+    expect(summaryMetric('Storage posture', 'total').querySelector('[data-operational-value]')).toHaveTextContent('0 B');
+    expect(summaryMetric('Storage posture', 'mode').querySelector('[data-operational-value]'))
+      .toHaveTextContent(planOnly ? 'Plan only' : 'Enforcing');
+    expect(screen.getByText('Plan only — nothing is ever deleted here')).toBeInTheDocument();
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not turn missing storage measurements or an absent enforcement flag into zero or enforcing', () => {
+    mockOverview.mockReturnValue(makeQuery({ inventory: [], policies: [] }));
+    renderPage();
+    for (const key of ['total', 'governed', 'ungoverned', 'holds', 'mode']) {
+      expect(summaryMetric('Storage posture', key)).toHaveAttribute('data-value-state', 'missing');
+      expect(summaryMetric('Storage posture', key).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    }
+    expect(summaryMetric('Storage posture', 'mode')).toHaveTextContent('Enforcement mode unknown');
+    expect(summaryMetric('Storage posture', 'mode')).not.toHaveTextContent('Enforcing');
+  });
+
+  it('retains a loading brief and independent ledger, then keeps all dry-run totals non-destructive', () => {
+    mockOverview.mockReturnValue({ ...makeQuery(undefined), isLoading: true });
+    mockRuns.mockReturnValue(makeQuery({ items: [makeRun()] }));
+    mockSimulate.mockReturnValue({
+      ...makeMutation(), data: { as_of: '2026-03-01T00:00:00Z', impacts: [],
+        total_rows_expiring: 0, total_bytes_reclaimable: 0, total_fidelity_loss_pct: 0, plan_only: true },
+    });
+    renderPage();
+    expect(card('Storage posture').querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(card('Storage posture').querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(within(card('Plan ledger')).getByText('Observed ledger dataset')).toBeInTheDocument();
+    expectOperationalBand('Dry-run impact', ['rows', 'bytes', 'fidelity', 'mode']);
+    expect(summaryMetric('Dry-run impact', 'bytes')).toHaveTextContent('0 B');
+    expect(summaryMetric('Dry-run impact', 'mode')).toHaveTextContent('Never — dry run');
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains historical plan records and their independent retry when the current overview is unavailable', () => {
+    const refetch = vi.fn();
+    mockOverview.mockReturnValue({ ...makeQuery(undefined), error: new Error('overview failed') });
+    mockRuns.mockReturnValue({ ...makeQuery({ items: [makeRun()] }), error: new Error('ledger refresh failed'), refetch });
+    renderPage();
+
+    const ledger = card('Plan ledger');
+    expect(within(ledger).getByText('Observed ledger dataset')).toBeInTheDocument();
+    expect(ledger).toHaveTextContent('300');
+    expect(ledger).toHaveTextContent(/1(?:\.0+)? KiB/);
+    expect(within(ledger).getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    fireEvent.click(within(ledger).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockRuns).toHaveBeenCalledWith(50, 0);
+    expect(mockOverview).toHaveBeenCalledWith();
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not replace current retention policies with a failed historical ledger', () => {
+    mockRuns.mockReturnValue({ ...makeQuery(undefined), error: new Error('ledger failed') });
+    renderPage();
+
+    expect(within(card('Retention policies')).getByText('drives')).toBeInTheDocument();
+    expect(within(card('Retention policies')).getByText('sessions')).toBeInTheDocument();
+    expect(within(card('Retention policies')).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(within(card('Plan ledger')).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
   it('opens a danger confirm naming the dataset instead of deleting on click', () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));

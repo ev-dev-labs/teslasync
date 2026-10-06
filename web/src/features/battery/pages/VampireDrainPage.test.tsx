@@ -267,7 +267,8 @@ const NO_VEHICLE = 'Select a vehicle to view its vampire drain.'
 
 function metricValues(label: string) {
   return screen.getAllByText(label).map((element) =>
-    element.closest('[data-stat]')?.querySelector('[data-stat-value]')?.parentElement?.textContent,
+    element.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent
+      ?? element.closest('[data-stat]')?.querySelector('[data-stat-value]')?.parentElement?.textContent,
   )
 }
 
@@ -398,8 +399,9 @@ describe('VampireDrainPage', () => {
       expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4),
     )
     // The KPI cards / gauge value are withheld — no half-populated dashboard.
-    expect(screen.getByRole('region', { name: 'Drain summary' }).querySelector('[data-stat-value]')).toBeNull()
-    expect(screen.getByRole('region', { name: 'Drain summary' }).querySelectorAll('[data-state="loading"]')).toHaveLength(4)
+    expect(screen.getByRole('region', { name: 'Drain summary' }).querySelector('[data-operational-value]')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Drain summary' }).querySelectorAll('[data-operational-metric]')).toHaveLength(4)
+    expect(screen.getByRole('region', { name: 'Drain summary' }).querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('72.50')).toBeNull()
     // Panel chrome still renders so the layout doesn't collapse.
     expect(screen.getByText('Drain rate trend')).toBeInTheDocument()

@@ -91,7 +91,11 @@ describe('maintenance live source integration and preservation boundaries', () =
     const source = readSource(`${directory}/MaintenanceSource.tsx`);
     expect(source).toContain('source.fatalError');
     expect(source).toContain('source.refreshError');
-    expect(source).toContain('{source.data == null ? empty : children}');
+    expect(source).toContain('<SourceContent');
+    expect(source).toContain("state={source.fatalError ? 'error'");
+    expect(source).toContain("source.data == null ? 'empty'");
+    expect(source).toContain('emptyContent=');
+    expect(source).toContain('{children}');
     const page = readSource('features/vehicle-systems/pages/MaintenancePage.tsx');
     expect(page).toContain('handleSchedule');
     expect(page).toContain('Preserved inherited no-op');

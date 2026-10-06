@@ -43,26 +43,37 @@ function summary(trust: CycleStressTrust) {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('cycle-stress source-preserving presentation', () => {
+  it('opens the real review drawer with bounded source scope and illustrative stress assumptions', () => {
+    const before = JSON.stringify(result);
+    render(summary(ready), { wrapper: Provider });
+    fireEvent.click(within(screen.getByTestId('cycle-stress-kpis')).getByRole('button', { name: 'Review details' }));
+    const drawer = within(screen.getByRole('dialog'));
+    expect(drawer.getByText('illustrative exponent 1.3')).toBeVisible();
+    expect(drawer.getByText('sum of count x depth fraction')).toBeVisible();
+    expect(drawer.getByText(/not a selected-date-window or full-history total/)).toBeVisible();
+    expect(JSON.stringify(result)).toBe(before);
+  });
+
   it('renders six compact metrics with honest bounded period and specialist formatting', () => {
     const { container } = render(summary(ready), { wrapper: Provider });
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(6);
-    expect(container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelector('[data-battery-period]')).toHaveTextContent('Returned vehicle histories · bounded evidence');
     expect(screen.getByText(/not a selected-date-window or full-history total/)).toBeInTheDocument();
-    expect(container.querySelector('[data-stat-context]')).toHaveTextContent('1 total rows returned');
+    expect(container.querySelector('[data-battery-detail-context]')).toHaveTextContent('1 total rows returned');
     expect(screen.getByRole('combobox', { name: 'Deep-cycle lens' })).toHaveAttribute('id', 'cycle-stress-threshold');
     expect(screen.getByRole('combobox', { name: 'Depth exponent' })).toHaveAttribute('id', 'cycle-stress-exponent');
-    expect(container.querySelector('[data-stat-strip]')).toHaveAttribute('data-stat-strip', 'cycle-stress-summary');
+    expect(container.querySelector('#cycle-stress-summary [data-operational-brief]')).not.toBeNull();
   });
   it('retains a persistent Router and metric values on a failed background refresh', () => {
     const retryCharging = vi.fn();
     const retryDrive = vi.fn();
     const view = render(summary(ready), { wrapper: Provider });
-    const values = Array.from(view.container.querySelectorAll('[data-stat-value]'), node => node.textContent);
+    const values = Array.from(view.container.querySelectorAll('[data-operational-value]'), node => node.textContent);
     const retained = cycleStressQueryState(true, {
       data: [session], error: new Error('private technical failure'), isError: true, refetch: retryCharging,
     }, { data: [], isSuccess: true, refetch: retryDrive });
     view.rerender(summary(retained));
-    expect(Array.from(view.container.querySelectorAll('[data-stat-value]'), node => node.textContent)).toEqual(values);
+    expect(Array.from(view.container.querySelectorAll('[data-operational-value]'), node => node.textContent)).toEqual(values);
     expect(screen.getByRole('alert')).toHaveTextContent(/most recently loaded evidence/);
     fireEvent.click(screen.getByRole('button', { name: 'Retry Charging history' }));
     expect(retryCharging).toHaveBeenCalledTimes(1);
@@ -81,7 +92,7 @@ describe('cycle-stress source-preserving presentation', () => {
     fireEvent.click(charging.getByRole('button', { name: 'Retry Charging history' }));
     expect(chargingRetry).toHaveBeenCalledTimes(1);
     expect(driveRetry).not.toHaveBeenCalled();
-    expect(container.querySelectorAll('[data-stat][data-state="missing"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
     expect(screen.queryByText('private charging stack')).not.toBeInTheDocument();
     expect(screen.queryByText('private drive stack')).not.toBeInTheDocument();
   });

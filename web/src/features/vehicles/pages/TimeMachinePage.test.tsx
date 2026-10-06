@@ -102,12 +102,16 @@ describe('TimeMachinePage preservation', () => {
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
     fireEvent.click(screen.getByRole('button', { name: '−1w' }));
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, earliest));
+    const callsBeforeVehicleChange = h.readState.mock.calls.length;
     h.vehicleId = 8;
     view.rerender(<QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={['/time-machine']}><TimeMachinePage /></MemoryRouter>
     </QueryClientProvider>);
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(8, latest));
-    expect(h.readState.mock.calls.some(([vehicleId, at]) => vehicleId === 8 && at === null)).toBe(true);
+    const nextVehicleCalls = h.readState.mock.calls.slice(callsBeforeVehicleChange);
+    expect(nextVehicleCalls[0]).toEqual([8, null]);
+    expect(nextVehicleCalls.some(([vehicleId, at]) => vehicleId === 8 && at === null)).toBe(true);
+    expect(nextVehicleCalls.some(([vehicleId, at]) => vehicleId === 8 && at === earliest)).toBe(false);
   });
 
   it('retains category shells and retry controls on initial reconstruction failure', async () => {
@@ -115,7 +119,7 @@ describe('TimeMachinePage preservation', () => {
     h.error = new Error('initial failure');
     renderPage();
     await waitFor(() => expect(screen.getAllByText('Signal reconstruction could not be loaded.')).toHaveLength(6));
-    const count = screen.getByText('Signals reconstructed').closest('[data-stat]');
+    const count = screen.getByText('Signals reconstructed').closest('[data-operational-metric]');
     if (!(count instanceof HTMLElement)) throw new Error('Reconstruction summary missing');
     expect(within(count).getByText('—')).toBeInTheDocument();
     expect(within(count).queryByText('0')).not.toBeInTheDocument();
@@ -128,12 +132,28 @@ describe('TimeMachinePage preservation', () => {
     h.reconstruction = { at: latest, count: 0, fields: [] };
     renderPage();
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
-    const count = screen.getByText('Signals reconstructed').closest('[data-stat]');
+    const count = screen.getByText('Signals reconstructed').closest('[data-operational-metric]');
     if (!(count instanceof HTMLElement)) throw new Error('Reconstruction summary missing');
     expect(within(count).getByText('0')).toBeInTheDocument();
     for (const category of ['battery', 'climate', 'motion', 'tires', 'security', 'other']) {
       expect(screen.getByRole('heading', { name: category })).toBeInTheDocument();
     }
+  });
+
+  it('opens the built-in review drawer with the independent history span and resolved instant', async () => {
+    renderPage();
+    await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
+    const brief = screen.getByTestId('time-machine-summary');
+    const span = brief.querySelector('[data-operational-metric="history-span"]');
+    if (!(span instanceof HTMLElement)) throw new Error('History span missing');
+    expect(span).toHaveAttribute('data-value-state', 'value');
+    expect(within(span).getByText('1d')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Signals reconstructed')).toBeInTheDocument();
+    expect(within(drawer).getByText('History span')).toBeInTheDocument();
+    expect(within(drawer).getByText('1d')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/independent timeline source/).length).toBeGreaterThan(0);
   });
 
   it('keeps first-match classification, source field order and exact age boundaries', () => {

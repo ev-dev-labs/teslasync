@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Caption } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { combineDataStates } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
@@ -10,9 +11,9 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatusGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { StateComposition } from '../components/continuation-dashboard-1/StateComposition';
 
 /* ── State colors ───────────────────────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -70,19 +71,38 @@ export function buildSegments(
 }
 
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
-function StackedBar({ segments }: { segments: StateSegment[] }) {
+function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k: string, d: string) => string; compact: boolean }) {
   const { fmtNumber } = useNumberFormatting();
+  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct)}%`).join('; ');
+
+  // Compact widgets retain their five-cell status grid; the rail's mandatory
+  // complete legend would duplicate it and change that caller-owned limit.
+  if (compact) {
+    return (
+      <div role="img" aria-label={summary} className="flex h-5 w-full rounded-full overflow-hidden forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]">
+        {segments.map((seg, index) => (
+          <div
+            key={`${seg.state}-${index}`}
+            aria-hidden="true"
+            className="h-full first:rounded-s-full last:rounded-e-full motion-reduce:transition-none forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]"
+            style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
+            title={`${seg.state}: ${fmtNumber(seg.pct)}%`}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
-    <div className="flex h-5 w-full rounded-full overflow-hidden">
-      {segments.map((seg) => (
-        <div
-          key={seg.state}
-          className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-normal"
-          style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
-          title={`${seg.state}: ${fmtNumber(seg.pct)}%`}
-        />
-      ))}
-    </div>
+    <StateComposition
+      summary={summary}
+      segments={segments.map((seg, index) => ({
+        id: `summary-${index}`,
+        label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
+        widthPercent: seg.pct,
+        color: stateColor(seg.state),
+        detail: <><span>{fmtDuration(seg.totalMin, t)}</span> · <span>{fmtNumber(seg.pct)}%</span></>,
+      }))}
+    />
   );
 }
 
@@ -100,53 +120,23 @@ function TimelineStripe({
 
   return (
     <div className="space-y-1.5">
-      <span className={dashboardTokens.metricLabel}>
+      <Caption>
         {t('widget.stateTimeline.timeline', '24h timeline')}
-      </span>
-      <div className="flex h-4 w-full rounded overflow-hidden">
-        {transitions.map((tr, i) => {
+      </Caption>
+      <StateComposition
+        summary={transitions.map(tr => `${t(`widget.stateTimeline.state.${tr.state}`, tr.state)}: ${fmtNumber(tr.durationMin ?? 0)} ${t('widget.driveTelemetry.min', 'min')}`).join('; ')}
+        segments={transitions.map((tr, index) => {
           const pct = ((tr.durationMin ?? 0) / totalMin) * 100;
-          if (pct < 0.5) return null;
-          return (
-            <div
-              key={`${tr.state}-${i}`}
-              className="h-full transition-all duration-normal"
-              style={{ width: `${pct}%`, backgroundColor: stateColor(tr.state ?? '') }}
-              title={`${tr.state}: ${fmtNumber(tr.durationMin ?? 0)} min`}
-            />
-          );
+          return {
+            id: `transition-${index}`,
+            label: t(`widget.stateTimeline.state.${tr.state}`, tr.state),
+            widthPercent: pct,
+            color: stateColor(tr.state),
+            hideFromTrack: pct < 0.5,
+            detail: <><TimeStamp value={tr.startDate || null} /> · {fmtNumber(tr.durationMin ?? 0)} {t('widget.driveTelemetry.min', 'min')}</>,
+          };
         })}
-      </div>
-    </div>
-  );
-}
-
-/* ── State list row ─────────────────────────────────────────────── */
-function StateRow({
-  seg,
-  t,
-}: {
-  seg: StateSegment;
-  t: (k: string, d: string) => string;
-}) {
-  const { fmtNumber } = useNumberFormatting();
-  return (
-    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
-      <div className="flex min-w-0 items-center gap-2">
-        <span
-          className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: stateColor(seg.state) }}
-        />
-        <span className={dashboardTokens.metricLabel}>
-          {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className={dashboardTokens.unit}>{fmtDuration(seg.totalMin, t)}</span>
-        <Badge variant="neutral" className="tabular-nums">
-          {fmtNumber(seg.pct)}%
-        </Badge>
-      </div>
+      />
     </div>
   );
 }
@@ -226,7 +216,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
             />
           ) : (
             <>
-              <StackedBar segments={segments} />
+              <StackedBar segments={segments} t={t} compact={isCompact} />
               {isCompact ? (
                 <WidgetStatusGrid
                   compact
@@ -238,13 +228,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
                     icon: <span className="mt-1.5 block size-2 shrink-0 rounded-full" style={{ backgroundColor: stateColor(seg.state) }} />,
                   }))}
                 />
-              ) : (
-                <div className="flex flex-col gap-1 overflow-y-auto">
-                  {segments.map((seg) => (
-                    <StateRow key={seg.state} seg={seg} t={t} />
-                  ))}
-                </div>
-              )}
+              ) : null}
             </>
           )}
 

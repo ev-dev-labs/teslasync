@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import type { FsdHeartbeat, PhysicsCockpit, SessionCertificate } from '@/types/teslaPhysics';
 
@@ -126,6 +127,10 @@ vi.mock('@/api/hooks/useTeslaPhysics', () => ({
 
 import PhysicsCockpitPage from './PhysicsCockpitPage';
 
+function renderPage() {
+  return render(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   h.cockpitError = null;
@@ -138,7 +143,7 @@ describe('PhysicsCockpitPage', () => {
   it('retains all cockpit, heartbeat and park evidence after independent refresh failures', () => {
     h.cockpitError = new Error('cockpit refresh failed');
     h.heartbeatError = new Error('heartbeat refresh failed');
-    render(<PhysicsCockpitPage />);
+    renderPage();
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
     expect(screen.getByText('0 km/h')).toBeInTheDocument();
     expect(screen.getByText('Confirmed park')).toBeInTheDocument();
@@ -153,7 +158,7 @@ describe('PhysicsCockpitPage', () => {
     h.heartbeatMissing = true;
     h.cockpitError = new Error('cockpit initial failure');
     h.heartbeatError = new Error('heartbeat initial failure');
-    render(<PhysicsCockpitPage />);
+    renderPage();
     expect(screen.getByRole('heading', { name: 'FSD trip-meter heartbeat' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Park truth' })).toBeInTheDocument();
     expect(screen.getByText('Trip-meter heartbeat could not be loaded.')).toBeInTheDocument();
@@ -162,7 +167,7 @@ describe('PhysicsCockpitPage', () => {
     expect(h.refetch).toHaveBeenCalledTimes(1);
   });
   it('shows Tesla physics fields and does not treat a present FSD meter as a tick', () => {
-    render(<PhysicsCockpitPage />);
+    renderPage();
     expect(screen.getByText('Tesla physics cockpit')).toBeInTheDocument();
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
     expect(screen.getByText(/398\.00 V/)).toBeInTheDocument();
@@ -174,5 +179,20 @@ describe('PhysicsCockpitPage', () => {
     const caveat = screen.getByText(cockpit.honesty);
     expect(caveat).toBeVisible();
     expect(caveat.closest('[data-role="page-header"]')).toBeNull();
+  });
+
+  it('keeps real zero speed numeric and reviews independently reported pack measurements', () => {
+    renderPage();
+    const brief = screen.getByTestId('physics-cockpit-readings');
+    const speed = brief.querySelector('[data-operational-metric="cockpit-speed"]');
+    if (!(speed instanceof HTMLElement)) throw new Error('Speed evidence missing');
+    expect(speed).toHaveAttribute('data-value-state', 'value');
+    expect(within(speed).getByText('0 km/h')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-metric="cockpit-current"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText(/Pack voltage \(V\) and current \(A\)/)).toBeInTheDocument();
+    expect(within(drawer).getByText('398.00 V')).toBeInTheDocument();
+    expect(within(drawer).getByText('1.20 A')).toBeInTheDocument();
   });
 });

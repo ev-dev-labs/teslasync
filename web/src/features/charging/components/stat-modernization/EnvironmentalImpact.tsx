@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Leaf, Trees } from 'lucide-react';
 import { Text } from '@/components/ui';
-import { StatGroup } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { CoreStats } from '../cost-analysis/types';
 import { CostStatSection } from './CostStatSection';
@@ -33,7 +33,8 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry, peri
       emptyMessage={t('costAnalysis.environment.noData', 'No data')} skeletonHeight={200}>
       {periodHeaderId => (
         <div className="space-y-4">
-          <StatGroup period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+          <ChargingSummaryBrief title={t('costAnalysis.environment.title', 'Environmental Impact')}
+            period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
             metrics={[
               { metricId: 'number', rawValue: co2SavedKg, label: t('costAnalysis.environment.kgCo2', 'kg CO₂ saved') },
               { metricId: 'number', rawValue: treeEquiv, label: t('costAnalysis.environment.treeEquiv', 'tree-years equivalent') },
@@ -52,7 +53,8 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry, peri
               </Text>
             </div>
           </div>
-          <StatGroup period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+          <ChargingSummaryBrief title={t('costAnalysis.environment.gallons', 'gallons avoided')}
+            period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
             metrics={[
               { metricId: 'number', rawValue: gallonsEquiv, label: t('costAnalysis.environment.gallons', 'gallons avoided') },
               { metricId: 'number', rawValue: metricTonsCo2, label: t('costAnalysis.environment.metricTons', 'metric tons CO₂') },

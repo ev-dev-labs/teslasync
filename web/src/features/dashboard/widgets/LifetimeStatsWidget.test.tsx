@@ -28,7 +28,7 @@
  * and driven per-test.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -192,10 +192,10 @@ describe('LifetimeStatsWidget — distance conversion (km→metres regression gu
 
     // 50,000 km → metres → km = 50,000 (rendered as plain text by StatCard).
     expect(screen.getByText('Total distance')).toBeInTheDocument();
-    expect(screen.getByText('50,000.00')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
     // The old bug (km × 0.621371 ÷ 1000 ≈ 31) must never surface.
     expect(screen.queryByText('31')).not.toBeInTheDocument();
-    expect(screen.getAllByText('km').length).toBeGreaterThan(0);
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
   });
 
   it('converts the km total to miles for a miles user (not the ~19 mi double bug)', () => {
@@ -204,8 +204,7 @@ describe('LifetimeStatsWidget — distance conversion (km→metres regression gu
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // 50,000 km = 50,000,000 m ÷ 1609.344 ≈ 31,069 mi.
-    expect(screen.getByText('31,068.56')).toBeInTheDocument();
-    expect(screen.getAllByText('mi').length).toBeGreaterThan(0);
+    expect(screen.getByText('31,068.56 mi')).toBeInTheDocument();
     // The old double conversion (~19) must never surface.
     expect(screen.queryByText('19')).not.toBeInTheDocument();
     expect(screen.queryByText('km')).not.toBeInTheDocument();
@@ -235,8 +234,8 @@ describe('LifetimeStatsWidget — layout variants', () => {
     expect(screen.getByText('Total drives')).toBeInTheDocument();
     expect(screen.getByText('1,234')).toBeInTheDocument();
     expect(screen.getByText('Total energy')).toBeInTheDocument();
-    expect(screen.getByText('8,500.50')).toBeInTheDocument();
-    expect(screen.getByText('3,200.00')).toBeInTheDocument();
+    expect(screen.getByText('8,500.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('3,200.00 kg')).toBeInTheDocument();
     // Wide-only stats are absent when not wide.
     expect(screen.queryByText('Total cost')).not.toBeInTheDocument();
     expect(screen.queryByText('Ownership days')).not.toBeInTheDocument();
@@ -255,7 +254,22 @@ describe('LifetimeStatsWidget — layout variants', () => {
     expect(screen.getByText('1,000')).toBeInTheDocument();
     expect(screen.getByText('Avg daily distance')).toBeInTheDocument();
     // 50,000 km / 1,000 days = 50 km/day → "50.0".
-    expect(screen.getByText('50.00')).toBeInTheDocument();
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
+  });
+
+  it('reviews seven retained lifetime quantities and preserves the ownership-day denominator', () => {
+    mockLifetime.mockReturnValue(makeQuery({
+      data: makeStats(), error: new Error('refresh failed'), isError: true,
+    }));
+    renderWidget({ size: { cols: 3, rows: 4 } });
+    const brief = screen.getByTestId('lifetime-stats-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(7);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('50,000.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('$456.78')).toBeInTheDocument();
+    expect(within(drawer).getByText(/positive measured ownership days/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/not the workspace date range/).length).toBeGreaterThan(0);
   });
 
   it('retains its heading in the compact layout', () => {
@@ -343,7 +357,7 @@ describe('LifetimeStatsWidget — loading / empty / error', () => {
 
     // Data present → the error is a subtle freshness signal, not a full panel.
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    expect(screen.getByText('50,000.00')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
   });
 });
 

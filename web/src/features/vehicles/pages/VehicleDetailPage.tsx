@@ -39,7 +39,7 @@ import VehicleSettingsTab from '../components/VehicleSettingsTab'
 import { SilenceBanner } from '../components/SilenceBanner'
 import { NextChargeDecisionStrip } from '../components/NextChargeDecisionStrip'
 import { useVehicleSettings, findEffectiveSetting } from '@/api/hooks/useVehicleSettings'
-import { AIVehiclePaintPreview } from '@/components/ai/AIVehiclePaintPreview'
+import { AIVehiclePaintPreview } from '@/components/ai'
 
 export default function VehicleDetailPage() {
   const { t } = useTranslation()
@@ -237,7 +237,7 @@ export default function VehicleDetailPage() {
 
       <VehicleDetailOverview state={state} stateQuery={stateQuery} />
       <VehicleDetailStats state={state} status={status} stateQuery={stateQuery} />
-      <VehicleDetailSystems state={state} motorQuery={motorQuery} climateQuery={climateQuery}
+      <VehicleDetailSystems state={state} stateQuery={stateQuery} motorQuery={motorQuery} climateQuery={climateQuery}
         securityQuery={securityQuery} tireQuery={tireQuery} chargingTelemetryQuery={chargingTelemetryQuery} />
 
       {/* Battery & range charts — existing source order, shared host sizing. */}

@@ -261,8 +261,8 @@ const heroRegion = () => screen.getByRole('region', { name: 'Health trend & proj
 
 /** Read the real shared stat's value and adjacent unit, not legacy MetricCard markup. */
 function metricValue(region: HTMLElement, label: string): string {
-  const tile = within(region).getByText(label).closest('[data-stat]');
-  return tile?.querySelector('[data-stat-value]')?.parentElement?.textContent ?? '';
+  const tile = within(region).getByText(label).closest('[data-operational-metric]');
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -283,8 +283,9 @@ describe('BatteryDegradationPage — loading', () => {
 
     expect(screen.getByRole('heading', { name: 'Battery degradation', level: 1 })).toBeInTheDocument();
     // Shared stats retain their labels while withholding all measured values.
-    expect(kpiRegion().querySelector('[data-stat-value]')).toBeNull();
-    expect(kpiRegion().querySelectorAll('[data-state="loading"]')).toHaveLength(4);
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
+    expect(kpiRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(kpiRegion().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     // The gauge verdict badge is withheld while its skeleton stands in.
     expect(screen.queryByText('Excellent')).toBeNull();
     // The prediction block is a skeleton, so its copy is absent.
@@ -313,8 +314,8 @@ describe('BatteryDegradationPage — populated (km)', () => {
     renderPage();
     const kpi = kpiRegion();
     expect(metricValue(kpi, 'Estimated capacity')).toBe('—');
-    expect(within(kpi).getByText('Estimated capacity').closest('[data-stat]'))
-      .toHaveAttribute('data-state', 'missing');
+    expect(within(kpi).getByText('Estimated capacity').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
     expect(within(kpi).queryByText('0.0 kWh', { exact: true })).not.toBeInTheDocument();
     expect(metricValue(kpi, 'Current SOH')).toBe('91.00%');
   });
@@ -323,8 +324,8 @@ describe('BatteryDegradationPage — populated (km)', () => {
     mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, estimated_capacity_wh: 0 } }));
     renderPage();
     expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('0.0 kWh');
-    expect(within(kpiRegion()).getByText('Estimated capacity').closest('[data-stat]'))
-      .toHaveAttribute('data-state', 'value');
+    expect(within(kpiRegion()).getByText('Estimated capacity').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'value');
     expect(metricValue(kpiRegion(), 'Current SOH')).toBe('91.00%');
   });
 
@@ -343,7 +344,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     // years_to_80_pct 5.3 → "~5.30 years", plus the predicted date.
     expect(screen.getByText(/in approximately/)).toBeInTheDocument();
     expect(screen.getByText(/2029-06-01/)).toBeInTheDocument();
-    expect(metricValue(screen.getByText('Total cycles').closest('[data-stat-strip]') as HTMLElement, 'Total cycles')).toBe('412.00');
+    expect(metricValue(screen.getByText('Total cycles').closest('[data-operational-brief]') as HTMLElement, 'Total cycles')).toBe('412.00');
 
     // 40 fast + 60 slow → 40% fast charges; 5 deep discharges; Medium stress.
     expect(screen.getByText(/40% fast charges/)).toBeInTheDocument();

@@ -270,6 +270,23 @@ describe('AlertRulesPage — data state', () => {
     expect(within(kpis).getByText('2')).toBeInTheDocument(); // enabled
   });
 
+  it('reviews all six counts with unfiltered scope and overlapping snooze semantics without losing rules controls', () => {
+    renderPage();
+    const brief = screen.getByTestId('alert-rules-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-metric="rules-total"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('before search and channel filtering');
+    expect(drawer).toHaveTextContent('Snoozed rules can overlap enabled or disabled rules');
+    for (const label of ['Total rules', 'Enabled', 'Disabled', 'Critical', 'Snoozed', 'Computed']) {
+      expect(drawer).toHaveTextContent(label);
+    }
+    fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create rule' })).toBeInTheDocument();
+  });
+
   it('renders all three insight panels and the rules table', () => {
     renderPage();
     expect(screen.getByText('Severity distribution')).toBeInTheDocument();

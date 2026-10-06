@@ -82,8 +82,10 @@ const FULL: NotificationStats = {
 
 describe('ChannelStatsBand — loaded', () => {
   it('renders all four KPI cards with their English labels', () => {
-    render(<ChannelStatsBand stats={FULL} isLoading={false} />);
+    const { container } = render(<ChannelStatsBand stats={FULL} isLoading={false} />);
 
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(screen.getByText('Total sent')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Pending')).toBeInTheDocument();
@@ -97,6 +99,14 @@ describe('ChannelStatsBand — loaded', () => {
     expect(screen.getByText('7')).toBeInTheDocument(); // failed
     expect(screen.getByText('3')).toBeInTheDocument(); // pending
     expect(screen.getByText('5/8')).toBeInTheDocument(); // enabled/total
+    expect(screen.getByText('Delivery counts have no reported time bounds; active channels are the configured enabled/total count.')).toBeInTheDocument();
+  });
+
+  it('retains the screenshot active-channel numerator and denominator without duplicating the band', () => {
+    const { container } = render(<ChannelStatsBand stats={{ ...FULL, enabled_channels: 1, total_channels: 1 }} isLoading={false} />);
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(screen.getByText('1/1')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="channels-active"] [data-operational-value]')).toHaveTextContent('1/1');
   });
 
   it('reads `sent` (successful deliveries), never the misnamed `total_sent`', () => {
@@ -193,6 +203,17 @@ describe('ChannelStatsBand — accessibility', () => {
     const { container } = render(<ChannelStatsBand stats={FULL} isLoading={false} />);
 
     // One lucide icon per card, each hidden from assistive tech.
-    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric] svg[aria-hidden="true"]')).toHaveLength(4);
+  });
+
+  it('opens the shared Review details drawer with every count and its source context', () => {
+    render(<ChannelStatsBand stats={FULL} isLoading={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Delivery counts have no reported time bounds; active channels are the configured enabled/total count.');
+    expect(drawer).toHaveTextContent('Total sent');
+    expect(drawer).toHaveTextContent('42');
+    expect(drawer).toHaveTextContent('Active channels');
+    expect(drawer).toHaveTextContent('5/8');
   });
 });

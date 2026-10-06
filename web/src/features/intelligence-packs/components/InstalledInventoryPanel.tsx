@@ -18,6 +18,7 @@ import { usePackActions } from '../hooks/usePackActions';
 import { useCatalog } from '../hooks/useCatalog';
 import { VerificationStatusBadge } from './VerificationStatusBadge';
 import { CapabilityRequestList } from './CapabilityRequestList';
+import { PackRepositorySource } from './PackRepositorySource';
 import { isEnableAllowed } from '../lib/trust';
 import type { InstalledPackRecord } from '../lib/packRepository';
 
@@ -148,49 +149,49 @@ export function InstalledInventoryPanel() {
     },
   ];
 
-  if (rows.length === 0) {
-    return (
-      // no-action: the install control lives in the adjacent Catalog tab of this same marketplace page, not in this Installed tab.
-      <EmptyState
-        icon={<PackageOpen className="h-10 w-10" />}
-        message={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
-      />
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      <DataTable
-        enableValueFilters
-        tableId="intelligence-packs:installed"
-        columns={columns}
-        data={rows}
-        keyExtractor={(r) => r.packId}
-        expandable
-        expandedKeys={expandedKeys}
-        onExpandedChange={setExpandedKeys}
-        renderExpanded={(r) => <ExpandedDetail record={r} />}
-        emptyMessage={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
-        mobileColumns={['name', 'enabled']}
-        name="IntelligencePacksInstalled"
-      />
+    <PackRepositorySource query={installedQuery} label={t('intelPacks.tabs.installed', 'Installed')}>
+      {rows.length === 0 ? (
+        // no-action: the install control lives in the adjacent Catalog tab of this same marketplace page, not in this Installed tab.
+        <EmptyState
+          icon={<PackageOpen className="h-10 w-10" />}
+          message={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
+        />
+      ) : (
+        <div className="space-y-3">
+          <DataTable
+            enableValueFilters
+            tableId="intelligence-packs:installed"
+            columns={columns}
+            data={rows}
+            keyExtractor={(r) => r.packId}
+            expandable
+            expandedKeys={expandedKeys}
+            onExpandedChange={setExpandedKeys}
+            renderExpanded={(r) => <ExpandedDetail record={r} />}
+            emptyMessage={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
+            mobileColumns={['name', 'enabled']}
+            name="IntelligencePacksInstalled"
+          />
 
-      <ConfirmDialog
-        open={uninstallTarget != null}
-        title={t('intelPacks.confirm.uninstallTitle', 'Uninstall pack?')}
-        message={t('intelPacks.confirm.uninstallMessage', 'This removes "{{name}}" and its version history from this device. This cannot be undone.', {
-          name: uninstallTarget?.envelope.manifest.name ?? '',
-        })}
-        variant="danger"
-        confirmLabel={t('intelPacks.installed.uninstall', 'Uninstall')}
-        cancelLabel={t('common.cancel', 'Cancel')}
-        loading={uninstall.isPending}
-        onConfirm={async () => {
-          if (uninstallTarget) await uninstall.mutateAsync(uninstallTarget.packId);
-          setUninstallTarget(null);
-        }}
-        onCancel={() => setUninstallTarget(null)}
-      />
-    </div>
+          <ConfirmDialog
+            open={uninstallTarget != null}
+            title={t('intelPacks.confirm.uninstallTitle', 'Uninstall pack?')}
+            message={t('intelPacks.confirm.uninstallMessage', 'This removes "{{name}}" and its version history from this device. This cannot be undone.', {
+              name: uninstallTarget?.envelope.manifest.name ?? '',
+            })}
+            variant="danger"
+            confirmLabel={t('intelPacks.installed.uninstall', 'Uninstall')}
+            cancelLabel={t('common.cancel', 'Cancel')}
+            loading={uninstall.isPending}
+            onConfirm={async () => {
+              if (uninstallTarget) await uninstall.mutateAsync(uninstallTarget.packId);
+              setUninstallTarget(null);
+            }}
+            onCancel={() => setUninstallTarget(null)}
+          />
+        </div>
+      )}
+    </PackRepositorySource>
   );
 }

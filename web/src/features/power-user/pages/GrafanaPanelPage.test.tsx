@@ -151,6 +151,19 @@ function getEditor(): HTMLTextAreaElement {
 }
 
 describe('GrafanaPanelPage', () => {
+  it('retains all three passive workflow instructions without implying AI apply or a Grafana push', () => {
+    renderPage();
+    const workflow = screen.getByRole('list', { name: 'How it works' });
+    const instructions = within(workflow).getAllByRole('listitem');
+    expect(instructions).toHaveLength(3);
+    expect(instructions[0]).toHaveTextContent('Draft with Helix or write / paste a Grafana panel JSON envelope in the editor.');
+    expect(instructions[1]).toHaveTextContent('Click copy to clipboard to grab the JSON.');
+    expect(instructions[2]).toHaveTextContent('In Grafana, choose add panel → edit JSON and paste it in.');
+    expect(workflow.querySelector('[aria-current]')).toBeNull();
+    expect(getEditor()).toHaveValue('');
+    expect(clipboardWriteText).not.toHaveBeenCalled();
+    expect(screen.getByText(/The browser never pushes panels to Grafana directly/)).toBeInTheDocument();
+  });
   it('retains the complete manual panel after denial and retries exact trimmed JSON', async () => {
     clipboardWriteText.mockRejectedValueOnce(new Error('denied'));
     renderPage();
@@ -197,7 +210,7 @@ describe('GrafanaPanelPage', () => {
       screen.getByText(/Build a Grafana panel JSON envelope against the curated catalog/i),
     ).toBeInTheDocument();
 
-    // KPI band is an accessible region whose four MetricCards surface the
+    // The compact Brief is an accessible region whose four raw metrics surface the
     // counts derived from the install-static catalogs: 8 panel types, 2
     // datasources, 5 tables, 33 total columns.
     const summary = screen.getByRole('region', { name: /Curated catalog summary/i });
@@ -209,6 +222,28 @@ describe('GrafanaPanelPage', () => {
     expect(within(summary).getByText('2')).toBeInTheDocument();
     expect(within(summary).getByText('5')).toBeInTheDocument();
     expect(within(summary).getByText('33')).toBeInTheDocument();
+  });
+
+  it('reviews static catalog evidence without applying, copying or discarding the JSON draft', () => {
+    const { container } = renderPage();
+    const json = '{"title":"Retained panel","targets":[{"rawSql":"SELECT 1"}]}';
+    fireEvent.change(getEditor(), { target: { value: json } });
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(4);
+    expect(container.querySelector('[data-operational-metric="columns"] [data-operational-value]')).toHaveTextContent('33');
+    expect(screen.getByText('Bundled builder catalog · all entries')).toBeInTheDocument();
+    expect(screen.getByText('Reference data · no live measurement')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Curated catalog summary details' });
+    expect(within(drawer).getByText(/not a live connectivity check/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Curated tables allowed in postgres-target SQL/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/The browser never pushes panels to Grafana/)).toBeInTheDocument();
+    expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
+    const close = within(drawer).getAllByRole('button', { name: 'Close' });
+    fireEvent.click(close[close.length - 1]);
+    expect(getEditor()).toHaveValue(json);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(json);
+    expect(clipboardWriteText).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Copy to clipboard' })).toBeEnabled();
   });
 
   it('renders the full curated catalog: panel types, datasource UIDs, and tables + columns', () => {

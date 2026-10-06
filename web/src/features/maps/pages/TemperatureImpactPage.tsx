@@ -1,14 +1,14 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Thermometer, Snowflake, Sun, Lightbulb, TrendingUp, Activity,
+  Thermometer, Snowflake, Sun, Lightbulb,
   BarChart3, CalendarRange, Car,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { Badge, Caption, Text, HelperText, DataTable, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -29,7 +29,7 @@ import {
   useTemperatureImpact,
   type TemperatureImpactPoint,
 } from '@/api/hooks/useAnalytics';
-import { AICabinTemperatureImpactNarrative } from '@/components/ai/AICabinTemperatureImpactNarrative';
+import { AICabinTemperatureImpactNarrative } from '@/components/ai';
 import { EfficiencyDetectivePanel } from '../components/EfficiencyDetectivePanel';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -47,6 +47,7 @@ interface BucketDef {
 interface BucketAvg {
   label: string;
   avg: number;
+  avgWhM: number;
   count: number;
   color: string;
 }
@@ -165,14 +166,14 @@ export default function TemperatureImpactPage() {
     const bucketAvgs: BucketAvg[] = tempBuckets.map((b, i) => {
       const vals = bucketCounts.get(i) ?? [];
       const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
-      return { label: b.label, avg: toDispEff(avg), count: vals.length, color: b.color };
+      return { label: b.label, avg: toDispEff(avg), avgWhM: avg / 1000, count: vals.length, color: b.color };
     });
 
     const withData = bucketAvgs.filter((b) => b.count > 0);
     const best = withData.reduce((a, b) => (b.avg < a.avg ? b : a), withData[0]);
     const worst = withData.reduce((a, b) => (b.avg > a.avg ? b : a), withData[0]);
 
-    return { avgEff: toDispEff(avgEff), bucketAvgs, best, worst, total: points.length };
+    return { avgEff: toDispEff(avgEff), avgEffWhM: avgEff / 1000, bucketAvgs, best, worst, total: points.length };
   }, [points, tempBuckets, toDispEff]);
 
   const bestLabel = stats?.best?.label;
@@ -326,6 +327,15 @@ export default function TemperatureImpactPage() {
 
   const hasPoints = points.length > 0;
   const hasMonthly = monthlyData.length > 0;
+  const briefScope = t('tempImpact.brief.scope', 'Selected vehicle · returned drive points; source window unspecified. Monthly trend and efficiency detective use independent periods.');
+  const briefMetrics = [
+    { metricId: 'efficiency', occurrenceId: 'temperature-average', rawValue: stats?.avgEffWhM, label: t('tempImpact.avgEfficiency', 'Avg efficiency'), description: briefScope, display: { formatter: (raw: number) => ({ value: fmtNumber(toDispEff(raw * 1000)), unit: effLabel }) } },
+    { metricId: 'text', occurrenceId: 'temperature-best', rawValue: stats?.best?.label, label: t('tempImpact.bestRange', 'Best temp range'), description: t('tempImpact.brief.best', 'Lowest average consumption among populated temperature buckets.'), context: stats?.best ? `${fmtNumber(stats.best.avg)} ${effLabel}` : undefined },
+    { metricId: 'text', occurrenceId: 'temperature-worst', rawValue: stats?.worst?.label, label: t('tempImpact.worstRange', 'Worst temp range'), description: t('tempImpact.brief.worst', 'Highest average consumption among populated temperature buckets.'), context: stats?.worst ? `${fmtNumber(stats.worst.avg)} ${effLabel}` : undefined },
+    { metricId: 'count', occurrenceId: 'temperature-points', rawValue: stats?.total ?? (source.hasData ? 0 : null), label: t('tempImpact.totalPoints', 'Total data points'), description: briefScope },
+    { metricId: 'efficiency', occurrenceId: 'temperature-best-efficiency', rawValue: stats?.best?.avgWhM, label: t('tempImpact.brief.bestEfficiency', 'Best-range efficiency'), description: t('tempImpact.brief.best', 'Lowest average consumption among populated temperature buckets.'), display: { formatter: (raw: number) => ({ value: fmtNumber(toDispEff(raw * 1000)), unit: effLabel }) } },
+    { metricId: 'efficiency', occurrenceId: 'temperature-worst-efficiency', rawValue: stats?.worst?.avgWhM, label: t('tempImpact.brief.worstEfficiency', 'Worst-range efficiency'), description: t('tempImpact.brief.worst', 'Highest average consumption among populated temperature buckets.'), display: { formatter: (raw: number) => ({ value: fmtNumber(toDispEff(raw * 1000)), unit: effLabel }) } },
+  ] as const;
 
   /* ================================================================ */
   /*  Render */
@@ -346,37 +356,14 @@ export default function TemperatureImpactPage() {
 
       {/* ── KPI band ─────────────────────────────────────────── */}
       <FadeIn>
-        <section
-          aria-label={t('tempImpact.kpis', 'Summary metrics')}
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-        >
-          <MetricCard
-            label={t('tempImpact.avgEfficiency', 'Avg efficiency')}
-            value={stats ? `${fmtNumber(stats.avgEff)} ${effLabel}` : '—'}
-            icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('tempImpact.bestRange', 'Best temp range')}
-            value={stats?.best?.label ?? '—'}
-            icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
-            color="green"
-            subtitle={stats?.best ? `${fmtNumber(stats.best.avg)} ${effLabel}` : undefined}
-          />
-          <MetricCard
-            label={t('tempImpact.worstRange', 'Worst temp range')}
-            value={stats?.worst?.label ?? '—'}
-            icon={<Sun className="h-4 w-4" aria-hidden="true" />}
-            color="purple"
-            subtitle={stats?.worst ? `${fmtNumber(stats.worst.avg)} ${effLabel}` : undefined}
-          />
-          <MetricCard
-            label={t('tempImpact.totalPoints', 'Total data points')}
-            value={stats?.total ?? (source.hasData ? 0 : '—')}
-            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-            color="cyan"
-          />
-        </section>
+        <MapsOperationalBrief
+          title={t('tempImpact.kpis', 'Summary metrics')}
+          description={t('tempImpact.brief.description', 'Observed consumption and populated temperature buckets, with their original efficiency captions retained.')}
+          scope={briefScope}
+          metrics={briefMetrics}
+          sources={[{ label: t('tempImpact.title', 'Temperature impact'), state: source }]}
+          loading={isLoading}
+        />
       </FadeIn>
 
       {/* ── Detective: month-over-month diagnosis ──────────── */}

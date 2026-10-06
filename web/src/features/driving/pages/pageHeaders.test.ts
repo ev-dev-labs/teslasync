@@ -1,4 +1,24 @@
 import { describe, expect, it } from 'vitest';
+import {
+  createSourceFile, forEachChild, isJsxAttribute, isJsxOpeningElement,
+  isJsxSelfClosingElement, ScriptKind, ScriptTarget, type Node,
+} from 'typescript';
+
+function pageHeaderAttributes(source: string) {
+  const attributes: string[] = [];
+  const file = createSourceFile('page.tsx', source, ScriptTarget.Latest, true, ScriptKind.TSX);
+  const visit = (node: Node) => {
+    if ((isJsxOpeningElement(node) || isJsxSelfClosingElement(node))
+      && /^(PageLayout|PageContainer)$/.test(node.tagName.getText(file))) {
+      for (const attribute of node.attributes.properties) {
+        if (isJsxAttribute(attribute)) attributes.push(attribute.name.getText(file));
+      }
+    }
+    forEachChild(node, visit);
+  };
+  visit(file);
+  return attributes;
+}
 
 const sources = import.meta.glob<string>([
   './*.tsx',
@@ -55,7 +75,7 @@ describe('Owned mobility page headers', () => {
   it.each(pages)('%s uses the shared compact header without a legacy action rail', (_path, source) => {
     expect(source).toMatch(/<(?:PageLayout|PageContainer)\b/);
     expect(source).not.toMatch(/compactHeader\s*=\s*\{false\}/);
-    expect(source).not.toMatch(/^\s{6}actions=/m);
+    expect(pageHeaderAttributes(source)).not.toContain('actions');
     expect(source).not.toMatch(/<h1\b|<PageHeader\b|<PageTitle\b/);
   });
 

@@ -32,7 +32,6 @@ import {
   DynamicsTripToolbar,
   RideOverview,
   PowertrainSummary,
-  SummaryStats,
   MotorHistoryCharts,
   DrivingTips,
   GForcePanel,
@@ -40,6 +39,7 @@ import {
   PedalUsage,
   SpeedGearPanel,
 } from '../components/driving-dynamics-modernization';
+import { MotorSamplesBrief } from '../components/operationalbrief-a-m/MotorSamplesBrief';
 import {
   isOpenDrive,
   mergeOpenDrives,
@@ -243,7 +243,7 @@ export default function DrivingDynamicsPage() {
               {t('dynamics.review.evidenceDescription', 'Power delivery, recovered power, axle load, and temperature — sampled only within the selected trip window.')}
             </Text>
           </div>
-          <SummaryStats
+          <MotorSamplesBrief
             vehicleId={vehicleId}
             historyQuery={historyQuery}
           />

@@ -254,7 +254,7 @@ function section(name: string) {
 }
 
 function metric(label: string) {
-  const element = kpi().getByText(label, { selector: '[data-stat-label]' }).closest('[data-stat]');
+  const element = kpi().getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' }).closest('[data-operational-metric]');
   if (!(element instanceof HTMLElement)) throw new Error(`Missing guard ${label} metric`);
   return element;
 }
@@ -337,8 +337,8 @@ describe('GuardModePage — status surfaces', () => {
 
     expect(section('status').getByText('Lock state unavailable')).toBeInTheDocument();
     expect(section('status').getByText('Sentry status unavailable')).toBeInTheDocument();
-    expect(metric('Lock state')).toHaveAttribute('data-state', 'missing');
-    expect(metric('Sentry mode')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.queryByText('Vehicle unlocked')).not.toBeInTheDocument();
     expect(screen.queryByText('Sentry mode off')).not.toBeInTheDocument();
     expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
@@ -352,10 +352,10 @@ describe('GuardModePage — status surfaces', () => {
     // Shared stats retain their labelled shell. A loading policy cannot erase
     // the independently resolved live readings or event counts.
     expect(screen.getByRole('region', { name: 'Guard status overview' })).toBeInTheDocument();
-    expect(metric('Guard state')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
     expect(metric('Guard state')).toHaveTextContent('Updating…');
     expect(metric('Guard state')).not.toHaveTextContent('Armed');
-    expect(metric('Sensitivity')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Sensitivity')).toHaveAttribute('data-value-state', 'missing');
     expect(metric('Lock state')).toHaveTextContent('Locked');
     expect(metric('Total events')).toHaveTextContent('0');
     expect(document.querySelector('[data-guard-section="settings"] .animate-pulse')).toBeInTheDocument();

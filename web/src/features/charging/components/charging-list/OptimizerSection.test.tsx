@@ -203,13 +203,13 @@ describe('OptimizerSection — charging habits', () => {
 
   it.each([0, -1, NaN, Infinity, 101])('shows unknown instead of a location share for %s', (value) => {
     renderSection({ schedule: { home_charging_pct: value } });
-    expect(screen.getByText('Most-used recorded location').parentElement).toHaveTextContent('—');
+    expect(screen.getByText('Most-used recorded location').closest('[data-operational-metric]')).toHaveTextContent('—');
     expect(screen.getByText('Location clusters do not confirm home charging. Missing location evidence is shown as unknown.')).toBeInTheDocument();
   });
 
   it('preserves a fully recorded location share without claiming it is home', () => {
     renderSection({ schedule: { home_charging_pct: 100 } });
-    expect(screen.getByText('Most-used recorded location').parentElement).toHaveTextContent('100.00%');
+    expect(screen.getByText('Most-used recorded location').closest('[data-operational-metric]')).toHaveTextContent('100.00%');
     expect(screen.queryByText('Home charging')).not.toBeInTheDocument();
   });
 });
@@ -268,10 +268,10 @@ describe('OptimizerSection — cost analysis', () => {
 
   it('flags a high peak-session share red and a low share emerald', () => {
     renderSection({ cost: { sessions_during_peak_pct: 45 } });
-    expect(screen.getByText('45.00%').className).toContain('text-red-400');
+    expect(screen.getByText('45.00%').className).toContain('dark:text-rose-300');
 
     renderSection({ cost: { sessions_during_peak_pct: 10 } });
-    expect(screen.getByText('10.00%').className).toContain('text-emerald-300');
+    expect(screen.getByText('10.00%').className).toContain('dark:text-emerald-300');
   });
 
   it('shows "—" for empty peak / off-peak hour lists (never a blank cell)', () => {

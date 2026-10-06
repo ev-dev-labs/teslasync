@@ -159,6 +159,11 @@ vi.mock('../components/odometer-milestones', async () => {
   };
 });
 
+vi.mock('../components/operationalbrief-a-m/MilestoneBrief', async () => {
+  const { MilestoneKpis } = await import('../components/odometer-milestones');
+  return { MilestoneBrief: MilestoneKpis };
+});
+
 import MilestonesPage from './MilestonesPage';
 
 function query(overrides: Record<string, unknown> = {}) {
@@ -275,7 +280,7 @@ describe('MilestonesPage', () => {
     render(<MilestonesPage />);
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
     expect(retry).toHaveBeenCalledOnce();
     expect(historyMock).toHaveBeenCalledWith('42', 1_000);
     expect(drives[0].distanceM).toBe(10_000);

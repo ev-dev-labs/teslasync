@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, MetricValue, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -93,20 +94,18 @@ export function PreconditioningDepartureDisposition({
           )}
         </Text>
         <PreconditioningSectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 1, md: 2, xl: 5 }} gap={3}>
-            {outcomes.map((outcome) => (
-              <div
-                key={outcome.key}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <MetricLabel>{outcome.label}</MetricLabel>
-                <MetricValue className="mt-1">{fmtInt(outcome.value)}</MetricValue>
-                <Text as="p" variant="caption" className="mt-2">
-                  {outcome.detail}
-                </Text>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="preconditioning-departure-disposition-summary"
+            title={t('preconditioningEffectiveness.departures.title', 'Departure disposition')}
+            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)
+              || state.climate.isPaused || state.drives.isPaused}
+            period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage'),
+              reason: t('preconditioningEffectiveness.departures.subtitle', 'Ordered gates assign every unique valid drive to exactly one exclusion or observational group.') }}
+            metrics={outcomes.map(outcome => ({
+              metricId: 'count', occurrenceId: outcome.key, label: outcome.label, rawValue: outcome.value,
+              description: outcome.detail,
+              display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
+            }))}
+          />
         </PreconditioningSectionBody>
       </LayoutCard>
     </section>

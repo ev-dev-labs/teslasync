@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StatGroup, type StatMetric, type StatPeriod } from '@/components/data-display';
+import { type StatMetric, type StatPeriod } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { Text } from '@/components/ui';
 
 interface ClimateMetricProps {
@@ -9,15 +10,15 @@ interface ClimateMetricProps {
   subtitle?: string;
   icon?: ReactNode;
   color?: 'cyan' | 'blue' | 'amber' | 'green' | 'purple';
+  metric?: Pick<StatMetric, 'metricId' | 'rawValue' | 'display'>;
 }
 
 function specialistMetric(props: ClimateMetricProps, occurrenceId: string): StatMetric {
   return {
-    // Fan levels, enum/status strings and preformatted percent/temperature
-    // values must not be coerced into generic counts, watts or temperatures.
-    metricId: 'text',
+    metricId: props.metric?.metricId ?? 'status',
     occurrenceId,
-    rawValue: props.value === '—' ? null : String(props.value),
+    rawValue: props.metric ? props.metric.rawValue : props.value === '—' ? null : String(props.value),
+    display: props.metric?.display,
     label: props.label,
     description: [props.label, props.subtitle].filter(Boolean).join(' · '),
     context: (
@@ -32,17 +33,19 @@ function specialistMetric(props: ClimateMetricProps, occurrenceId: string): Stat
 /** Also renders usefully on its own; the group collects these typed props. */
 export function ClimateMetric(props: ClimateMetricProps) {
   const { t } = useTranslation();
-  return <StatGroup metrics={[specialistMetric(props, 'climate-single')]}
+  return <VehicleOperationalBrief id="climate-single" title={props.label} metrics={[specialistMetric(props, 'climate-single')]}
     period={{ kind: 'unknown', label: t('climate.page.overview', 'Climate overview') }} />;
 }
 
 /** A single canonical stat bank retains all specialist labels, values and context. */
 export function ClimateMetricGroup({
-  id, period, children,
+  id, period, children, title, retained,
 }: {
   id: string;
   period: StatPeriod;
   children: ReactNode;
+  title: string;
+  retained?: boolean;
 }) {
   const metrics = Children.toArray(children).map((child, index) => {
     if (!isValidElement<ClimateMetricProps>(child) || child.type !== ClimateMetric) {
@@ -50,5 +53,5 @@ export function ClimateMetricGroup({
     }
     return specialistMetric(child.props, `${id}-${index}`);
   });
-  return <StatGroup id={id} metrics={metrics} period={period} />;
+  return <VehicleOperationalBrief embedded id={id} title={title} metrics={metrics} period={period} retained={retained} />;
 }

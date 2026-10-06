@@ -10,12 +10,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Key, KeyRound, ShieldCheck, XCircle, Crown, Info,
+  Plus, Key, KeyRound, ShieldCheck, Info,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
 import { Button, ConfirmDialog, Text, Caption } from '@/components/ui';
-import { MetricCard, MetricBar } from '@/components/data-display';
+import { MetricBar, type StatMetric } from '@/components/data-display';
+import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
 import {
   EmptyState,
   Skeleton,
@@ -27,7 +28,6 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useApiKeys, useDeleteApiKey, useRevokeApiKey } from '@/api/hooks/useAdmin';
-import type { NeonColor } from '@/lib/tokens';
 import type { APIKey } from '@/types/admin';
 import {
   ApiKeyCard,
@@ -63,6 +63,7 @@ export default function APIKeysPage() {
   const sourceState = !keysState.hasData
     ? 'loading' : keysState.status === 'stale' ? 'retained' : keys.length === 0 ? 'empty' : 'ready';
   const emptyInventory = (
+    // no-action: the page header owns Create key and its read-only guard; do not duplicate an unguarded write CTA here.
     <EmptyState
       icon={<Key className="h-10 w-10" aria-hidden="true" />}
       title={t('apiKeys.empty.title', 'No API keys')}
@@ -70,17 +71,18 @@ export default function APIKeysPage() {
     />
   );
   const emptyPermissions = (
+    // no-action: this is derived usage detail; the page header already offers guarded key creation.
     <EmptyState
       icon={<KeyRound className="h-8 w-8" aria-hidden="true" />}
       message={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
     />
   );
 
-  const kpis: { key: string; label: string; value: number; icon: React.ReactNode; color: NeonColor }[] = [
-    { key: 'total', label: t('apiKeys.kpi.total', 'Total keys'), value: summary.total, icon: <Key className="h-5 w-5" />, color: 'cyan' },
-    { key: 'active', label: t('apiKeys.kpi.active', 'Active'), value: summary.active, icon: <ShieldCheck className="h-5 w-5" />, color: 'green' },
-    { key: 'expired', label: t('apiKeys.kpi.expired', 'Expired'), value: summary.expired, icon: <XCircle className="h-5 w-5" />, color: 'red' },
-    { key: 'admin', label: t('apiKeys.kpi.admin', 'Admin access'), value: summary.admin, icon: <Crown className="h-5 w-5" />, color: 'purple' },
+  const kpis: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'total', label: t('apiKeys.kpi.total', 'Total keys'), rawValue: keysState.hasData ? summary.total : undefined },
+    { metricId: 'count', occurrenceId: 'active', label: t('apiKeys.kpi.active', 'Active'), rawValue: keysState.hasData ? summary.active : undefined },
+    { metricId: 'count', occurrenceId: 'expired', label: t('apiKeys.kpi.expired', 'Expired'), rawValue: keysState.hasData ? summary.expired : undefined },
+    { metricId: 'count', occurrenceId: 'admin', label: t('apiKeys.kpi.admin', 'Admin access'), rawValue: keysState.hasData ? summary.admin : undefined },
   ];
 
   const guidancePoints = [
@@ -113,24 +115,12 @@ export default function APIKeysPage() {
 
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section
-          aria-label={t('apiKeys.kpi.aria', 'API key summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          {isLoading
-            ? Array.from({ length: kpis.length }).map((_, i) => (
-                <Skeleton key={i} height={84} className="rounded-xl" />
-              ))
-            : kpis.map((k) => (
-                <MetricCard
-                  key={k.key}
-                  label={k.label}
-                  value={keysState.hasData ? k.value : '—'}
-                  icon={k.icon}
-                  color={k.color}
-                />
-              ))}
-        </section>
+        <AdminSummary metrics={kpis} testId="api-keys-summary"
+          eyebrow={t('apiKeys.title', 'API keys')} title={t('apiKeys.kpi.aria', 'API key summary')}
+          description={t('apiKeys.summary.source', 'Counts are derived from the loaded API key inventory, including active, expired and administrator-access keys.')}
+          scope={t('apiKeys.summary.scope', 'Loaded inventory snapshot; the response does not report an observation time.')}
+          sourceStatus={keysState.status === 'stale' ? 'stale' : keysState.isRefreshing ? 'refreshing' : keysState.status}
+          loading={isLoading && !keysState.hasData} />
       </FadeIn>
 
       {/* 2 — Bento: hero key grid (col-span-2) + access-levels/guidance column */}

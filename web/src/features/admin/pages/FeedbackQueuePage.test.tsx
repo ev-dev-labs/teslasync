@@ -294,6 +294,17 @@ function drawerFor(title: string): HTMLElement {
 }
 
 describe('FeedbackQueuePage', () => {
+  it('keeps whole-queue scope and all six facet measurements in the actual reviewable brief', () => {
+    renderPage()
+    const summary = screen.getByTestId('feedback-queue-summary')
+    expect(summary).toHaveAttribute('data-operational-brief')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    expect(summary).toHaveTextContent('unaffected by the table filters')
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('independent status and category queries')
+    expect(screen.getByText('Queue')).toBeInTheDocument()
+  })
+
   it('renders the KPI band, status distribution, category mix, bridge status, rows, and GitHub link for a populated queue', () => {
     renderPage()
 
@@ -573,7 +584,7 @@ describe('FeedbackQueuePage', () => {
   it('retains known status counts without inventing an unknown total or denominator after a partial first load', () => {
     configure({ counts: { new: { total: undefined, error: new Error('counts down') } } })
     renderPage()
-    const totalTile = screen.getByText('Total feedback').closest('[data-role="metric-card"]')
+    const totalTile = screen.getByText('Total feedback').closest('[data-operational-metric]')
     if (!totalTile) throw new Error('Missing total feedback identity')
     expect(within(totalTile).getByText('—')).toBeInTheDocument()
     expect(within(totalTile).queryByText('5')).toBeNull()

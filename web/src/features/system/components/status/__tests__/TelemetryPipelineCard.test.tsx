@@ -7,6 +7,21 @@ import { TelemetryPipelineCard } from '../TelemetryPipelineCard'
 import type { Vehicle } from '@/api/types'
 import type { PollEngineStatus } from '@/api/polling'
 import type { TelemetryStatus, VehicleTelemetry } from '@/types/telemetry'
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
+
+const translated = vi.hoisted(() => vi.fn(
+  (key: string, fallback?: unknown, values?: Record<string, unknown>) => {
+    const text = typeof fallback === 'string' ? fallback : key
+    return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? `{{${name}}}`))
+  },
+))
+vi.mock('react-i18next', async (importActual) => ({
+  ...await importActual<typeof import('react-i18next')>(),
+  useTranslation: () => ({ t: translated, i18n: { language: 'en' } }),
+}))
 
 const mockPolling: { data: PollEngineStatus | undefined; error: Error | null } = { data: undefined, error: null }
 const mockMqtt: { data: (TelemetryStatus & { vehicles: VehicleTelemetry[] }) | undefined; error: Error | null } = { data: undefined, error: null }
@@ -85,10 +100,65 @@ function makeMqtt(
 
 describe('TelemetryPipelineCard', () => {
   beforeEach(() => {
+    translated.mockClear()
     mockPolling.data = undefined
     mockMqtt.data = undefined
     mockPolling.error = null
     mockMqtt.error = null
+  })
+
+  it('uses the non-colliding telemetrySources keys with the original exact English fallbacks', () => {
+    harness(<TelemetryPipelineCard
+      vehicles={[makeVehicle()]} positionCount={undefined} drivesCount={undefined}
+      chargingSessionsCount={undefined} signalLogCount={undefined} now={NOW}
+    />)
+    expect(translated).toHaveBeenCalledWith('systemStatus.telemetrySources.pollSource', 'REST polling')
+    expect(translated).toHaveBeenCalledWith('systemStatus.telemetrySources.streamSource', 'Fleet Telemetry stream')
+    expect(translated).toHaveBeenCalledWith('systemStatus.telemetrySources.streamUnknown', 'Fleet Telemetry connection unknown')
+    expect(translated.mock.calls.some(([key]) => key.startsWith('systemStatus.telemetry.'))).toBe(false)
+  })
+
+  it('keeps an unknown vehicle source separate from a confirmed empty fleet', () => {
+    harness(<TelemetryPipelineCard
+      vehicles={undefined} positionCount={undefined} drivesCount={undefined}
+      chargingSessionsCount={undefined} signalLogCount={undefined} now={NOW}
+    />)
+    expect(screen.getByText('Vehicle telemetry is unavailable until the vehicle list loads.')).toBeInTheDocument()
+    expect(screen.queryByText(/No vehicles configured yet/)).not.toBeInTheDocument()
+    expect(screen.queryByText('none configured')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { battery: 0, label: 'battery 0%', readout: '0%', known: true },
+    { battery: Number.NaN, label: 'Battery level', readout: '—', known: false },
+  ])('keeps battery $readout distinct from missing/nonfinite readings using the passive shared bar', ({ battery, label, readout, known }) => {
+    const vehicle = makeVehicle()
+    mockPolling.data = {
+      enabled: true,
+      vehicles: {
+        [vehicle.vin]: {
+          activity: 'online', profile: 'awake', consec_idle: 0,
+          last_poll_time: '', next_poll_after: '', battery_level: battery, last_decision: null,
+        },
+      },
+    }
+    const { container } = harness(<TelemetryPipelineCard
+      vehicles={[vehicle]} positionCount={0} drivesCount={0}
+      chargingSessionsCount={0} signalLogCount={0} now={NOW}
+    />)
+    const row = screen.getByRole('link', { name: 'Daily Driver' }).closest('li')!
+    expect(within(row).getByText(readout)).toBeInTheDocument()
+    const bar = within(row).getByRole('progressbar', { name: label })
+    expect(bar.querySelector('[data-metric-track]')).toHaveClass('h-1')
+    if (known) {
+      expect(bar).toHaveAttribute('aria-valuenow', '0')
+      expect(bar.querySelector('[data-metric-fill]')).not.toBeNull()
+    } else {
+      expect(bar).not.toHaveAttribute('aria-valuenow')
+      expect(bar).toHaveAttribute('aria-valuetext', 'No reading')
+      expect(bar.querySelector('[data-metric-fill]')).toBeNull()
+    }
+    expect(container.querySelectorAll('[role="progressbar"]')).toHaveLength(1)
   })
 
   it('retains streaming liveness and fleet metrics independently of a polling source failure', () => {
@@ -211,10 +281,10 @@ describe('TelemetryPipelineCard', () => {
       />,
     )
     // Liveness summary chips visible
-    expect(screen.getByText(/1 sending/)).toBeInTheDocument()
-    expect(screen.getByText(/1 slow/)).toBeInTheDocument()
-    expect(screen.getByText(/1 stale/)).toBeInTheDocument()
-    expect(screen.getByText(/1 offline/)).toBeInTheDocument()
+    const liveness = screen.getByRole('region', { name: 'Liveness:' })
+    for (const key of ['sending', 'slow', 'stale', 'offline']) {
+      expect(liveness.querySelector(`[data-operational-metric="liveness-${key}"] [data-operational-value]`)).toHaveTextContent('1')
+    }
   })
 
   it('considers MQTT-stream activity as liveness even when REST polling has never run (the streaming-only Fleet Telemetry case)', () => {
@@ -281,6 +351,34 @@ describe('TelemetryPipelineCard', () => {
     expect(within(row).getByText('stream')).toBeInTheDocument()
     // The displayed last-seen is the MQTT one (30 s), not the older poll (3 min)
     expect(within(row).getByText(/30s ago/)).toBeInTheDocument()
+  })
+
+  it.each([
+    { lastAgoMs: 5 * 60_000, nextMs: 90_000, level: 'slow', last: 'last: 5 min ago', next: 'next: in 2 min' },
+    { lastAgoMs: 30 * 60_000, nextMs: 2 * 60 * 60_000, level: 'stale', last: 'last: 30 min ago', next: 'next: in 2h' },
+    { lastAgoMs: -30_000, nextMs: 2 * 24 * 60 * 60_000, level: 'sending', last: 'last: in 30s', next: 'next: in 2d' },
+  ])('preserves the exact liveness ladder and rounded relative-clock presentation at $lastAgoMs ms', ({ lastAgoMs, nextMs, level, last, next }) => {
+    const vehicle = makeVehicle()
+    mockPolling.data = {
+      enabled: true,
+      vehicles: {
+        [vehicle.vin]: {
+          activity: 'online', profile: 'awake', consec_idle: 0,
+          last_poll_time: new Date(NOW - lastAgoMs).toISOString(),
+          next_poll_after: new Date(NOW + nextMs).toISOString(),
+          battery_level: 50, last_decision: null,
+        },
+      },
+    }
+    harness(<TelemetryPipelineCard
+      vehicles={[vehicle]} positionCount={0} drivesCount={0}
+      chargingSessionsCount={0} signalLogCount={0} now={NOW}
+    />)
+    const row = screen.getByRole('link', { name: 'Daily Driver' }).closest('li')!
+    expect(within(row).getByText(level)).toBeInTheDocument()
+    expect(row).toHaveTextContent(last)
+    expect(row).toHaveTextContent(next)
+    expect(within(row).getByText('poll')).toBeInTheDocument()
   })
 
   it('shows "MQTT broker disconnected" warning chip when broker is down and "polling engine disabled" when both are off', () => {

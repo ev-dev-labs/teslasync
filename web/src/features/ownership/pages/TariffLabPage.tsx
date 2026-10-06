@@ -43,9 +43,10 @@ import {
   EvidencePanel,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatPct, formatPricePerEnergy } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -461,37 +462,47 @@ export default function TariffLabPage() {
         <OwnershipPanel
           title={t('ownership.tariff.summary.title', 'Arbitrage summary')}
           empty={!result}
+          preserveSummary
           emptyMessage={t(
             'ownership.tariff.summary.empty',
             'Run a replay to see how much your plan choice is worth.',
           )}
         >
-          <StatGrid
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.tariff.brief.title', 'Returned tariff replay comparison')}
+            description={t('ownership.tariff.brief.description', 'Annualised savings and shiftable share are modelled replay results, not a bill or a completed charging action.')}
+            scope={t('ownership.tariff.brief.scope', 'Latest replay selection and model assumptions; source coverage remains in the evidence')}
+            source={simulate}
+            window={result?.window}
+            metrics={[
               {
-                key: 'saving',
+                occurrenceId: 'saving', metricId: 'currency',
                 label: t('ownership.tariff.stat.saving', 'Best-case annual saving'),
-                value: money(result?.max_saving_minor),
+                rawValue: result?.max_saving_minor,
+                display: specialistDisplay(money),
                 tone: (result?.max_saving_minor ?? 0) > 0 ? 'positive' : 'default',
-                hint: bestResult?.name,
+                context: bestResult?.name,
               },
               {
-                key: 'observed',
+                occurrenceId: 'observed', metricId: 'energy',
                 label: t('ownership.tariff.stat.observed', 'Observed energy'),
-                value: units.formatEnergy(result?.observed_energy_wh ?? 0),
-                hint: t('ownership.tariff.stat.sessions', '{{count}} sessions', {
-                  count: result?.session_count ?? 0,
+                rawValue: result?.observed_energy_wh,
+                display: specialistDisplay(units.formatEnergy),
+                context: result?.session_count == null ? '—' : t('ownership.tariff.stat.sessions', '{{count}} sessions', {
+                  count: result.session_count,
                 }),
               },
               {
-                key: 'plans',
+                occurrenceId: 'plans', metricId: 'count',
                 label: t('ownership.tariff.stat.plans', 'Plans evaluated'),
-                value: fmtInt(results.length),
+                rawValue: result ? results.length : null,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'shift',
+                occurrenceId: 'shift', metricId: 'percent',
                 label: t('ownership.tariff.stat.shift', 'Shiftable share modelled'),
-                value: formatPct(result?.shiftable_pct),
+                rawValue: result?.shiftable_pct,
+                display: specialistDisplay(formatPct),
                 tone: 'accent',
               },
             ]}

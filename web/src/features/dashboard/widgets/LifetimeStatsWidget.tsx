@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Route, Zap, Car, Leaf, DollarSign, CalendarDays } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { useDataState } from '@/hooks/useDataState';
 import { EmptyState } from '@/components/feedback';
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
@@ -9,14 +9,16 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { isFiniteNumber } from '@/lib/numberFormat';
 
 export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -47,62 +49,68 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   const distanceMeters = (data?.total_distance_km ?? 0) * 1000;
   const displayDistance = toDistanceDisplay(distanceMeters);
 
-  const coreStats = useMemo((): StatGridItem[] => {
+  const coreStats = useMemo((): StatMetric[] => {
     if (!data) return [];
     return [
       {
+        metricId: 'distance',
         label: t('widget.lifetimeStats.totalDistance', 'Total distance'),
-        value: isFiniteNumber(data.total_distance_km) ? fmtNumber(displayDistance) : null,
-        unit: distanceUnit,
-        icon: <Route className="h-3.5 w-3.5" />,
+        rawValue: data.total_distance_km == null ? null : data.total_distance_km * 1000,
+        description: t('widget.lifetimeStats.summary.distanceHelp', 'Source lifetime distance in kilometres, normalized to metres before display.'),
+        display: { formatter: raw => ({ value: fmtNumber(toDistanceDisplay(raw)), unit: distanceUnit }) },
       },
       {
+        metricId: 'count',
         label: t('widget.lifetimeStats.totalDrives', 'Total drives'),
-        value: isFiniteNumber(data.total_drives) ? fmtInt(data.total_drives) : null,
-        icon: <Car className="h-3.5 w-3.5" />,
+        rawValue: data.total_drives,
+        description: t('widget.lifetimeStats.summary.drivesHelp', 'Reported lifetime drive count for this vehicle.'),
       },
       {
+        metricId: 'energy',
         label: t('widget.lifetimeStats.totalEnergy', 'Total energy'),
-        value: isFiniteNumber(data.total_energy_kwh) ? fmtNumber(data.total_energy_kwh) : null,
-        unit: 'kWh',
-        icon: <Zap className="h-3.5 w-3.5" />,
+        rawValue: data.total_energy_kwh == null ? null : data.total_energy_kwh * 1000,
+        description: t('widget.lifetimeStats.summary.energyHelp', 'Reported lifetime energy, normalized from kWh to Wh; original kWh display retained.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
       },
       {
+        metricId: 'mass',
         label: t('widget.lifetimeStats.co2Saved', 'CO₂ saved'),
-        value: isFiniteNumber(data.co2_offset_kg) ? fmtNumber(data.co2_offset_kg) : null,
-        unit: 'kg',
-        icon: <Leaf className="h-3.5 w-3.5" />,
+        rawValue: data.co2_offset_kg,
+        description: t('widget.lifetimeStats.summary.carbonHelp', 'Source-reported lifetime CO₂ offset in kilograms.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) },
       },
     ];
-  }, [data, displayDistance, distanceUnit, t, fmtNumber, fmtInt]);
+  }, [data, toDistanceDisplay, distanceUnit, t, fmtNumber]);
 
-  const wideStats = useMemo((): StatGridItem[] => {
+  const wideStats = useMemo((): StatMetric[] => {
     if (!data) return [];
 
     const avgDailyMeters = data.ownership_days > 0
       ? distanceMeters / data.ownership_days
       : 0;
-    const avgDailyDisplay = toDistanceDisplay(avgDailyMeters);
-
     return [
       {
+        metricId: 'currency',
         label: t('widget.lifetimeStats.totalCost', 'Total cost'),
-        value: isFiniteNumber(data.total_charging_cost) ? formatCurrency(data.total_charging_cost) : null,
-        icon: <DollarSign className="h-3.5 w-3.5" />,
+        rawValue: data.total_charging_cost,
+        description: t('widget.lifetimeStats.summary.costHelp', 'Recorded lifetime charging cost in its original denomination; no currency conversion.'),
+        display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
       },
       {
+        metricId: 'count',
         label: t('widget.lifetimeStats.ownershipDays', 'Ownership days'),
-        value: isFiniteNumber(data.ownership_days) ? fmtInt(data.ownership_days) : null,
-        icon: <CalendarDays className="h-3.5 w-3.5" />,
+        rawValue: data.ownership_days,
+        description: t('widget.lifetimeStats.summary.daysHelp', 'Reported ownership-day count used as the daily-distance denominator.'),
       },
       {
+        metricId: 'distance',
         label: t('widget.lifetimeStats.avgDailyDistance', 'Avg daily distance'),
-        value: isFiniteNumber(data.total_distance_km) && data.ownership_days > 0 ? fmtNumber(avgDailyDisplay) : null,
-        unit: distanceUnit,
-        icon: <Route className="h-3.5 w-3.5" />,
+        rawValue: isFiniteNumber(data.total_distance_km) && isFiniteNumber(data.ownership_days) && data.ownership_days > 0 ? avgDailyMeters : null,
+        description: t('widget.lifetimeStats.summary.dailyHelp', 'Lifetime distance divided by positive measured ownership days; not a rolling 24-hour distance.'),
+        display: { formatter: raw => ({ value: fmtNumber(toDistanceDisplay(raw)), unit: distanceUnit }) },
       },
     ];
-  }, [data, distanceMeters, toDistanceDisplay, distanceUnit, formatCurrency, t, fmtInt, fmtNumber]);
+  }, [data, distanceMeters, toDistanceDisplay, distanceUnit, formatCurrency, t, fmtNumber]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),
@@ -155,7 +163,15 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {data ? (
-        <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
+        <DashboardSourceBrief
+          metrics={allStats}
+          state={dataState}
+          eyebrow={t('widget.lifetimeStats.summary.eyebrow', 'Lifetime history')}
+          title={t('widget.lifetimeStats.summary.title', 'Lifetime operating summary')}
+          description={t('widget.lifetimeStats.summary.description', 'Lifetime totals for the resolved vehicle, not the workspace date range. Exact history coverage and first observation are not supplied.')}
+          scope={t('widget.lifetimeStats.summary.scope', 'Vehicle {{id}} · lifetime', { id })}
+          testId="lifetime-stats-operational-brief"
+        />
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Trophy className="h-5 w-5" />}

@@ -14,7 +14,6 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import {
-  ColdStartKpis,
   ColdStartMethodology,
   ColdStartOpportunities,
   ColdWarmComparison,
@@ -24,6 +23,7 @@ import {
   type ColdStartSectionState,
 } from '../components/cold-start';
 import { summarizeColdStarts } from '../lib/coldStart';
+import { ColdStartBrief } from '../components/operationalbrief-a-m/ColdStartBrief';
 
 const DRIVE_WINDOW_LIMIT = 1_000;
 const ANALYSIS_COLUMNS = { default: 1, xl: 5 } as const;
@@ -82,10 +82,12 @@ export default function ColdStartPage() {
     >
       <StaleRefreshWarning state={sourceState} label={t('coldStart.title', 'Cold Start Cost')} />
       <FadeIn>
-        <ColdStartKpis
+        <ColdStartBrief
           summary={summary}
           penaltyCostLabel={penaltyCostLabel}
           {...sectionState}
+          scope={t('coldStart.brief.window', '{{start}}–{{end}}; returned selected-window drives', { start, end })}
+          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
       </FadeIn>
 

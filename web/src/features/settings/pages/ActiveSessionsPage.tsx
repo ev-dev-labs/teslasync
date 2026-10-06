@@ -119,6 +119,8 @@ export default function ActiveSessionsPage() {
               lastActive={stats.lastActive}
               isLoading={isLoading}
               isError={isError}
+              retained={sessionsState.status === 'stale'}
+              sourceAvailable={isSessionMode}
               error={sessionsState.fatalError}
               onRetry={refetch}
             />

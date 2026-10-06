@@ -59,10 +59,10 @@ function DriveCalendarContent() {
       title={t('driveCalendar.title', 'Drive calendar')}
       subtitle={t('driveCalendar.subtitle', 'Driving activity and streaks in the selected period')}
     >
-      <StaleRefreshWarning hasData={source.hasData} error={source.refreshError}
-        onRetry={source.retry ?? undefined} />
+      <StaleRefreshWarning state={source} />
       <FadeIn>
         <CalendarSummaryCards calendar={calendar} rangeEnd={end} {...sectionState}
+          retained={source.status === 'stale' || source.isRefreshBlocked}
           period={{
             kind: 'analysis', label: `${start} – ${end}`,
             start: startInstant, endExclusive: endInstantExclusive,

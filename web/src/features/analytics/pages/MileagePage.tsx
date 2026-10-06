@@ -32,7 +32,8 @@ import {
 } from '@/api/hooks/useAnalytics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
-import { MileageSummary, MileageSourceNotice } from '../components/mileage-modernization';
+import { MileageSourceNotice } from '../components/mileage-modernization';
+import { MileageBrief as MileageSummary } from '../components/operationalbrief-a-m/MileageBrief';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -196,10 +197,11 @@ export default function MileagePage() {
         <LayoutCard title={t('mileage.kpis', 'Mileage summary metrics')}>
           <section aria-label={t('mileage.kpis', 'Mileage summary metrics')} className="min-w-0 space-y-3">
             <MileageSourceNotice source={statsSource} onRetry={() => statsQuery.refetch()} />
-            {statsSource.fatalError ? (
+            <MileageSummary stats={stats} loading={statsQuery.isLoading}
+              retained={statsSource.status === 'stale' || statsSource.isRefreshBlocked}
+              fatalError={!!statsSource.fatalError} />
+            {statsSource.fatalError && (
               <QueryError error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
-            ) : (
-              <MileageSummary stats={stats} loading={statsQuery.isLoading} retained={!!statsSource.refreshError} />
             )}
           </section>
         </LayoutCard>

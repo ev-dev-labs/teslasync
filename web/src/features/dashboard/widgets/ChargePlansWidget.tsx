@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
-import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -9,14 +8,14 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetDetailCard, type DetailEntry } from './shared';
+import type { DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { WidgetBigNumber } from './shared';
+import { ChargePlansBody } from '../components/continuation-dashboard-3/ChargePlansBody';
 
 /**
  * Maps a charge-plan status to a semantic <Badge> variant. Exported for direct
@@ -192,6 +191,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
 
   const rateEntries: DetailEntry[] = useMemo(() => {
     return safeRates.map((rp) => ({
+      id: rp.id,
       label: rp.utility ?? '—',
       value: rp.name ?? '—',
       badge: { text: rp.id ?? '—', variant: 'neutral' as const },
@@ -247,61 +247,17 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {hasData ? (
-        <div className="h-full flex flex-col gap-3 overflow-y-auto">
-          {/* Active charge plan details */}
-          {activePlan ? (
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant={badgeVariant(activePlan.status)} size="sm" dot>
-                  {activePlan.status ?? '—'}
-                </Badge>
-                <span className={dashboardTokens.metricLabel}>
-                  {activePlan.rate_plan ?? ''}
-                </span>
-              </div>
-
-              {/* Summary stats */}
-              <WidgetStatGrid stats={[
-                { label: t('widget.chargePlans.targetSoc', 'Target SOC'), value: knownNumber(activePlan.target_soc) == null ? '—' : `${fmtNumber(activePlan.target_soc)}%` },
-                { label: t('widget.chargePlans.departure', 'Departure'), value: activePlan.depart_by ? formatTime(activePlan.depart_by) : '—' },
-              ]} />
-
-              <WidgetDetailCard
-                entries={planEntries.slice(2)}
-                compact={size.rows <= 3}
-                emptyMessage={t('widget.chargePlans.noDetails', 'No plan details')}
-                emptyIcon={<Clock className="h-5 w-5" />}
-              />
-            </div>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Clock className="h-5 w-5" />}
-              message={t('widget.chargePlans.noPlans', 'No charge plans')}
-              className="py-4"
-            />
-          )}
-
-          {/* Rate plans section */}
-            <div className="border-t border-[var(--border-subtle)] pt-2">
-              <h4 className={dashboardTokens.title}>
-                {t('widget.chargePlans.ratePlans', 'Rate plans')}
-              </h4>
-              <WidgetDetailCard
-                entries={rateEntries}
-                compact={size.rows <= 3}
-                emptyMessage={t('widget.chargePlans.noRates', 'No rate plans')}
-                emptyIcon={<Clock className="h-5 w-5" />}
-              />
-            </div>
-        </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Clock className="h-5 w-5" />}
-          message={t('widget.chargePlans.noData', 'No charge plans or rate data')}
-          className="py-4"
-        />
-      )}
+      <ChargePlansBody
+        activePlan={activePlan}
+        statusVariant={badgeVariant(activePlan?.status)}
+        summaryStats={planEntries.slice(0, 2).map(({ label, value }) => ({ label, value }))}
+        planEntries={planEntries}
+        rateEntries={rateEntries}
+        compactDetails={size.rows <= 3}
+        hasData={hasData}
+        plansState={plansState}
+        ratesState={ratesState}
+      />
     </WidgetShell>
   );
 }

@@ -263,6 +263,21 @@ describe('SignalStatsPanel — null safety', () => {
 
 // ── styling & colour a11y ────────────────────────────────────────────────
 describe('SignalStatsPanel — styling & colour', () => {
+  it('keeps long selected identities, numeric values and explicit unknown rows through typography adoption', () => {
+    const name = 'BatteryTemperatureNormalizedSignal'.repeat(5);
+    renderPanel({
+      stats: [{ signal: name, min: -3.5, max: 0, avg: -1.25, count: 6 }],
+      selectedSignals: [name, 'NeverObservedSelectedSignal'],
+    });
+    expect(screen.getByText(name)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(within(rowFor(name)).getByText('-3.50')).toBeInTheDocument();
+    expect(within(rowFor(name)).getByText('0.00')).toBeInTheDocument();
+    expect(within(rowFor('NeverObservedSelectedSignal')).getAllByLabelText('No data')).toHaveLength(3);
+    expect(within(rowFor('NeverObservedSelectedSignal')).getByText('0')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: /Hide empty \(1\)/ }));
+    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(screen.queryByText('NeverObservedSelectedSignal')).toBeNull();
+  });
   it('applies an extra className to the panel surface', () => {
     const { container } = renderPanel({ className: 'stats-surface-x' });
     expect(container.querySelector('.stats-surface-x')).not.toBeNull();

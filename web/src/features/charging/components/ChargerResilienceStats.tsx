@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { ChargingSummaryBrief } from './operationalbrief-all/ChargingSummaryBrief';
 import { HelpTooltip } from '@/components/ui';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -18,9 +19,10 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
   const available = state.hasData && summary.sites.length > 0;
   const metrics: StatMetric[] = [
     {
-      metricId: 'text', occurrenceId: 'resilience-score',
+      metricId: 'number', occurrenceId: 'resilience-score',
       label: t('chargerResilience.score', 'Resilience Score'),
-      rawValue: available ? fmtNumber(summary.resilienceScore) : null,
+      rawValue: available ? summary.resilienceScore : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) },
       context: <div className="flex flex-wrap items-center gap-1">
         {t('chargerResilience.scoreHint', 'out of 100')}
         <HelpTooltip
@@ -30,9 +32,10 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
       </div>,
     },
     {
-      metricId: 'text', occurrenceId: 'effective-sites',
+      metricId: 'number', occurrenceId: 'effective-sites',
       label: t('chargerResilience.effectiveSites', 'Effective Site Count'),
-      rawValue: available ? fmtNumber(summary.effectiveSiteCount) : null,
+      rawValue: available ? summary.effectiveSiteCount : null,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) },
       context: <div className="flex flex-wrap items-center gap-1">
         {t('chargerResilience.effectiveSitesHint', '{{n}} locations seen', { n: state.hasData ? summary.sites.length : '—' })}
         <HelpTooltip
@@ -42,20 +45,22 @@ export function ChargerResilienceStats({ summary, state, loading }: Props) {
       </div>,
     },
     {
-      metricId: 'text', occurrenceId: 'top-site-dependency',
+      metricId: 'percent', occurrenceId: 'top-site-dependency',
       label: t('chargerResilience.topDependency', 'Top-Site Dependency'),
-      rawValue: available ? fmtPercent(summary.topSiteDependencyPct) : null,
+      rawValue: available ? summary.topSiteDependencyPct : null,
+      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: summary.topSite?.label ?? t('chargerResilience.none', 'None yet'),
     },
     {
-      metricId: 'text', occurrenceId: 'fallback-coverage',
+      metricId: 'percent', occurrenceId: 'fallback-coverage',
       label: t('chargerResilience.fallback', 'Fallback Coverage'),
-      rawValue: available ? fmtPercent(summary.fallbackCoveragePct) : null,
+      rawValue: available ? summary.fallbackCoveragePct : null,
+      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: t('chargerResilience.fallbackHint', 'sessions charged elsewhere'),
     },
   ];
 
-  return <StatStrip
+  return <ChargingSummaryBrief
     id="charger-resilience-metrics"
     title={t('chargerResilience.kpis', 'Charger resilience metrics')}
     metrics={metrics}

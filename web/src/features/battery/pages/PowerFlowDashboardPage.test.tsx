@@ -374,7 +374,9 @@ describe('PowerFlowDashboardPage — edge branches', () => {
     const overview = overviewRegion();
     expect(within(overview).queryByRole('meter', { name: /State of Charge/i })).toBeNull();
     expect(within(overview).getByRole('group', { name: /State of Charge/i })).not.toHaveAttribute('aria-valuenow');
-    expect(within(overview).getByText('Unknown')).toBeInTheDocument();
+    const gauge = within(overview).getByRole('group', { name: /State of Charge/i });
+    expect(within(gauge).getByText('—')).toBeInTheDocument();
+    expect(within(gauge).queryByText('0.00')).not.toBeInTheDocument();
   });
 
   it('keeps signed current values, direction labels, gauge and both charts during cached refresh failures', () => {

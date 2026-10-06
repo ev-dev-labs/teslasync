@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HardDrive } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, Subhead, Text } from '@/components/ui';
+import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useBackupRuns } from '@/api/hooks/useAdmin';
 import { cn } from '@/lib/cn';
@@ -14,7 +15,6 @@ import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { WidgetStatGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { severityTokens } from '@/lib/tokens';
 
 type BackupStatus = 'completed' | 'failed' | 'running' | 'queued';
@@ -143,12 +143,12 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
               )}
             />
             <div className="min-w-0">
-              <p className={dashboardTokens.secondaryMetric}>
+              <Text as="p" variant="metricValue" className="min-w-0 [overflow-wrap:anywhere]">
                 {fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t)}
-              </p>
-              <p className="text-2xs text-[var(--text-muted)] truncate">
+              </Text>
+              <Caption className="block [overflow-wrap:anywhere]">
                 {t('widget.backupMonitor.lastBackup', 'Last backup')}
-              </p>
+              </Caption>
             </div>
           </div>
         )}
@@ -177,9 +177,9 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
             { label: t('widget.backupMonitor.type', 'Type'), value: latestRun?.backupType ?? '—' },
           ]} />
             <div className="min-w-0">
-              <p className={dashboardTokens.metricLabel}>
+              <Caption className="block">
                 {t('widget.backupMonitor.status', 'Status')}
-              </p>
+              </Caption>
               <Badge variant={statusVariant(latestStatus)}>
                 {statusLabel(latestStatus, t)}
               </Badge>
@@ -188,37 +188,25 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
           {/* Wide layout: last 5 backup runs */}
           {isWide && (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-              <p className="text-2xs tracking-wider text-[var(--text-muted)] mb-1">
+              <Subhead className="mb-1">
                 {t('widget.backupMonitor.recentRuns', 'Recent runs')}
-              </p>
-              {sortedRuns.slice(0, 5).map((run) => (
-                <div
-                  key={run.id}
-                  className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] py-2 min-h-[44px]"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        'inline-block h-2 w-2 rounded-full shadow-[0_0_6px] shrink-0',
-                        statusDotColor(run.status),
-                      )}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs text-[var(--text-primary)] truncate">
-                        {fmtShortTime(run.completedAt ?? run.createdAt)}
-                      </p>
-                      <p className="text-2xs text-[var(--text-muted)] truncate">
-                        {fmtBytes(run.fileSize)}
-                        {knownNumber(run.durationMs) != null ? ` · ${formatDurationMs(run.durationMs)}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant={statusVariant(run.status)} className="shrink-0 text-2xs">
-                    {statusLabel(run.status, t)}
-                  </Badge>
-                </div>
-              ))}
+              </Subhead>
+              <KVList layout="responsive" wrap items={sortedRuns.slice(0, 5).map((run) => ({
+                id: run.id,
+                leading: (
+                  <span aria-hidden="true" className={cn('inline-block h-2 w-2 rounded-full shrink-0', statusDotColor(run.status))} />
+                ),
+                label: (
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <Text variant="bodySm">{fmtShortTime(run.completedAt ?? run.createdAt)}</Text>
+                    <Caption>
+                      {fmtBytes(run.fileSize)}
+                      {knownNumber(run.durationMs) != null ? ` · ${formatDurationMs(run.durationMs)}` : ''}
+                    </Caption>
+                  </span>
+                ),
+                value: <Badge variant={statusVariant(run.status)}>{statusLabel(run.status, t)}</Badge>,
+              }))} />
             </div>
           )}
         </div>

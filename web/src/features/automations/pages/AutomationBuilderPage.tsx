@@ -6,11 +6,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   Circle,
-  Cog,
-  Filter,
   ListChecks,
   PlayCircle,
-  Power,
   Save,
   X,
   Zap,
@@ -27,7 +24,9 @@ import {
   Toggle,
   Textarea as UiTextarea,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import {
   AlertBanner,
   DraftRecoveryBanner,
@@ -38,8 +37,8 @@ import {
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
-import { AINLAutomationBuilder } from '@/components/ai/AINLAutomationBuilder';
-import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai/AIGeofenceAwareAutomationSuggestions';
+import { AINLAutomationBuilder } from '@/components/ai';
+import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
@@ -514,6 +513,15 @@ export default function AutomationBuilderPage() {
     && triggerReady
     && actionsReady
     && !form.conditions.some(conditionNeedsPlace);
+  const draftContext = t('automations.builder.brief.context', 'Current editor draft only. Publishing still requires validation and an explicit save.');
+  const rawMetrics: readonly StatMetric[] = [
+    { metricId: 'text', occurrenceId: 'trigger', rawValue: selectedTriggerLabel, label: t('automations.builder.summaryTrigger', 'Trigger'), description: draftContext },
+    { metricId: 'count', occurrenceId: 'conditions', rawValue: conditionCount, label: t('automations.builder.summaryConditions', 'Conditions'), description: t('automations.builder.onlyIfDesc', 'Optional checks that must pass before actions run.') },
+    { metricId: 'count', occurrenceId: 'actions', rawValue: actionCount, label: t('automations.builder.summaryActions', 'Actions'), description: t('automations.builder.thenDesc', 'Actions are executed in order.') },
+    { metricId: 'status', occurrenceId: 'status', rawValue: form.enabled ? t('automations.builder.statusEnabled', 'Enabled') : t('automations.builder.statusDisabled', 'Disabled'),
+      label: t('automations.builder.summaryStatus', 'Status'), description: draftContext },
+  ];
+  const briefMetrics = useOperationalMetrics(rawMetrics);
 
   const readinessItems = useMemo(
     () => [
@@ -723,39 +731,25 @@ export default function AutomationBuilderPage() {
           />
         )}
 
-        {/* 1 — Summary KPI band: reflows from 2 → 4 columns, fills the width */}
+        {/* 1 — Draft summary; the typed editors remain the source of truth */}
         <FadeIn>
-          <section
-            aria-label={t('automations.builder.summary', 'Automation summary')}
-            className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:gap-5"
-          >
-            <MetricCard
-              label={t('automations.builder.summaryTrigger', 'Trigger')}
-              value={selectedTriggerLabel}
-              icon={<Zap className="h-5 w-5" />}
-              color="cyan"
+          <div>
+            <OperationalBrief
+              compact
+              testId="automation-builder-brief"
+              eyebrow={t('automations.builder.brief.eyebrow', 'Automation draft')}
+              title={t('automations.builder.summary', 'Automation summary')}
+              description={draftContext}
+              statusLabel={allReady ? t('automations.builder.readyToSave', 'Ready to save')
+                : t('automations.builder.notReady', 'Not ready yet')}
+              statusTone="neutral"
+              metrics={briefMetrics}
+              scope={t('automations.builder.brief.scope', 'Editor configuration; not execution history')}
+              freshness={dirty ? t('automations.builder.brief.unsaved', 'Local changes not published')
+                : t('automations.builder.brief.editor', 'Current editor state')}
+              provenance={draftContext}
             />
-            <MetricCard
-              label={t('automations.builder.summaryConditions', 'Conditions')}
-              value={conditionCount}
-              icon={<Filter className="h-5 w-5" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('automations.builder.summaryActions', 'Actions')}
-              value={actionCount}
-              icon={<Cog className="h-5 w-5" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('automations.builder.summaryStatus', 'Status')}
-              value={form.enabled
-                ? t('automations.builder.statusEnabled', 'Enabled')
-                : t('automations.builder.statusDisabled', 'Disabled')}
-              icon={<Power className="h-5 w-5" />}
-              color={form.enabled ? 'green' : 'amber'}
-            />
-          </section>
+          </div>
         </FadeIn>
 
         {/* 2 — Two-pane bento: build canvas (hero) + assist rail */}

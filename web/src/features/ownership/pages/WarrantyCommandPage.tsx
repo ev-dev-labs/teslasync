@@ -35,9 +35,10 @@ import {
   MutationError,
   OwnershipPanel,
   SiNumberInput,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   daysToSeconds,
   formatCurrencyMinor,
@@ -549,41 +550,45 @@ export default function WarrantyCommandPage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.warranty.summary.title', 'Coverage posture')}
-          source={overviewQuery} sourceEnabled={vehicleId != null} empty={!overview}>
-          <StatGrid
-            stats={[
+          source={overviewQuery} sourceEnabled={vehicleId != null} empty={!overview} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.warranty.brief.title', 'Recorded warranty coverage and expiry')}
+            description={t('ownership.warranty.notice.body', 'TeslaSync does not know your contract. Enter the term as written on your paperwork; every projection below is then computed from your own driving and battery data.')}
+            scope={t('ownership.warranty.brief.scope', 'Selected vehicle and recorded coverage terms; expiry projections use recorded driving')}
+            source={overviewQuery} enabled={vehicleId != null}
+            observedAt={overview?.as_of}
+            metrics={[
               {
-                key: 'active',
+                occurrenceId: 'active', metricId: 'count',
                 label: t('ownership.warranty.stat.active', 'Active coverages'),
-                value: fmtInt(overview?.active_count ?? 0),
+                rawValue: overview?.active_count,
+                display: specialistDisplay(fmtInt),
                 tone: 'positive',
               },
               {
-                key: 'expiring',
+                occurrenceId: 'expiring', metricId: 'count',
                 label: t('ownership.warranty.stat.expiring', 'Expiring within 90 days'),
-                value: fmtInt(overview?.expiring_soon_count ?? 0),
+                rawValue: overview?.expiring_soon_count,
+                display: specialistDisplay(fmtInt),
                 tone: (overview?.expiring_soon_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                key: 'next',
+                occurrenceId: 'next', metricId: 'text',
                 label: t('ownership.warranty.stat.next', 'Next expiry'),
-                value: overview?.next_expiry_at ? formatDateTime(overview.next_expiry_at) : '—',
+                rawValue: overview?.next_expiry_at ? formatDateTime(overview.next_expiry_at) : null,
               },
               {
-                key: 'odometer',
+                occurrenceId: 'odometer', metricId: 'distance',
                 label: t('ownership.warranty.stat.odometer', 'Odometer'),
-                value:
-                  overview?.odometer_m != null ? units.formatDistance(overview.odometer_m) : '—',
-                hint: t('ownership.warranty.stat.odometerHint', 'Derived from recorded drives'),
+                rawValue: overview?.odometer_m,
+                display: specialistDisplay(units.formatDistance),
+                context: t('ownership.warranty.stat.odometerHint', 'Derived from recorded drives'),
               },
               {
-                key: 'claimed',
+                occurrenceId: 'claimed', metricId: 'currency',
                 label: t('ownership.warranty.stat.claimed', 'Total claimed'),
-                value: formatCurrencyMinor(
-                  overview?.total_claimed_minor,
-                  currency,
-                  units.unitPrefs.locale,
-                ),
+                rawValue: overview?.total_claimed_minor,
+                display: specialistDisplay((raw) => formatCurrencyMinor(raw, currency, units.unitPrefs.locale)),
               },
             ]}
           />
@@ -793,7 +798,7 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.warranty.claims.title', 'Claim ledger')}
-          source={warrantiesQuery}
+          source={overviewQuery}
           sourceEnabled={vehicleId != null}
           editing={claimFor != null}
           description={t(

@@ -329,6 +329,19 @@ beforeEach(() => {
 });
 
 describe('AutomationListPage', () => {
+  it('reviews cumulative counters without claiming a known window or changing selected rules', () => {
+    const mutation = vi.fn();
+    useBulkMock.mockReturnValue({ mutateAsync: mutation });
+    renderPage();
+    selectRows([2]);
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Rule inventory details' });
+    expect(within(drawer).getAllByText('Cumulative counters on loaded rules; their start time is not supplied.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('360')).toBeInTheDocument();
+    expect(within(drawer).getByText('28')).toBeInTheDocument();
+    expect(captured.table.selectedKeys).toEqual([2]);
+    expect(mutation).not.toHaveBeenCalled();
+  });
   it('states loaded and filtered selection scope without treating a filter as select-all', async () => {
     renderPage();
     selectRows([1, 2, 3]);
@@ -497,8 +510,9 @@ describe('AutomationListPage', () => {
     expect(captured.table.isLoading).toBe(true);
     expect(captured.status.isLoading).toBe(true);
     expect(captured.table.totalCount).toBe(0);
-    // KPI tiles are replaced by skeletons during the first load.
-    expect(within(kpiRegion()).queryByText('Total runs')).not.toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Total runs')).toBeInTheDocument();
+    expect(screen.getByTestId('automation-rules-brief')).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('propagates an error to both sections without hiding them', () => {
@@ -514,7 +528,8 @@ describe('AutomationListPage', () => {
     expect(screen.getByTestId('stub-table')).toBeInTheDocument();
     expect(screen.getByTestId('stub-status')).toBeInTheDocument();
     // KPI band shows the error with retry — never fabricated zeros.
-    expect(within(kpiRegion()).queryByText('Total')).not.toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Total')).toBeInTheDocument();
+    expect(kpiRegion().querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
     const retry = within(kpiRegion()).getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
     expect(query.refetch).toHaveBeenCalledTimes(1);

@@ -14,7 +14,8 @@ import { useDataState } from '@/hooks/useDataState';
 import { browserTimezone } from '@/lib/timezone';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -52,13 +53,17 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
   const sharePct = data?.totals?.fsd_share_pct ?? null;
   const shareChange = data?.drive_analytics?.comparison?.fsd_share_change_pct_points ?? null;
 
-  const distanceLabel = distanceM == null
-    ? '—'
-    : formatDistance(distanceM);
-  const shareLabel = sharePct == null ? '—' : `${fmtNumber(sharePct)}%`;
-  const changeLabel = shareChange == null
-    ? '—'
-    : `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange)} pts`;
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'distance', rawValue: distanceM, label: t('widget.fsdWeekly.distance', 'Reported FSD'),
+      description: t('widget.fsdWeekly.summary.distanceHelp', 'Reported supervised-driving distance in metres for this Monday–Sunday window.'),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+    { metricId: 'percent', rawValue: sharePct, label: t('widget.fsdWeekly.share', 'Share'),
+      description: t('widget.fsdWeekly.summary.shareHelp', 'Source-reported FSD share, on the 0–100 percent scale.'),
+      display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+    { metricId: 'number', rawValue: shareChange, label: t('widget.fsdWeekly.vsLastWeek', 'vs last week'),
+      description: t('widget.fsdWeekly.summary.changeHelp', 'Share change in percentage points versus the previous Monday–Sunday window, not a percent growth rate.'),
+      display: { formatter: raw => ({ value: `${raw >= 0 ? '+' : ''}${fmtNumber(raw)}`, unit: 'pts' }) } },
+  ];
 
   return (
     <WidgetShell
@@ -89,16 +94,18 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
       ) : (
         <div className="flex h-full min-w-0 flex-col gap-3">
           <div data-testid="fsd-weekly-distance">
-            <WidgetBigNumber
-              label={t('widget.fsdWeekly.distance', 'Reported FSD')}
-              value={distanceLabel}
-              size={isCompact ? 'secondary' : 'primary'}
+            <DashboardSourceBrief
+              metrics={metrics}
+              state={dataState}
+              eyebrow={t('widget.fsdWeekly.summary.eyebrow', 'Supervised driving')}
+              title={t('widget.fsdWeekly.summary.title', 'Weekly FSD summary')}
+              description={t('widget.fsdWeekly.honesty', 'Unmeasured is not zero. Last week is the previous Monday–Sunday window.')}
+              scope={t('widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}', {
+                id, start: startIso, end: endIso, timezone: browserTimezone(),
+              })}
+              testId="fsd-weekly-operational-brief"
             />
           </div>
-          <WidgetStatGrid stats={[
-            { label: t('widget.fsdWeekly.share', 'Share'), value: shareLabel },
-            { label: t('widget.fsdWeekly.vsLastWeek', 'vs last week'), value: changeLabel },
-          ]} cols={2} />
           <Text as="p" size="xs" color="muted">
             {t(
               'widget.fsdWeekly.honesty',

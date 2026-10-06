@@ -6,7 +6,7 @@ import type { DataStateSource } from '@/api/dataState';
 import { Button } from '@/components/ui';
 import { OwnershipPanel } from './OwnershipPanel';
 
-function panel(source: DataStateSource<unknown>, extra: { empty?: boolean; editing?: boolean; sourceEnabled?: boolean; children?: ReactNode } = {}) {
+function panel(source: DataStateSource<unknown>, extra: { empty?: boolean; editing?: boolean; sourceEnabled?: boolean; children?: ReactNode; preserveSummary?: boolean } = {}) {
   return (
     <MemoryRouter>
       <OwnershipPanel title="Statement evidence" source={source} emptyMessage="Select a statement." {...extra}>
@@ -17,6 +17,31 @@ function panel(source: DataStateSource<unknown>, extra: { empty?: boolean; editi
 }
 
 describe('OwnershipPanel source preservation', () => {
+  it('retains opted-in summaries during loading without changing ordinary source-body behavior', () => {
+    render(panel({ isLoading: true }, { preserveSummary: true, children: <p>Unknown summary quantities</p> }));
+    expect(screen.getByRole('status', { name: 'Loading Statement evidence' })).toBeInTheDocument();
+    expect(screen.getByText('Unknown summary quantities')).toBeInTheDocument();
+  });
+
+  it('keeps opted-in unknown summaries beside fatal recovery rather than masking the error', () => {
+    const refetch = vi.fn();
+    render(panel({ error: new Error('source failed'), refetch }, {
+      preserveSummary: true, children: <p>Unknown summary quantities</p>,
+    }));
+    expect(screen.getByText('Unknown summary quantities')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('retains the empty-source explanation and an opted-in summary through a refresh failure', () => {
+    render(panel({ data: [], error: new Error('refresh failed') }, {
+      empty: true, preserveSummary: true, children: <p>Known empty summary</p>,
+    }));
+    expect(screen.getByText('Select a statement.')).toBeInTheDocument();
+    expect(screen.getByText('Known empty summary')).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+  });
+
   it('keeps the canonical named card while a source initially loads', () => {
     render(panel({ isLoading: true }));
     expect(screen.getByRole('heading', { name: 'Statement evidence' })).toBeInTheDocument();
@@ -64,7 +89,7 @@ describe('OwnershipPanel source preservation', () => {
     }));
     fireEvent.click(screen.getByRole('button', { name: 'Save entered statement' }));
     expect(save).toHaveBeenCalledOnce();
-    expect(screen.getByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
   it('preserves the prerequisite message for a disabled query', () => {

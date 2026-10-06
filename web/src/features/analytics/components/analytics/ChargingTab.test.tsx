@@ -190,7 +190,7 @@ describe('ChargingTab — loading', () => {
 
     // Panel shells (titles) are always present, even mid-load.
     for (const title of PANEL_TITLES) {
-      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
 
     // The KPI band is a skeleton — no metric labels, and no empty/error UI.

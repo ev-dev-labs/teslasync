@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, PanelTitle, Text, MetricLabel, GlossaryTerm } from '@/components/ui';
-import { OperationalBrief } from '@/components/data-display';
+import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { ChartContainer } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { BatteryPanelGrid } from './BatteryPanelGrid';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 
 export interface HealthUnavailableOutlineProps {
   loading: boolean;
@@ -22,9 +23,21 @@ export function HealthUnavailableOutline({ loading, summary, thermal, links }: H
   const recovery = loading
     ? <Skeleton className="h-40 rounded-xl" />
     : <Text variant="bodySm">{unavailable}</Text>;
+  const comparisonMetrics: StatMetric[] = [
+    { metricId: 'energy', occurrenceId: 'capacity-new', rawValue: null,
+      label: t('battery.newVsNow.capNew', 'Capacity When New'), missingReason: unavailable },
+    { metricId: 'energy', occurrenceId: 'capacity-now', rawValue: null,
+      label: t('battery.newVsNow.capNow', 'Capacity Now'), missingReason: unavailable },
+    { metricId: 'distance', occurrenceId: 'range-new', rawValue: null,
+      label: t('battery.newVsNow.rangeNew', 'Range When New'), missingReason: unavailable },
+    { metricId: 'distance', occurrenceId: 'range-now', rawValue: null,
+      label: t('battery.newVsNow.rangeNow', 'Range Now'), missingReason: unavailable },
+  ];
   return (
     <div className="min-w-0 w-full space-y-6" data-testid="battery-health-unavailable-outline">
       <OperationalBrief
+        compact
+        loading={loading}
         testId="battery-operational-brief"
         eyebrow={t('operations.battery.eyebrow', 'Battery posture')}
         title={t('operations.battery.title', 'Long-term pack health remains measurable and actionable')}
@@ -39,7 +52,7 @@ export function HealthUnavailableOutline({ loading, summary, thermal, links }: H
           { key: 'charging-stress', label: t('operations.battery.chargingStress', 'Charging stress'), value: '—', detail: unavailable },
           { key: 'thermal-impact', label: t('operations.battery.thermalImpact', 'Thermal impact'), value: '—', detail: t('operations.battery.thermalImpactUnavailable', 'More temperature history is required to estimate thermal exposure.') },
           { key: 'cycles', label: t('operations.battery.cycleExposure', 'Cycle exposure'), value: '—', detail: unavailable },
-        ]}
+        ].map(metric => ({ ...metric, rawValue: null, valueState: 'missing' as const }))}
       />
       <Text as="p" variant="caption" className="flex flex-wrap items-center gap-x-4 gap-y-1" data-testid="battery-glossary-strip">
         <span>{t('battery.glossary.lead', 'Terms on this page:')}</span>
@@ -95,13 +108,17 @@ export function HealthUnavailableOutline({ loading, summary, thermal, links }: H
         {thermal}
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle>{t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}</PanelTitle>
-          {recovery}
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            {[t('battery.newVsNow.capNew', 'Capacity When New'), t('battery.newVsNow.capNow', 'Capacity Now'),
-              t('battery.newVsNow.rangeNew', 'Range When New'), t('battery.newVsNow.rangeNow', 'Range Now')].map(label => (
-              <div key={label}><MetricLabel>{label}</MetricLabel><Text>—</Text></div>
-            ))}
-          </div>
+          <BatteryEvidenceBrief
+            title={t('battery.newVsNow.brief.summary', 'Capacity and range evidence')}
+            description={unavailable}
+            metrics={comparisonMetrics}
+            loading={loading}
+            period={{
+              kind: 'unknown',
+              label: t('battery.health.brief.capacityScope', 'Capacity and range model unavailable'),
+              reason: unavailable,
+            }}
+          />
         </GlassPanel>
       </BatteryPanelGrid>
       <GlassPanel className="p-4 sm:p-5">

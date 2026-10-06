@@ -60,6 +60,10 @@ vi.mock('react-i18next', async () => {
 import { request } from '@/api/client';
 import { ToastProvider } from '@/components/feedback/Toast';
 import DiagnosticPage from './DiagnosticPage';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 import type { DiagnosticReport } from '@/api/types';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;

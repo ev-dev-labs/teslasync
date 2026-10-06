@@ -192,7 +192,7 @@ describe('EnergyLedgerPage partial-data contract', () => {
     renderPage();
 
     const summary = screen.getByRole('region', { name: 'Energy ledger metrics' });
-    expect(summary.querySelectorAll('[data-stat]')).toHaveLength(4);
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     for (const label of ['Books Closure', 'Reached the Wheels', 'Vampire Drain', 'Unexplained']) {
       expect(within(summary).getByText(label)).toBeInTheDocument();
     }

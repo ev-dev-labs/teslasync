@@ -31,7 +31,8 @@ export function FeedbackFacetPanel({
   const hasData = sources.some((source) => source.hasData)
   const fatalError = sources.find((source) => source.fatalError)?.fatalError
   const empty = complete && counts.every((count) => count.value === 0)
-  const emptyBody = <EmptyState icon={emptyIcon} message={emptyMessage} />
+  const emptyBody = <EmptyState icon={emptyIcon} message={emptyMessage}
+    action={{ label: t('common.refresh', 'Refresh'), onClick: onRetry }} />
   const loading = !hasData && !fatalError && combined.status === 'initial'
 
   return (

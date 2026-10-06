@@ -100,6 +100,10 @@ vi.mock('../components/analytics', () => {
     ),
   };
 });
+vi.mock('../components/operationalbrief-a-m/FleetOverviewBrief', async () => {
+  const { HeroGauges } = await import('../components/analytics');
+  return { FleetOverviewBrief: HeroGauges };
+});
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it. Guarded
 // polyfill keeps the render deterministic.

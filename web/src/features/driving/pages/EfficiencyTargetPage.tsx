@@ -16,7 +16,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 
 import {
-  EfficiencyTargetKpis,
   GoalPulse,
   RecentWeekScorecard,
   TargetConsistencyChart,
@@ -26,6 +25,7 @@ import {
   type EfficiencyTargetSectionState,
 } from '../components/efficiency-target';
 import { summarizeTarget } from '../lib/efficiencyTarget';
+import { EfficiencyTargetBrief } from '../components/operationalbrief-a-m/EfficiencyTargetBrief';
 
 const DRIVE_HISTORY_LIMIT = 1000;
 const SPLIT_COLUMNS = { default: 1, xl: 5 } as const;
@@ -114,10 +114,11 @@ export default function EfficiencyTargetPage() {
     >
       <StaleRefreshWarning state={sourceState} label={t('effTarget.title', 'Efficiency Target')} />
       <FadeIn>
-        <EfficiencyTargetKpis
+        <EfficiencyTargetBrief
           summary={summary}
           targetWhPerKm={targetWhPerKm}
           state={sectionState}
+          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
       </FadeIn>
 

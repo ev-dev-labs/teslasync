@@ -15,7 +15,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const query = useVehicleState(id);
   const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
@@ -24,6 +25,12 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
+  const vehiclesState = deriveDataState(vehiclesQuery);
+  const sourceState = deriveDataState({
+    ...query,
+    data: stateData ?? (isLoading || isError || error ? undefined : null),
+  }, { provenance: stateData?.live ? 'live' : 'cached', unavailable: state == null });
+  const dataState = id > 0 ? sourceState : vehiclesState;
   const reading = (value: unknown, format: (value: number) => string) => {
     const number = knownNumber(value);
     return number == null ? '—' : format(number);
@@ -34,12 +41,12 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
       title={t('widget.chargeStatusLive', 'Charge status')}
       loading={isLoading && !stateData}
       error={!stateData && isError ? String(error ?? 'Request failed') : null}
-      dataState={stateData ? deriveDataState(query, { provenance: stateData.live ? 'live' : 'cached' }) : undefined}
+      dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={() => { if (id > 0) void refetch(); else void vehiclesQuery.refetch(); }}
     >
       <div className="h-full flex flex-col justify-center">
         {state?.is_charging ? (

@@ -217,7 +217,7 @@ function renderPage(initialEntries: string[] = ['/software-updates']) {
 
 function kpiBand(): HTMLElement {
   const band = screen.getByRole('heading', { name: 'Software update summary' })
-    .closest<HTMLElement>('[data-stat-strip]');
+    .closest<HTMLElement>('[data-operational-brief]');
   if (!band) throw new Error('Software update summary strip not found');
   return band;
 }
@@ -225,7 +225,7 @@ function kpiBand(): HTMLElement {
 /** Scope a shared stat tile by its unique summary label. */
 function kpiCard(label: string): HTMLElement {
   const band = kpiBand();
-  const el = within(band).getByText(label).closest<HTMLElement>('[data-stat]');
+  const el = within(band).getByText(label).closest<HTMLElement>('[data-operational-metric]');
   if (!el) throw new Error(`Stat tile not found for "${label}"`);
   return el;
 }
@@ -380,8 +380,9 @@ describe('SoftwareUpdatesPage — resilience states', () => {
     // Data children are not shown while loading…
     expect(screen.queryByTestId('cadence-chart')).toBeNull();
     const band = kpiBand();
-    expect(band.querySelectorAll('[data-stat][data-state="loading"]')).toHaveLength(6);
-    expect(kpiCard('Current version')).toHaveAttribute('data-state', 'loading');
+    expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(band).toHaveAttribute('aria-busy', 'true');
+    expect(kpiCard('Current version').querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(within(band).queryByText('2025.20.1')).not.toBeInTheDocument();
   });
 

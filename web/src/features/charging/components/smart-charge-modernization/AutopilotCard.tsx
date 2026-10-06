@@ -4,7 +4,8 @@ import { Bot, ShieldCheck, CalendarClock, Zap } from 'lucide-react';
 import { LayoutCard, ChartCard } from '@/components/layout/layout-reference';
 import { Grid } from '@/components/layout';
 import { Button, Select, Input, Slider, Toggle, Badge, Text, Caption, ErrorText } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -108,9 +109,10 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
       context: preview ? t('autopilot.windowEnd', 'ends {{end}}', { end: formatTime(preview.window.end_time) }) : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'preview-savings',
+      metricId: 'currency', occurrenceId: 'preview-savings',
       label: t('autopilot.previewSavings', 'Saves vs now'),
-      rawValue: preview && knownNumber(preview.savings) != null ? formatCurrency(preview.savings) : null,
+      rawValue: preview ? knownNumber(preview.savings) : null,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
       comparisonContent: preview && preview.savings > 0 && knownNumber(preview.savings_percent) != null
         ? <Text variant="bodySm">{fmtPercent(preview.savings_percent)}</Text> : undefined,
     },
@@ -175,7 +177,7 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
           </div>
 
           <div className="min-w-0 space-y-4">
-            <StatStrip id="smart-charge-autopilot-preview" metrics={previewMetrics}
+            <ChargingSummaryBrief id="smart-charge-autopilot-preview" metrics={previewMetrics}
               period={{ kind: 'unknown', label: t('autopilot.preview', 'Preview next run'),
                 reason: t('chargePlanner.modernization.previewContext', 'Estimated next charge window from the current profile and SOC input; not an applied schedule.') }} />
             {previewMutation.isPending ? <Skeleton height={120} /> : previewError ? (
@@ -216,17 +218,19 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
             )}
             <StaleRefreshWarning state={savingsState} />
             {savingsState.fatalError ? <QueryError error={savingsState.fatalError} onRetry={() => void savingsQuery.refetch()} /> : (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-                <Text variant="bodySm" className="font-medium">{t('autopilot.realized', 'Realized savings')}</Text>
-                {savingsQuery.isLoading && !savingsState.hasData ? <Skeleton lines={1} /> : (
-                  <Text variant="bodySm" className="tabular-nums">
-                    {savings ? t('autopilot.realizedValue', '{{total}} across {{runs}} runs', {
-                      total: knownNumber(savings.total_savings) != null ? formatCurrency(savings.total_savings) : '—',
-                      runs: knownNumber(savings.runs) ?? '—',
-                    }) : '—'}
-                  </Text>
-                )}
-              </div>
+              <ChargingSummaryBrief title={t('autopilot.realized', 'Realized savings')}
+                loading={savingsQuery.isLoading && !savingsState.hasData}
+                retained={savingsState.hasData && (savingsState.refreshError != null || savingsState.isRefreshBlocked)}
+                metrics={[{ metricId: 'currency', occurrenceId: 'realized-savings',
+                  label: t('autopilot.realized', 'Realized savings'), rawValue: savings?.total_savings,
+                  display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
+                  context: savings ? t('autopilot.realizedValue', '{{total}} across {{runs}} runs', {
+                    total: knownNumber(savings.total_savings) != null ? formatCurrency(savings.total_savings) : '—',
+                    runs: knownNumber(savings.runs) ?? '—',
+                  }) : undefined }]}
+                period={{ kind: 'unknown', label: t('autopilot.realized', 'Realized savings'),
+                  reason: t('charging.brief.autopilotSavingsScope',
+                    'Independent autopilot savings source; its time bounds are not reported and it is not scoped by the planner departure date.') }} />
             )}
           </div>
         </Grid>

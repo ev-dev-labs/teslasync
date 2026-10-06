@@ -18,7 +18,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 
-import { GlassPanel, DataTable, Toggle, SectionTitle, type Column } from '@/components/ui';
+import { Caption, GlassPanel, DataTable, Text, Toggle, SectionTitle, type Column } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SourceContent } from '@/components/layout';
@@ -115,14 +115,13 @@ export function SignalStatsPanel({
   const renderNumeric = useCallback(
     (n: number, valueClassName: string) =>
       Number.isFinite(n) ? (
-        <span className={cn('font-mono', valueClassName)}>{fmtNumber(n)}</span>
+        <Text mono size="xs" className={valueClassName}>{fmtNumber(n)}</Text>
       ) : (
-        <span
-          className="text-[var(--text-muted)]"
+        <Caption
           aria-label={t('signalStats.noData', 'No data')}
         >
           —
-        </span>
+        </Caption>
       ),
     [t, fmtNumber],
   );
@@ -137,14 +136,14 @@ export function SignalStatsPanel({
         const idx = signalIndex?.[s.signal] ?? positionIndex.get(s.signal) ?? 0;
         const color = CHART_COLORS[Math.max(0, idx) % CHART_COLORS.length];
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-mono font-semibold" style={{ color }}>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Text mono size="xs" weight="medium" className="break-words [overflow-wrap:anywhere]" style={{ color }}>
               {s.signal}
-            </span>
+            </Text>
             {isEmptyStat(s) && (
-              <span className="text-2xs text-[var(--text-muted)]">
+              <Caption>
                 {t('signalStats.noDataInRange', 'No data in range')}
-              </span>
+              </Caption>
             )}
           </div>
         );
@@ -160,7 +159,7 @@ export function SignalStatsPanel({
       filterValue: (s) => s.count,
       filterValueLabel: (_value, s) => fmtInt(s.count),
       render: (s) => (
-        <span className="font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</span>
+        <Text mono size="xs" color="muted">{fmtInt(s.count)}</Text>
       ),
     },
   ], [positionIndex, renderNumeric, signalIndex, t, fmtNumber, fmtInt]);

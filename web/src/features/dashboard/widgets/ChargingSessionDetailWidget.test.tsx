@@ -105,8 +105,11 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return template.replace(/{{(\w+)}}/g, (match, name: string) =>
+        options?.[name] == null ? match : String(options[name]));
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -587,6 +590,7 @@ describe('ChargingSessionDetailWidget — compact layout', () => {
   });
 
   it('shows the empty placeholder (not a blank panel) when compact and data-less', () => {
+    useChargingSessionsMock.mockReturnValue({ data: [] });
     useChargingSessionDetailMock.mockReturnValue(makeDetailQuery({ data: undefined }));
 
     renderWidget({ cols: 1, rows: 1 });
@@ -605,8 +609,28 @@ describe('ChargingSessionDetailWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading Charge session detail' })).toBeInTheDocument();
     expect(screen.queryByText('Charge session detail')).toBeInTheDocument();
     expect(screen.queryByText('No charge sessions')).not.toBeInTheDocument();
+  });
+
+  it('keeps measured telemetry visible while only the session detail is pending', () => {
+    useChargingSessionDetailMock.mockReturnValue(
+      makeDetailQuery({ isLoading: true, data: undefined, dataUpdatedAt: 0 }),
+    );
+    useChargeTelemetryMock.mockReturnValue(
+      makeTelemetryQuery({ data: [makeReading({ power_w: 9000, battery_level: 72 })] }),
+    );
+
+    const { container } = renderWidget({ cols: 2, rows: 2 });
+
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Charge session detail' })).toBeInTheDocument();
+    expect(chartMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: [expect.objectContaining({ power: 9, soc: 72 })],
+    }));
+    expect(screen.queryByText('No charge sessions')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy added')).not.toBeInTheDocument();
   });
 
   it('keeps ready detail visible while telemetry is loading', () => {
@@ -636,14 +660,15 @@ describe('ChargingSessionDetailWidget — query states', () => {
     expect(screen.queryByText('Energy added')).not.toBeInTheDocument();
   });
 
-  it('renders an EmptyState placeholder (never a blank panel) when detail is absent', () => {
+  it('renders an EmptyState placeholder (never a blank panel) when no sessions exist', () => {
+    useChargingSessionsMock.mockReturnValue({ data: [] });
     useChargingSessionDetailMock.mockReturnValue(
       makeDetailQuery({ data: undefined, isLoading: false, error: null, isError: false }),
     );
 
     renderWidget({ cols: 2, rows: 2 });
 
-    // Titled shell still renders; the body degrades to the placeholder.
+    // A confirmed empty session list is distinct from a pending detail request.
     expect(screen.getByText('Charge session detail')).toBeInTheDocument();
     expect(screen.getByText('No charge sessions')).toBeInTheDocument();
     expect(screen.queryByText('Energy added')).not.toBeInTheDocument();

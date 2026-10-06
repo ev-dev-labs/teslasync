@@ -10,6 +10,7 @@ import { Badge, Column, DataTable } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
 import { useAuditLog } from '../hooks/useAuditLog';
+import { PackRepositorySource } from './PackRepositorySource';
 import type { AuditAction, AuditLogEntry } from '../lib/auditLog';
 
 const ACTION_VARIANT: Record<AuditAction, 'info' | 'success' | 'warning' | 'danger' | 'neutral'> = {
@@ -62,22 +63,24 @@ export function AuditLogPanel() {
     },
   ];
 
-  if (rows.length === 0) {
-    // no-action: transient — this log fills automatically as install/uninstall/rollback actions occur; there is no user action to populate an empty audit trail.
-    return <EmptyState icon={<ScrollText className="h-10 w-10" />} message={t('intelPacks.audit.empty', 'No actions have been recorded yet.')} />;
-  }
-
   return (
-    <DataTable
-      enableValueFilters
-      tableId="intelligence-packs:audit-log"
-      columns={columns}
-      data={rows}
-      keyExtractor={(r) => r.id}
-      pagination
-      mobileColumns={['timestamp', 'action']}
-      emptyMessage={t('intelPacks.audit.empty', 'No actions have been recorded yet.')}
-      name="IntelligencePacksAuditLog"
-    />
+    <PackRepositorySource query={auditQuery} label={t('intelPacks.tabs.audit', 'Audit log')}>
+      {rows.length === 0 ? (
+        // no-action: actions in the other marketplace panels populate the local log.
+        <EmptyState icon={<ScrollText className="h-10 w-10" />} message={t('intelPacks.audit.empty', 'No actions have been recorded yet.')} />
+      ) : (
+        <DataTable
+          enableValueFilters
+          tableId="intelligence-packs:audit-log"
+          columns={columns}
+          data={rows}
+          keyExtractor={(r) => r.id}
+          pagination
+          mobileColumns={['timestamp', 'action']}
+          emptyMessage={t('intelPacks.audit.empty', 'No actions have been recorded yet.')}
+          name="IntelligencePacksAuditLog"
+        />
+      )}
+    </PackRepositorySource>
   );
 }

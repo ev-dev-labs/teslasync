@@ -43,9 +43,10 @@ import {
   GhostDrivesPanel,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatEfficiencyFromSI, formatPct, formatSpan } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -488,22 +489,26 @@ export default function DriverAttributionPage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.driver.summary.title', 'Separation quality')}
-          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
-          <StatGrid
-            stats={[
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.driver.brief.title', 'Cluster separation and attribution')}
+            description={t('ownership.driver.brief.description', 'Behavioural clusters are anonymous until labelled. Inferred and ambiguous drives remain distinct from confirmed drives.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={reportQuery} enabled={vehicleId != null}
+            window={report?.window}
+            metrics={[
               {
-                key: 'clusters',
+                occurrenceId: 'clusters', metricId: 'count',
                 label: t('ownership.driver.stat.clusters', 'Distinct clusters'),
-                value: fmtInt(clusters.length),
+                rawValue: report ? clusters.length : null,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'separation',
+                occurrenceId: 'separation', metricId: 'ratio',
                 label: t('ownership.driver.stat.separation', 'Separation score'),
-                value:
-                  report?.separation_score != null
-                    ? fmtNumber(report.separation_score)
-                    : '—',
-                hint: report?.separation_verdict,
+                rawValue: report?.separation_score,
+                display: specialistDisplay(fmtNumber),
+                context: report?.separation_verdict,
                 tone:
                   report?.separation_verdict === 'strong'
                     ? 'positive'
@@ -512,22 +517,25 @@ export default function DriverAttributionPage() {
                       : 'default',
               },
               {
-                key: 'labelled',
+                occurrenceId: 'labelled', metricId: 'count',
                 label: t('ownership.driver.stat.labelled', 'Confirmed drives'),
-                value: fmtInt(report?.labelled_drive_count ?? 0),
+                rawValue: report?.labelled_drive_count,
+                display: specialistDisplay(fmtInt),
                 tone: 'positive',
               },
               {
-                key: 'inferred',
+                occurrenceId: 'inferred', metricId: 'count',
                 label: t('ownership.driver.stat.inferred', 'Inferred drives'),
-                value: fmtInt(report?.inferred_drive_count ?? 0),
+                rawValue: report?.inferred_drive_count,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'ambiguous',
+                occurrenceId: 'ambiguous', metricId: 'count',
                 label: t('ownership.driver.stat.ambiguous', 'Ambiguous drives'),
-                value: fmtInt(report?.ambiguous_drive_count ?? 0),
+                rawValue: report?.ambiguous_drive_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.ambiguous_drive_count ?? 0) > 0 ? 'warning' : 'default',
-                hint: t(
+                context: t(
                   'ownership.driver.stat.ambiguousHint',
                   'Two clusters fit almost equally well',
                 ),

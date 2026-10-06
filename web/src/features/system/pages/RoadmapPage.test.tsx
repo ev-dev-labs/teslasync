@@ -39,6 +39,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
 vi.mock('react-i18next', async () => {
@@ -98,7 +102,7 @@ function kpi() {
 // by a sibling `<p>{value}</p>`; read the value by hopping the label→value pair.
 function metricValue(label: string): string {
   const labelEl = kpi().getByText(label);
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? '';
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 // Each phase band is a labelled <section> → role="region" named after the phase.

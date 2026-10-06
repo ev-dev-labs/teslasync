@@ -21,6 +21,7 @@ import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 
 import {
   useVehicleDrivers,
@@ -35,7 +36,6 @@ import { useVehicle } from '@/api/hooks/useVehicles';
 import type { VehicleDriver, VehicleInvitation } from '@/api/types';
 
 import {
-  AccessKpiBand,
   AccessOverviewPanel,
   type AccessStatusSlice,
   type AccessRoleSlice,
@@ -300,13 +300,20 @@ export default function VehicleAccessPage() {
       <StaleRefreshWarning state={invitationsState} label={t('vehicleAccess.invitations.title', 'Share invitations')} />
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <AccessKpiBand
-          drivers={drivers == null ? null : driversList.length}
-          invitations={invitations == null ? null : invitationsList.length}
-          pending={invitations == null ? null : pendingCount}
-          expiringSoon={invitations == null ? null : expiringSoonCount}
-          retained={driversState.status === 'stale' || invitationsState.status === 'stale'}
-        />
+        <VehicleEvidenceBrief id="vehicle-access-summary"
+          title={t('vehicleAccess.kpis', 'Access summary')}
+          description={t('vehicleAccess.briefDescription', 'Driver and invitation records are independent snapshots. Expiring soon means pending invitations expiring within the next seven days.')}
+          status={driversState.status === 'stale' || invitationsState.status === 'stale' ? 'stale'
+            : driversState.data == null || invitationsState.data == null ? 'partial' : 'ok'}
+          loading={driversLoading || invitationsLoading}
+          scope={t('vehicleAccess.snapshot', 'Latest access records')}
+          provenance={`${t('dataSources.labels.vehicleDrivers', 'Vehicle drivers')} / ${t('dataSources.labels.shareInvitations', 'Share invitations')}`}
+          metrics={[
+            { metricId: 'count', occurrenceId: 'drivers', label: t('vehicleAccess.kpi.drivers', 'Drivers'), rawValue: drivers == null ? null : driversList.length },
+            { metricId: 'count', occurrenceId: 'invitations', label: t('vehicleAccess.kpi.invitations', 'Invitations'), rawValue: invitations == null ? null : invitationsList.length },
+            { metricId: 'count', occurrenceId: 'pending', label: t('vehicleAccess.kpi.pending', 'Pending'), rawValue: invitations == null ? null : pendingCount },
+            { metricId: 'count', occurrenceId: 'expiring', label: t('vehicleAccess.kpi.expiringSoon', 'Expiring soon'), rawValue: invitations == null ? null : expiringSoonCount },
+          ]} />
       </FadeIn>
 
       {/* 2 — Drivers (hero) + Access Overview (context) bento */}

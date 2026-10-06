@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Badge, DataTable, Text, type Column } from '@/components/ui';
-import { StatGroup } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useVampireSplit } from '@/api/hooks/useTeslaPhysics';
@@ -49,7 +49,7 @@ export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined
         ) : split ? (
           <>
             <Text as="p" variant="caption">{split.honesty}</Text>
-            <StatGroup period={period} retained={state.status !== 'ok'} metrics={[
+            <BatteryEvidenceBrief title={t('vampireDrain.modernization.splitSummary', 'Observed drain split')} description={split.honesty} period={period} retained={state.status !== 'ok'} metrics={[
               { metricId: 'percent', occurrenceId: 'vampire-plugged', rawValue: split.complete_plugged_drain_pct, label: t('vampireDrain.split.completePct', 'At-limit plugged') },
               { metricId: 'percent', occurrenceId: 'vampire-unplugged', rawValue: split.unplugged_drain_pct, label: t('vampireDrain.split.unpluggedPct', 'After unplug') },
             ]} />

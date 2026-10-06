@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Battery, Calendar, TrendingDown, Zap } from 'lucide-react';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 
@@ -33,11 +34,11 @@ export function BatteryDegradationStats({ data, loading = false, prediction = fa
     'Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).');
   const rate = prediction ? data?.prediction?.slope_per_year : data?.degradation_rate_pct_per_year;
   const rateMetric: StatMetric = {
-    metricId: 'text',
+    metricId: 'rate',
     occurrenceId: prediction ? 'battery-degradation-fit-rate' : 'battery-degradation-rate',
     label: t('battery.degradation.rate', 'Degradation rate'),
-    rawValue: rate != null && Number.isFinite(rate)
-      ? `${fmtNumber(prediction ? Math.abs(rate) : rate)}%/yr` : null,
+    rawValue: rate != null ? prediction ? Math.abs(rate) : rate : null,
+    display: { formatter: raw => ({ value: `${fmtNumber(raw)}%/yr`, unit: '' }) },
     description: rateHelp,
     context: <TrendingDown className="h-4 w-4" aria-hidden="true" />,
   };
@@ -80,17 +81,17 @@ export function BatteryDegradationStats({ data, loading = false, prediction = fa
     },
     rateMetric,
     {
-      metricId: 'text',
-      rawValue: data?.battery_age_months != null && Number.isFinite(data.battery_age_months) && data.battery_age_months >= 0
-        ? ageLabel(data.battery_age_months, t) : null,
+      metricId: 'number',
+      rawValue: data?.battery_age_months != null && data.battery_age_months >= 0 ? data.battery_age_months : null,
+      display: { formatter: raw => ({ value: ageLabel(raw, t), unit: '' }) },
       label: t('battery.degradation.batteryAge', 'Battery age'),
       context: <Calendar className="h-4 w-4" aria-hidden="true" />,
     },
   ];
   return (
-    <StatStrip
+    <BatteryEvidenceBrief
       id={prediction ? 'battery-degradation-prediction-stats' : 'battery-degradation-summary'}
-      variant={prediction ? 'embedded' : 'standalone'}
+      title={prediction ? t('battery.degradation.brief.prediction', 'Degradation model evidence') : t('battery.degradation.brief.summary', 'Battery degradation evidence')}
       metrics={metrics}
       loading={loading}
       period={{

@@ -309,7 +309,7 @@ describe('efficiencyColor', () => {
       } }, { data: [] });
       renderPage();
       const metrics = screen.getByRole('region', { name: 'Key metrics' });
-      expect(within(metrics).getAllByText('0.00').length).toBeGreaterThanOrEqual(2);
+      expect(within(metrics).getAllByText(/^0\.00(?: .+)?$/, { selector: '[data-operational-value]' }).length).toBeGreaterThanOrEqual(2);
       expect(screen.queryByText('No efficiency summary available yet')).not.toBeInTheDocument();
     });
   });
@@ -340,7 +340,10 @@ describe('EfficiencyPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Efficiency' })).toBeInTheDocument();
     // Loading takes precedence over both the empty state and the metric cards.
     expect(screen.queryByText('No efficiency data available yet')).toBeNull();
-    expect(screen.queryByText('Avg consumption')).toBeNull();
+    expect(screen.getByText('Avg consumption')).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Lifetime efficiency evidence' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(summary.querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('identifies the failed source and still renders the empty KPI placeholder', () => {
@@ -356,7 +359,8 @@ describe('EfficiencyPage', () => {
     const kpis = screen.getByRole('region', { name: 'Key metrics' });
     expect(within(kpis).getByText('Unable to load Key metrics')).toBeInTheDocument();
     expect(within(kpis).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(within(kpis).queryByText('Avg consumption')).not.toBeInTheDocument();
+    expect(within(kpis).getByText('Avg consumption')).toBeInTheDocument();
+    expect(within(kpis).getByText('Avg consumption').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
   });
 
   it('renders an empty-state placeholder (never a blank panel) when there are no stats', () => {
@@ -377,17 +381,18 @@ describe('EfficiencyPage', () => {
 
     // avgSpeedKmh=60 must display as 60.00 km/h — the pre-fix code fed km/h
     // straight into convertSpeedFromSI (an m/s converter) → 216.00.
-    expect(kpis.getByText('60.00')).toBeInTheDocument();
+    expect(kpis.getByText('60.00 km/h', { selector: '[data-operational-value]' })).toBeInTheDocument();
     expect(screen.queryByText('216.00')).toBeNull();
     // topSpeedKmh=120 → 120 (pre-fix: 432); totalDistanceKm=5000 → 5,000
     // (pre-fix: 5 because km was treated as metres).
-    expect(kpis.getByText('120')).toBeInTheDocument();
+    expect(kpis.getByText('120 km/h', { selector: '[data-operational-value]' })).toBeInTheDocument();
     expect(screen.queryByText('432')).toBeNull();
-    expect(kpis.getByText('5,000')).toBeInTheDocument();
+    expect(kpis.getByText('5,000 km', { selector: '[data-operational-value]' })).toBeInTheDocument();
     // Efficiency (5.0 km/kWh), CO₂ (300 kg) and drive count (42) round-trip.
-    expect(kpis.getByText('5.00')).toBeInTheDocument();
-    const co2 = kpis.getByLabelText('CO₂ saved: 300 kg');
-    expect(within(co2).getByText('300 kg', { selector: '[data-stat-value]' })).toBeInTheDocument();
+    expect(kpis.getByText('5.00 km/kWh', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    const co2 = kpis.getByText('CO₂ saved').closest('[data-operational-metric]');
+    expect(co2).not.toBeNull();
+    expect(within(co2 as HTMLElement).getByText('300 kg', { selector: '[data-operational-value]' })).toBeInTheDocument();
     expect(kpis.getByText('42')).toBeInTheDocument();
   });
 
@@ -397,10 +402,10 @@ describe('EfficiencyPage', () => {
     const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
 
     // 60 km/h → 37.28 mph, 5000 km → 3,107 mi, 200 Wh/km → 321.87 Wh/mi.
-    expect(kpis.getByText('37.28')).toBeInTheDocument();
-    expect(kpis.getByText('3,107')).toBeInTheDocument();
-    expect(kpis.getByText('321.87')).toBeInTheDocument();
-    expect(screen.getAllByText('Wh/mi').length).toBeGreaterThan(0);
+    expect(kpis.getByText('37.28 mph', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    expect(kpis.getByText('3,107 mi', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    expect(kpis.getByText('321.87 Wh/mi', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    expect(screen.getAllByText(/Wh\/mi/).length).toBeGreaterThan(0);
     // The km figures must NOT leak through under the imperial preference.
     expect(screen.queryByText('60.00')).toBeNull();
     expect(screen.queryByText('5,000')).toBeNull();

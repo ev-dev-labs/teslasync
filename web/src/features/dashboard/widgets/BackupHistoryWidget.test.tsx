@@ -110,6 +110,19 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+it('reviews measured backup counts and durations with the actual site and open-ended source window', () => {
+  setup({ events: makeQuery({ data: [makeEvent({ duration_seconds: 3600 }), makeEvent({ id: 2, duration_seconds: 1800 })] }) });
+  render(<BackupHistoryWidget size={STANDARD} />);
+  const brief = screen.getByTestId('backup-history-operational-brief');
+  expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getByText('2')).toBeInTheDocument();
+  expect(within(drawer).getByText('45m')).toBeInTheDocument();
+  expect(within(drawer).getByText(/Energy site 100/)).toBeInTheDocument();
+  expect(within(drawer).getByText(/no explicit exclusive end bound/)).toBeInTheDocument();
+});
+
 it.each([1, 2, 3])('keeps an accessible heading and events at %s columns', cols => {
   setup({ events: makeQuery({ data: [makeEvent()] }) });
   render(<BackupHistoryWidget size={{ cols, rows: 4 }} />);

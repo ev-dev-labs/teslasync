@@ -37,9 +37,10 @@ import {
   EvidencePanel,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { daysToSeconds, formatPct, formatSignedPct, formatSpan } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -456,16 +457,19 @@ export default function ModelTrustPage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.trust.summary.title', 'Portfolio trust')}
-          source={trustQuery} sourceEnabled={vehicleId != null} empty={!report}>
-          <StatGrid
-            stats={[
+          source={trustQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.trust.brief.title', 'Recorded model trust and scoring')}
+            description={t('ownership.trust.notice.body', 'A prediction only counts once its outcome is recorded. Skill is measured against a naive persistence baseline, so a model that merely repeats the last value scores zero — not high.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={trustQuery} enabled={vehicleId != null}
+            window={report?.window}
+            metrics={[
               {
-                key: 'portfolio',
+                occurrenceId: 'portfolio', metricId: 'score',
                 label: t('ownership.trust.stat.portfolio', 'Portfolio trust score'),
-                value:
-                  report?.portfolio_trust_score != null
-                    ? `${fmtNumber(report.portfolio_trust_score)}/100`
-                    : '—',
+                rawValue: report?.portfolio_trust_score,
+                display: specialistDisplay((raw) => `${fmtNumber(raw)}/100`),
                 tone:
                   (report?.portfolio_trust_score ?? 0) >= 75
                     ? 'positive'
@@ -474,27 +478,32 @@ export default function ModelTrustPage() {
                       : 'default',
               },
               {
-                key: 'trusted',
+                occurrenceId: 'trusted', metricId: 'count',
                 label: t('ownership.trust.stat.trusted', 'Trusted models'),
-                value: fmtInt(report?.trusted_count ?? 0),
+                rawValue: report?.trusted_count,
+                display: specialistDisplay(fmtInt),
                 tone: 'positive',
               },
               {
-                key: 'watch',
+                occurrenceId: 'watch', metricId: 'count',
                 label: t('ownership.trust.stat.watch', 'On watch'),
-                value: fmtInt(report?.watch_count ?? 0),
+                rawValue: report?.watch_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.watch_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                key: 'unreliable',
+                occurrenceId: 'unreliable', metricId: 'count',
                 label: t('ownership.trust.stat.unreliable', 'Unreliable'),
-                value: fmtInt(report?.unreliable_count ?? 0),
+                rawValue: report?.unreliable_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.unreliable_count ?? 0) > 0 ? 'critical' : 'default',
               },
               {
-                key: 'scored',
+                occurrenceId: 'scored', metricId: 'count',
                 label: t('ownership.trust.stat.scored', 'Scored / recorded'),
-                value: `${fmtNumber(report?.total_scored ?? 0)} / ${fmtNumber(report?.total_predictions ?? 0)}`,
+                rawValue: report?.total_scored,
+                display: { countTotal: report?.total_predictions,
+                  formatter: (raw) => ({ value: `${fmtNumber(raw)} / ${report?.total_predictions == null ? '—' : fmtNumber(report.total_predictions)}`, unit: '' }) },
               },
             ]}
           />

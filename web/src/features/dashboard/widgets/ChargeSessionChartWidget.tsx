@@ -17,6 +17,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { classifyChargingSource } from '@/lib/chargerKind';
+import { chartTokens } from '@/lib/tokens';
 
 type ChartChargerType = 'home' | 'supercharger' | 'dc' | 'unknown';
 
@@ -168,7 +169,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                       t(`widget.chargeSessionChart.type.${props.payload?.type ?? 'unknown'}`, CHARGER_TYPE_LABEL[props.payload?.type ?? 'unknown']),
                     ]}
                     labelFormatter={(label: string) => label}
-                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                    cursor={{ fill: chartTokens.gridStroke }}
                   />
                   <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
                     {chartData.map((d, i) => (

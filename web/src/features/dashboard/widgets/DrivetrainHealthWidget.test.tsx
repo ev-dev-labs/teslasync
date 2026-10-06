@@ -229,7 +229,8 @@ describe('DrivetrainHealthWidget', () => {
     const { container } = renderWidget();
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('role', 'status');
   });
 
   it('renders the titled shell, health gauge and four stats in °C', () => {
@@ -362,10 +363,10 @@ describe('DrivetrainHealthWidget', () => {
     );
     renderWidget();
 
-    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('The drivetrain assessment could not be loaded.');
     expect(screen.getByText('48.00')).toBeInTheDocument();
 
-    // The error panel replaces the gauge + header (and its refresh control).
+    // Only the failed assessment is replaced; the motor evidence stays visible.
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Refresh/i }).length).toBeGreaterThan(0);
   });

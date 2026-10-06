@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DoorOpen } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Subhead } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { asNonEmptyString } from '@/lib/typeGuards';
 import { WidgetStatusGrid, type StatusCell } from './shared';
@@ -165,7 +164,7 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={() => { if (id > 0) void refetch(); else void vehicleQuery.refetch(); }}
     >
       {securityData ? (
         isCompact ? (
@@ -188,15 +187,15 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
         ) : (
           <div className={isTall ? 'space-y-4' : 'space-y-2'}>
             <div>
-              <h4 className={`${dashboardTokens.metricLabel} mb-1.5`}>
+              <Subhead className="mb-1.5 break-words">
                 {t('widget.doorWindow.doors', 'Doors')}
-              </h4>
+              </Subhead>
               <WidgetStatusGrid cells={doorCells} cols={2} />
             </div>
             <div>
-              <h4 className={`${dashboardTokens.metricLabel} mb-1.5`}>
+              <Subhead className="mb-1.5 break-words">
                 {t('widget.doorWindow.windows', 'Windows')}
-              </h4>
+              </Subhead>
               <WidgetStatusGrid cells={windowCells} cols={2} />
             </div>
           </div>

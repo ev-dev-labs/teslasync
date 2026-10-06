@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -15,6 +14,7 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { Badge, MetricLabel, Table, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -60,7 +60,8 @@ export function ArchetypeCandidateModels({
 
   return (
     <section data-testid="drive-archetypes-candidates">
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t('archetypes.candidates.title', 'Candidate-k model selection')}
         subtitle={t(
           'archetypes.candidates.subtitle',
@@ -165,7 +166,7 @@ export function ArchetypeCandidateModels({
           </Table>
           </ArchetypeSectionBody>
         )}
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

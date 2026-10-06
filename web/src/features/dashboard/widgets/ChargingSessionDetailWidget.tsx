@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, areaGradient, ChartLegend, EmbeddedChart, useMeasuredAxisWidth, measureAxisLabelWidth, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useChargingSessions, useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
@@ -67,7 +68,6 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   const {
     data: detail,
     isLoading: detailLoading,
-    error: detailError,
     isFetching, isStale, isError, dataUpdatedAt,
   } = detailQuery;
 
@@ -77,30 +77,32 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     isLoading: telemetryLoading,
   } = telemetryQuery;
 
+  const isCompact = size.cols <= 1;
+  const isWide = size.cols >= 3;
   const isLoading = !detail && (sessionsQuery.isLoading || detailLoading || telemetryLoading);
+  const sessionsState = deriveDataState(sessionsQuery, { provenance: 'historical' });
   const detailState = deriveDataState(detailQuery, { provenance: 'historical' });
+  const telemetryState = deriveDataState(telemetryQuery, { provenance: 'historical' });
   const combined = combineDataStates([
-    deriveDataState(sessionsQuery, { provenance: 'historical' }),
+    sessionsState,
     detailState,
-    deriveDataState(telemetryQuery, { provenance: 'historical' }),
+    telemetryState,
   ]);
-  const dataState = detail ? { ...detailState, ...combined } : undefined;
+  const hasPayload = detail != null || telemetry != null || sessions != null;
+  const dataState = isCompact
+    ? latestSessionId == null ? sessionsState : detailState
+    : {
+      ...detailState,
+      ...combined,
+      data: detail ?? telemetry ?? sessions,
+      hasData: hasPayload,
+      fatalError: hasPayload ? null : sessionsState.fatalError ?? detailState.fatalError ?? telemetryState.fatalError,
+    };
   const refresh = () => {
     void sessionsQuery.refetch?.();
     void detailQuery.refetch();
     void telemetryQuery.refetch?.();
   };
-  const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
-
-  // Only replace the whole widget with a full-panel error on the INITIAL load
-  // failure, when there is no cached detail to fall back on. The session detail
-  // query polls while a charge is live, so a transient background-refetch
-  // failure must not blank out otherwise-valid numbers — it is surfaced through
-  // the freshness indicator's error state instead (WidgetShell forwards
-  // `isError` to <DataFreshness>).
-  const blockingError = !detail && (detailError || sessionsQuery.error)
-    ? String(detailError || sessionsQuery.error) : null;
 
   const chartData = useMemo((): ChartDatum[] => {
     const points = telemetry ?? [];
@@ -205,6 +207,15 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
 
   const chart = useMemo(() => {
     return (
+      <SourceContent
+        state={telemetryState.fatalError ? 'error' : !telemetryState.hasData && telemetryLoading ? 'loading' : telemetryState.refreshError ? 'retained' : 'ready'}
+        label={t('widget.chargingSessionDetail.telemetry', 'Charging telemetry')}
+        emptyMessage={t('widget.chargingSessionDetail.noTelemetry', 'No charging telemetry is available for this session')}
+        errorMessage={t('widget.chargingSessionDetail.telemetryError', 'Charging telemetry could not be loaded.')}
+        error={telemetryState.fatalError}
+        errorRecovery={{ onRetry: telemetryState.retry ?? undefined }}
+        retainedMessage={t('widget.chargingSessionDetail.telemetryRetained', 'Previously loaded charging telemetry remains visible while it refreshes.')}
+      >
       <EmbeddedChart
         title={t('widget.chargingSessionDetail.title', 'Charge session detail')}
         ariaLabel={t(
@@ -293,8 +304,9 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           </ResponsiveContainer>
         )}
       </EmbeddedChart>
+      </SourceContent>
     );
-  }, [chartData, tick, t, unitPrefs.power, fmt, powerAxisWidth, socAxisWidth]);
+  }, [chartData, tick, t, unitPrefs.power, fmt, powerAxisWidth, socAxisWidth, telemetryState, telemetryLoading]);
 
   // ── Compact layout: large kWh number + charger badge ──
   if (isCompact) {
@@ -303,7 +315,6 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         title={t('widget.chargingSessionDetail.title', 'Charge session detail')}
         loading={isLoading}
         dataState={dataState}
-        error={blockingError}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching || telemetryQuery.isFetching || sessionsQuery.isFetching}
         isStale={isStale}
@@ -337,17 +348,29 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       icon={<Zap className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
       dataState={dataState}
-      error={blockingError}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching || telemetryQuery.isFetching || sessionsQuery.isFetching}
       isStale={isStale}
       isError={isError || telemetryQuery.isError || sessionsQuery.isError}
       onRefresh={refresh}
     >
+      {sessionsState.fatalError && <QueryError error={sessionsState.fatalError} onRetry={sessionsState.retry ?? undefined} />}
+      {detailState.fatalError && <QueryError error={detailState.fatalError} onRetry={detailState.retry ?? undefined} />}
+      <StaleRefreshWarning state={detailState} />
+      {latestSessionId != null && !detail && !detailState.fatalError && (
+        <SourceContent
+          state={detailState.status === 'initial' ? 'loading' : 'empty'}
+          label={t('widget.chargingSessionDetail.title', 'Charge session detail')}
+          emptyMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+          errorMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+        >
+          {null}
+        </SourceContent>
+      )}
       <WidgetChartSummary
         stats={stats}
         chart={chart}
-        isEmpty={!detail}
+        isEmpty={!detail && latestSessionId == null && chartData.length === 0}
         emptyMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
         emptyIcon={<Zap className="h-5 w-5" />}
       />

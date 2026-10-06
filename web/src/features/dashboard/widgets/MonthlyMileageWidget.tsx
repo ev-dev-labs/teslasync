@@ -13,6 +13,7 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens } from '@/lib/tokens';
 
 interface BarDatum {
   month: string;
@@ -218,7 +219,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                   `${fmtNumber(value)} ${distanceUnit}`,
                   t('widget.monthlyMileage.distance', 'Distance'),
                 ]}
-                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                cursor={{ fill: chartTokens.gridStroke }}
               />
               <Bar
                 dataKey="distance"
@@ -229,7 +230,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 {chartData.map((entry, idx) => (
                   <Cell
                     key={`bar-${idx}`}
-                    fill={entry.isCurrent ? '#22d3ee' : 'rgba(255,255,255,0.1)'}
+                    fill={entry.isCurrent ? chartTokens.series[5] : chartTokens.axisStroke}
                   />
                 ))}
               </Bar>

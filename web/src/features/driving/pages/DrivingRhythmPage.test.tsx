@@ -173,6 +173,10 @@ vi.mock('../components/driving-rhythm', () => {
   };
 });
 
+vi.mock('../components/operationalbrief-a-m/DrivingRhythmBrief', async () => ({
+  DrivingRhythmBrief: (await import('../components/driving-rhythm')).DrivingRhythmKpis,
+}));
+
 import DrivingRhythmPage from './DrivingRhythmPage';
 
 function query(overrides: Record<string, unknown> = {}) {

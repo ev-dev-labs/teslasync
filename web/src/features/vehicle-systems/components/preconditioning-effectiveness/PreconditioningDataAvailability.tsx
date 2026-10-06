@@ -11,6 +11,7 @@ import type {
   PreconditioningSourceQueryState,
 } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 interface PreconditioningDataAvailabilityProps {
   summary: PreconditioningSummary;
@@ -21,7 +22,7 @@ interface AvailabilityItem {
   key: string;
   label: string;
   available: boolean;
-  support: string;
+  support: number | string;
 }
 
 export function PreconditioningDataAvailability({
@@ -67,55 +68,55 @@ export function PreconditioningDataAvailability({
       key: 'climate',
       label: t('preconditioningEffectiveness.availability.climateRows', 'Climate endpoint rows'),
       available: summary.climateRows.returnedRows > 0,
-      support: fmtInt(summary.climateRows.returnedRows),
+      support: summary.climateRows.returnedRows,
     },
     {
       key: 'drives',
       label: t('preconditioningEffectiveness.availability.driveRows', 'Drive endpoint rows'),
       available: summary.driveRows.returnedRows > 0,
-      support: fmtInt(summary.driveRows.returnedRows),
+      support: summary.driveRows.returnedRows,
     },
     {
       key: 'timestamps',
       label: t('preconditioningEffectiveness.availability.timeline', 'Unique climate timeline'),
       available: summary.climateRows.uniqueTimestampRows > 0,
-      support: fmtInt(summary.climateRows.uniqueTimestampRows),
+      support: summary.climateRows.uniqueTimestampRows,
     },
     {
       key: 'overlap',
       label: t('preconditioningEffectiveness.availability.overlap', 'Temporal window overlap'),
       available: summary.coverage.overlappingDriveWindows > 0,
-      support: fmtInt(summary.coverage.overlappingDriveWindows),
+      support: summary.coverage.overlappingDriveWindows,
     },
     {
       key: 'window',
       label: t('preconditioningEffectiveness.availability.windowRows', 'Pre-drive window rows'),
       available: summary.windowSupport.departuresWithWindowRows > 0,
-      support: fmtInt(summary.windowSupport.departuresWithWindowRows),
+      support: summary.windowSupport.departuresWithWindowRows,
     },
     {
       key: 'thermal',
       label: t('preconditioningEffectiveness.availability.thermal', 'Distinct-state join support'),
       available: summary.windowSupport.departuresWithThermalSupport > 0,
-      support: fmtInt(summary.windowSupport.departuresWithThermalSupport),
+      support: summary.windowSupport.departuresWithThermalSupport,
     },
     {
       key: 'classified',
       label: t('preconditioningEffectiveness.availability.classified', 'Classified departures'),
       available: summary.joinedDepartures > 0,
-      support: fmtInt(summary.joinedDepartures),
+      support: summary.joinedDepartures,
     },
     {
       key: 'active',
       label: t('preconditioningEffectiveness.availability.active', 'Observed HVAC-active group'),
       available: summary.conditionedDepartures > 0,
-      support: fmtInt(summary.conditionedDepartures),
+      support: summary.conditionedDepartures,
     },
     {
       key: 'control',
       label: t('preconditioningEffectiveness.availability.control', 'Explicitly HVAC-off control group'),
       available: summary.unconditionedDepartures > 0,
-      support: fmtInt(summary.unconditionedDepartures),
+      support: summary.unconditionedDepartures,
     },
     {
       key: 'comparison',
@@ -155,26 +156,21 @@ export function PreconditioningDataAvailability({
           state={state}
           className="mt-3"
         >
-          <Grid cols={{ default: 1, sm: 2, xl: 5 }} gap={3}>
-            {items.map((item) => (
-              <div
-                key={item.key}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <MetricLabel>{item.label}</MetricLabel>
-                  <Badge variant={item.available ? 'success' : 'neutral'}>
-                    {item.available
-                      ? t('preconditioningEffectiveness.availability.available', 'Available')
-                      : t('preconditioningEffectiveness.availability.withheld', 'Withheld')}
-                  </Badge>
-                </div>
-                <Text as="p" variant="caption" className="mt-2">
-                  {item.support}
-                </Text>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="preconditioning-availability-summary"
+            title={t('preconditioningEffectiveness.availability.title', 'Data availability and query state')}
+            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)}
+            period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage'),
+              reason: t('preconditioningEffectiveness.availability.subtitle', 'Query transport state is separate from analytical availability, and cached evidence remains visible after a refresh failure.') }}
+            metrics={items.map(item => ({
+              metricId: typeof item.support === 'number' ? 'count' as const : 'status' as const,
+              occurrenceId: item.key, label: item.label, rawValue: item.support,
+              display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
+              context: <Badge variant={item.available ? 'success' : 'neutral'}>
+                {item.available ? t('preconditioningEffectiveness.availability.available', 'Available')
+                  : t('preconditioningEffectiveness.availability.withheld', 'Withheld')}
+              </Badge>,
+            }))}
+          />
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-3">
             <DatabaseZap className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
             <Text as="p" variant="caption">

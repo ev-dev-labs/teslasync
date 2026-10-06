@@ -21,7 +21,7 @@ import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useQuietHours } from '@/api/hooks/useNotifications';
 import { QuietHoursPanel } from '@/features/settings/components/QuietHoursPanel';
-import { AIQuietHoursSuggestion } from '@/components/ai/AIQuietHoursSuggestion';
+import { AIQuietHoursSuggestion } from '@/components/ai';
 import { QuietHoursSummary } from '../components/QuietHoursSummary';
 import { QuietHoursGuide } from '../components/QuietHoursGuide';
 import type { QuietHoursWindowInput } from '@/api/types';

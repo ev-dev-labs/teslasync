@@ -427,7 +427,7 @@ describe('FSMDistributionWidget', () => {
     expect(screen.getByText('Recent transitions')).toBeVisible();
     expect(within(transitionFeed()).getAllByTestId('timestamp')).toHaveLength(2);
     expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('State distribution could not be loaded.');
   });
 
   it('keeps distribution and real dual recovery when transition loading fails', () => {
@@ -475,7 +475,9 @@ describe('FSMDistributionWidget', () => {
 
     expect(screen.getByText('State distribution')).toBeInTheDocument();
     expect(screen.getByText('No state data available')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No state data available').closest('[role="status"]')).toBeInTheDocument();
+    expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+    expect(screen.getByText('No recent transitions')).toBeInTheDocument();
     // The donut is not rendered while empty.
     expect(screen.queryByTestId('pie')).not.toBeInTheDocument();
   });
@@ -569,6 +571,7 @@ describe('FSMDistributionWidget', () => {
     expect(screen.getByText('No state data available')).toBeInTheDocument();
     expect(screen.queryByTestId('pie')).not.toBeInTheDocument();
     // The non-array transitions payload never reaches a `.map`/feed render.
-    expect(screen.queryByText('Recent transitions')).not.toBeInTheDocument();
+    expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+    expect(screen.getByText('No recent transitions')).toBeInTheDocument();
   });
 });

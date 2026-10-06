@@ -253,6 +253,26 @@ describe('AutomationStatusWidget — compact view', () => {
 });
 
 describe('AutomationStatusWidget — full view', () => {
+  it('reviews measured configuration counts while preserving the live per-entity action rail', () => {
+    renderWidget(WIDE, makeQuery({
+      data: [
+        makeAutomation({ id: 1, name: 'Retained enabled', enabled: true }),
+        makeAutomation({ id: 2, name: 'Retained failing', enabled: true, consecutive_failures: 2 }),
+      ],
+      isError: true, error: new Error('refresh failed'),
+    }));
+    expect(screen.getByRole('switch', { name: 'Toggle Retained enabled' })).toBeInTheDocument();
+    const brief = screen.getByTestId('automation-operational-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('2')).toBeInTheDocument();
+    expect(within(drawer).getByText('1')).toBeInTheDocument();
+    expect(within(drawer).getByText('0')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not all manually disabled automations/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/action permissions and per-row recovery remain independent/)).toBeInTheDocument();
+  });
   it('shows a titled summary header and one row per automation', () => {
     renderWidget(
       FULL,

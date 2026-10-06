@@ -21,7 +21,8 @@ import {
   GlassPanel, Input as ControlInput,
   TabNav, Pagination, PanelTitle, Text, Caption, Badge,
 } from '@/components/ui';
-import { MetricCard, MetricBar, Timeline } from '@/components/data-display';
+import { OperationalBrief, MetricBar, Timeline } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -40,9 +41,10 @@ import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { useTimezone } from '@/lib/timezone';
 import {
-  History, CheckCircle, XCircle, Terminal, Clock, TrendingUp,
-  Award, Search, Gamepad2, ListChecks, BarChart3, ShieldCheck,
+  CheckCircle, XCircle, Terminal,
+  Search, Gamepad2, ListChecks, BarChart3, ShieldCheck,
 } from 'lucide-react';
+import { commandHistoryMetrics } from '../components/statstrip-command-summaries/commandSummaryMetrics';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -135,7 +137,7 @@ const OTHER_COLOR = '#64748b';
 
 export default function CommandHistoryPage() {
   const { t } = useTranslation();
-  const { fmtPercent } = useNumberFormatting();
+  const { fmtPercent, precision } = useNumberFormatting();
   const pctLabel = (n: number, total: number): string =>
     fmtPercent(total > 0 ? (n / total) * 100 : 0);
   usePageTitle(t('commandHistory.title', 'Command history'));
@@ -327,6 +329,10 @@ export default function CommandHistoryPage() {
       : noVehicle
         ? t('commandHistory.selectVehiclePrompt', 'Select a vehicle to view command history')
         : t('commandHistory.noCommands', 'No commands have been sent yet');
+  const operationalMetrics = useOperationalMetrics(commandHistoryMetrics(
+    !noVehicle && commands != null ? stats : null,
+    t, (command) => formatCommandName(command, t), precision,
+  ));
 
   return (
     <PageLayout
@@ -350,61 +356,34 @@ export default function CommandHistoryPage() {
       <FadeIn>
         <section
           aria-label={t('commandHistory.kpis', 'Command metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
         >
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
-            ))
-          ) : error ? (
+          {error ? (
             <QueryError
               error={error}
               onRetry={() => refetch()}
-              className="col-span-2 lg:col-span-3 3xl:col-span-6"
             />
           ) : (
-            <>
-          <MetricCard
-            label={t('commandHistory.total', 'Total commands')}
-            value={stats.total}
-            icon={<Terminal className="h-4 w-4" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('commandHistory.total24h', 'Commands (24h)')}
-            value={stats.total24h}
-            icon={<Clock className="h-4 w-4" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('commandHistory.successRate', 'Success rate')}
-            value={fmtPercent(stats.successRate)}
-            icon={<TrendingUp className="h-4 w-4" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('commandHistory.failed', 'Failed')}
-            value={stats.failedCount}
-            icon={<XCircle className="h-4 w-4" />}
-            color="red"
-          />
-          <MetricCard
-            label={t('commandHistory.mostUsed', 'Most used')}
-            value={stats.mostUsed ? formatCommandName(stats.mostUsed, t) : '—'}
-            icon={<Award className="h-4 w-4" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('commandHistory.lastSent', 'Last sent')}
-            value={
-              stats.lastCommand
-                ? formatRelative(stats.lastCommand.created_at, { tz: 'UTC' })
-                : '—'
-            }
-            icon={<History className="h-4 w-4" />}
-            color="amber"
-          />
-            </>
+            <OperationalBrief
+              compact
+              testId="command-history-summary"
+              eyebrow={t('commandHistory.kpis', 'Command metrics')}
+              title={t('commandHistory.brief.title', 'Command history summary')}
+              description={t('commandHistory.summary.scope', 'Selected vehicle history; status and search filters apply only to the timeline.')}
+              metrics={operationalMetrics}
+              loading={isLoading}
+              scope={`${formatDateTime(startInstant, { tz: timeZone })} → ${formatDateTime(endInstantExclusive, { tz: timeZone })}`}
+              provenance={t('commandHistory.summary.scope', 'Selected vehicle history; status and search filters apply only to the timeline.')}
+              statusLabel={noVehicle
+                ? t('commandHistory.selectVehiclePrompt', 'Select a vehicle to view command history')
+                : isLoading ? t('commandHistory.brief.loading', 'Loading command history')
+                  : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
+                    : commands == null ? t('commandHistory.brief.unavailable', 'Command history unavailable')
+                      : commands.length === 0 ? t('commandHistory.brief.empty', 'No commands recorded')
+                        : t('commandHistory.brief.recorded', 'Recorded command history')}
+              statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
+              freshness={state.updatedAt != null
+                ? formatDateTime(new Date(state.updatedAt).toISOString()) : undefined}
+            />
           )}
         </section>
       </FadeIn>

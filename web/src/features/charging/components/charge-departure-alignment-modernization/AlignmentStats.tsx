@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { Badge, HelpTooltip } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { ChargeDepartureAlignmentSummary } from '../../lib/chargeDepartureAlignment';
@@ -77,7 +78,7 @@ export function AlignmentStats({ summary, loading, retained, missingReason, hist
   ];
 
   return (
-    <StatStrip
+    <ChargingSummaryBrief
       id="charge-departure-alignment-summary"
       title={t('chargeDepartureAlignment.kpis', 'Charge departure alignment metrics')}
       metrics={metrics}

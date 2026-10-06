@@ -5,11 +5,11 @@
  * so the seller can paste them into a listing. A self-verification badge
  * proves the signature round-trips through the public verify endpoint.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BadgeCheck, ShieldCheck } from 'lucide-react';
 
-import { HelperText, Badge, CopyButton, ErrorText } from '@/components/ui';
+import { HelperText, Badge, Button, CopyButton, ErrorText } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
@@ -22,6 +22,8 @@ import {
   useVerifyBatteryCertificate,
 } from '@/api/hooks/useBatteryCertificate';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { VaultSummaryBrief } from './operationalbrief-all/VaultSummaryBrief';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 
 export interface BatteryCertificatePanelProps {
   vehicleId: string | null;
@@ -39,16 +41,32 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
 
   const issued = certQuery.data ?? null;
   const signature = issued?.signature ?? null;
+  const lastAttempt = useRef<typeof issued>(null);
 
-  // Self-verify the just-issued certificate through the same public
-  // endpoint a buyer would use. Runs once per signature.
+  // A previous success must not attest a newly issued certificate.
   useEffect(() => {
-    if (issued && !verifyMutation.isPending && verifyMutation.data === undefined && !verifyMutation.isError) {
+    if (issued && issued !== lastAttempt.current && !verifyMutation.isPending) {
+      lastAttempt.current = issued;
       verifyMutation.mutate({ certificate: issued.certificate, signature: issued.signature });
     }
   }, [issued, verifyMutation]);
 
-  const verified = verifyMutation.data?.valid === true;
+  const verificationMatches =
+    issued != null &&
+    verifyMutation.variables?.signature === issued.signature &&
+    verifyMutation.variables?.certificate === issued.certificate;
+  const verified = verificationMatches && !verifyMutation.isPending && !verifyMutation.isError && verifyMutation.data?.valid === true;
+  const verificationFailed = verificationMatches && !verifyMutation.isPending &&
+    (verifyMutation.isError || verifyMutation.data?.valid === false);
+  const description = t('resaleVault.brief.certificate.description', 'Server-issued battery snapshot; signature verification is shown separately and applies only to this exact payload.');
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'percent', occurrenceId: 'certificate-soh', label: t('resaleVault.certificate.soh', 'State of health'), rawValue: issued?.certificate.current_soh, description },
+    { metricId: 'energy', occurrenceId: 'certificate-capacity', label: t('resaleVault.certificate.capacity', 'Current capacity'), rawValue: issued ? issued.certificate.estimated_capacity_kwh * 1000 : null, description,
+      display: { formatter: (raw) => ({ value: formatEnergy(raw), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'certificate-cycles', label: t('resaleVault.certificate.cycles', 'Total cycles'), rawValue: issued?.certificate.total_cycles, description, display: { notation: 'source' } },
+    { metricId: 'score', occurrenceId: 'certificate-habits', label: t('resaleVault.certificate.habits', 'Charge habits score'), rawValue: issued?.certificate.charge_habits_score, description,
+      display: { formatter: (raw) => ({ value: `${fmtNumber(raw)} / 100`, unit: '' }) } },
+  ];
 
   return (
     <LayoutCard title={t('resaleVault.certificate.title', 'Battery certificate')}
@@ -71,6 +89,15 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
       </HelperText>
 
       <StaleRefreshWarning state={certState} label={t('resaleVault.certificate.title', 'Battery certificate')} />
+      <VaultSummaryBrief id="certificate" title={t('resaleVault.brief.certificate.title', 'Certificate measurements')}
+        description={description} metrics={metrics} hasEvidence={issued != null}
+        sources={[{ id: 'certificate', section: 'battery', labelKey: 'resaleVault.certificate.title',
+          label: 'Battery certificate', loading: !certState.hasData && certQuery.isLoading, state: certState }]}
+        scope={t('resaleVault.brief.certificate.scope', 'Issued {{issued}}; expires {{expires}}', {
+          issued: issued?.certificate.issued_at ?? '—', expires: issued?.certificate.expires_at ?? '—',
+        })}
+        provenance={issued?.certificate.issuer}
+      />
       <SourceContent
         state={certState.fatalError ? 'error' : !certState.hasData && certQuery.isLoading ? 'loading' : !issued ? 'empty' : 'ready'}
         label={t('resaleVault.certificate.title', 'Battery certificate')}
@@ -87,22 +114,6 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
         {issued ? <>
           <KVList
             items={[
-              {
-                label: t('resaleVault.certificate.soh', 'State of health'),
-                value: `${fmtNumber(issued.certificate.current_soh)}%`,
-              },
-              {
-                label: t('resaleVault.certificate.capacity', 'Current capacity'),
-                value: formatEnergy(issued.certificate.estimated_capacity_kwh * 1000),
-              },
-              {
-                label: t('resaleVault.certificate.cycles', 'Total cycles'),
-                value: String(issued.certificate.total_cycles),
-              },
-              {
-                label: t('resaleVault.certificate.habits', 'Charge habits score'),
-                value: `${fmtNumber(issued.certificate.charge_habits_score)} / 100`,
-              },
               {
                 label: t('resaleVault.certificate.expires', 'Valid until'),
                 value: formatDate(issued.certificate.expires_at),
@@ -130,10 +141,20 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
             </div>
           </div>
 
-          {verifyMutation.isError && (
-            <ErrorText>
-              {t('resaleVault.certificate.verifyError', 'Self-verification failed — the signature may be stale.')}
-            </ErrorText>
+          {verificationFailed && (
+            <div className="space-y-2">
+              <ErrorText>
+                {t('resaleVault.certificate.verifyError', 'Self-verification failed — the signature may be stale.')}
+              </ErrorText>
+              <Button
+                wrapLabel
+                size="sm"
+                variant="secondary"
+                onClick={() => verifyMutation.mutate({ certificate: issued.certificate, signature: issued.signature })}
+              >
+                {t('resaleVault.certificate.retryVerify', 'Retry verification')}
+              </Button>
+            </div>
           )}
         </> : null}
       </SourceContent>

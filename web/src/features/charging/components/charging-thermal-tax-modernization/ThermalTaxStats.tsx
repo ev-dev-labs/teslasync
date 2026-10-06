@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Flame, Gauge, Timer, Zap } from 'lucide-react';
 import { Badge, Button, Text } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { StatStrip, type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import type { DataState } from '@/api/dataState';
 import type { ChargingSession } from '@/types/charging';
@@ -68,11 +69,10 @@ export function ThermalTaxStats({ session, selected, summary, samples, state, lo
       </span>,
     },
     {
-      // The generic roundedMinutes contract emits "2h 0m" where the original
-      // specialist emits "2h". Retain that actual display contract as text.
-      metricId: 'text', occurrenceId: 'thermal-heater-on-time',
+      metricId: 'duration', occurrenceId: 'thermal-heater-on-time',
       label: t('chargingThermalTax.heaterOnTime', 'Heater On Time'),
-      rawValue: hasIntegral ? formatDurationSecondsAsMinutes(summary.heaterOnS) : null, missingReason,
+      rawValue: hasIntegral ? summary.heaterOnS : null, missingReason,
+      display: { formatter: raw => ({ value: formatDurationSecondsAsMinutes(raw), unit: '' }) },
       description: t('chargingThermalTax.metrics.onTimeMethod', 'Intervals count as heater-on when average endpoint power exceeds 50 W.'),
       context: <span className="inline-flex flex-wrap items-center gap-1">
         <Timer className="h-4 w-4" aria-hidden="true" />
@@ -93,7 +93,7 @@ export function ThermalTaxStats({ session, selected, summary, samples, state, lo
     },
   ];
 
-  return <StatStrip
+  return <ChargingSummaryBrief
     id="charging-thermal-tax-metrics"
     title={t('chargingThermalTax.kpis', 'Charging thermal tax metrics')}
     metrics={metrics}

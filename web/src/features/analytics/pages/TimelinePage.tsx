@@ -32,13 +32,14 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 
-import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { StatPeriod } from '@/lib/metric-reference';
-import { TimelineSource, TimelineSummary, type TimelineSourceFacts } from '../components/timeline-modernization';
+import { TimelineSource, type TimelineSourceFacts } from '../components/timeline-modernization';
+import { OperationalBrief, type StatMetric } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ─── Types matching actual API responses ────────────────── */
 
@@ -265,6 +266,30 @@ export default function TimelinePage() {
   const sleepingSec = (summaryByState.asleep?.totalSeconds ?? 0) +
     (summaryByState.sleeping?.totalSeconds ?? 0) +
     (summaryByState.offline?.totalSeconds ?? 0);
+  const summaryMetrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'timeline-total-transitions',
+      label: t('timeline.totalTransitions', 'Total transitions'),
+      description: t('timeline.summary.transitionDescription', 'Sum of transition counts returned by the state summary for this window'),
+      rawValue: summarySource.available ? totalTransitions : null },
+    { metricId: 'duration', occurrenceId: 'timeline-driving-time',
+      label: t('timeline.drivingTime', 'Driving time'),
+      description: t('timeline.summary.drivingDescription', 'Time in the driving state, rounded to whole minutes'),
+      rawValue: summarySource.available ? drivingSec : null,
+      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
+    { metricId: 'duration', occurrenceId: 'timeline-charging-time',
+      label: t('timeline.chargingTime', 'Charging time'),
+      description: t('timeline.summary.chargingDescription', 'Time in the charging state, rounded to whole minutes'),
+      rawValue: summarySource.available ? chargingSec : null,
+      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
+    { metricId: 'duration', occurrenceId: 'timeline-idle-sleep-time',
+      label: t('timeline.idleSleepTime', 'Idle / sleep time'),
+      description: t('timeline.summary.idleSleepDescription', 'Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes'),
+      rawValue: summarySource.available ? idleSec + sleepingSec : null,
+      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
+  ];
+  const summaryOperationalMetrics = useOperationalMetrics(summaryMetrics.map(metric => ({
+    ...metric, missingReason: t('timeline.summary.missing', 'No state summary is available for this window'),
+  })));
 
   /* ─── Table columns ─── */
 
@@ -384,14 +409,27 @@ export default function TimelinePage() {
       )}
       {/* Independent summary source: unknown never masquerades as a zero. */}
       <FadeIn>
-        <TimelineSummary
-          source={summarySource}
-          period={summaryPeriod}
-          totalTransitions={totalTransitions}
-          drivingTime={formatHoursFromSeconds(drivingSec)}
-          chargingTime={formatHoursFromSeconds(chargingSec)}
-          idleSleepTime={formatHoursFromSeconds(idleSec + sleepingSec)}
+        <OperationalBrief compact testId="timeline-summary"
+          eyebrow={t('timeline.title', 'Timeline')}
+          title={t('timeline.kpis', 'Summary metrics')}
+          description={t('timeline.summary.provenance', 'Vehicle FSM summary for the requested window; continuous observation coverage is unknown')}
+          statusLabel={summarySource.available
+            ? summarySource.error ? t('timeline.brief.retained', 'Retained state summary')
+              : summarySource.paused ? t('timeline.brief.pausedRetained', 'State summary refresh paused')
+                : t('timeline.brief.available', 'Returned state summary')
+            : summarySource.paused ? t('timeline.brief.paused', 'State summary paused')
+              : summarySource.loading ? t('timeline.brief.loading', 'Loading state summary')
+                : t('timeline.brief.unavailable', 'State summary unavailable')}
+          statusTone={summarySource.error || summarySource.paused ? 'warning' : 'neutral'}
+          metrics={summaryOperationalMetrics}
+          scope={summaryPeriod.label}
+          provenance={summaryPeriod.provenance}
+          loading={summarySource.enabled && summarySource.loading && !summarySource.paused && !summarySource.available}
         />
+        {(!summarySource.available && (!summarySource.loading || summarySource.paused)
+          || summarySource.available && (summarySource.error || summarySource.paused)) && (
+          <TimelineSource source={summarySource} label={t('timeline.kpis', 'Summary metrics')}>{null}</TimelineSource>
+        )}
       </FadeIn>
 
       {/* State timeline bar — proportional state distribution from summary */}

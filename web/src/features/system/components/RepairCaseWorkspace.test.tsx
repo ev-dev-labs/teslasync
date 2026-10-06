@@ -234,22 +234,6 @@ describe('RepairCaseWorkspace', () => {
       return Promise.resolve({});
     });
 
-    it('retains case statistics independently when their background refresh fails', async () => {
-      const { client } = renderWorkspace();
-      await screen.findByText('Case #7');
-      const metrics = screen.getByRole('region', { name: 'Repair case metrics' });
-      expect(within(metrics).getByText('Open cases')).toBeInTheDocument();
-      const initialValues = within(metrics).getAllByText(/^[01]$/).map((value) => value.textContent);
-      mockRequest.mockImplementation((url: string) => {
-        if (url === '/data-repair/cases/stats?vehicle_id=3') return Promise.reject(new Error('statistics refresh'));
-        if (url.startsWith('/data-repair/cases?')) return Promise.resolve({ cases: [repairCase], has_more: false });
-        return Promise.resolve({});
-      });
-      await act(async () => { await client.invalidateQueries({ queryKey: ['data-repair', 'cases', 'stats'] }); });
-      expect(await screen.findByText('Retained metrics')).toBeInTheDocument();
-      expect(screen.getByText('Case #7')).toBeInTheDocument();
-      expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText(/^[01]$/).map((value) => value.textContent)).toEqual(initialValues);
-    });
     await act(async () => {
       await client.invalidateQueries({ queryKey: ['data-repair', 'cases'] });
     });
@@ -261,6 +245,26 @@ describe('RepairCaseWorkspace', () => {
     );
     expect(screen.getByRole('button', { name: /Repair cases could not refresh/i }))
       .toBe(warning);
+  });
+
+  it('retains case statistics independently when their background refresh fails', async () => {
+    const { client } = renderWorkspace();
+    await screen.findByText('Case #7');
+    const metrics = screen.getByRole('region', { name: 'Repair case metrics' });
+    expect(within(metrics).getByText('Open cases')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(metrics).getAllByText(/^[01]$/).map((value) => value.textContent)).toEqual(['1', '0', '0', '1']);
+    });
+    const initialValues = within(metrics).getAllByText(/^[01]$/).map((value) => value.textContent);
+    mockRequest.mockImplementation((url: string) => {
+      if (url === '/data-repair/cases/stats?vehicle_id=3') return Promise.reject(new Error('statistics refresh'));
+      if (url.startsWith('/data-repair/cases?')) return Promise.resolve({ cases: [repairCase], has_more: false });
+      return Promise.resolve({});
+    });
+    await act(async () => { await client.invalidateQueries({ queryKey: ['data-repair', 'cases', 'stats'] }); });
+    expect(await screen.findByText('Retained metrics')).toBeInTheDocument();
+    expect(screen.getByText('Case #7')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText(/^[01]$/).map((value) => value.textContent)).toEqual(initialValues);
   });
 
   it('keeps cached quarantine rows visible after a background refresh fails', async () => {

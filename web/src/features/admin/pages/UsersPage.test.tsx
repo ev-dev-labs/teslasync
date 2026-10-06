@@ -20,7 +20,7 @@
  *   9. No other subjects → the table's empty state renders and the count is 0.
  *
  * The two query hooks are mocked via `vi.hoisted` so no network is touched; the
- * pure `isImpersonation*` helpers and every real shared component (MetricCard,
+ * pure `isImpersonation*` helpers and every real shared component (OperationalBrief,
  * DataTable, QueryError, PageContainer, StatusPanel, PolicyPanel) render for a
  * true integration signal.
  */
@@ -30,6 +30,12 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({
+  unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+    energy: 'Wh', duration: 's', power: 'W', precision: 2, locale: 'en-US' },
+}) }))
+vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }))
 
 import type {
   ImpersonationStatus,
@@ -173,7 +179,7 @@ function renderPage() {
 function kpiValue(label: string): string {
   const region = screen.getByRole('region', { name: 'Impersonation summary' })
   const labelEl = within(region).getByText(label)
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? ''
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? ''
 }
 
 /** The real <button> refresh control — disambiguated from the freshness chip,
@@ -222,9 +228,10 @@ describe('UsersPage', () => {
     })
     renderPage()
 
-    // KPI band collapses to a skeleton — no derived metric labels yet.
-    expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument()
-    expect(screen.queryByText('Available subjects')).not.toBeInTheDocument()
+    // Metric labels and source context remain visible without invented loading values.
+    expect(screen.getByTestId('subjects-operational-brief')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText('Available subjects')).toBeInTheDocument()
+    expect(screen.getByTestId('subjects-operational-brief').querySelector('[data-operational-value]')).toBeNull()
     // The subjects table shows its own loading affordance.
     expect(screen.getByTestId('users-page-loading')).toBeInTheDocument()
   })
@@ -275,7 +282,7 @@ describe('UsersPage', () => {
 
     // The table degrades to a retryable QueryError wired to refetch.
     expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1)
-    const retry = screen.getByRole('button', { name: /retry/i })
+    const retry = screen.getByRole('button', { name: 'Retry', exact: true })
     fireEvent.click(retry)
     await waitFor(() => expect(hoisted.candidatesRefetch).toHaveBeenCalled())
   })
@@ -332,5 +339,60 @@ describe('UsersPage', () => {
     expect(screen.getByText('No other subjects')).toBeInTheDocument()
     // No searchable list is drawn when there is nothing to search.
     expect(screen.queryByTestId('users-page-list')).not.toBeInTheDocument()
+  })
+
+  it('retains subjects, active target, admin and expiry after both refreshes fail', () => {
+    hoisted.state.status = makeStatusQuery({
+      data: {
+        mode: 'active',
+        original_admin: 'support-admin',
+        target: 'bob',
+        expires_at: '2030-01-01T12:15:00Z',
+      },
+      isError: true,
+      error: new Error('status refresh failed'),
+    })
+    hoisted.state.candidates = makeCandidatesQuery({
+      isError: true,
+      error: new Error('candidates refresh failed'),
+    })
+    renderPage()
+
+    expect(kpiValue('Available subjects')).toBe('2')
+    expect(kpiValue('Access mode')).toBe('Forward-auth')
+    expect(kpiValue('Session status')).toBe('Active')
+    expect(screen.getByTestId('users-page-list')).toBeInTheDocument()
+    expect(screen.getByText('alice')).toBeInTheDocument()
+    expect(screen.getAllByText('bob').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('support-admin')).toBeInTheDocument()
+    expect(screen.getByText('Expires')).toBeInTheDocument()
+    expect(screen.getByText('Current target')).toBeInTheDocument()
+    expect(screen.getByText('How impersonation works')).toBeInTheDocument()
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+  })
+
+  it('does not refetch the disabled candidates source in open mode', () => {
+    hoisted.state.status = makeStatusQuery({ data: { mode: 'open' } })
+    hoisted.state.candidates = makeCandidatesQuery({ data: undefined, isLoading: true })
+    renderPage()
+
+    fireEvent.click(getRefreshButton())
+    expect(hoisted.statusRefetch).toHaveBeenCalledTimes(1)
+    expect(hoisted.candidatesRefetch).not.toHaveBeenCalled()
+    expect(screen.getByTestId('users-page-open-mode')).toBeInTheDocument()
+  })
+
+  it('reviews retained subject scope and policy in the real details drawer', () => {
+    hoisted.state.status = makeStatusQuery({ isError: true, error: new Error('status refresh failed') })
+    hoisted.state.candidates = makeCandidatesQuery({ isError: true, error: new Error('candidate refresh failed') })
+    renderPage()
+    expect(screen.getByTestId('subjects-operational-brief')).toHaveTextContent('Retained evidence')
+    expect(kpiValue('Available subjects')).toBe('2')
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument()
+    expect(within(drawer).getAllByText(/Current impersonation status and available session subjects are independent sources/).length).toBeGreaterThan(0)
+    expect(within(drawer).getByText(/Configured policy limit of 15 minutes/)).toBeInTheDocument()
+    expect(screen.getByTestId('users-page-list')).toBeInTheDocument()
   })
 })

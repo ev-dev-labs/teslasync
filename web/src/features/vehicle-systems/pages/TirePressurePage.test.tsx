@@ -265,7 +265,7 @@ function renderPage() {
 
 /** Scope to the real shared statistic, not its label/tooltip wrapper. */
 function kpiCard(label: string) {
-  const el = screen.getByText(label, { selector: '[data-stat-label]' }).closest('[data-stat]');
+  const el = screen.getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' }).closest('[data-operational-metric]');
   if (!el) throw new Error(`KPI card not found for label: ${label}`);
   return within(el as HTMLElement);
 }
@@ -277,10 +277,10 @@ function historyTable() {
 }
 
 function pressureMetric(label: string, value: string, unit: string) {
-  // StatTile separates the numeric value and unit for shared typography.
+  // OperationalBrief retains the formatted value and unit together.
   const card = kpiCard(label);
-  expect(card.getByText(value, { selector: '[data-stat-value]' })).toBeInTheDocument();
-  expect(card.getByText(unit, { selector: '[data-stat-unit]' })).toBeInTheDocument();
+  expect(card.getByText(`${value} ${unit}`, { selector: '[data-operational-value]' })).toHaveTextContent(value);
+  expect(card.getByText(`${value} ${unit}`, { selector: '[data-operational-value]' })).toHaveTextContent(unit);
 }
 
 beforeEach(() => {
@@ -426,7 +426,7 @@ describe('TirePressurePage — populated data (bar)', () => {
     // Wait for the latest reading to resolve (avg KPI is a unique post-resolution
     // string), then scope each KPI to its card. avg = 300k Pa = 3 bar,
     // min = 200k Pa = 2 bar, 2 warnings.
-    await kpiCard('Avg pressure').findByText('3.00', { selector: '[data-stat-value]' });
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
     pressureMetric('Avg pressure', '3.00', 'bar');
     pressureMetric('Min pressure', '2.00', 'bar');
     expect(kpiCard('Warning count').getByText('2')).toBeInTheDocument();
@@ -463,7 +463,7 @@ describe('TirePressurePage — populated data (bar)', () => {
     renderPage();
 
     // Wait for the reading to resolve; avg + min both convert to 3.00 bar.
-    await kpiCard('Avg pressure').findByText('3.00', { selector: '[data-stat-value]' });
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
     pressureMetric('Min pressure', '3.00', 'bar');
     pressureMetric('Avg pressure', '3.00', 'bar');
     expect(kpiCard('Warning count').getByText('0')).toBeInTheDocument();
@@ -471,7 +471,7 @@ describe('TirePressurePage — populated data (bar)', () => {
     // The phantom 0-bar reading must not leak into the KPI band.
     expect(screen.queryByText('0.00 bar')).not.toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Tire pressure summary' }))
-      .queryByText('0.00', { selector: '[data-stat-value]' })).not.toBeInTheDocument();
+      .queryByText('0.00 bar', { selector: '[data-operational-value]' })).not.toBeInTheDocument();
   });
 });
 

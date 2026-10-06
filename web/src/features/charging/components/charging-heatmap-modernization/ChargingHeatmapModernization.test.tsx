@@ -30,6 +30,7 @@ vi.mock('@/components/motion', async importOriginal => {
 
 const retry = vi.fn();
 const savedPreferences = getFormatterPreferences();
+const savedFullscreenEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
 
 function setQuery(overrides: Record<string, unknown> = {}) {
   vi.mocked(useChargingSessionsPaginated).mockReturnValue({
@@ -79,7 +80,13 @@ function mount() {
 }
 
 function metric(container: HTMLElement, id: string) {
-  const tile = container.querySelector(`[data-metric="${id}"]`);
+  const keys: Record<string, string> = {
+    'charge.sessions': 'charging-heatmap-total-sessions',
+    'charge.energyAdded': 'charging-heatmap-total-energy',
+    'charge.recordedCost': 'charging-heatmap-total-cost',
+    'charge.avgDuration': 'charging-heatmap-average-duration',
+  };
+  const tile = container.querySelector(`[data-operational-metric="${keys[id]}"]`);
   expect(tile).not.toBeNull();
   return tile as HTMLElement;
 }
@@ -117,6 +124,11 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  if (savedFullscreenEnabled) {
+    Object.defineProperty(document, 'fullscreenEnabled', savedFullscreenEnabled);
+  } else {
+    Reflect.deleteProperty(document, 'fullscreenEnabled');
+  }
   setGlobalPrecision(savedPreferences.precision);
   setGlobalLocale(savedPreferences.locale);
 });
@@ -126,7 +138,7 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     setQuery({ data: [session(1), session(2)] });
     const { container } = mount();
     expectPanels(container);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(metric(container, 'charge.sessions')).toHaveTextContent('2');
     expect(metric(container, 'charge.energyAdded')).toHaveTextContent('24.00 kWh');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('$6.00');
@@ -170,8 +182,9 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     const { container, rerender } = mount();
     expectPanels(container);
     const summary = screen.getByRole('region', { name: 'Charging summary' });
-    expect(summary.querySelectorAll('[data-stat]')).toHaveLength(0);
-    expect(summary.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(summary.querySelectorAll('[data-operational-metric] [aria-hidden="true"]')).toHaveLength(4);
     setQuery({ data: undefined, isError: true, error: new Error('sessions down') });
     rerender(<ChargingHeatmapPage />);
     expectPanels(container);
@@ -184,22 +197,22 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     setQuery({ data: [] });
     rerender(<ChargingHeatmapPage />);
     expectPanels(container);
-    expect(metric(container, 'charge.sessions')).toHaveAttribute('data-state', 'value');
-    expect(metric(container, 'charge.sessions').querySelector('[data-stat-value]')).toHaveTextContent('0');
-    expect(metric(container, 'charge.energyAdded')).toHaveAttribute('data-state', 'missing');
-    expect(metric(container, 'charge.avgDuration')).toHaveAttribute('data-state', 'missing');
+    expect(metric(container, 'charge.sessions')).toHaveAttribute('data-value-state', 'value');
+    expect(metric(container, 'charge.sessions').querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(metric(container, 'charge.energyAdded')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric(container, 'charge.avgDuration')).toHaveAttribute('data-value-state', 'missing');
   });
 
   it('distinguishes recorded zero cost/energy from missing cost and unfinished duration', () => {
     setQuery({ data: [session(1, { total_energy_added_wh: 0, cost_decimal: 0, ended_at: null })] });
     const { container, rerender } = mount();
-    expect(metric(container, 'charge.energyAdded')).toHaveAttribute('data-state', 'value');
+    expect(metric(container, 'charge.energyAdded')).toHaveAttribute('data-value-state', 'value');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('$0.00');
-    expect(metric(container, 'charge.avgDuration')).toHaveAttribute('data-state', 'missing');
+    expect(metric(container, 'charge.avgDuration')).toHaveAttribute('data-value-state', 'missing');
     setQuery({ data: [session(1, { total_energy_added_wh: 0, cost_decimal: null, ended_at: null })] });
     rerender(<ChargingHeatmapPage />);
-    expect(metric(container, 'charge.recordedCost')).toHaveAttribute('data-state', 'missing');
-    expect(metric(container, 'charge.recordedCost').querySelector('[data-stat-value]')).toHaveTextContent('—');
+    expect(metric(container, 'charge.recordedCost')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric(container, 'charge.recordedCost').querySelector('[data-operational-value]')).toHaveTextContent('—');
   });
 
   it('retains the positive completed-duration denominator and recorded-only cost total', () => {
@@ -210,7 +223,7 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     expect(metric(container, 'charge.avgDuration')).toHaveTextContent('2.00 h');
     expect(metric(container, 'charge.energyAdded')).toHaveTextContent('36.00 kWh');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('$3.00');
-    expect(metric(container, 'charge.recordedCost').querySelector('[data-stat-context]')).toHaveTextContent('recorded values only');
+    expect(metric(container, 'charge.recordedCost').querySelector(':scope > div:last-child')).toHaveTextContent('recorded values only');
   });
 
   it('keeps exact query operands on persistent scope rerender and adds no local selectors', () => {
@@ -225,6 +238,7 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
   });
 
   it('updates display preferences without changing raw SI sessions or the mounted calendar', () => {
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
     const data = [session(1), session(2)];
     const bytes = JSON.stringify(data);
     setQuery({ data });
@@ -236,7 +250,19 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('€6,000');
     expect(screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' })).toBe(grid);
     expect(JSON.stringify(data)).toBe(bytes);
-    expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
+    // Controls belong to the two opted-in breakdown figures, not the calendar.
+    expect(within(grid).queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
+    expect(within(grid).queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
+    const breakdownCharts = container.querySelectorAll('figure');
+    expect(breakdownCharts).toHaveLength(2);
+    for (const chart of breakdownCharts) {
+      expect(within(chart).getByRole('button', { name: /full.?screen/i })).toBeInTheDocument();
+      expect(within(chart).getByRole('button', { name: 'Export chart', exact: true })).toBeInTheDocument();
+      fireEvent.click(within(chart).getByRole('button', { name: 'Export chart', exact: true }));
+      const menu = within(chart).getByRole('menu', { name: 'Export chart', exact: true });
+      expect(within(menu).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
+      fireEvent.keyDown(menu, { key: 'Escape' });
+      expect(within(chart).queryByRole('menu')).not.toBeInTheDocument();
+    }
   });
 });

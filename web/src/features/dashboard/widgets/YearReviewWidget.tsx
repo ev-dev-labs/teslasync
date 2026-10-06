@@ -1,8 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Calendar, Route, Car, Zap, Leaf, TrendingUp, Timer, Star,
-} from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useDataState } from '@/hooks/useDataState';
 import { EmptyState } from '@/components/feedback';
 import { useYearReview } from '@/api/hooks/useAnalytics';
@@ -10,7 +8,9 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -24,7 +24,7 @@ const METERS_PER_KM = 1000;
 const KMH_PER_MPS = 3.6; // 1 m/s === 3.6 km/h
 
 export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, fmtInt, locale } = useNumberFormatting();
+  const { fmtNumber, locale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -40,7 +40,6 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
 
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
-  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -49,8 +48,6 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
   // display unit. Feeding km straight into convertDistanceFromSI (which
   // expects metres) previously under-reported every figure by ~1000×.
   const displayDistance = toDistanceDisplay((data?.total_distance_km ?? 0) * METERS_PER_KM);
-  const displayLongestDrive = toDistanceDisplay((data?.longest_drive?.distance_km ?? 0) * METERS_PER_KM);
-  const displayFastestSpeed = toSpeedDisplay((data?.fastest_speed_kmh ?? 0) / KMH_PER_MPS);
 
   // Find busiest month
   const busiestMonth = useMemo(() => {
@@ -62,63 +59,71 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       .format(new Date(Date.UTC(currentYear, best.month - 1, 1)));
   }, [data?.monthly_stats, locale, currentYear]);
 
-  const coreStats = useMemo((): StatGridItem[] => {
+  const coreStats = useMemo((): StatMetric[] => {
     if (!data) return [];
     return [
       {
+        metricId: 'distance',
         label: t('widget.lifetimeStats.totalDistance', 'Total distance'),
-        value: isFiniteNumber(data.total_distance_km) ? fmtNumber(displayDistance) : null,
-        unit: distanceUnit,
-        icon: <Route className="h-3.5 w-3.5" />,
+        rawValue: data.total_distance_km == null ? null : data.total_distance_km * METERS_PER_KM,
+        description: t('widget.yearReview.summary.distanceHelp', 'Reported year distance, normalized from kilometres to metres.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
       },
       {
+        metricId: 'count',
         label: t('widget.yearReview.totalDrives', 'Total drives'),
-        value: isFiniteNumber(data.total_drives) ? fmtInt(data.total_drives) : null,
-        icon: <Car className="h-3.5 w-3.5" />,
+        rawValue: data.total_drives,
+        description: t('widget.yearReview.summary.drivesHelp', 'Reported drive count for this calendar year.'),
       },
       {
+        metricId: 'energy',
         label: t('widget.yearReview.energyUsed', 'Energy used'),
-        value: isFiniteNumber(data.total_energy_kwh) ? fmtNumber(data.total_energy_kwh) : null,
-        unit: 'kWh',
-        icon: <Zap className="h-3.5 w-3.5" />,
+        rawValue: data.total_energy_kwh == null ? null : data.total_energy_kwh * 1000,
+        description: t('widget.yearReview.summary.energyHelp', 'Reported year energy, normalized from kWh to Wh; original kWh display retained.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
       },
       {
+        metricId: 'mass',
         label: t('widget.yearReview.co2Saved', 'CO₂ saved'),
-        value: isFiniteNumber(data.co2_offset_kg) ? fmtNumber(data.co2_offset_kg) : null,
-        unit: 'kg',
-        icon: <Leaf className="h-3.5 w-3.5" />,
+        rawValue: data.co2_offset_kg,
+        description: t('widget.yearReview.summary.carbonHelp', 'Source-reported CO₂ offset for this calendar year, in kilograms.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) },
       },
       {
+        metricId: 'text',
         label: t('widget.yearReview.busiestMonth', 'Best month'),
-        value: busiestMonth,
-        icon: <Star className="h-3.5 w-3.5" />,
+        rawValue: busiestMonth === '—' ? null : busiestMonth,
+        description: t('widget.yearReview.summary.monthHelp', 'Month with the most source-reported drives, using the existing selection rule and localized month name.'),
       },
       {
+        metricId: 'distance',
         label: t('widget.yearReview.longestDrive', 'Longest drive'),
-        value: isFiniteNumber(data.longest_drive?.distance_km) ? fmtNumber(displayLongestDrive) : null,
-        unit: distanceUnit,
-        icon: <TrendingUp className="h-3.5 w-3.5" />,
+        rawValue: data.longest_drive?.distance_km == null ? null : data.longest_drive.distance_km * METERS_PER_KM,
+        description: t('widget.yearReview.summary.longestHelp', 'Source longest drive in this year, normalized from kilometres to metres.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
       },
     ];
-  }, [data, displayDistance, displayLongestDrive, distanceUnit, busiestMonth, t, fmtNumber, fmtInt]);
+  }, [data, distanceUnit, busiestMonth, t, fmtNumber]);
 
-  const wideStats = useMemo((): StatGridItem[] => {
+  const wideStats = useMemo((): StatMetric[] => {
     if (!data) return [];
     return [
       {
+        metricId: 'duration',
         label: t('widget.yearReview.drivingTime', 'Driving time'),
-        value: isFiniteNumber(data.total_driving_minutes) ? fmtNumber(data.total_driving_minutes / 60) : null,
-        unit: 'h',
-        icon: <Timer className="h-3.5 w-3.5" />,
+        rawValue: data.total_driving_minutes == null ? null : data.total_driving_minutes * 60,
+        description: t('widget.yearReview.summary.durationHelp', 'Source driving minutes normalized to seconds; the original hour display is retained.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw / 3600), unit: 'h' }) },
       },
       {
+        metricId: 'speed',
         label: t('widget.yearReview.topSpeed', 'Top speed'),
-        value: isFiniteNumber(data.fastest_speed_kmh) ? fmtNumber(displayFastestSpeed) : null,
-        unit: speedUnit,
-        icon: <TrendingUp className="h-3.5 w-3.5" />,
+        rawValue: data.fastest_speed_kmh == null ? null : data.fastest_speed_kmh / KMH_PER_MPS,
+        description: t('widget.yearReview.summary.speedHelp', 'Source peak speed normalized from km/h to m/s; not average speed.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertSpeedFromSI(raw, speedUnit)), unit: speedUnit }) },
       },
     ];
-  }, [data, displayFastestSpeed, speedUnit, t, fmtNumber]);
+  }, [data, speedUnit, t, fmtNumber]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),
@@ -171,7 +176,15 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {data ? (
-        <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
+        <DashboardSourceBrief
+          metrics={allStats}
+          state={dataState}
+          eyebrow={t('widget.yearReview.summary.eyebrow', 'Calendar-year history')}
+          title={t('widget.yearReview.summary.title', 'Year operating summary')}
+          description={t('widget.yearReview.summary.description', 'Calendar-year totals for the resolved vehicle. The current year may be incomplete; exact source coverage and observation bounds are not supplied.')}
+          scope={t('widget.yearReview.summary.scope', 'Vehicle {{id}} · year {{year}}', { id, year: currentYear })}
+          testId="year-review-operational-brief"
+        />
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Calendar className="h-5 w-5" />}

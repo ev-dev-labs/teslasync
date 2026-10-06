@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Sparkline } from '@/components/charts';
 import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignals, useSignalGaps, useSignalHistory } from '@/api/hooks/useTelemetry';
 
@@ -104,7 +105,7 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
   const label = formatSignalName(signal);
 
   return (
-    <div className="flex items-center gap-2 py-1.5 border-b border-white/[0.04] last:border-b-0">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
       {/* Color indicator (decorative — the row label carries the meaning) */}
       <div
         aria-hidden="true"
@@ -113,13 +114,13 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
       />
 
       {/* Label + value */}
-      <div className="flex-1 min-w-0">
-        <p className={dashboardTokens.metricLabel}>
+      <div className="min-w-0 flex-[1_1_5rem]">
+        <Caption className="block break-words">
           {label}
-        </p>
-        <p className={`${dashboardTokens.secondaryMetric} break-all`}>
+        </Caption>
+        <Text as="p" size="lg" weight="semibold" color="primary" className="break-all tabular-nums">
           {currentValue != null ? fmtNumber(currentValue) : '—'}
-        </p>
+        </Text>
       </div>
 
       {/* Sparkline */}
@@ -132,16 +133,16 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
           ariaLabel={`${label} ${t('widget.trendSparkline', 'trend')}`}
         />
       ) : (
-        <span className="text-2xs text-[var(--text-muted)] w-14 text-center">
+        <Caption className="w-14 break-words text-center">
           {t('widget.noHistory', 'no data')}
-        </span>
+        </Caption>
       )}
 
       {/* Trend indicator — icon-only, so announce the direction to AT */}
-      <StaleRefreshWarning state={historyState} />
       <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="flex-shrink-0">
         <TrendIcon className="h-3 w-3" style={{ color: trendColor }} aria-hidden="true" />
       </span>
+      <StaleRefreshWarning state={historyState} className="w-full min-w-0" />
     </div>
   );
 }
@@ -208,6 +209,18 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
       isError={liveError}
       onRefresh={handleRefresh}
     >
+      {signalsState.fatalError && (
+        <div className="mb-2 min-w-0">
+          <Caption className="block break-words">{t('widget.signalHealth.sourceCatalog', 'Signal catalog')}</Caption>
+          <QueryError error={signalsState.fatalError} onRetry={signalsState.retry ?? undefined} />
+        </div>
+      )}
+      {liveState.fatalError && (
+        <div className="mb-2 min-w-0">
+          <Caption className="block break-words">{t('widget.signalHealth.sourceLive', 'Live signals')}</Caption>
+          <QueryError error={liveState.fatalError} onRetry={liveState.retry ?? undefined} />
+        </div>
+      )}
       {configuredSignals.length === 0 ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-5 w-5" />}

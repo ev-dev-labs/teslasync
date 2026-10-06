@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { LayoutCard, Grid } from '@/components/layout';
 import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
@@ -44,11 +45,11 @@ export function PreconditioningThresholdConfidence({
   ] as const;
   const comparison = summary.overall;
   const confidence = [
-    [t('preconditioningEffectiveness.thresholds.balanceCount', 'Balanced-pair support'), fmtInt(comparison.balanceCount)],
-    [t('preconditioningEffectiveness.thresholds.volumeCount', 'Classified volume'), fmtInt(comparison.volumeCount)],
-    [t('preconditioningEffectiveness.thresholds.balanceConfidence', 'Balance confidence'), fmtPercent(comparison.balanceConfidence * 100)],
-    [t('preconditioningEffectiveness.thresholds.volumeConfidence', 'Volume confidence'), fmtPercent(comparison.volumeConfidence * 100)],
-    [t('preconditioningEffectiveness.thresholds.combinedConfidence', 'Combined confidence'), comparison.evidence !== 'none' ? fmtPercent(comparison.confidence * 100) : '—'],
+    [t('preconditioningEffectiveness.thresholds.balanceCount', 'Balanced-pair support'), comparison.balanceCount, 'count'],
+    [t('preconditioningEffectiveness.thresholds.volumeCount', 'Classified volume'), comparison.volumeCount, 'count'],
+    [t('preconditioningEffectiveness.thresholds.balanceConfidence', 'Balance confidence'), comparison.balanceConfidence * 100, 'percent'],
+    [t('preconditioningEffectiveness.thresholds.volumeConfidence', 'Volume confidence'), comparison.volumeConfidence * 100, 'percent'],
+    [t('preconditioningEffectiveness.thresholds.combinedConfidence', 'Combined confidence'), comparison.evidence !== 'none' ? comparison.confidence * 100 : null, 'percent'],
   ] as const;
 
   return (
@@ -91,17 +92,17 @@ export function PreconditioningThresholdConfidence({
               {preconditioningEvidenceLabel(t, comparison.evidence)}
             </Badge>
           </div>
-          <Grid cols={{ default: 2, md: 5 }} gap={3}>
-            {confidence.map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-lg border border-[var(--border-subtle)] p-3"
-              >
-                <MetricLabel>{label}</MetricLabel>
-                <MetricValue className="mt-1">{value}</MetricValue>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="preconditioning-confidence-summary"
+            title={t('preconditioningEffectiveness.thresholds.confidenceTitle', 'Overall comparison support')}
+            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)
+              || state.climate.isPaused || state.drives.isPaused}
+            period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage'),
+              reason: t('preconditioningEffectiveness.thresholds.confidenceMethod', 'Confidence is descriptive support, not statistical significance: balance confidence times volume confidence over strata containing both groups; effects are withheld without within-stratum overlap.') }}
+            metrics={confidence.map(([label, rawValue, metricId], index) => ({
+              metricId, occurrenceId: `confidence-${index}`, label, rawValue,
+              display: { formatter: raw => ({ value: metricId === 'count' ? fmtInt(raw) : fmtPercent(raw), unit: '' }) },
+            }))}
+          />
           <Text as="p" variant="caption" className="mt-4">
             {t(
               'preconditioningEffectiveness.thresholds.confidenceMethod',

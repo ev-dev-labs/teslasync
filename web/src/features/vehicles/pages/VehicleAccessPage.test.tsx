@@ -338,7 +338,9 @@ describe('VehicleAccessPage — loading', () => {
 
     renderPage();
 
-    expect(within(kpiRegion()).getAllByText('—')).toHaveLength(4);
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(kpiRegion().querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(within(kpiRegion()).queryByText('0')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByText('No drivers found. Refresh to sync from Tesla.')).toBeNull();
@@ -356,6 +358,19 @@ describe('VehicleAccessPage — empty', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('No access data to summarize yet.')).toBeInTheDocument();
     expect(within(kpiRegion()).getAllByText('0')).toHaveLength(4);
+  });
+
+  describe('VehicleAccessPage — actual operational evidence', () => {
+    it('reviews independent source counts and the seven-day expiry rule in the built-in drawer', () => {
+      renderPopulated();
+      const brief = kpiRegion();
+      expect(brief.querySelector('[data-operational-metric="drivers"]')).toHaveAttribute('data-value-state', 'value');
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      expect(within(drawer).getAllByText(/within the next seven days/).length).toBeGreaterThan(0);
+      expect(within(drawer).getByText('Expiring soon')).toBeInTheDocument();
+      expect(within(drawer).getByText('1')).toBeInTheDocument();
+    });
   });
 });
 

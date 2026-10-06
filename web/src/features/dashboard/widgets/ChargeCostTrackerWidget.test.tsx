@@ -37,7 +37,7 @@
  * `<MemoryRouter>` wraps every render because the error panel navigates.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { ChargingSession } from '@/api/types';
@@ -452,6 +452,17 @@ describe('ChargeCostTrackerWidget — request contract', () => {
 // ── Interactions & accessibility ──────────────────────────────────────────────
 
 describe('ChargeCostTrackerWidget — interactions & a11y', () => {
+  it('reviews actual charging quantities with capped-window and estimate limitations', () => {
+    renderWidget(FULL, 42);
+    const brief = screen.getByTestId('charge-cost-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('10.00 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText('$5.00')).toBeInTheDocument();
+    expect(within(drawer).getByText(/3.5 miles per kWh assumption/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Vehicle 42.*at most 100 returned sessions, no explicit end bound/)).toBeInTheDocument();
+  });
   it('preserves signed recorded costs and real zero energy without inventing unknown costs', () => {
     const metrics = computeMetrics([
       makeSession({ cost_decimal: -2, cost: 4, total_energy_added_wh: 0 }),

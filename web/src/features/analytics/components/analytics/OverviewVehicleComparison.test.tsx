@@ -255,10 +255,10 @@ describe('OverviewVehicleComparison — loading', () => {
     const { container } = renderCmp(makeQuery({ isLoading: true }));
 
     // Panel titles frame all four sections even while loading…
-    expect(screen.getByText('Fleet usage')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency leaderboard')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle comparison')).toBeInTheDocument();
-    expect(screen.getByText('Energy & activity')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet usage' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency leaderboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vehicle comparison' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy & activity' })).toBeInTheDocument();
 
     // …pulsing skeletons are on screen…
     expect(container.querySelector('.animate-pulse')).not.toBeNull();

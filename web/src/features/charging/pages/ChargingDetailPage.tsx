@@ -33,7 +33,7 @@ import {
   PageHeaderSkeleton, ChartBlockSkeleton,
 } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { AIChargingDiagnosis } from '@/components/ai/AIChargingDiagnosis';
+import { AIChargingDiagnosis } from '@/components/ai';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ComposedChart, Line, ReferenceLine, ChartTooltip,
@@ -502,6 +502,7 @@ export default function ChargingDetailPage() {
             calculatedRate={perKwhRate}
             rateText={displayPerKwhRate != null ? `${formatCurrency(displayPerKwhRate)}/kWh` : '—'}
             currencySymbol={currencySymbol}
+            distanceM={addedDistanceM}
             distanceText={addedDistanceM != null
               ? `${fmtNumber(toDistanceDisplay(addedDistanceM))} ${distanceUnit}` : '—'}
             averageRate={avgRate}

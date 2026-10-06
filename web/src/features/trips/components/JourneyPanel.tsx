@@ -11,7 +11,7 @@ import {
   type JourneyTransition,
 } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
-import { Badge, Button, DataTable, GlassPanel, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { FormSection } from '@/components/forms';
 import type { Column } from '@/components/ui';
@@ -155,7 +155,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
       header: t('journey.col.journey', 'Journey'),
       render: (row) => (
         <div>
-          <Text as="p" variant="label">
+          <Text as="p" variant="label" className="break-words [overflow-wrap:anywhere]">
             {row.name}
           </Text>
           <Text as="p" variant="caption">
@@ -362,9 +362,9 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                   {safeArray(detail.plans).map((plan) => (
                     <li
                       key={plan.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"
+                      className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
                     >
-                      <Text as="span" size="sm">
+                      <Text as="span" variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">
                         {t('journey.planVersion', 'v{{version}}', { version: plan.version })}
                         {plan.note ? ` · ${plan.note}` : ''}
                       </Text>
@@ -396,12 +396,12 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
       </LayoutCard>
 
       {detail != null ? (
-        <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           <div className="grid gap-6 lg:grid-cols-2">
             <DeparturePanel session={detail.session} />
             <ChecklistPanel session={detail.session} />
           </div>
-        </GlassPanel>
+        </div>
       ) : null}
     </div>
   );

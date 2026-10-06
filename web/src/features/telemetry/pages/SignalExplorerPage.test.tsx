@@ -22,8 +22,9 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { SignalHistoryResp } from '@/api/types';
@@ -76,7 +77,7 @@ vi.mock('@/hooks/useRealtimeEvents', () => ({
 // `onApply` with a fixed draft — lets us exercise handleApplyAiDraft without
 // standing up the SSE stream. The real gating/streaming is covered by the
 // sibling AI contract tests.
-vi.mock('@/components/ai/AISignalExplorerNlFilter', () => ({
+vi.mock('@/components/ai', () => ({
   AISignalExplorerNlFilter: ({
     onApply,
   }: {
@@ -263,10 +264,23 @@ describe('SignalExplorerPage', () => {
     expect(await screen.findByText('80.15')).toBeInTheDocument();
     mockedRequest.mockRejectedValue(new Error('refresh failed'));
     await act(async () => { await client.refetchQueries({ queryKey: ['signal-explorer'] }); });
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The refetch promise settles before the query observer's scheduled render.
+    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent(
+      'Signal data may be out of date',
+    );
     expect(screen.getByText('80.15')).toBeInTheDocument();
     expect(screen.getAllByText('80.1').length).toBeGreaterThan(0);
     expect(screen.queryByText(/Failed to load data/)).toBeNull();
+    const brief = screen.getByTestId('signal-explorer-summary');
+    expect(brief).toHaveTextContent('Retained source data');
+    const requestsBeforeReview = mockedRequest.mock.calls.length;
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Returned rows only; not a server-wide total');
+    expect(drawer).toHaveTextContent('previously executed query until Explore is pressed');
+    expect(within(drawer).getByText('Records')).toBeInTheDocument();
+    expect(mockedRequest.mock.calls.length).toBe(requestsBeforeReview);
+    expect(screen.getByText('80.15')).toBeInTheDocument();
   });
 
   it('runs a historical query on Explore, requesting SI history per signal with the correct URL contract', async () => {

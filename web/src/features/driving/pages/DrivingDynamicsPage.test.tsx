@@ -155,6 +155,9 @@ vi.mock('@/components/forms', async (importActual) => {
 });
 
 type ModernPanels = typeof import('../components/driving-dynamics-modernization');
+vi.mock('../components/operationalbrief-a-m/MotorSamplesBrief', async () => ({
+  MotorSamplesBrief: (await import('../components/driving-dynamics-modernization')).SummaryStats,
+}));
 
 // Orchestration doubles follow the actual split barrels. Unit cases additionally
 // mount the real stat presenters below, because they now own useUnits().

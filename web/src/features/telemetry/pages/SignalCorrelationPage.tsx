@@ -5,7 +5,7 @@ import { ArrowLeftRight, GitCompareArrows, Timer, Waypoints } from 'lucide-react
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, Toggle, HelpTooltip } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
+import { CorrelationStatStrip } from '../components/statstrip-correlation/CorrelationStatStrip';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -23,12 +23,10 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
 
 import { crossCorrelate } from '../lib/signalCorrelation';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HOURS = 24;
 
 export default function SignalCorrelationPage() {
-  const { fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalCorrelation.title', 'Signal correlation'));
 
@@ -222,74 +220,12 @@ export default function SignalCorrelationPage() {
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('signalCorrelation.kpis', 'Correlation metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError
-                error={error}
-                onRetry={() => {
-                  void historyA.refetch();
-                  void historyB.refetch();
-                }}
-              />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('signalCorrelation.bestR', 'Peak correlation')}
-                value={result != null ? fmtScientificNumber(result.bestR, 3) : '—'}
-                subtitle={t('signalCorrelation.zeroLag', 'at zero lag: {{r}}', {
-                  r: result != null ? fmtScientificNumber(result.zeroLagR, 3) : '—',
-                })}
-                icon={<GitCompareArrows className="h-5 w-5" />}
-                color={Math.abs(result?.bestR ?? 0) >= 0.7 ? 'green' : 'cyan'}
-                help={{
-                  i18nKey: 'help.signalCorrelation.bestR',
-                  defaultValue:
-                    'An ordinary overlay chart only ever shows the zero-lag correlation, which misses every relationship with a delay in it. Sweeping the lag finds the shift at which the two signals line up best, and the difference between the peak and the zero-lag value is exactly the information a static chart throws away.',
-                }}
-              />
-              <MetricCard
-                label={t('signalCorrelation.bestLag', 'Best lag')}
-                value={result != null ? `${result.bestLagS} s` : '—'}
-                subtitle={leadLabel}
-                icon={<Timer className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalCorrelation.significance', 'Significance')}
-                value={
-                  result == null
-                    ? '—'
-                    : result.significant
-                      ? t('signalCorrelation.real', 'Real')
-                      : t('signalCorrelation.noise', 'Noise')
-                }
-                subtitle={t('signalCorrelation.threshold', 'needs |r| > {{v}}', {
-                  v: result != null ? fmtScientificNumber(result.significanceThreshold, 3) : '—',
-                })}
-                icon={<ArrowLeftRight className="h-5 w-5" />}
-                color={result?.significant ? 'green' : 'amber'}
-              />
-              <MetricCard
-                label={t('signalCorrelation.effectiveN', 'Effective samples')}
-                value={result != null ? Math.round(result.effectiveN) : '—'}
-                subtitle={t('signalCorrelation.rawN', 'from {{n}} raw points', {
-                  n: result?.bestN ?? 0,
-                })}
-                icon={<Waypoints className="h-5 w-5" />}
-                color="blue"
-              />
-            </>
-          )}
-        </section>
+        <CorrelationStatStrip result={result} leadLabel={leadLabel} loading={isLoading}
+          retained={result != null && (historyAState.isRefreshing || historyBState.isRefreshing
+            || historyAState.status === 'stale' || historyBState.status === 'stale')}
+          errorA={bothChosen ? historyAState.fatalError ?? historyAState.refreshError : null}
+          errorB={bothChosen ? historyBState.fatalError ?? historyBState.refreshError : null}
+          onRetryA={() => { void historyA.refetch(); }} onRetryB={() => { void historyB.refetch(); }} />
       </FadeIn>
 
       {/* 3 — Correlogram */}

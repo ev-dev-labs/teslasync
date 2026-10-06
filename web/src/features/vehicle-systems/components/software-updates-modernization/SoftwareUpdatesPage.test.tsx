@@ -31,6 +31,12 @@ vi.mock('@/hooks/useUrlState', () => ({
 vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({ fmtInt: (n: number) => String(Math.round(n)), locale: 'en-US' }),
 }));
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { locale: 'en-US', precision: 2, duration: 'd' } }),
+}));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
@@ -62,14 +68,6 @@ vi.mock('@/components/data-display', async importOriginal => ({
   ...await importOriginal<typeof import('@/components/data-display')>(),
   ...await import('@/components/data-display/stat-reference'),
 }));
-vi.mock('@/components/data-display/stat-reference', async importOriginal => ({
-  ...await importOriginal<typeof import('@/components/data-display/stat-reference')>(),
-  StatStrip: ({ metrics, retained, footer }: { metrics: { occurrenceId: string; label: string; rawValue: unknown }[]; retained: boolean; footer?: ReactNode }) =>
-    <section data-testid="summary" data-retained={retained}>
-      {metrics.map(metric => <div key={metric.occurrenceId}>{metric.label}: {metric.rawValue == null ? '—' : String(metric.rawValue)}</div>)}
-      {footer}
-    </section>,
-}));
 vi.mock('./SoftwareCadenceCard', () => ({
   SoftwareCadenceCard: ({ data, errorContent }: { data: unknown[]; errorContent: ReactNode }) =>
     <section data-testid="cadence">{data.length}{errorContent}</section>,
@@ -84,6 +82,15 @@ function RouterWrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter initialEntries={['/software-updates']}>{children}</MemoryRouter>;
 }
 
+function summaryMetric(label: string) {
+  const region = screen.getByTestId('software-update-summary');
+  const node = within(region).getByText(label, {
+    selector: '[data-operational-metric] > div:first-child > :first-child',
+  }).closest('[data-operational-metric]');
+  if (!(node instanceof HTMLElement)) throw new Error(`Missing summary metric ${label}`);
+  return within(node);
+}
+
 describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -95,12 +102,12 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
   });
   it('keeps unknown counts distinct from a successful observed empty page', () => {
     const view = render(<SoftwareUpdatesPage />, { wrapper: RouterWrapper });
-    expect(screen.getByText('Total updates: —')).toBeTruthy();
+    expect(summaryMetric('Total updates').getByText('—')).toBeTruthy();
     expect(screen.getByText('By status')).toBeTruthy();
     expect(screen.getByText('Update timeline')).toBeTruthy();
     fake.query.data = [];
     view.rerender(<SoftwareUpdatesPage />);
-    expect(screen.getByText('Total updates: 0')).toBeTruthy();
+    expect(summaryMetric('Total updates').getByText('0')).toBeTruthy();
     expect(screen.getByText('No update history')).toBeTruthy();
   });
   it('refreshes unavailable status and timeline from the existing read query without manufacturing counts', () => {
@@ -113,7 +120,7 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
       fireEvent.click(within(status).getByRole('button', { name: 'Refresh' }));
     }
     expect(fake.query.refetch).toHaveBeenCalledTimes(3);
-    expect(screen.getByText('Total updates: —')).toBeTruthy();
+    expect(summaryMetric('Total updates').getByText('—')).toBeTruthy();
     expect(screen.queryByRole('link', { name: /Release notes/ })).toBeNull();
   });
   it('offers vehicle management from every unavailable surface when no vehicle is selected', () => {
@@ -123,15 +130,15 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
     expect(links).toHaveLength(3);
     for (const link of links) expect(link).toHaveAttribute('href', '/vehicles');
     expect(fake.query.refetch).not.toHaveBeenCalled();
-    expect(screen.getByText('Total updates: —')).toBeTruthy();
+    expect(summaryMetric('Total updates').getByText('—')).toBeTruthy();
   });
   it('retains exact row identities, release-note link, vehicle and AI scope on refresh failure', () => {
     fake.query.data = [row];
     fake.query.isError = true;
     fake.query.error = new Error('Fake refresh failure');
     render(<SoftwareUpdatesPage />, { wrapper: RouterWrapper });
-    expect(screen.getByTestId('summary').getAttribute('data-retained')).toBe('true');
-    expect(screen.getByText(row.version)).toBeTruthy();
+    expect(screen.getByTestId('software-update-summary').parentElement).toHaveAttribute('data-source-retained', 'true');
+    expect(summaryMetric('Current version').getByText(row.version)).toBeTruthy();
     expect(screen.getByText('Fake vehicle')).toBeTruthy();
     expect(screen.getByTestId('fake-ai').textContent).toBe('7');
     const link = screen.getByRole('link', { name: `Release notes for ${row.version}` });
@@ -145,7 +152,7 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
     fake.query.data = [{ ...row, status: 'scheduled', installed_at: null }];
     const view = render(<SoftwareUpdatesPage />, { wrapper: RouterWrapper });
     expect(screen.getByText(/^Scheduled /)).toBeTruthy();
-    expect(screen.getByText('Pending: 1')).toBeTruthy();
+    expect(summaryMetric('Pending').getByText('1')).toBeTruthy();
     fake.query.data = [];
     view.rerender(<SoftwareUpdatesPage />);
     fireEvent.click(screen.getAllByRole('button', { name: 'View all time' })[0]);

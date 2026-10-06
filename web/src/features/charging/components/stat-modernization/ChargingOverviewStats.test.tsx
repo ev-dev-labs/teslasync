@@ -44,7 +44,7 @@ function render(ui: ReactElement) {
   });
 }
 function tile(container: HTMLElement, id: string) {
-  const result = container.querySelector(`[data-metric="${id}"]`);
+  const result = container.querySelector(`[data-operational-metric^="${id}:"]`);
   expect(result).not.toBeNull();
   return result!;
 }
@@ -55,13 +55,13 @@ describe('live charging overview source preservation', () => {
   it('renders all six old aggregates, distinct rate/mean-power labels, precisions and secondary facts', () => {
     const before = JSON.stringify(chargingStats);
     const { container } = render(<ChargingOverviewStats {...props} />);
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(6);
-    expect(tile(container, 'charge.sessions').querySelector('[data-stat-value]')).toHaveTextContent(fmtCompact(chargingStats.count));
-    expect(tile(container, 'charge.energyAdded').querySelector('[data-stat-value]')).toHaveTextContent(fmtCompact(chargingStats.totalEnergyWh / 1000, 10000));
-    expect(tile(container, 'charge.recordedCost').querySelector('[data-stat-value]')).toHaveTextContent(`$${fmtNumber(chargingStats.totalCost)}`);
-    expect(tile(container, 'charge.overallRate').querySelector('[data-stat-value]')).toHaveTextContent(fmtNumber(chargingStats.avgRateKw));
-    expect(tile(container, 'charge.meanSessionPower').querySelector('[data-stat-value]')).toHaveTextContent(fmtNumber(chargingStats.avgPowerW / 1000));
-    expect(tile(container, 'charge.avgDuration').querySelector('[data-stat-value]')).toHaveTextContent(formatDurationMinutes(chargingStats.avgDurationMin));
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(tile(container, 'charge.sessions').querySelector('[data-operational-value]')).toHaveTextContent(fmtCompact(chargingStats.count));
+    expect(tile(container, 'charge.energyAdded').querySelector('[data-operational-value]')).toHaveTextContent(fmtCompact(chargingStats.totalEnergyWh / 1000, 10000));
+    expect(tile(container, 'charge.recordedCost').querySelector('[data-operational-value]')).toHaveTextContent(`$${fmtNumber(chargingStats.totalCost)}`);
+    expect(tile(container, 'charge.overallRate').querySelector('[data-operational-value]')).toHaveTextContent(fmtNumber(chargingStats.avgRateKw));
+    expect(tile(container, 'charge.meanSessionPower').querySelector('[data-operational-value]')).toHaveTextContent(fmtNumber(chargingStats.avgPowerW / 1000));
+    expect(tile(container, 'charge.avgDuration').querySelector('[data-operational-value]')).toHaveTextContent(formatDurationMinutes(chargingStats.avgDurationMin));
     expect(screen.getByText('Overall charging rate')).toBeInTheDocument();
     expect(screen.getByText('Mean session power')).toBeInTheDocument();
     expect(screen.getByText('Avg rate (kW)')).toBeInTheDocument();
@@ -69,24 +69,24 @@ describe('live charging overview source preservation', () => {
     expect(screen.getByText(props.secondary)).toBeInTheDocument();
     expect(screen.getByText(period.provenance)).toBeInTheDocument();
     expect(JSON.stringify(chargingStats)).toBe(before);
-    expect(container.querySelector('[data-testid="charging-overview-kpis"]')).toHaveAttribute('data-columns', '6');
+    expect(container.querySelector('[data-testid="charging-overview"] [role="list"]')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3');
   });
   it('composes the original Delta operands/precision/direction and prior tooltip without computing a new delta', () => {
     const { container } = render(<ChargingOverviewStats {...props} />);
-    expect(tile(container, 'charge.sessions').querySelector('[data-stat-specialist-comparison]')).toHaveTextContent('50.00%');
-    expect(tile(container, 'charge.overallRate').querySelector('[data-stat-specialist-comparison]')).toHaveTextContent('21.25%');
-    expect(tile(container, 'charge.overallRate').querySelector('[title]')?.getAttribute('title')).toContain('Aggregate');
-    expect(tile(container, 'charge.meanSessionPower').querySelector('[data-stat-specialist-comparison]')).toHaveTextContent('8.13%');
-    expect(tile(container, 'charge.overallRate').querySelector('[data-stat-specialist-comparison] [title]'))
+    expect(tile(container, 'charge.sessions').querySelector('[title]')).toHaveTextContent('50.00%');
+    expect(tile(container, 'charge.overallRate').querySelector('[title]')).toHaveTextContent('21.25%');
+    expect(tile(container, 'charge.overallRate')).toHaveTextContent('Aggregate');
+    expect(tile(container, 'charge.meanSessionPower').querySelector('[title]')).toHaveTextContent('8.13%');
+    expect(tile(container, 'charge.overallRate').querySelector('[title]'))
       .toHaveAttribute('title', `${fmtNumber(chargingStats.avgRateKw)} vs ${fmtNumber(priorChargingStats.avgRateKw)}`);
-    expect(tile(container, 'charge.overallRate').querySelector('[data-stat-specialist-comparison] [title]')?.className)
+    expect(tile(container, 'charge.overallRate').querySelector('[title]')?.className)
       .toContain('text-[var(--text-secondary)]');
   });
   it('keeps the original previous-zero percent em dash rather than fabricating Infinity or absolute change', () => {
     const priorZero = { ...priorChargingStats, count: 0, totalEnergyWh: 0, totalCost: 0,
       avgRateKw: 0, avgDurationMin: 0, avgPowerW: 0 };
     const { container } = render(<ChargingOverviewStats {...props} priorStats={priorZero} />);
-    for (const item of container.querySelectorAll('[data-stat-specialist-comparison]')) {
+    for (const item of container.querySelectorAll('[data-operational-metric] [title]')) {
       expect(item).toHaveTextContent('—');
       expect(item).not.toHaveTextContent(/Infinity|NaN/);
     }
@@ -95,10 +95,10 @@ describe('live charging overview source preservation', () => {
     const { container } = render(<ChargingOverviewStats {...props} priorHasData={false}
       priorLabel="Prior range is outside the returned source"
       hasRecordedCosts={false} stats={{ ...chargingStats, avgRateKw: NaN, avgPowerW: null, avgDurationMin: null }} />);
-    expect(container.querySelectorAll('[data-stat-specialist-comparison]')).toHaveLength(0);
-    expect(tile(container, 'charge.overallRate')).toHaveAttribute('data-state', 'invalid');
-    expect(tile(container, 'charge.meanSessionPower')).toHaveAttribute('data-state', 'missing');
-    expect(tile(container, 'charge.recordedCost')).toHaveAttribute('data-state', 'missing');
+    expect(container.querySelectorAll('[data-operational-metric] [title]')).toHaveLength(0);
+    expect(tile(container, 'charge.overallRate')).toHaveAttribute('data-value-state', 'invalid');
+    expect(tile(container, 'charge.meanSessionPower')).toHaveAttribute('data-value-state', 'missing');
+    expect(tile(container, 'charge.recordedCost')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getByText('No recorded session costs in the selected returned sessions.')).toBeInTheDocument();
     expect(screen.getByText('Prior range is outside the returned source')).toBeInTheDocument();
   });
@@ -107,22 +107,24 @@ describe('live charging overview source preservation', () => {
     const { container, rerender } = render(<ChargingOverviewStats {...props}
       stats={{ ...chargingStats, totalCost: 0 }} loading retained
       footer={<Button onClick={action}>Review anomalies</Button>} />);
-    expect(tile(container, 'charge.recordedCost')).toHaveAttribute('data-state', 'value');
-    expect(tile(container, 'charge.recordedCost').querySelector('[data-stat-value]')).toHaveTextContent('$0.00');
+    expect(tile(container, 'charge.recordedCost')).toHaveAttribute('data-value-state', 'value');
+    expect(tile(container, 'charge.recordedCost').querySelector('[data-operational-value]')).toHaveTextContent('$0.00');
     expect(container.querySelector('#charging-overview')).toHaveAttribute('aria-busy', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Review anomalies' }));
     expect(action).toHaveBeenCalledOnce();
     rerender(<ChargingOverviewStats {...props} loading />);
-    expect(container.querySelectorAll('[data-state="loading"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
   it('renders a real empty shell and updates selected numeric precision without changing compact/minute contracts', () => {
     const { container, rerender } = render(<ChargingOverviewStats {...props} />);
     act(() => { setGlobalPrecision(5); });
-    expect(tile(container, 'charge.overallRate').querySelector('[data-stat-value]')).toHaveTextContent(fmtNumber(chargingStats.avgRateKw, 5));
-    expect(tile(container, 'charge.avgDuration').querySelector('[data-stat-value]')).toHaveTextContent(formatDurationMinutes(chargingStats.avgDurationMin));
+    expect(tile(container, 'charge.overallRate').querySelector('[data-operational-value]')).toHaveTextContent(fmtNumber(chargingStats.avgRateKw, 5));
+    expect(tile(container, 'charge.avgDuration').querySelector('[data-operational-value]')).toHaveTextContent(formatDurationMinutes(chargingStats.avgDurationMin));
     rerender(<ChargingOverviewStats {...props} stats={{ ...chargingStats, count: 0 }} />);
     expect(container.querySelector('#charging-overview')).not.toBeNull();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     expect(screen.getByText('No charging sessions in this range')).toBeInTheDocument();
   });
   it('keeps initial source failure actionable rather than labeling it a successful empty result', () => {
@@ -130,7 +132,7 @@ describe('live charging overview source preservation', () => {
     const { container } = render(<ChargingOverviewStats {...props} stats={{ ...chargingStats, count: 0 }}
       error={new Error('Synthetic initial source failure')} onRetry={retry} />);
     expect(container.querySelector('#charging-overview')).not.toBeNull();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     expect(screen.queryByText('No charging sessions in this range')).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
@@ -142,7 +144,7 @@ describe('live charging overview source preservation', () => {
       stats={{ ...chargingStats, count: 0 }} onRetry={retry} />);
     expect(screen.getByText('No charging sessions in this range')).toBeInTheDocument();
     expect(screen.getByText(props.secondary)).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
   });

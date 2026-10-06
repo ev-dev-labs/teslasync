@@ -38,6 +38,7 @@ import { resolveDashboardWidgetResults } from '../lib/sandboxRunner';
 import type { FormulaRunResult } from '../lib/sandboxRunner';
 import type { PackCapabilityId, PackVizKind } from '../lib/manifestTypes';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { SandboxRunBrief } from './operationalbrief-all/SandboxRunBrief';
 
 function seriesToChartData(series: number[]) {
   return series.map((value, i) => ({ i, value }));
@@ -47,10 +48,12 @@ function FormulaSeriesChart({
   title,
   kind,
   data,
+  unit,
 }: {
   title: string;
   kind: 'line' | 'area' | 'bar';
   data: { i: number; value: number }[];
+  unit?: string;
 }) {
   const { t } = useTranslation();
 
@@ -66,7 +69,7 @@ function FormulaSeriesChart({
       data={data}
       dataColumns={[
         { key: 'i', label: t('intelPacks.sandbox.row', 'Sample') },
-        { key: 'value', label: t('intelPacks.sandbox.value', 'Value') },
+        { key: 'value', label: `${t('intelPacks.sandbox.value', 'Value')}${unit ? ` (${unit})` : ''}` },
       ]}
       fluid={false}
       mobileHeight={120}
@@ -120,7 +123,7 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
       {data.length === 0 ? (
         <Text as="p" variant="caption">{t('intelPacks.sandbox.noData', 'No output rows.')}</Text>
       ) : kind === 'line' || kind === 'area' || kind === 'bar' ? (
-        <FormulaSeriesChart title={title} kind={kind} data={data} />
+        <FormulaSeriesChart title={title} kind={kind} data={data} unit={result.unit} />
       ) : kind === 'sparkline' ? (
         <Sparkline data={result.series} ariaLabel={title} />
       ) : kind === 'radial-gauge' ? (
@@ -143,7 +146,7 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
         />
       ) : (
         <div>
-          <Text variant="metricValue">{result.latest != null ? fmtNumber(result.latest) : '—'}</Text>
+          <Text variant="metricValue">{result.latest != null ? `${fmtNumber(result.latest)}${result.unit ? ` ${result.unit}` : ''}` : '—'}</Text>
           <Text as="p" variant="caption">
             {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
           </Text>
@@ -177,6 +180,11 @@ export function SandboxPreviewPanel() {
   }, [selectedEntry, trustQuery.data]);
 
   const run = useSandboxPreview(selectedEntry?.envelope.manifest ?? null, grantedCapabilities);
+  const grantDescription = trustQuery.data
+    ? t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant')
+    : selectedEntry?.installedVersion != null
+      ? t('intelPacks.sandbox.installedGrantUnavailable', 'Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available.')
+      : t('intelPacks.sandbox.usingFullGrant', 'Preview mode: simulating full requested-capability grant (not installed)');
 
   if (entries.length === 0) {
     // no-action: preview entries are sourced from the same bundled catalog fixture as the Catalog tab, which always ships at least one demo entry.
@@ -201,9 +209,7 @@ export function SandboxPreviewPanel() {
 
       {selectedEntry && (
         <Badge variant={trustQuery.data ? 'success' : 'neutral'} size="sm">
-          {trustQuery.data
-            ? t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant')
-            : t('intelPacks.sandbox.usingFullGrant', 'Preview mode: simulating full requested-capability grant (not installed)')}
+          {grantDescription}
         </Badge>
       )}
 
@@ -225,14 +231,12 @@ export function SandboxPreviewPanel() {
               </div>
             </div>
           ))}
-          <p className="text-xs text-[var(--text-muted)]">
-            {t('intelPacks.sandbox.runStats', '{{rows}} sample rows · {{steps}} evaluation steps · {{ms}}ms{{truncated}}', {
-              rows: run.rowsUsed,
-              steps: run.totalStepsUsed,
-              ms: run.durationMs,
-              truncated: run.truncated ? t('intelPacks.sandbox.truncatedSuffix', ' · truncated by budget') : '',
-            })}
-          </p>
+          <SandboxRunBrief
+            run={run}
+            packName={selectedEntry.envelope.manifest.name}
+            packVersion={selectedEntry.envelope.manifest.version}
+            grantDescription={grantDescription}
+          />
         </div>
       )}
     </div>

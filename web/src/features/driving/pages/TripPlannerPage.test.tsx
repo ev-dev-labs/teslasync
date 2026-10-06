@@ -23,7 +23,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { StrictMode, type ReactNode } from 'react';
@@ -287,14 +287,15 @@ function renderPage(initialEntry = '/trip-planner', strictMode = false) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const page = (
+  const tree = () => (
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[initialEntry]}>
         <TripPlannerPage />
       </MemoryRouter>
     </QueryClientProvider>
   );
-  return render(strictMode ? <StrictMode>{page}</StrictMode> : page);
+  const view = render(strictMode ? <StrictMode>{tree()}</StrictMode> : tree());
+  return { ...view, rerenderPage: () => view.rerender(strictMode ? <StrictMode>{tree()}</StrictMode> : tree()) };
 }
 
 function selectOriginAndDestination() {
@@ -340,6 +341,47 @@ beforeEach(() => {
 /* ── structure & a11y ─────────────────────────────────────── */
 
 describe('TripPlannerPage — structure & a11y', () => {
+  it('retains the complete plan and allows source-local replanning after a failed recomputation', () => {
+    const view = renderPage();
+    planWith(makePlan());
+    const error = new Error('plan refresh failed');
+    mockUsePlanTrip.mockReturnValue({
+      data: undefined, error, isError: true, isIdle: false, isPending: false, isSuccess: false,
+      status: 'error', context: undefined, variables: undefined, submittedAt: 0,
+      failureCount: 1, failureReason: error, isPaused: false, reset: vi.fn(),
+      mutate: planMutate, mutateAsync: async () => makePlan(),
+    });
+    view.rerenderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to compute trip plan. Please try again.')).not.toBeInTheDocument();
+    expect(screen.getByTestId('map-legs')).toHaveTextContent('2');
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('soc-points')).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: 'Send to Car' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(planMutate).toHaveBeenCalledTimes(2);
+  });
+
+  it('surfaces a rejected command response without discarding the computed plan', () => {
+    const view = renderPage();
+    planWith(makePlan());
+    mockUseVehicleCommand.mockReturnValue({
+      data: { success: false, error: 'Vehicle rejected navigation' },
+      error: null, isError: false, isIdle: false, isPending: false, isSuccess: true,
+      status: 'success', context: undefined, variables: undefined, submittedAt: 0,
+      failureCount: 0, failureReason: null, isPaused: false, reset: vi.fn(),
+      mutate: commandMutate, mutateAsync: async () => ({ success: false }),
+    });
+    view.rerenderPage();
+    expect(screen.getByText('Vehicle rejected navigation')).toBeInTheDocument();
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: 'Send to Car' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Send to Car' }));
+    expect(commandMutate).toHaveBeenCalledWith({
+      vehicleId: 1, command: 'navigation_request', params: { lat: 41, lon: -71 },
+    });
+  });
+
   it('renders the page title and subtitle without a duplicate vehicle picker', () => {
     renderPage();
 
@@ -388,7 +430,7 @@ describe('TripPlannerPage — empty state (no plan yet)', () => {
   it('renders six KPI tiles as placeholders and an insights empty state', () => {
     renderPage();
     // All six KPI values are the em-dash placeholder until a plan exists.
-    expect(screen.getAllByText('—')).toHaveLength(6);
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getAllByText('—')).toHaveLength(6);
     expect(
       screen.getByText('Plan a trip to see feasibility, estimates, and weather impact.'),
     ).toBeInTheDocument();
@@ -585,7 +627,7 @@ describe('TripPlannerPage — KPI derivation after a successful plan', () => {
 
     expect(screen.getByText('Free')).toBeInTheDocument();
     // charging_duration_s === 0 → the charging KPI stays a placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(1);
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getAllByText('—')).toHaveLength(1);
   });
 
   it('threads the plan into the map, SOC chart and leg list children', () => {
@@ -622,7 +664,7 @@ describe('TripPlannerPage — duration formatting edge cases', () => {
     planWith(makePlan({ route: { total_duration_s: Number.NaN } }));
 
     // Only the total-time tile falls back to the em-dash; the rest are valued.
-    expect(screen.getAllByText('—')).toHaveLength(1);
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getAllByText('—')).toHaveLength(1);
     expect(screen.getByText('1h 30m')).toBeInTheDocument(); // driving still renders
   });
 });

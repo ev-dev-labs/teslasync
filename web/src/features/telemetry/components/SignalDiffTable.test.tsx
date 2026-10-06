@@ -230,6 +230,22 @@ describe('deltaLabel', () => {
 
 // ── SignalDiffTable — loading / empty ────────────────────────────────────
 describe('SignalDiffTable — loading & empty states', () => {
+  it('retains exact long raw values, real numeric zero and selected identity after typography adoption', () => {
+    const name = 'CanonicalLongTelemetrySignal'.repeat(4);
+    const raw = 'exact source value; '.repeat(12);
+    renderTable({
+      rows: [
+        { name, value_a: raw, value_b: 0, source_a: 'log', source_b: 'l2', changed: true },
+      ],
+      selectedSignals: [name],
+    });
+    expect(screen.getByText(name)).toHaveClass('whitespace-nowrap');
+    const row = within(rowFor(name));
+    expect(row.getByText(raw.trim())).toHaveClass('whitespace-nowrap');
+    expect(row.getByText('0.00')).toBeInTheDocument();
+    expect(row.getByText('changed')).toBeInTheDocument();
+    expect(row.getByRole('checkbox')).toBeChecked();
+  });
   it('renders only the loading placeholder while loading (no table)', () => {
     renderTable({ loading: true });
     expect(screen.getByText('Loading…')).toBeInTheDocument();

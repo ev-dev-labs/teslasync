@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, Route, Zap, DollarSign, Gauge } from 'lucide-react';
-import { InlineMetric } from '@/components/data-display';
+import { Caption } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { EmptyState } from '@/components/feedback';
 import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -13,7 +15,7 @@ import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber, type StatGridItem } from './shared';
 
 /** 1 km = 1000 m exactly — scales the digest's km wire value up to SI metres. */
 const METERS_PER_KM = 1000;
@@ -135,6 +137,33 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
       },
     ] : []),
   ] : [];
+  const summaryStats: readonly StatGridItem[] = stats.length === 2 ? [
+    ...stats,
+    { label: t('widget.weeklySummary.cost', 'Cost'), value: cost },
+    { label: t('widget.weeklySummary.efficiency', 'Efficiency'), value: formatMetric(metrics?.efficiency), unit: efficiencyUnit },
+  ] : stats.length > 0 ? stats : [
+    { label: t('widget.weeklySummary.distance', 'Distance'), value: null, unit: distanceUnit },
+    { label: t('widget.weeklySummary.energy', 'Energy'), value: null, unit: 'kWh' },
+    { label: t('widget.weeklySummary.cost', 'Cost'), value: null },
+    { label: t('widget.weeklySummary.efficiency', 'Efficiency'), value: null, unit: efficiencyUnit },
+  ];
+  const rawMetrics: readonly StatMetric[] = summaryStats.map((stat, index) => ({
+    metricId: index === 0 ? 'distance' : index === 1 ? 'energy' : index === 2 ? 'currency' : 'efficiency',
+    rawValue: index === 0
+      ? data?.distanceKm == null ? null : data.distanceKm * METERS_PER_KM
+      : index === 1 ? data?.energyKwh == null ? null : data.energyKwh * 1000
+        : index === 2 ? data?.cost
+          : data?.efficiency == null ? null : data.efficiency / METERS_PER_KM,
+    label: stat.label,
+    description: t('widget.weeklySummary.summary.metricHelp', 'Current-week source quantity. Existing week-over-week comparisons keep their zero-baseline, sub-1% and lower-is-better behavior.'),
+    display: { formatter: () => ({ value: String(stat.value ?? '—'), unit: stat.unit ?? '' }) },
+    comparisonContent: stat.trendValue ? (
+      <Caption className={stat.trendPositive === true ? 'text-emerald-300' : stat.trendPositive === false ? 'text-rose-300' : undefined}>
+        <span aria-hidden="true">{stat.trend === 'up' ? '↑ ' : stat.trend === 'down' ? '↓ ' : ''}</span>
+        {stat.trendValue}
+      </Caption>
+    ) : null,
+  }));
 
   if (isCompact) {
     return (
@@ -158,24 +187,17 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
       icon={<TrendingUp className="h-3.5 w-3.5 text-cyan-400" />}
       {...shellProps}
     >
-      {metrics ? (
-        <div className="space-y-2">
-          <WidgetStatGrid stats={stats} cols={isWide ? 4 : 2} />
-
-          {!isWide && !isTall && (
-            <div className="flex items-center justify-between text-2xs text-[var(--text-muted)] px-1">
-              <InlineMetric
-                icon={<DollarSign className="h-3 w-3" />}
-                value={cost}
-              />
-              <InlineMetric
-                icon={<Gauge className="h-3 w-3" />}
-                value={`${formatMetric(metrics.efficiency)} ${efficiencyUnit}`}
-              />
-            </div>
-          )}
-        </div>
-      ) : (
+      <DashboardSourceBrief
+          metrics={rawMetrics}
+          state={state}
+          eyebrow={t('widget.weeklySummary.summary.eyebrow', 'Weekly vehicle sources')}
+          title={t('widget.weeklySummary.summary.title', 'Weekly operating summary')}
+          description={t('widget.weeklySummary.summary.description', 'Current-week totals for the resolved vehicle with the existing previous-week comparisons. Exact bounds, timezone and completeness are not supplied; missing operands and zero baselines do not imply no change.')}
+          scope={t('widget.weeklySummary.summary.scope', 'Vehicle {{id}} · current / previous week', { id: id ?? '—' })}
+          testId="weekly-summary-operational-brief"
+          loading={isLoading && !data}
+        />
+      {!metrics && !isLoading && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}
           message={t('widget.weeklySummary.noData', 'No weekly data')}

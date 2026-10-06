@@ -193,6 +193,26 @@ describe('SoftwareUpdateStatusWidget — vehicle resolution', () => {
 });
 
 describe('SoftwareUpdateStatusWidget — shell states', () => {
+  it('keeps complete version and scheduled values in the tall canonical presentation', () => {
+    const current = '2026.40.5.long-current-build-identity-without-truncation';
+    const update = '2026.44.10.long-pending-build-identity-without-truncation';
+    const scheduled = '2026-10-31T02:30:00+13:00';
+    mockState.mockReturnValue(stateResult(current));
+    mockConfig.mockReturnValue(cfg({
+      software_update_version: update,
+      software_update_download_pct: 100,
+      software_update_expected_duration: 37,
+      software_update_scheduled_start: scheduled,
+    }));
+    renderWidget(TALL);
+    expect(screen.getByText(current)).toBeInTheDocument();
+    expect(screen.getByText(update)).not.toHaveClass('truncate');
+    expect(screen.getByText(`Scheduled: ${scheduled}`)).toBeInTheDocument();
+    expect(screen.getByText(/Est\. time.*37\.00/)).toBeInTheDocument();
+    expect(screen.getByText('Ready to install')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
+  });
+
   it('preserves the installed version while config fails, without inventing up-to-date health', () => {
     const refetchState = vi.fn();
     const refetchConfig = vi.fn();

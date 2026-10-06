@@ -10,12 +10,15 @@ import {
   useJurisdictionRates,
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
+import { OperationalBrief } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -31,8 +34,8 @@ import {
   MoneyInput,
   MutationError,
   OwnershipPanel,
-  StatGrid,
 } from '../components';
+import { complianceSummary } from '../components/statstrip-compliance/complianceSummaryMetrics';
 import {
   formatCurrencyMinor,
   formatPct,
@@ -45,7 +48,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 const WINDOW_OPTIONS = [30, 90, 180, 365];
 
 export default function JurisdictionCompliancePage() {
-  const { fmtInt, fmtNumber, fmtScientificNumber } = useNumberFormatting();
+  const { fmtInt, fmtNumber, fmtScientificNumber, precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -94,10 +97,12 @@ export default function JurisdictionCompliancePage() {
   const createFiling = useCreateFiling();
 
   const report = reportQuery.data;
+  const reportState = useDataState(reportQuery, { provenance: 'historical' });
   const jurisdictions = useMemo(() => report?.jurisdictions ?? [], [report?.jurisdictions]);
   const rates = useMemo(() => ratesQuery.data?.items ?? [], [ratesQuery.data?.items]);
   const filings = useMemo(() => filingsQuery.data?.items ?? [], [filingsQuery.data?.items]);
-  const currency = report?.currency ?? rateDraft.currency;
+  const liabilitySummary = complianceSummary(report, units.unitPrefs, precision, locale, t);
+  const liabilityMetrics = useOperationalMetrics(liabilitySummary.metrics, liabilitySummary.preferences);
 
   const submitRate = (event: FormEvent) => {
     event.preventDefault();
@@ -389,54 +394,22 @@ export default function JurisdictionCompliancePage() {
       <FadeIn>
         <OwnershipPanel title={t('ownership.compliance.summary.title', 'Period liability')}
           source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
-          <StatGrid
-            stats={[
-              {
-                key: 'distance',
-                label: t('ownership.compliance.stat.distance', 'Total distance'),
-                value: units.formatDistance(report?.total_distance_m ?? 0),
-                hint: t('ownership.compliance.stat.drives', '{{count}} drives', {
-                  count: report?.drive_count ?? 0,
-                }),
-              },
-              {
-                key: 'assigned',
-                label: t('ownership.compliance.stat.assigned', 'Assigned to a jurisdiction'),
-                value: units.formatDistance(report?.assigned_distance_m ?? 0),
-                tone: 'positive',
-              },
-              {
-                key: 'unassigned',
-                label: t('ownership.compliance.stat.unassigned', 'Unassigned'),
-                value: units.formatDistance(report?.unassigned_distance_m ?? 0),
-                hint: formatPct(report?.unassigned_share_pct ?? 0),
-                tone: (report?.unassigned_share_pct ?? 0) > 10 ? 'warning' : 'default',
-              },
-              {
-                key: 'roadUsage',
-                label: t('ownership.compliance.stat.roadUsage', 'Road-usage charge'),
-                value: formatCurrencyMinor(
-                  report?.total_road_usage_charge_minor,
-                  currency,
-                  units.unitPrefs.locale,
-                ),
-              },
-              {
-                key: 'liability',
-                label: t('ownership.compliance.stat.liability', 'Total liability'),
-                value: formatCurrencyMinor(
-                  report?.total_liability_minor,
-                  currency,
-                  units.unitPrefs.locale,
-                ),
-                tone: 'warning',
-              },
-              {
-                key: 'emissions',
-                label: t('ownership.compliance.stat.emissions', 'Attributed emissions'),
-                value: `${fmtNumber((report?.total_emissions_g ?? 0) / 1000)} kg`,
-              },
-            ]}
+          <OperationalBrief
+            compact
+            testId="compliance-period-liability"
+            eyebrow={t('ownership.compliance.navTitle', 'Jurisdictional compliance')}
+            title={t('ownership.compliance.brief.title', 'Recorded period liability')}
+            description={t('ownership.compliance.brief.description', 'Distance, road-usage liability and attributed emissions for the recorded apportionment window.')}
+            metrics={liabilityMetrics}
+            scope={liabilitySummary.period.label}
+            provenance={liabilitySummary.period.kind === 'unknown'
+              ? liabilitySummary.period.reason : liabilitySummary.period.provenance}
+            statusLabel={reportState.status === 'stale'
+              ? t('dataState.stale.title', 'Data may be stale')
+              : t('ownership.compliance.brief.recorded', 'Recorded apportionment')}
+            statusTone={reportState.status === 'stale' ? 'warning' : 'neutral'}
+            freshness={reportState.updatedAt != null
+              ? formatDateTime(new Date(reportState.updatedAt).toISOString()) : undefined}
           />
         </OwnershipPanel>
       </FadeIn>

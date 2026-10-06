@@ -33,6 +33,10 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -211,7 +215,7 @@ function lastPostBody(url: string): SubmitBody {
 /** Return the metric card wrapper (`div.flex-1`) that owns a given label so
  *  the value paragraph can be asserted without cross-card collisions. */
 function metricCard(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('.flex-1');
+  const el = screen.getByText(label).closest('[data-operational-metric]');
   if (!el) throw new Error(`no metric card for "${label}"`);
   return el as HTMLElement;
 }
@@ -270,6 +274,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     // The KPI tiles only leave their loading skeletons once the jobs query
     // resolves — gate on one of them before the synchronous assertions.
     expect(await screen.findByText('Total exports')).toBeInTheDocument();
+    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
     expect(screen.getByText('New export')).toBeInTheDocument();
 
     expect(screen.getByText('Total size')).toBeInTheDocument();
@@ -284,6 +289,7 @@ describe('DataExportPage — Project Apex elevation', () => {
   it('aggregates the stat tiles from job data (count, summed bytes, top type)', async () => {
     renderPage();
     await screen.findByText('Total exports');
+    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
 
     // 3 jobs total.
     expect(within(metricCard('Total exports')).getByText('3')).toBeInTheDocument();
@@ -291,6 +297,36 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(within(metricCard('Total size')).getByText('4.77 MB')).toBeInTheDocument();
     // drives x2 beats charging x1 — rendered lower-cased from the type key.
     expect(within(metricCard('Most exported')).getByText('drives')).toBeInTheDocument();
+  });
+
+  it('opens the real export review drawer with recorded bytes and by-count type context', async () => {
+    renderPage();
+    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
+    const summary = screen.getByRole('region', { name: 'Export summary metrics' });
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(within(metricCard('Most exported')).getByText('By count')).toBeInTheDocument();
+    expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('4.77 MB')).toBeInTheDocument();
+    expect(within(drawer).getByText('By count')).toBeInTheDocument();
+    expect(within(drawer).getByText('Loaded export jobs; no server-wide total or reporting window is supplied.')).toBeInTheDocument();
+  });
+
+  it('keeps all four export metrics and creation/download controls after a failed background refresh', async () => {
+    renderPage();
+    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
+    jobsError = new Error('background export refresh failed');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await screen.findByTestId('stale-refresh-warning');
+    const summary = screen.getByRole('region', { name: 'Export summary metrics' });
+    expect(within(summary).getByText('Retained source')).toBeInTheDocument();
+    expect(within(metricCard('Total exports')).getByText('3')).toBeInTheDocument();
+    expect(within(metricCard('Total size')).getByText('4.77 MB')).toBeInTheDocument();
+    expect(within(metricCard('Most exported')).getByText('drives')).toBeInTheDocument();
+    expect(metricCard('Last export')).toHaveAttribute('data-value-state', 'value');
+    expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
   });
 
   it('submits a new export with the chosen type, format and default 30-day window', async () => {
@@ -391,6 +427,8 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(await screen.findByText('No exports yet')).toBeInTheDocument();
     expect(screen.getByText('Create your first export above to get started.')).toBeInTheDocument();
     expect(within(metricCard('Total exports')).getByText('0')).toBeInTheDocument();
+    expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'value');
+    expect(metricCard('Total size').querySelector('[data-operational-value]')).toHaveTextContent('0 B');
   });
 
   it('surfaces a load-error banner without crashing the rest of the page', async () => {
@@ -400,6 +438,8 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(await screen.findByText('Failed to load export jobs')).toBeInTheDocument();
     // The wizard (fed by the still-successful vehicles query) keeps working.
     expect(screen.getByText('New export')).toBeInTheDocument();
+    expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'missing');
+    expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'missing');
   });
 
   it('opens the artifact URL for a ready job', async () => {

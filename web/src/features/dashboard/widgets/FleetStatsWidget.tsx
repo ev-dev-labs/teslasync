@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { MiniChart } from '@/components/charts';
+import { SourceContent } from '@/components/layout';
+import { Skeleton } from '@/components/feedback';
+import { Caption } from '@/components/ui';
 import { combineDataStates } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -9,12 +12,14 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
-import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive, ChargingSession } from '../types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { sourcePresentation } from '../components/continuation-dashboard-3/sourcePresentation';
 
 /** 1 mile = 1.609344 km exactly — restates Wh/km efficiency as Wh/mi. */
 const KM_PER_MILE = 1.609344;
@@ -51,8 +56,14 @@ export default function FleetStatsWidget(_props: WidgetProps) {
     enabled: primaryId > 0,
   });
 
-  const vehiclesState = useDataState(vehiclesQuery);
-  const analyticsState = useDataState(analyticsQuery, { provenance: 'historical' });
+  const vehiclesState = useDataState({
+    ...vehiclesQuery,
+    data: vehicles ?? (vehiclesQuery.isLoading || vehiclesQuery.isPending || vehiclesQuery.isError ? undefined : null),
+  });
+  const analyticsState = useDataState({
+    ...analyticsQuery,
+    data: analytics ?? (analyticsQuery.isLoading || analyticsQuery.isPending || analyticsQuery.isError ? undefined : null),
+  }, { provenance: 'historical' });
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const chargesState = useDataState(chargesQuery, { provenance: 'historical' });
   const sources = primaryId > 0
@@ -79,36 +90,103 @@ export default function FleetStatsWidget(_props: WidgetProps) {
   const onlineCount = vehicles == null ? null : vehicles.filter((v) => v.state === 'online').length;
   const metrics = [
     {
+      metricId: 'count' as const,
+      rawValue: vehicleCount,
       label: t('fleet.size', 'Fleet size'),
       value: vehicleCount == null ? null : fmtInt(vehicleCount),
       subtitle: onlineCount == null ? undefined : `${fmtInt(onlineCount)} ${t('fleet.online', 'online')}`,
+      source: vehiclesState,
+      hasContent: vehicles != null,
     },
     {
+      metricId: 'distance' as const,
+      rawValue: analytics?.total_distance_km == null ? null : analytics.total_distance_km * METERS_PER_KM,
       label: t('fleet.distance', 'Distance (30d)'),
       value: isFiniteNumber(analytics?.total_distance_km) ? fmtNumber(toDistanceDisplay(analytics.total_distance_km)) : null,
       unit: distanceUnit,
       trend: drivesQuery.data?.map((drive) => drive.distance_m).filter(isFiniteNumber).reverse(),
+      trendSource: primaryId > 0 ? drivesState : null,
+      trendLabel: t('widget.fleetStats.recentDrives', 'Recent drives'),
       color: '#22d3ee',
+      source: analyticsState,
+      hasContent: analytics != null,
     },
     {
+      metricId: 'energy' as const,
+      rawValue: analytics?.total_energy_kwh == null ? null : analytics.total_energy_kwh * 1000,
       label: t('fleet.energy', 'Energy (30d)'),
       value: isFiniteNumber(analytics?.total_energy_kwh) ? fmtNumber(analytics.total_energy_kwh) : null,
       unit: 'kWh',
       trend: chargesQuery.data?.map((charge) => charge.total_energy_added_wh).filter(isFiniteNumber).reverse(),
+      trendSource: primaryId > 0 ? chargesState : null,
+      trendLabel: t('widget.fleetStats.recentCharges', 'Recent charging sessions'),
       color: '#34d399',
+      source: analyticsState,
+      hasContent: analytics != null,
     },
     {
+      metricId: 'efficiency' as const,
+      rawValue: analytics?.avg_efficiency_wh_km == null ? null : analytics.avg_efficiency_wh_km / METERS_PER_KM,
       label: t('fleet.efficiency', 'Efficiency'),
       value: isFiniteNumber(analytics?.avg_efficiency_wh_km) ? fmtNumber(toEfficiencyDisplay(analytics.avg_efficiency_wh_km)) : null,
       unit: efficiencyUnit,
       subtitle: t('fleet.average', 'fleet average'),
+      source: analyticsState,
+      hasContent: analytics != null,
     },
     {
+      metricId: 'count' as const,
+      rawValue: null,
       label: t('fleet.alerts', 'Alerts'),
       value: null,
       subtitle: t('fleet.unread', 'unread'),
+      source: null,
+      hasContent: false,
     },
   ];
+  const rawMetrics: readonly StatMetric[] = metrics.map((metric) => ({
+    metricId: metric.metricId,
+    rawValue: metric.rawValue,
+    label: metric.label,
+    description: metric.metricId === 'count'
+      ? metric.source
+        ? t('widget.fleetStats.summary.registryHelp', 'Returned registry count; online caption reflects registry state, not verified live telemetry.')
+        : t('widget.fleetStats.summary.alertsHelp', 'Unread alert count has no connected source in this widget; unknown is not zero.')
+      : t('widget.fleetStats.summary.analyticsHelp', 'Fleet-wide trailing 30-day analytics, normalized to canonical SI before display.'),
+    display: { formatter: () => ({ value: metric.value ?? '—', unit: metric.unit ?? '' }) },
+    context: <>
+      {metric.subtitle && <Caption>{metric.subtitle}</Caption>}
+      {metric.source && (
+        <SourceContent
+          state={sourcePresentation(metric.source, metric.hasContent)}
+          label={metric.label}
+          emptyMessage={t('common.noData', 'No data available')}
+          emptyContent={<Caption>{t('common.noData', 'No data available')}</Caption>}
+          errorMessage={t('widget.fleetStats.sourceError', 'Unable to load {{source}}', { source: metric.label })}
+          error={metric.source.fatalError}
+          errorRecovery={{ onRetry: metric.source.retry ?? undefined }}
+        >{null}</SourceContent>
+      )}
+      {metric.trendSource && (
+        <SourceContent
+          state={sourcePresentation(metric.trendSource, (metric.trend?.length ?? 0) > 0)}
+          label={metric.trendLabel}
+          emptyMessage={t('common.noData', 'No data available')}
+          errorMessage={t('widget.fleetStats.sourceError', 'Unable to load {{source}}', { source: metric.trendLabel })}
+          error={metric.trendSource.fatalError}
+          errorRecovery={{ onRetry: metric.trendSource.retry ?? undefined }}
+          loadingContent={<Skeleton className="h-6 w-full" />}
+          emptyContent={<Caption>{t('common.noData', 'No data available')}</Caption>}
+        >
+          {metric.trend && metric.trend.length > 0 ? (
+            <div className={dashboardTokens.unit}>
+              <MiniChart data={metric.trend} color={metric.color} height={24} width={60} />
+            </div>
+          ) : <Caption>{t('common.noData', 'No data available')}</Caption>}
+        </SourceContent>
+      )}
+    </>,
+  }));
 
   return (
     <WidgetShell
@@ -120,24 +198,15 @@ export default function FleetStatsWidget(_props: WidgetProps) {
       isError={sources.some((source) => source.fatalError != null || source.refreshError != null)}
       onRefresh={refresh}
     >
-      <div className="grid min-w-0 grid-cols-1 gap-3 @xs:grid-cols-2 @sm:grid-cols-3 @lg:grid-cols-5">
-        {metrics.map((metric) => (
-          <div key={metric.label} role="group" aria-label={metric.label} className="flex min-w-0 flex-col gap-2">
-            <WidgetBigNumber
-              label={metric.label}
-              value={metric.value}
-              unit={metric.unit}
-              subtitle={metric.subtitle}
-              size="secondary"
-            />
-            {metric.trend && metric.trend.length > 0 && (
-              <div className={dashboardTokens.unit}>
-                <MiniChart data={metric.trend} color={metric.color} height={24} width={60} />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <DashboardSourceBrief
+        metrics={rawMetrics}
+        state={dataState}
+        eyebrow={t('widget.fleetStats.summary.eyebrow', 'Independent fleet sources')}
+        title={t('widget.fleetStats.summary.title', 'Fleet operating totals')}
+        description={t('widget.fleetStats.summary.description', 'Registry counts and 30-day fleet analytics are independent from the first registered vehicle’s five recent drives and charging sessions. Those sparklines are not the fleet-wide analysis window; unread alerts have no source here.')}
+        scope={t('widget.fleetStats.summary.scope', 'Fleet totals · first-vehicle recent series')}
+        testId="fleet-stats-operational-brief"
+      />
     </WidgetShell>
   );
 }

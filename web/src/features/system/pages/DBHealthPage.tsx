@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Database, Table2, Layers, AlertTriangle, GitCommitHorizontal, Gauge,
+  Database, AlertTriangle,
   RefreshCw, ArrowUpDown, CheckCircle2, XCircle, ListChecks, Server,
 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Button, DataTable, PanelTitle, Caption, Label, Text, type Column,
 } from '@/components/ui';
-import { MetricBar, MetricCard, TimeStamp } from '@/components/data-display';
+import { MetricBar, TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import {
@@ -20,11 +20,12 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 
 import { cn } from '@/lib/cn';
-import { typography, type NeonColor } from '@/lib/tokens';
+import { typography } from '@/lib/tokens';
 import type { TableInfo } from '@/types/admin';
 import { VisuallyHidden } from '@/components/a11y';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
+import { DBHealthSummary } from '../components/statstrip-db-health/DBHealthSummary';
 
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
@@ -143,63 +144,8 @@ export default function DBHealthPage() {
     ? tables.filter((tbl) => tbl.sizeBytes > LARGE_TABLE_THRESHOLD).length
     : null;
 
-  const dbSizeBytes = dbStats?.databaseSize != null ? Number(dbStats.databaseSize) : null;
-  const dbSizeDisplay = dbSizeBytes != null && Number.isFinite(dbSizeBytes) ? formatBytes(dbSizeBytes) : '—';
-
-  // ── KPI band config — 6 metrics fill the width on wide screens ──
-  const kpis: Array<{
-    key: string; label: string; value: string; icon: React.ReactNode;
-    color: NeonColor; subtitle?: string;
-  }> = [
-    {
-      key: 'size',
-      label: t('dbHealth.totalSize', 'Total DB size'),
-      value: dbSizeDisplay,
-      icon: <Database className="h-5 w-5" aria-hidden="true" />,
-      color: 'cyan',
-    },
-    {
-      key: 'tables',
-      label: t('dbHealth.tables', 'Tables'),
-      value: dbStats?.tables != null ? fmtInt(tables.length) : '—',
-      icon: <Table2 className="h-5 w-5" aria-hidden="true" />,
-      color: 'blue',
-    },
-    {
-      key: 'rows',
-      label: t('dbHealth.totalRows', 'Total rows'),
-      value: totalRows != null ? fmtInt(totalRows) : '—',
-      icon: <Layers className="h-5 w-5" aria-hidden="true" />,
-      color: 'purple',
-    },
-    {
-      key: 'large',
-      label: t('dbHealth.largeTables', 'Large tables'),
-      value: largeTables != null ? fmtInt(largeTables) : '—',
-      icon: <AlertTriangle className="h-5 w-5" aria-hidden="true" />,
-      color: 'amber',
-      subtitle: t('dbHealth.largeTablesHint', '> 100 MB'),
-    },
-    {
-      key: 'migration',
-      label: t('dbHealth.migration', 'Migration'),
-      value: migrationLoading ? '—' : String(migrationVersion),
-      icon: <GitCommitHorizontal className="h-5 w-5" aria-hidden="true" />,
-      color: migrationDirty == null ? 'cyan' : migrationDirty ? 'red' : 'green',
-      subtitle: migrationLoading || !migrationData || migrationDirty == null
-        ? undefined
-        : migrationDirty
-          ? t('dbHealth.dirtyShort', 'Dirty')
-          : t('dbHealth.cleanShort', 'Clean'),
-    },
-    {
-      key: 'pool',
-      label: t('dbHealth.poolUsage', 'Pool usage'),
-      value: poolUsage != null ? `${fmtNumber(poolUsage)}%` : '—',
-      icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
-      color: poolUsage != null && poolUsage >= 80 ? 'red' : 'cyan',
-    },
-  ];
+  const dbSizeBytes = dbStats?.databaseSize != null && String(dbStats.databaseSize).trim() !== ''
+    ? Number(dbStats.databaseSize) : null;
 
   const tableColumns: Column<TableInfo>[] = useMemo(
     () => [
@@ -311,25 +257,10 @@ export default function DBHealthPage() {
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section
-          aria-label={t('dbHealth.kpis', 'Summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6"
-        >
-          {statsLoading && !dbStats
-            ? Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} height={84} className="rounded-xl" />
-              ))
-            : kpis.map((kpi) => (
-                <MetricCard
-                  key={kpi.key}
-                  label={kpi.label}
-                  value={kpi.value}
-                  icon={kpi.icon}
-                  color={kpi.color}
-                  subtitle={kpi.subtitle}
-                />
-              ))}
-        </section>
+        <DBHealthSummary stats={statsState} migration={migrationState} pool={poolState}
+          statsLoading={statsLoading} migrationLoading={migrationLoading} poolLoading={poolLoading}
+          sizeBytes={dbSizeBytes} totalRows={totalRows} largeTables={largeTables}
+          migrationVersion={migrationVersion} migrationDirty={migrationDirty} poolUsage={poolUsage} />
       </FadeIn>
 
       {/* 2 — Primary bento: hero table-size chart + migration status */}

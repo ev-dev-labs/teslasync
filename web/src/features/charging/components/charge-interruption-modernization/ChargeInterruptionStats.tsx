@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { QueryError } from '@/components/feedback';
 import { Badge, HelpTooltip } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -127,7 +128,7 @@ export function ChargeInterruptionStats({
   ];
 
   return (
-    <StatStrip
+    <ChargingSummaryBrief
       id="charge-interruption-summary"
       title={t('chargeInterruption.kpis', 'Charge interruption metrics')}
       metrics={metrics}

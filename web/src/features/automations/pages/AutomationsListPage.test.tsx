@@ -247,7 +247,7 @@ function kpiRegion(): HTMLElement {
 
 function metricValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
+  const card = labelEl.closest('[data-operational-metric]') as HTMLElement;
   return within(card).getByText(/^\d+$/).textContent ?? '';
 }
 
@@ -309,6 +309,17 @@ describe('isRecord / isAutomationImportEnvelope', () => {
 // ═══ KPI band ════════════════════════════════════════════════════════════════
 
 describe('AutomationsListPage — KPI band', () => {
+  it('opens the real review drawer with loaded unfiltered rule context without mutating a rule', () => {
+    setAutomations([active, disabled, autoOff]);
+    renderPage();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Rule inventory details' });
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Full loaded rule set, before status and search filters.').length).toBeGreaterThan(0);
+    expect(m.toggleMutate).not.toHaveBeenCalled();
+    expect(m.deleteMutate).not.toHaveBeenCalled();
+    expect(m.testRunMutate).not.toHaveBeenCalled();
+  });
   it('renders the page heading and subtitle', () => {
     renderPage();
     const heading = screen.getByRole('heading', { level: 1, name: 'Automations' });

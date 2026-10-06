@@ -289,8 +289,8 @@ describe('SignalCatalogWidget — standard layout', () => {
     ]);
     renderWidget(STANDARD);
 
-    const batteryRow = screen.getByText('BatteryLevel').closest('div') as HTMLElement;
-    const speedRow = screen.getByText('VehicleSpeed').closest('div') as HTMLElement;
+    const batteryRow = screen.getByText('BatteryLevel').closest('div')?.parentElement as HTMLElement;
+    const speedRow = screen.getByText('VehicleSpeed').closest('div')?.parentElement as HTMLElement;
     expect(within(batteryRow).getByText('3')).toBeInTheDocument();
     expect(within(speedRow).getByText('0')).toBeInTheDocument();
   });

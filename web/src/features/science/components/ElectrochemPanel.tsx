@@ -11,7 +11,6 @@ import { AreaChartWrapper } from '@/components/charts';
 import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import {
-  Badge,
   Caption,
   DataTable,
   SectionTitle,
@@ -26,6 +25,8 @@ import { formatTemperatureDelta } from '@/lib/unitConversion';
 import { asList, downsample, SCIENCE_ACCENT, unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { ScienceSummaryBrief } from './operationalbrief-all/ScienceSummaryBrief';
 
 export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
   const { fmtNumber, fmtScientificNumber, fmtInt } = useNumberFormatting();
@@ -34,6 +35,100 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
   const state = useDataState(query, { provenance: 'historical' });
   const data = state.data;
   const { formatDuration, formatEnergy, formatTemperature, unitPrefs } = useUnits();
+  const evidenceMetrics: StatMetric[] = [
+    {
+      metricId: 'count', occurrenceId: 'rest-points',
+      label: t('science.electrochem.restPoints', 'rest points'),
+      rawValue: data ? asList(data.ocv_points).length : null,
+      description: t('science.electrochem.restCaveat', 'Rest-end pack voltage is not proven equilibrium OCV. Compare SOC, temperature and dwell before interpreting a change.'),
+      context: data ? `n=${fmtInt(asList(data.ocv_points).length)} ${t('science.electrochem.restPoints', 'rest points')}` : undefined,
+    },
+    {
+      metricId: 'count', occurrenceId: 'resistance-steps',
+      label: t('science.overview.resistance', 'Resistance steps'),
+      rawValue: data ? asList(data.ir_points).length : null,
+      description: t('science.overview.batteryMeaning', 'Rest voltage and pack resistance are proxies, not cell diagnostics.'),
+      context: data ? `n=${fmtInt(asList(data.ir_points).length)} IR` : undefined,
+    },
+    {
+      metricId: 'text', occurrenceId: 'firmware',
+      label: t('science.firmware', 'Firmware'),
+      rawValue: data?.firmware_epoch || null,
+      description: t('science.brief.firmwareContext', 'Source firmware epoch; observations are not a cell diagnostic.'),
+      context: data?.truncated ? t('science.truncated', 'Sample cap hit') : undefined,
+    },
+  ];
+  const arrheniusMetrics: StatMetric[] = [
+    {
+      metricId: 'number', occurrenceId: 'activation-energy',
+      label: t('science.electrochem.activationEnergy', 'Ea'),
+      rawValue: data?.arrhenius?.ea_j_per_mol,
+      description: data?.arrhenius?.honesty ?? t('science.unknown', 'unknown'),
+      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: 'J/mol' }) },
+      context: data?.arrhenius?.ea_ci95_low != null && data?.arrhenius?.ea_ci95_high != null
+        ? `${t('science.electrochem.activationInterval', 'CI')}: ${fmtNumber(data.arrhenius.ea_ci95_low)}…${fmtNumber(data.arrhenius.ea_ci95_high)} J/mol`
+        : t('science.brief.intervalUnknown', 'Confidence interval unknown'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'temperature-bins',
+      label: t('science.electrochem.tempBins', 'Temp bins'),
+      rawValue: data?.arrhenius?.temp_bins,
+      description: t('science.brief.arrheniusContext', 'Inspect fit eligibility and temperature coverage before interpreting activation energy.'),
+      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: '' }) },
+    },
+    {
+      metricId: 'number', occurrenceId: 'temperature-span',
+      label: t('science.electrochem.temperatureSpan', 'Temperature span'),
+      rawValue: data?.arrhenius?.temp_span_c,
+      description: t('science.brief.temperatureDelta', 'Temperature difference, not an absolute temperature.'),
+      display: { formatter: (raw) => ({ value: formatTemperatureDelta(raw, unitPrefs), unit: '' }) },
+    },
+  ];
+  const agingMetrics: StatMetric[] = [
+    {
+      metricId: 'energy', occurrenceId: 'throughput',
+      label: t('science.electrochem.throughput', 'Throughput'),
+      rawValue: data?.aging?.throughput_wh,
+      description: data?.aging?.honesty ?? t('science.unknown', 'unknown'),
+      context: data?.aging?.throughput_wh == null
+        ? `${t('science.electrochem.throughput', 'Throughput')}: ${t('common.unknown', 'Unknown')}` : undefined,
+    },
+    {
+      metricId: 'duration', occurrenceId: 'rest-duration',
+      label: t('science.electrochem.restHours', 'Rest'),
+      rawValue: data?.aging?.rest_hours != null ? data.aging.rest_hours * 3600 : null,
+      description: t('science.brief.restExposure', 'Reported rest exposure, not a measured aging split.'),
+      display: { formatter: (raw) => ({ value: fmtNumber(raw / 3600), unit: 'h' }) },
+    },
+    {
+      metricId: 'rate', occurrenceId: 'proxy-slope',
+      label: t('science.electrochem.proxySlope', 'Proxy slope'),
+      rawValue: data?.aging?.proxy_slope_wh_per_day,
+      description: data?.aging?.honesty ?? t('science.unknown', 'unknown'),
+      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: 'Wh/day' }) },
+      context: data?.aging?.proxy_slope_wh_per_day != null
+        ? `n=${fmtNumber(data.aging.proxy_n)}` : t('science.unknown', 'unknown'),
+    },
+    {
+      metricId: 'energy', occurrenceId: 'capacity-proxy',
+      label: t('science.electrochem.capacityProxy', 'Capacity proxy'),
+      rawValue: data?.capacity_proxy_unknown ? null : data?.capacity_proxy_wh,
+      description: t('science.brief.capacityContext', 'Energy-based capacity proxy, not a battery health score or cell diagnostic.'),
+      missingReason: t('science.unknown', 'unknown'),
+    },
+    {
+      metricId: 'energy', occurrenceId: 'assumed-reference-capacity',
+      label: t('science.electrochem.assumedReference', 'Assumed reference capacity'),
+      rawValue: data?.aging?.nominal_pack_wh,
+      description: t('science.brief.assumedCapacity', 'Assumed reference, not measured vehicle capacity.'),
+    },
+    {
+      metricId: 'energy', occurrenceId: 'holdout-rmse',
+      label: t('science.holdoutRmse', 'holdout RMSE'),
+      rawValue: data?.aging?.holdout_rmse_wh,
+      description: t('science.brief.holdoutContext', 'Holdout error is unavailable unless the source reports it; it is not zero.'),
+    },
+  ];
 
   const restColumns: Column<ScienceOCVPoint>[] = [
     { key: 'at', header: t('science.electrochem.observedAt', 'Observed'), render: (r) => formatDateTime(r.at) },
@@ -74,6 +169,13 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
     <section data-testid="science-electrochem" className="min-w-0">
       <LayoutCard title={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}>
       <StaleRefreshWarning state={state} />
+      <ScienceSummaryBrief
+        title={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}
+        description={data?.honesty ?? t('science.overview.batteryMeaning', 'Rest voltage and pack resistance are proxies, not cell diagnostics.')}
+        metrics={evidenceMetrics} states={[state]} window={window} report={data}
+        limited={!data || data.truncated || (asList(data.ocv_points).length === 0 && asList(data.ir_points).length === 0)}
+        testId="science-electrochem-brief"
+      />
       <SourceContent
         state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
         label={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}
@@ -87,12 +189,6 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
       {data && (
         <>
           <Text as="p" size="sm" color="secondary">{data.honesty}</Text>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="neutral" size="sm">n={fmtInt(asList(data.ocv_points).length)} {t('science.electrochem.restPoints', 'rest points')}</Badge>
-            <Badge variant="neutral" size="sm">n={fmtInt(asList(data.ir_points).length)} IR</Badge>
-            <Badge variant="neutral" size="sm">{t('science.firmware', 'Firmware')}: {data.firmware_epoch || unknown(t)}</Badge>
-            {data.truncated ? <Badge variant="danger" size="sm">{t('science.truncated', 'Sample cap hit')}</Badge> : null}
-          </div>
           <div className="space-y-2">
             <SectionTitle>{t('science.electrochem.restEvidence', 'Rest-voltage evidence')}</SectionTitle>
             <Text as="p" size="sm" color="secondary">
@@ -156,19 +252,13 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
               mobileColumns={['at', 'resistance', 'current']}
             />
           )}
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={data.arrhenius?.unknown ? 'warning' : 'success'} size="sm">
-              Ea: {data.arrhenius?.ea_j_per_mol != null ? `${fmtNumber(data.arrhenius.ea_j_per_mol)} J/mol` : unknown(t)}
-            </Badge>
-            {data.arrhenius?.ea_ci95_low != null && data.arrhenius?.ea_ci95_high != null ? (
-              <Badge variant="neutral" size="sm">
-                CI: {fmtNumber(data.arrhenius.ea_ci95_low)}…{fmtNumber(data.arrhenius.ea_ci95_high)}
-              </Badge>
-            ) : null}
-            <Badge variant="neutral" size="sm">
-              {t('science.electrochem.tempBins', 'Temp bins')}: {fmtNumber(data.arrhenius?.temp_bins)} / {formatTemperatureDelta(data.arrhenius?.temp_span_c ?? 0, unitPrefs)}
-            </Badge>
-          </div>
+          <ScienceSummaryBrief
+            title={t('science.electrochem.arrheniusTitle', 'Temperature dependence of pack resistance')}
+            description={data.arrhenius?.honesty ?? t('science.brief.arrheniusContext', 'Inspect fit eligibility and temperature coverage before interpreting activation energy.')}
+            metrics={arrheniusMetrics} states={[state]} window={window} report={data}
+            limited={data.arrhenius == null || data.arrhenius.unknown}
+            testId="science-arrhenius-brief"
+          />
           <Text as="p" size="sm" color="secondary">{data.arrhenius?.honesty}</Text>
           <DataTable
             tableId="science:ocv-bins"
@@ -189,20 +279,13 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
             <Text as="p" size="sm" className="font-semibold">{t('science.electrochem.aging', 'Aging exposure and capacity-proxy trend')}</Text>
             <Text as="p" size="sm" color="secondary">{data.aging?.honesty}</Text>
             <Caption>{t('science.electrochem.assumedReference', 'Assumed reference capacity')}: {data.aging?.nominal_pack_wh != null ? formatEnergy(data.aging.nominal_pack_wh) : unknown(t)}</Caption>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="neutral" size="sm">
-                {t('science.electrochem.throughput', 'Throughput')}: {data.aging?.throughput_wh == null ? t('common.unknown', 'Unknown') : formatEnergy(data.aging.throughput_wh)}
-              </Badge>
-              <Badge variant="neutral" size="sm">
-                {t('science.electrochem.restHours', 'Rest')}: {fmtNumber(data.aging?.rest_hours)} h
-              </Badge>
-              <Badge variant={data.aging?.unknown ? 'warning' : 'neutral'} size="sm">
-                {t('science.electrochem.proxySlope', 'Proxy slope')}:{' '}
-                {data.aging?.proxy_slope_wh_per_day != null
-                  ? `${fmtNumber(data.aging.proxy_slope_wh_per_day)} Wh/day (n=${fmtNumber(data.aging.proxy_n)})`
-                  : unknown(t)}
-              </Badge>
-            </div>
+            <ScienceSummaryBrief
+              title={t('science.electrochem.aging', 'Aging exposure and capacity-proxy trend')}
+              description={data.aging?.honesty ?? t('science.brief.restExposure', 'Reported rest exposure, not a measured aging split.')}
+              metrics={agingMetrics} states={[state]} window={window} report={data}
+              limited={data.aging == null || data.aging.unknown || data.capacity_proxy_unknown}
+              testId="science-aging-brief"
+            />
             <Caption>
               {t('science.electrochem.capacityProxy', 'Capacity proxy')}:{' '}
               {data.capacity_proxy_unknown || data.capacity_proxy_wh == null ? unknown(t) : formatEnergy(data.capacity_proxy_wh)}

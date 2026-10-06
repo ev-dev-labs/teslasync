@@ -12,8 +12,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  MapPin, Plus, Globe, Ruler,
-  Check, X, Navigation, RefreshCw, BatteryCharging,
+  Plus, Globe, Ruler,
+  Check, X, Navigation, RefreshCw,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
@@ -23,8 +23,8 @@ import {
   GlassPanel, Button, Input, Select, Modal, Toggle, ConfirmDialog,
   Tabs, PanelTitle, Caption, HelperText,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, AlertBanner } from '@/components/feedback';
+import { AlertBanner } from '@/components/feedback';
+import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
@@ -47,7 +47,7 @@ import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
 import type { Geofence as ApiGeofence, Position, VisitedPlaceCandidate } from '@/api/types';
-import { AISuggestNewGeofences } from '@/components/ai/AISuggestNewGeofences';
+import { AISuggestNewGeofences } from '@/components/ai';
 import { ChargingPlacesWorkspace } from '@/features/maps/components/charging-places';
 import { useVisitedPlaceCandidates, resolveSavedPlaceName } from '@/api/hooks/useLocations';
 import {
@@ -242,6 +242,14 @@ export default function GeofencesPage() {
       pending: list.filter((g) => g.needsReview).length,
     };
   }, [geofences]);
+  const candidateState = deriveDataState(candidateQuery, { provenance: 'historical' });
+  const briefScope = t('geofences.brief.scope', 'Saved geofences and visited candidates are independent sources; not limited to the selected vehicle.');
+  const briefMetrics = [
+    { metricId: 'count', occurrenceId: 'geofences-total', rawValue: geofencesState.hasData ? stats.total : null, label: t('geofences.totalGeofences', 'Total geofences'), description: briefScope },
+    { metricId: 'count', occurrenceId: 'geofences-reviewed', rawValue: geofencesState.hasData ? stats.reviewed : null, label: t('geofences.visits.reviewedPlaces', 'Reviewed places'), description: t('geofences.brief.reviewed', 'Saved places not flagged as needing review.') },
+    { metricId: 'count', occurrenceId: 'geofences-pending', rawValue: geofencesState.hasData ? stats.pending : null, label: t('geofences.visits.pending', 'Awaiting review'), description: t('geofences.brief.pending', 'Saved places flagged as needing review.') },
+    { metricId: 'count', occurrenceId: 'geofences-candidates', rawValue: candidateQuery.data?.length, label: t('geofences.visits.candidates', 'Visited candidates'), description: t('geofences.brief.candidates', 'Returned visited-place candidates; separate from saved geofence totals.') },
+  ] as const;
 
   // ─── Drawer integration ──────────────────────────────────────────────────
 
@@ -542,43 +550,14 @@ export default function GeofencesPage() {
     >
       {/* 1 — KPI band remains visible with source-aware unknown values. */}
       <FadeIn>
-        <section
-          aria-label={t('geofences.summaryAria', 'Geofence summary')}
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-        >
-          {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={84} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('geofences.totalGeofences', 'Total geofences')}
-                value={geofencesState.hasData ? stats.total : '—'}
-                icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('geofences.visits.reviewedPlaces', 'Reviewed places')}
-                value={geofencesState.hasData ? stats.reviewed : '—'}
-                icon={<Check className="h-4 w-4" aria-hidden="true" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('geofences.visits.pending', 'Awaiting review')}
-                value={geofencesState.hasData ? stats.pending : '—'}
-                icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('geofences.visits.candidates', 'Visited candidates')}
-                value={candidateQuery.data?.length ?? '—'}
-                icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
-                color="amber"
-              />
-            </>
-          )}
-        </section>
+        <MapsOperationalBrief
+          title={t('geofences.summaryAria', 'Geofence summary')}
+          description={t('geofences.brief.description', 'Review saved boundaries and the independent visited-place queue before changing a zone.')}
+          scope={briefScope}
+          metrics={briefMetrics}
+          sources={[{ label: t('geofences.title', 'Geofences'), state: geofencesState }, { label: t('geofences.visits.candidates', 'Visited candidates'), state: candidateState }]}
+          loading={isLoading}
+        />
       </FadeIn>
 
       {/* 2 — Helix draft assistant. Whole section gated on the AI feature flag

@@ -2,7 +2,8 @@
  * WarrantyPanel — coverage countdown rows + assumption disclosure.
  * Pure presentational: outlook passed as props.
  */
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => ({
@@ -37,6 +38,53 @@ const outlook: WarrantyOutlook = {
 };
 
 describe('WarrantyPanel', () => {
+  it('preserves null versus real zero distance allowance, supplied coverage ordering and countdown clamping', () => {
+    render(
+      <WarrantyPanel selected loading={false} error={null}
+        outlook={{
+          ...outlook,
+          coverages: [
+            { ...outlook.coverages[0], name: 'Time-only coverage', km_limit: null, km_remaining: null, days_remaining: 0, status: 'expiring_soon' },
+            { ...outlook.coverages[1], name: 'Exhausted distance allowance', km_remaining: 0, days_remaining: -3, status: 'expired' },
+          ],
+        }}
+        onRetry={vi.fn()} />,
+    );
+    const timeOnly = screen.getByText('Time-only coverage').parentElement;
+    const exhausted = screen.getByText('Exhausted distance allowance').parentElement;
+    expect(timeOnly).toHaveTextContent('0 days left');
+    expect(timeOnly).not.toHaveTextContent('km left');
+    expect(exhausted).toHaveTextContent('0 days left');
+    expect(exhausted).toHaveTextContent(/0(?:[,.]0+)? km left/);
+    expect(screen.getByText('Expiring soon')).toBeInTheDocument();
+    expect(screen.getByText('Expired')).toBeInTheDocument();
+    expect(timeOnly?.parentElement?.nextElementSibling).toBe(exhausted?.parentElement);
+    expect(screen.getByText(outlook.assumption)).toBeInTheDocument();
+  });
+
+  it('keeps initial warranty failure distinct from an empty outlook and recovers only its source', () => {
+    const onRetry = vi.fn();
+    const view = render(
+      <MemoryRouter>
+        <WarrantyPanel selected loading={false} error={new Error('warranty unavailable')} outlook={null} onRetry={onRetry} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('heading', { name: 'Warranty countdown' })).toBeInTheDocument();
+    expect(screen.getByText('This source could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByText('No warranty outlook')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+    view.rerender(
+      <MemoryRouter>
+        <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={onRetry} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(outlook.assumption)).toBeInTheDocument();
+    expect(screen.getByText('Basic Limited')).toBeInTheDocument();
+    expect(screen.getByText('Battery & Drive Unit')).toBeInTheDocument();
+    expect(screen.queryByText('This source could not be loaded.')).not.toBeInTheDocument();
+  });
+
   it('renders coverage rows with countdowns and the assumption', () => {
     render(
       <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={() => {}} />,

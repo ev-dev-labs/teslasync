@@ -83,6 +83,7 @@ vi.mock('@/api/hooks/useDriving', async (importActual) => {
 // exact and the call arguments are inspectable. Returns a STABLE object so the
 // widget's memoised `stats` keeps stable formatter references between renders.
 const units = vi.hoisted(() => ({
+  unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar', energy: 'kWh', power: 'kW', duration: 'h', locale: 'en-US' },
   formatEnergy: vi.fn((v?: number | null) => (v == null ? '—' : `${v} Wh`)),
 }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => units }));
@@ -226,7 +227,7 @@ describe('RegenEfficiencyWidget — standard layout', () => {
     expect(screen.getByText('5000 Wh')).toBeInTheDocument();
 
     // Free charges renders through the integer formatter within its own tile.
-    const freeTile = screen.getByText('Free charges').parentElement?.parentElement as HTMLElement;
+    const freeTile = screen.getByText('Free charges').closest('[data-operational-metric]') as HTMLElement;
     expect(within(freeTile).getByText('7')).toBeInTheDocument();
 
     expect(units.formatEnergy).toHaveBeenCalledWith(1234);
@@ -385,11 +386,24 @@ describe('RegenEfficiencyWidget — null-safety', () => {
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(hasGauge(container)).toBe(false);
 
-    // Both energy formatters are still called; missing drive energy returns
-    // the placeholder (never a blank tile).
-    expect(units.formatEnergy).toHaveBeenCalledWith(undefined);
+    // The actual bridge validates missing values before specialist formatting.
+    expect(units.formatEnergy).not.toHaveBeenCalled();
     expect(screen.getAllByText('—')).toHaveLength(4);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('reviews actual retained watt-hour sources without relabelling absolute drive power as regeneration', () => {
+    mockRegen.mockReturnValue(qr({ data: makeData(), isError: true, error: new Error('refresh failed') }));
+    renderWidget(STANDARD, { vehicleId: 42 });
+    const brief = screen.getByTestId('regen-efficiency-operational-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('1234 Wh')).toBeInTheDocument();
+    expect(within(drawer).getByText('5000 Wh')).toBeInTheDocument();
+    expect(within(drawer).getByText('7')).toBeInTheDocument();
+    expect(within(drawer).getByText(/absolute drive power is not regenerative power/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Vehicle 42/)).toBeInTheDocument();
   });
 });
 

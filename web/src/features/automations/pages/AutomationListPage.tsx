@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { Button, GlassPanel, Input, Select, type SelectOption } from '@/components/ui';
-import { BulkActionToolbar, MetricCard } from '@/components/data-display';
+import { BulkActionToolbar } from '@/components/data-display';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { OperationalWriteNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -20,7 +20,7 @@ import { Icons } from '@/lib/icons';
 import { AutomationListTable } from './AutomationListTable';
 import { AutomationStatusPanel } from './AutomationStatusPanel';
 import { RoutineWizard } from '../components/RoutineWizard';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { AutomationRulesBrief } from '../components/operationalbrief-all/AutomationRulesBrief';
 
 type RowKey = string | number;
 type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
@@ -35,7 +35,6 @@ type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
  * page is the bulk-control alternative for users with dozens of automations.
  */
 export default function AutomationListPage() {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('automationList.title', 'Automation rules'));
@@ -190,59 +189,22 @@ export default function AutomationListPage() {
       />
       <StaleRefreshWarning state={automationsState} label={t('automationList.title', 'Automation rules')} />
 
-      {/* 1 — KPI band: full-width responsive metric grid */}
+      {/* 1 — Compact summary of the full loaded rule set */}
       <FadeIn>
         <section
           aria-label={t('automationList.kpis', 'Automation summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
         >
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
-            ))
-          ) : error ? (
+          <AutomationRulesBrief
+            bulk stats={stats} hasData={automationsState.hasData}
+            loading={isLoading}
+            retained={Boolean(automationsState.refreshError || automationsState.isRefreshBlocked)}
+          />
+          {error && (
             <QueryError
               error={error}
               onRetry={() => refetch()}
               className="col-span-2 lg:col-span-3 3xl:col-span-6"
             />
-          ) : (
-            <>
-              <MetricCard
-                label={t('automationList.kpi.total', 'Total')}
-                value={stats.total}
-                icon={<Icons.workflow className="h-5 w-5" />}
-              />
-              <MetricCard
-                label={t('automationList.kpi.active', 'Active')}
-                value={stats.active}
-                icon={<Icons.power className="h-5 w-5" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('automationList.kpi.disabled', 'Disabled')}
-                value={stats.disabled}
-                icon={<Icons.pause className="h-5 w-5" />}
-              />
-              <MetricCard
-                label={t('automationList.kpi.autoDisabled', 'Auto-disabled')}
-                value={stats.autoDisabled}
-                icon={<Icons.securityOff className="h-5 w-5" />}
-                color="red"
-              />
-              <MetricCard
-                label={t('automationList.kpi.runs', 'Total runs')}
-                value={fmtInt(stats.totalRuns)}
-                icon={<Icons.play className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('automationList.kpi.failures', 'Failures')}
-                value={fmtInt(stats.totalFailures)}
-                icon={<Icons.warning className="h-5 w-5" />}
-                color="amber"
-              />
-            </>
           )}
         </section>
       </FadeIn>

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
+import { EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -74,16 +75,12 @@ export function ChargingHeatmapSummary({ stats, state, loading }: ChargingHeatma
   ];
 
   return (
-    <StatStrip
+    <ChargingSummaryBrief
       id="charging-heatmap-summary"
-      metrics={loading || state.fatalError ? [] : metrics}
+      metrics={state.fatalError ? [] : metrics}
       loading={loading}
       retained={state.hasData && state.status === 'stale'}
-      emptyContent={loading ? (
-        <div className="grid grid-cols-2 gap-3 @lg:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} height={92} />)}
-        </div>
-      ) : state.fatalError ? (
+      emptyContent={state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={state.retry ?? undefined} />
       ) : (
         <EmptyState

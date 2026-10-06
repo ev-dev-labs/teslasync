@@ -4,8 +4,8 @@
  * The component is the shared "recommendation card stack" used by the AI/coach
  * dashboard widgets (Charging Optimizer, Anomaly Detector, Driving Coach,
  * Battery Degradation Forecast). It has one runtime export (the component) plus
- * a type export (`TipItem`). It is a pure display component — no hooks, no
- * network, no user interaction — so a bare render() suffices and there is no
+ * a type export (`TipItem`). It is a display component — no network or user
+ * interaction — with real i18next initialized below, and there is no
  * loading/error branch to drive (parents own those via WidgetShell). Every
  * remaining branch is exercised through the component:
  *   - the empty branch short-circuits to an <EmptyState> (default message vs.
@@ -25,10 +25,23 @@
  *     the empty state rather than falling back to the compact/normal default.
  *   - colliding tip titles both render (keyed by `id`).
  */
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { createInstance } from 'i18next';
+import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { WidgetTipCards, type TipItem } from './WidgetTipCards';
 import { BADGE_VARIANTS } from '@/components/ui';
+
+vi.unmock('react-i18next');
+
+beforeAll(async () => {
+  const i18n = createInstance();
+  await i18n.use(initReactI18next).init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: { translation: {} } },
+  });
+});
 
 const baseTip: TipItem = {
   id: 'tip-1',
@@ -88,6 +101,23 @@ describe('WidgetTipCards — null safety (hardening)', () => {
 });
 
 describe('WidgetTipCards — rendering tips', () => {
+  it('preserves complete long recommendations, caller labels and theme-aware containment', () => {
+    const title = 'LongRecommendationIdentifier'.repeat(12);
+    const description = 'Complete recommendation details. '.repeat(16);
+    const impactLabel = 'Caller-owned impact explanation '.repeat(8);
+    render(<WidgetTipCards tips={[tip({ title, description, impact: 'high', impactLabel })]} />);
+
+    expect(screen.getByText(title)).toHaveTextContent(title);
+    expect(screen.getByText(title)).toHaveClass('min-w-0', '[overflow-wrap:anywhere]');
+    expect(screen.getByText(description.trim())).toHaveTextContent(description.trim());
+    expect(screen.getByText(impactLabel.trim())).toHaveTextContent(impactLabel.trim());
+    expect(screen.getByText(impactLabel.trim())).toHaveClass('max-w-full', 'whitespace-normal');
+    expect(screen.getByRole('listitem')).toHaveClass(
+      'bg-[var(--surface-2)]', 'border-[var(--border-subtle)]',
+    );
+    expect(screen.getByRole('listitem')).not.toHaveClass('bg-white/[0.03]', 'border-white/[0.06]');
+  });
+
   it('renders each tip title + description as accessible list items', () => {
     render(
       <WidgetTipCards
@@ -103,6 +133,36 @@ describe('WidgetTipCards — rendering tips', () => {
     expect(screen.getByText('Avoid DC fast')).toBeInTheDocument();
     expect(screen.getByRole('list')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  describe('WidgetTipCards — localization', () => {
+    it('localizes its fallback labels without rewriting caller-owned recommendations', async () => {
+      const i18n = createInstance();
+      await i18n.init({
+        lng: 'fr', fallbackLng: 'en',
+        resources: {
+          fr: { translation: { dashboard: { tipCards: {
+            noRecommendations: 'Aucune recommandation',
+            impact: { high: 'fort', medium: 'moyen', low: 'faible' },
+          } } } },
+        },
+      });
+      const { rerender } = render(
+        <I18nextProvider i18n={i18n}>
+          <WidgetTipCards tips={[tip({ impact: 'high' })]} />
+        </I18nextProvider>,
+      );
+      expect(screen.getByText('fort')).toBeInTheDocument();
+      expect(screen.getByText(baseTip.title)).toBeInTheDocument();
+      expect(screen.getByText(baseTip.description)).toBeInTheDocument();
+
+      rerender(
+        <I18nextProvider i18n={i18n}>
+          <WidgetTipCards tips={[]} />
+        </I18nextProvider>,
+      );
+      expect(screen.getByRole('status')).toHaveTextContent('Aucune recommandation');
+    });
   });
 
   it('renders an optional leading icon and hides it from assistive tech', () => {

@@ -68,6 +68,7 @@ import {
   computeChargerSpecs,
 } from '../components/charging-list';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ----------------------------------------------------------------*/
 /*  URL allowlists */
@@ -610,6 +611,18 @@ export default function ChargingListPage() {
   const isChargingNow = liveState?.is_charging === true;
   const hasChargingPosture = typeof liveState?.is_charging === 'boolean';
   const departureBatteryPct = liveState?.battery_level;
+  const numericBriefMetrics = useOperationalMetrics([
+    { metricId: 'percent', occurrenceId: 'departure', rawValue: departureBatteryPct,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '%' }) } },
+    { metricId: 'currency', occurrenceId: 'cost', rawValue: hasRecordedCosts ? currentStats.totalCost : null,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'interruptions',
+      rawValue: chargingState.hasData ? interruptionAnomalies.length : null,
+      display: { formatter: raw => ({ value: String(raw), unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'reliability', rawValue: reliabilityPct,
+      display: { formatter: raw => ({ value: t('operations.charging.reliabilityValue',
+        '{{value}}% clear', { value: fmtInt(raw) }), unit: '' }) } },
+  ]);
   const timeToTarget = isChargingNow && (liveState?.time_to_full_charge ?? 0) > 0
     ? formatDurationMinutes((liveState?.time_to_full_charge ?? 0) * 60)
     : null;
@@ -1141,7 +1154,7 @@ export default function ChargingListPage() {
               ? t('operations.status.awaitingData', 'Awaiting data')
               : anomalies.length > 0 || vehicleStateQuery.isError
                 ? t('operations.status.review', 'Review recommended')
-                : t('operations.status.onTrack', 'On track')
+                : t('charging.brief.available', 'Source measurements available')
           }
           statusTone={
             isChargingNow
@@ -1222,9 +1235,10 @@ export default function ChargingListPage() {
                   : 'success',
             },
             {
+              ...numericBriefMetrics[0],
               key: 'departure',
               label: t('operations.charging.departureReadiness', 'Departure readiness'),
-              value: departureBatteryPct != null ? `${fmtInt(departureBatteryPct)}%` : '—',
+              value: numericBriefMetrics[0].value,
               detail: departureBatteryPct == null
                 ? t(
                     'operations.charging.departureUnavailable',
@@ -1254,9 +1268,10 @@ export default function ChargingListPage() {
                     : 'success',
             },
             {
+              ...numericBriefMetrics[1],
               key: 'cost',
               label: t('operations.charging.costExposure', 'Cost exposure'),
-              value: hasRecordedCosts ? formatCurrency(currentStats.totalCost) : '—',
+              value: numericBriefMetrics[1].value,
               detail: blendedCostPerKwh != null
                 ? t(
                     'operations.charging.costExposureDetail',
@@ -1280,9 +1295,10 @@ export default function ChargingListPage() {
               tone: 'neutral',
             },
             {
+              ...numericBriefMetrics[2],
               key: 'interruptions',
               label: t('operations.charging.interruptions', 'Potential interruptions'),
-              value: interruptionAnomalies.length,
+              value: numericBriefMetrics[2].value,
               detail: t(
                 'operations.charging.interruptionsDetail',
                 'Sessions with a telemetry gap or sustained unexpectedly low DC power.',
@@ -1290,15 +1306,10 @@ export default function ChargingListPage() {
               tone: interruptionAnomalies.length > 0 ? 'danger' : 'success',
             },
             {
+              ...numericBriefMetrics[3],
               key: 'reliability',
               label: t('operations.charging.reliability', 'Charger reliability'),
-              value: reliabilityPct == null
-                ? '—'
-                : t(
-                    'operations.charging.reliabilityValue',
-                    '{{value}}% clear',
-                    { value: fmtInt(reliabilityPct) },
-                  ),
+              value: numericBriefMetrics[3].value,
               detail: t(
                 'operations.charging.reliabilityDetail',
                 'Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.',

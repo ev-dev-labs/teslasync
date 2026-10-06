@@ -8,10 +8,11 @@ import {
 
 import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
 import { Badge, Button, DataTable, Caption, Text, type Column, useSortToggle } from '@/components/ui';
-import { StatStrip, StatGroup, type StatMetric } from '@/components/data-display';
+import { StatGroup, type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import { useMetricPreferences } from '@/components/data-display/stat-reference';
 import { formatMetric, type StatPeriod } from '@/lib/metric-reference';
-import { AIVampireDrainExplanation } from '@/components/ai/AIVampireDrainExplanation';
+import { AIVampireDrainExplanation } from '@/components/ai';
 import {
   LinearGauge, ChartLegend, ChartTooltip, EmbeddedChart, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
@@ -273,7 +274,7 @@ export default function VampireDrainPage() {
               />
             </LayoutCard>
           ) : (
-            <StatStrip id="vampire-drain-summary" metrics={metrics} period={period}
+            <BatteryEvidenceBrief id="vampire-drain-summary" title={t('vampireDrain.brief.title', 'Observed parked-drain statistics')} metrics={metrics} period={period}
               loading={statsState.status === 'initial'} retained={statsState.hasData && statsState.status !== 'ok'} />
           )}
         </Section>

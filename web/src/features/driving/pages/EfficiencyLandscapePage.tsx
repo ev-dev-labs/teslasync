@@ -1,12 +1,12 @@
 import { Fragment, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mountain, Snowflake, Trophy, Thermometer } from 'lucide-react';
+import { Mountain } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, HelpTooltip } from '@/components/ui';
+import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
+import { Text, HelpTooltip } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
@@ -15,6 +15,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
@@ -28,6 +29,7 @@ import {
   TEMP_BANDS_C,
   type LandscapeCell,
 } from '../lib/efficiencyLandscape';
+import { DrivingSummaryBrief } from '../components/operationalbrief-a-m/DrivingSummaryBrief';
 
 /** km per statute mile, derived from the shared conversion lib. */
 const KM_PER_MILE = convertDistanceToSI(1, 'mi') / 1000;
@@ -50,6 +52,7 @@ export default function EfficiencyLandscapePage() {
   });
 
   const drivesQuery = useDrives(vehicleIdStr);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const allDrives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
 
   const drives = useMemo<Drive[]>(() => {
@@ -86,13 +89,36 @@ export default function EfficiencyLandscapePage() {
     cell.whPerKm != null
       ? `${tempLabel(cell.tempBand)} · ${speedLabel(cell.speedBand)} ${speedUnit} · ${toEff(cell.whPerKm)} ${effUnit} (${cell.drives})`
       : `${tempLabel(cell.tempBand)} · ${speedLabel(cell.speedBand)} ${speedUnit} · —`;
+  const available = drivesState.data != null;
+  const briefMetrics: readonly StatMetric[] = [
+    { metricId: 'efficiency', occurrenceId: 'best',
+      rawValue: available && landscape.best?.whPerKm != null ? landscape.best.whPerKm / 1000 : null,
+      label: t('landscape.sweetCell', 'Happiest Conditions'),
+      description: t('landscape.brief.best', 'Lowest distance-weighted consumption among supported condition cells.'),
+      context: landscape.best ? `${tempLabel(landscape.best.tempBand)} · ${speedLabel(landscape.best.speedBand)} ${speedUnit}` : undefined,
+      display: { formatter: (raw) => ({ value: String(toEff(raw * 1000)), unit: effUnit }) } },
+    { metricId: 'efficiency', occurrenceId: 'worst',
+      rawValue: available && landscape.worst?.whPerKm != null ? landscape.worst.whPerKm / 1000 : null,
+      label: t('landscape.painCell', 'Harshest Conditions'),
+      description: t('landscape.brief.worst', 'Highest distance-weighted consumption among supported condition cells.'),
+      context: landscape.worst ? `${tempLabel(landscape.worst.tempBand)} · ${speedLabel(landscape.worst.speedBand)} ${speedUnit}` : undefined,
+      display: { formatter: (raw) => ({ value: String(toEff(raw * 1000)), unit: effUnit }) } },
+    { metricId: 'percent', occurrenceId: 'spread',
+      rawValue: available && landscape.best?.whPerKm != null && landscape.worst?.whPerKm != null && landscape.best.whPerKm > 0
+        ? Math.round(((landscape.worst.whPerKm - landscape.best.whPerKm) / landscape.best.whPerKm) * 100) : null,
+      label: t('landscape.spread', 'Condition Spread'),
+      description: t('landscape.spreadHint', 'harshest vs happiest'), display: { precision: 0 } },
+    { metricId: 'count', occurrenceId: 'mapped', rawValue: available ? landscape.analyzed : null,
+      label: t('landscape.analyzed', 'Drives Mapped'),
+      description: t('landscape.brief.mapped', 'Returned drives with speed, temperature, distance and energy evidence.') },
+  ];
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('landscape.title', 'Efficiency Landscape')} />;
   }
 
-  const isLoading = drivesQuery.isLoading;
-  const isError = drivesQuery.isError;
+  const isLoading = drivesState.status === 'initial';
+  const isError = drivesState.fatalError != null;
   const hasScale = landscape.minWhPerKm != null && landscape.maxWhPerKm != null;
 
   return (
@@ -111,90 +137,51 @@ export default function EfficiencyLandscapePage() {
         </div>
       }
     >
+      <StaleRefreshWarning state={drivesState} label={t('landscape.title', 'Efficiency Landscape')} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section
           aria-label={t('landscape.kpis', 'Landscape summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('landscape.sweetCell', 'Happiest Conditions')}
-                value={landscape.best != null ? `${toEff(landscape.best.whPerKm!)} ${effUnit}` : '—'}
-                subtitle={
-                  landscape.best != null
-                    ? `${tempLabel(landscape.best.tempBand)} · ${speedLabel(landscape.best.speedBand)} ${speedUnit}`
-                    : undefined
-                }
-                icon={<Trophy className="h-5 w-5" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('landscape.painCell', 'Harshest Conditions')}
-                value={landscape.worst != null ? `${toEff(landscape.worst.whPerKm!)} ${effUnit}` : '—'}
-                subtitle={
-                  landscape.worst != null
-                    ? `${tempLabel(landscape.worst.tempBand)} · ${speedLabel(landscape.worst.speedBand)} ${speedUnit}`
-                    : undefined
-                }
-                icon={<Snowflake className="h-5 w-5" />}
-                color="red"
-              />
-              <MetricCard
-                label={t('landscape.spread', 'Condition Spread')}
-                value={
-                  landscape.best != null && landscape.worst != null && landscape.best.whPerKm! > 0
-                    ? `${Math.round(((landscape.worst.whPerKm! - landscape.best.whPerKm!) / landscape.best.whPerKm!) * 100)}%`
-                    : '—'
-                }
-                subtitle={t('landscape.spreadHint', 'harshest vs happiest')}
-                icon={<Thermometer className="h-5 w-5" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('landscape.analyzed', 'Drives Mapped')}
-                value={landscape.analyzed}
-                icon={<Mountain className="h-5 w-5" />}
-                color="cyan"
-              />
-            </>
-          )}
+          <DrivingSummaryBrief metrics={briefMetrics}
+            title={t('landscape.kpis', 'Landscape summary metrics')}
+            description={t('landscape.brief.description', 'Observed distance-weighted consumption across speed and temperature cells; thin evidence remains visible in the field.')}
+            scope={t('driving.brief.window', '{{start}}–{{end}}; returned drive subset, not a server-wide aggregate', { start, end })}
+            provenance={t('landscape.brief.source', 'Returned drive history; distance-weighted speed × temperature cells.')}
+            loading={isLoading} error={drivesState.fatalError}
+            retained={drivesState.status === 'stale' || drivesState.refreshError != null}
+            onRetry={() => void drivesQuery.refetch()} />
         </section>
       </FadeIn>
 
       {/* 2 — The field */}
       <FadeIn delay={0.1}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
+        <LayoutCard
+          title={t('landscape.field', 'Consumption Field')}
+          actions={<>
             <Mountain className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('landscape.field', 'Consumption Field')}
             <HelpTooltip
               size="sm"
               i18nKey="help.efficiencyLandscape.body"
               defaultValue="Every drive lands in one speed × temperature cell; color encodes distance-weighted consumption from green (thriftiest) to red (thirstiest). Cells with thin evidence show their number but stay uncolored until they earn 10 km of driving."
               ariaLabel={t('help.efficiencyLandscape.iconLabel', 'More info about the field map')}
             />
-          </PanelTitle>
-          {isError ? (
-            <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
-          ) : isLoading ? (
-            <Skeleton height={280} />
-          ) : landscape.analyzed === 0 ? (
-            <EmptyState
+          </>}
+        >
+          <SourceContent
+            state={isError ? 'error' : isLoading ? 'loading' : landscape.analyzed === 0 ? 'empty' : 'ready'}
+            label={t('landscape.field', 'Consumption Field')}
+            error={drivesState.fatalError}
+            errorMessage={t('drivingSecondary.states.historyError', 'Could not load drive history.')}
+            errorRecovery={{ onRetry: () => void drivesQuery.refetch() }}
+            loadingContent={<Skeleton height={280} />}
+            emptyMessage={t('landscape.noData', 'No drives with speed, temperature, and energy data in this period.')}
+            emptyContent={<EmptyState
               icon={<Mountain className="h-8 w-8" />}
               message={t('landscape.noData', 'No drives with speed, temperature, and energy data in this period.')}
               actionTo={{ label: t('landscape.browseDrives', 'Browse drives'), to: '/drives' }}
-            />
-          ) : (
+            />}
+          >
             <div className="overflow-x-auto">
               <div
                 role="img"
@@ -231,18 +218,18 @@ export default function EfficiencyLandscapePage() {
                           >
                             {cell.whPerKm != null ? (
                               <>
-                                <span
-                                  className="font-mono text-sm font-semibold tabular-nums"
+                                <Text variant="bodySm" weight="semibold"
+                                  className="font-mono tabular-nums"
                                   style={{ color: trusted ? '#0b1220' : 'var(--text-secondary)' }}
                                 >
                                   {toEff(cell.whPerKm)}
-                                </span>
-                                <span
-                                  className="text-2xs tabular-nums"
+                                </Text>
+                                <Text variant="caption"
+                                  className="tabular-nums"
                                   style={{ color: trusted ? '#0b1220' : 'var(--text-muted)', opacity: 0.75 }}
                                 >
                                   ×{cell.drives}
-                                </span>
+                                </Text>
                               </>
                             ) : (
                               <Text variant="caption">—</Text>
@@ -271,8 +258,8 @@ export default function EfficiencyLandscapePage() {
                 </div>
               )}
             </div>
-          )}
-        </GlassPanel>
+          </SourceContent>
+        </LayoutCard>
       </FadeIn>
     </PageLayout>
   );

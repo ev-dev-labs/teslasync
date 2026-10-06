@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Boxes, Grid3X3, Network, RadioTower, Shuffle } from 'lucide-react';
+import { Grid3X3, Network, RadioTower } from 'lucide-react';
 
 import { useSignalHistory, useSignals } from '@/api/hooks/useTelemetry';
 import {
   Bar, BarChart, CartesianGrid, ChartContainer, ChartTooltip,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
@@ -103,9 +104,6 @@ export default function SignalMutualInformationPage() {
       })),
     [result, t],
   );
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalMutualInformation.title', 'Signal mutual information')} />;
-  }
   const historyAHasData = historyA.data !== undefined;
   const historyBHasData = historyB.data !== undefined;
   const isLoading = bothChosen && (
@@ -122,6 +120,31 @@ export default function SignalMutualInformationPage() {
     0,
     ...(result?.cells ?? []).map((cell) => Math.abs(cell.contribution)),
   );
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'aligned-samples', rawValue: bothChosen ? result?.alignedCount : null,
+      label: t('signalMutualInformation.kpis.samples', 'Aligned samples'),
+      display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
+      description: t('signalMutualInformation.kpis.cadence', '{{seconds}} s robust cadence', {
+        seconds: result == null ? '—' : fmtNumber(result.cadenceMs / 1_000),
+      }) },
+    { metricId: 'number', occurrenceId: 'mutual-information', rawValue: bothChosen ? result?.mutualInformation : null,
+      label: t('signalMutualInformation.kpis.mi', 'Mutual information'),
+      display: { formatter: (raw) => ({ value: fmtScientificNumber(raw, 3), unit: '' }) },
+      description: t('signalMutualInformation.kpis.bits', 'bits of shared state information') },
+    { metricId: 'percent', occurrenceId: 'normalized-mi', rawValue: bothChosen && result != null ? result.normalizedMutualInformation * 100 : null,
+      label: t('signalMutualInformation.kpis.normalized', 'Normalized MI'),
+      display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
+      description: t('signalMutualInformation.kpis.range', '0% independent · 100% determined') },
+    { metricId: 'status', occurrenceId: 'permutation-test', rawValue: !bothChosen || result == null ? null
+        : result.significant ? t('signalMutualInformation.kpis.detected', 'Detected') : t('signalMutualInformation.kpis.null', 'Null-like'),
+      label: t('signalMutualInformation.kpis.signal', 'Permutation test'),
+      description: t('signalMutualInformation.kpis.threshold', '95% null threshold {{value}}', {
+        value: result == null ? '—' : fmtScientificNumber(result.nullThreshold, 3),
+      }) },
+  ];
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('signalMutualInformation.title', 'Signal mutual information')} />;
+  }
   return (
     <PageLayout
       title={t('signalMutualInformation.title', 'Signal mutual information')}
@@ -177,68 +200,26 @@ export default function SignalMutualInformationPage() {
         </GlassPanel>
       </FadeIn>
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('signalMutualInformation.kpis.label', 'Mutual information metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError
-                error={error}
-                onRetry={() => {
-                  void signalsQuery.refetch();
-                  void historyA.refetch();
-                  void historyB.refetch();
-                }}
-              />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('signalMutualInformation.kpis.samples', 'Aligned samples')}
-                value={result != null ? fmtInt(result.alignedCount) : '—'}
-                subtitle={t('signalMutualInformation.kpis.cadence', '{{seconds}} s robust cadence', {
-                  seconds: result != null ? fmtNumber(result.cadenceMs / 1_000) : '—',
-                })}
-                icon={<Boxes className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('signalMutualInformation.kpis.mi', 'Mutual information')}
-                value={result != null ? fmtScientificNumber(result.mutualInformation, 3) : '—'}
-                subtitle={t('signalMutualInformation.kpis.bits', 'bits of shared state information')}
-                icon={<Grid3X3 className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalMutualInformation.kpis.normalized', 'Normalized MI')}
-                value={result != null
-                  ? fmtPercent(result.normalizedMutualInformation * 100)
-                  : '—'}
-                subtitle={t('signalMutualInformation.kpis.range', '0% independent · 100% determined')}
-                icon={<Network className="h-5 w-5" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('signalMutualInformation.kpis.signal', 'Permutation test')}
-                value={result == null
-                  ? '—'
-                  : result.significant
-                    ? t('signalMutualInformation.kpis.detected', 'Detected')
-                    : t('signalMutualInformation.kpis.null', 'Null-like')}
-                subtitle={t('signalMutualInformation.kpis.threshold', '95% null threshold {{value}}', {
-                  value: result != null ? fmtScientificNumber(result.nullThreshold, 3) : '—',
-                })}
-                icon={<Shuffle className="h-5 w-5" />}
-                color={result?.significant ? 'green' : 'amber'}
-              />
-            </>
-          )}
-        </section>
+        <TelemetrySummaryBrief title={t('signalMutualInformation.kpis.label', 'Mutual information metrics')}
+          metrics={metrics} testId="signal-mutual-information-summary" loading={isLoading}
+          unavailable={isError} unknown={!bothChosen || result == null}
+          sourceStatus={historyAState.status === 'partial' || historyBState.status === 'partial' ? 'partial'
+            : historyAState.status === 'unavailable' || historyBState.status === 'unavailable' ? 'unavailable' : undefined}
+          retained={result != null && (historyAState.isRefreshing || historyBState.isRefreshing
+            || historyAState.status === 'stale' || historyBState.status === 'stale'
+            || historyAState.refreshError != null || historyBState.refreshError != null)}
+          scope={t('telemetryBrief.pairWindow', '{{hours}}h requested · {{signalA}} / {{signalB}} · aligned overlap only', {
+            hours: HISTORY_HOURS, signalA: signalA || '—', signalB: signalB || '—',
+          })}
+          sourceBounds={[
+            ...(signalA ? [{ signal: signalA, from: historyA.data?.from, to: historyA.data?.to }] : []),
+            ...(signalB ? [{ signal: signalB, from: historyB.data?.from, to: historyB.data?.to }] : []),
+          ]}
+          provenance={t('telemetryBrief.pairProvenance', 'Two independently queried signal histories; aligned numeric samples only')}
+          description={t('telemetryBrief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+        {isError && <QueryError error={error} onRetry={() => {
+          void signalsQuery.refetch(); void historyA.refetch(); void historyB.refetch();
+        }} />}
       </FadeIn>
       <FadeIn delay={0.2}>
         {isError ? (

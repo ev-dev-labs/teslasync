@@ -34,7 +34,8 @@ export default function TeslaApiUsagePage() {
               {t('teslaUsage.cycleSection', 'Current cycle and prior periods')}
             </Heading>
             <GlassPanel className="p-4 sm:p-6">
-              <TeslaApiUsageCard apiUsage={data} now={Date.now()} loading={isLoading} error={state.fatalError} />
+              <TeslaApiUsageCard apiUsage={data} now={Date.now()} loading={isLoading}
+                error={state.fatalError ?? (state.hasData ? query.error : null)} />
             </GlassPanel>
           </section>
         </FadeIn>

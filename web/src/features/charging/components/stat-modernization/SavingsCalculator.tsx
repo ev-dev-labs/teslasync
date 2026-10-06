@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Calculator } from 'lucide-react';
 import { Input, Button, Text } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { StatGroup } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../cost-analysis/constants';
 import type { GasComparison } from '../cost-analysis/types';
@@ -80,7 +80,8 @@ export function SavingsCalculator({
             <Text as="h4" variant="label">{t('costAnalysis.calculator.comparison', 'Comparison')}</Text>
             {error ? <QueryError error={error} onRetry={onRetry} /> : null}
             {isLoading && !gasComparison && !error ? <Skeleton height={160} /> : gasComparison ? (
-              <StatGroup period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
+              <ChargingSummaryBrief title={t('costAnalysis.calculator.comparison', 'Comparison')}
+                period={period} preferences={preferences} periodInHeader periodContextInHeader periodHeaderId={periodHeaderId}
                 loading={isLoading} retained={Boolean(error || isLoading)}
                 metrics={[
                   { metricId: 'currency', rawValue: gasComparison.gasCost,

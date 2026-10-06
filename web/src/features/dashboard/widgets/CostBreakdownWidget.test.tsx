@@ -47,7 +47,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -101,6 +101,7 @@ const money = vi.hoisted(() => ({
 }));
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({
+    currencySymbol: '$',
     costPerKwh: 0.12,
     currencySymbol: '$',
     formatCurrency: money.formatCurrency,
@@ -232,6 +233,20 @@ function makeData(over: Partial<CostBreakdown> = {}): CostBreakdown {
 
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const STANDARD: WidgetSize = { cols: 2, rows: 3 };
+
+it('reviews actual cost quantities and the original tariff conversion without hiding monthly detail', () => {
+  mockCost.mockReturnValue(qr({ data: makeData(), isError: true, error: new Error('refresh failed') }));
+  renderWidget(STANDARD, { vehicleId: 42 });
+  const brief = screen.getByTestId('cost-breakdown-operational-brief');
+  expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getByText('$240.00')).toBeInTheDocument();
+  expect(within(drawer).getByText('$0.05')).toBeInTheDocument();
+  expect(within(drawer).getByText('$180.00')).toBeInTheDocument();
+  expect(within(drawer).getByText(/not independently measured savings/)).toBeInTheDocument();
+  expect(within(drawer).getByText(/Vehicle 42/)).toBeInTheDocument();
+});
 
 function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

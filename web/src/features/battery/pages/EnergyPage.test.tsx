@@ -516,16 +516,20 @@ describe('EnergyPage', () => {
 
     // Charger buckets resolve to all three human-readable family labels once the
     // sessions query settles (this also anchors the section assertions below).
-    expect(await screen.findByText('DC fast')).toBeInTheDocument()
-    expect(screen.getByText('Home/AC')).toBeInTheDocument()
+    const chargerHeading = await screen.findByRole('heading', { name: 'Charger type breakdown' })
+    const chargerCard = chargerHeading.closest('[data-card]')
+    if (!(chargerCard instanceof HTMLElement)) throw new Error('Missing charger breakdown card')
+    expect(await within(chargerCard).findByText('DC fast', { selector: 'span' })).toBeInTheDocument()
+    expect(within(chargerCard).getByText('Home/AC', { selector: 'span' })).toBeInTheDocument()
 
     // All four chart panels + hero + lifetime are present — nothing stubbed out.
-    expect(screen.getByText('Energy & cost daily')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency trend')).toBeInTheDocument()
-    expect(screen.getByText('Charging by time of day')).toBeInTheDocument()
-    expect(screen.getByText('Charger type breakdown')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency & cost overview')).toBeInTheDocument()
-    expect(screen.getByText('Lifetime metrics')).toBeInTheDocument()
+    for (const title of [
+      'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
+      'Charger type breakdown', 'Efficiency & cost overview', 'Lifetime metrics',
+    ]) {
+      expect(screen.getByRole('heading', { name: title, exact: true }))
+        .toHaveAttribute('data-card-title', 'true')
+    }
 
     // Landmark regions expose their accessible names for screen-reader nav.
     expect(screen.getByRole('region', { name: 'Energy overview' })).toBeInTheDocument()

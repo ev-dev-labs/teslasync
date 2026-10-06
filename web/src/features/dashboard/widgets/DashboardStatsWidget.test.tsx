@@ -318,6 +318,23 @@ describe('DashboardStatsWidget — primary freshness does not follow historical 
 // ── Populated body (full size, cols = 2) ─────────────────────────────────────
 
 describe('DashboardStatsWidget — populated (full size)', () => {
+  it('reviews retained fleet counts and distinct current-state scope without gating transition history', () => {
+    useDashboardStatsMock.mockReturnValue({
+      ...makeQ(makeStats(), { isError: true }), error: new Error('refresh failed'),
+    });
+    timelineMock.mockReturnValue(makeQ({ data: [makeTransition()] }));
+    renderWidget({ cols: 3, rows: 4 }, 42);
+    const brief = screen.getByTestId('dashboard-stats-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(within(brief).getByText('Fleet counts · FSM vehicle 42')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('1,234')).toBeInTheDocument();
+    expect(within(drawer).getByText('online')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/separate 168-hour history query/).length).toBeGreaterThan(0);
+    expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+    expect(screen.getByText('5m ago')).toBeInTheDocument();
+  });
   it('renders the stat grid with fmtInt-formatted fleet counts', () => {
     useDashboardStatsMock.mockReturnValue(
       makeQ(makeStats({ totalVehicles: 3, totalTrips: 1234, totalChargingSessions: 42 })),

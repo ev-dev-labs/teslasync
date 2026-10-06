@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input, Button, Caption } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
+import { QueryError } from '@/components/feedback';
 import { useImportClips } from '../../hooks/useClipCatalog';
 import { useDashcamSettings } from '../../hooks/useDashcamSettings';
 import { defaultDashcamSettings } from '../../lib/types';
@@ -28,12 +29,17 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
 
   const handleImport = async () => {
     if (videoFiles.length === 0) return;
-    await importClips.mutateAsync({
-      files: videoFiles,
-      sidecarFile,
-      vehicleId,
-      settings: settingsQuery.data ?? defaultDashcamSettings(),
-    });
+    try {
+      await importClips.mutateAsync({
+        files: videoFiles,
+        sidecarFile,
+        vehicleId,
+        settings: settingsQuery.data ?? defaultDashcamSettings(),
+      });
+    } catch {
+      // Keep the native mutation error and selected files available for retry.
+      return;
+    }
     setVideoFiles([]);
     setSidecarFile(null);
     if (videoInputRef.current) videoInputRef.current.value = '';
@@ -77,6 +83,12 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
           </Caption>
         )}
       </div>
+      {importClips.error && (
+        <QueryError
+          error={importClips.error}
+          resourceName={t('dashcam.import.title', 'Import clips from disk')}
+        />
+      )}
     </LayoutCard>
   );
 }

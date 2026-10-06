@@ -33,6 +33,7 @@ export default function PrivacyBenchmarksPage() {
   const optedIn = statusQuery.data?.opted_in ?? false;
   const statusState = deriveDataState(statusQuery);
   const releasesQuery = useBenchmarkReleases(vehicleId, 12, 0, optedIn);
+  const releasesState = deriveDataState(releasesQuery, { provenance: 'historical' });
   const consent = useOptInBenchmarks();
   const createRelease = useCreateBenchmarkRelease();
   const revoke = useRevokeBenchmarks();
@@ -107,7 +108,12 @@ export default function PrivacyBenchmarksPage() {
             </FadeIn>
           </Grid>
           <FadeIn delay={0.12}>
-            <MetricComparisonGrid release={latest} loading={releasesQuery.isLoading} />
+            <MetricComparisonGrid
+              release={latest}
+              loading={releasesQuery.isLoading && optedIn}
+              source={releasesState}
+              optedIn={statusQuery.data?.opted_in}
+            />
           </FadeIn>
           <FadeIn delay={0.16}>
             <BenchmarkPercentileChart release={latest} loading={releasesQuery.isLoading} />

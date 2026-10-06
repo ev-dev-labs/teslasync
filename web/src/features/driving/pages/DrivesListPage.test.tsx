@@ -199,7 +199,7 @@ const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 const mockCrossTabRefresh = useCrossTabRefresh as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -324,22 +324,20 @@ function LocationProbe() {
 
 function renderPage(initialEntries: string[] = [DEFAULT_RANGE]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <MemoryRouter initialEntries={initialEntries}>
+  function Providers({ children }: { children: ReactNode }) {
+    return <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
-        <ToastProvider>
-          <DrivesListPage />
-          <LocationProbe />
-        </ToastProvider>
+        <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
-  );
+    </MemoryRouter>;
+  }
+  return render(<><DrivesListPage /><LocationProbe /></>, { wrapper: Providers });
 }
 
 const kpiRegion = () => screen.getByTestId('drives-overview-kpis');
 const listRegion = () => screen.getByRole('region', { name: 'Drive list' });
 const analysisRegion = () => screen.getByRole('region', { name: 'Trends and highlights' });
-const filtersBar = () => screen.getByRole('tablist', { name: 'Filter drives by collection · Filter drives by FSD evidence' });
+const filtersBar = () => screen.getByRole('group', { name: 'Filter drives by collection · Filter drives by FSD evidence' });
 
 /** Value <p> that immediately follows a MetricCard's label span. */
 function cardValue(region: HTMLElement, label: string): string {
@@ -388,6 +386,14 @@ describe('DrivesListPage — no vehicle selected', () => {
 });
 
 describe('DrivesListPage — loading', () => {
+  it('keeps a null history response distinct from measured zero operating facts', () => {
+    mockDrives.mockReturnValue(makeQuery({ data: null }));
+    renderPage();
+    expect(screen.getByText('Drive history is unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('drives-operational-brief')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Activity, efficiency, and exceptions in context' })).toBeInTheDocument();
+  });
+
   it('shows skeletons and never flashes the "no drives" empty state', () => {
     mockDrives.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     renderPage();
@@ -397,7 +403,8 @@ describe('DrivesListPage — loading', () => {
     expect(screen.getByText('Highlights')).toBeInTheDocument();
     // The overview must NOT render the populated card nor the empty message
     // while the query is still in flight (regression guard).
-    expect(screen.queryByRole('heading', { name: 'Overview', level: 3 })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Overview', level: 3 })).toBeInTheDocument();
+    expect(screen.queryByTestId('drives-overview-kpis')).not.toBeInTheDocument();
     expect(screen.queryByText('No drives in this range')).toBeNull();
     // No drive rows have rendered yet.
     expect(screen.queryByText('Beach')).toBeNull();
@@ -411,10 +418,13 @@ describe('DrivesListPage — primary error', () => {
 
     // ErrorDisplay renders production-safe structured copy rather than the
     // raw error.message — status-less errors fall into the network branch.
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    // PageContainer replaces its children with the error box.
-    expect(screen.queryByRole('region', { name: 'Drive list' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Overview', level: 3 })).toBeNull();
+    expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Drive history could not be loaded')).toBeInTheDocument();
+    // The source fails, not the complete page or independently recovered FSD.
+    expect(screen.getByRole('region', { name: 'Drive list' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Trends and highlights' })).toBeInTheDocument();
+    expect(screen.queryByText('Beach')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Overview', level: 3 })).toBeInTheDocument();
   });
 
   it('keeps the retained drive list when a BACKGROUND refetch fails', () => {
@@ -438,9 +448,52 @@ describe('DrivesListPage — primary error', () => {
     // …and a non-blocking notice explains why the numbers may lag.
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
+
+  it('retains both sources and selected IDs through failed background refreshes', async () => {
+    const historyQuery = makeQuery({ data: DRIVES });
+    const fsdQuery = makeQuery({
+      data: { drive_analytics: { contributing_drives: [
+        { drive_id: 1, fsd_distance_m: 20_000, fsd_share_pct: 50, confidence: 'high', reset_affected: false },
+      ] } },
+    });
+    mockDrives.mockReturnValue(historyQuery);
+    mockFsdInsights.mockReturnValue(fsdQuery);
+    const { rerender } = renderPage();
+    const selections = within(listRegion()).getAllByRole('checkbox');
+    fireEvent.click(selections[0]);
+    expect(await screen.findByText('1 selected')).toBeInTheDocument();
+    mockDrives.mockReturnValue({ ...historyQuery, isError: true, error: new Error('drive refresh') });
+    mockFsdInsights.mockReturnValue({ ...fsdQuery, isError: true, error: new Error('FSD refresh') });
+    // Reuse the mounted tree so selection is genuinely retained.
+    rerender(<><DrivesListPage /><LocationProbe /></>);
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(within(listRegion()).getAllByRole('checkbox')[0]).toBeChecked();
+    expect(within(listRegion()).getByText('Home → Beach')).toBeInTheDocument();
+    expect(within(listRegion()).getByText('FSD 50.00%')).toBeInTheDocument();
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps the independent FSD recovery notice visible when history also fails', () => {
+    mockDrives.mockReturnValue(makeQuery({ isError: true, error: new Error('history unavailable') }));
+    mockFsdInsights.mockReturnValue(makeQuery({ isError: true, error: new Error('FSD unavailable') }));
+    renderPage();
+    expect(screen.getByText('FSD evidence could not be loaded')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Drive list' })).toBeInTheDocument();
+    expect(screen.queryByText('No drives recorded yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No drives in this analysis window')).not.toBeInTheDocument();
+  });
 });
 
 describe('DrivesListPage — populated (km)', () => {
+  it.each([null, 0])('keeps an absent top speed distinct from a measured %s reading', (maxSpeedMps) => {
+    mockDrives.mockReturnValue(makeQuery({ data: DRIVES.map((drive) => ({ ...drive, maxSpeedMps })) }));
+    renderPage();
+    const row = within(analysisRegion()).getByText('Top speed').closest('div');
+    expect(row).not.toBeNull();
+    if (row) expect(within(row).getByText(maxSpeedMps == null ? '—' : '0 km/h')).toBeInTheDocument();
+  });
+
   it('derives honest KPI tiles from the drive list', () => {
     renderPage();
     const kpi = kpiRegion();
@@ -929,7 +982,7 @@ describe('DrivesListPage — FSD evidence', () => {
     );
     expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
     const unknown = within(filtersBar()).getByRole('button', { name: /Unknown/ });
-    expect(unknown).toHaveTextContent('(0)');
+    expect(unknown).not.toHaveTextContent('(0)');
     expect(unknown).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));

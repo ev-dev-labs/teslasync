@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Badge, Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
@@ -49,17 +50,16 @@ export function ComfortConsistencyRowDisposition({
           )}
         </Text>
         <ComfortConsistencySectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, md: 3, xl: 5 }} gap={3}>
-            {outcomes.map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <MetricLabel>{label}</MetricLabel>
-                <MetricValue className="mt-1">{fmtInt(value)}</MetricValue>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="comfort-consistency-disposition-summary"
+            title={t('comfortConsistency.rows.title', 'Returned-row disposition')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('comfortConsistency.rows.subtitle', 'Ordered, mutually exclusive outcomes explain why each endpoint row is analyzed or withheld.') }}
+            metrics={outcomes.map(([label, rawValue], index) => ({
+              metricId: 'count', occurrenceId: `outcome-${index}`, label, rawValue,
+              display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
+            }))}
+          />
           <Text as="p" variant="caption" className="mt-3">
             {t(
               'comfortConsistency.rows.identity',

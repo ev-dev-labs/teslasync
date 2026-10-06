@@ -7,6 +7,7 @@ import type { GuardConfig, GuardEvent } from '@/api/hooks/useGuard';
 import type { DataStateSource } from '@/api/dataState';
 import type { useVehicleState } from '@/api/hooks/useVehicles';
 import type { Geofence } from '@/types/location';
+import { ApiError } from '@/lib/resilience';
 
 type HookStateResponse = NonNullable<ReturnType<typeof useVehicleState>['data']>;
 // Mock sparse/malformed snapshots without changing the read-only production DTO.
@@ -23,6 +24,11 @@ const H = vi.hoisted(() => ({
   setConfig: { mutate: vi.fn(), isPending: false, error: null as Error | null },
   panic: { mutate: vi.fn(), isPending: false, error: null as Error | null },
   ack: { mutate: vi.fn(), isPending: false, error: null as Error | null },
+}));
+
+vi.mock('@/api/client', async importOriginal => ({
+  ...await importOriginal<typeof import('@/api/client')>(),
+  request: vi.fn(() => Promise.reject(new Error('Unexpected request in guard presentation test'))),
 }));
 
 vi.mock('react-i18next', async importOriginal => {
@@ -120,12 +126,12 @@ function metric(label: string) {
   const overview = screen.getByRole('region', { name: 'Guard status overview' });
   const query = within(overview);
   // Tooltip descriptions may legitimately repeat a metric's label text.
-  const selector = '[data-stat-label]';
+  const selector = '[data-operational-metric] > div:first-child > :first-child';
   expect(query.getAllByText(label, { selector })).toHaveLength(1);
-  const tile = query.getByText(label, { selector }).closest('[data-stat]');
+  const tile = query.getByText(label, { selector }).closest('[data-operational-metric]');
   if (!(tile instanceof HTMLElement)) throw new Error(`Missing metric tile for ${label}`);
   expect(overview).toContainElement(tile);
-  expect(tile.querySelectorAll('[data-stat-label]')).toHaveLength(1);
+  expect(tile.querySelectorAll(selector)).toHaveLength(1);
   return tile;
 }
 function section(name: string) {
@@ -195,11 +201,11 @@ describe('guard live modernization preservation', () => {
     renderPage();
     for (const name of ['map', 'arming', 'panic', 'settings', 'status', 'events'])
       expect(document.querySelector(`[data-guard-section="${name}"]`)).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-stat]')).toHaveLength(6);
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(document.querySelectorAll('[data-card-grid]')).toHaveLength(1);
     expect(screen.getByTestId('guard-map')).toBeInTheDocument();
     expect(metric('Lock state')).toHaveTextContent('Locked');
-    expect(metric('Total events')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Total events')).toHaveAttribute('data-value-state', 'missing');
     expect(H.setConfig.mutate).not.toHaveBeenCalled();
     expect(H.panic.mutate).not.toHaveBeenCalled();
     expect(H.ack.mutate).not.toHaveBeenCalled();
@@ -209,21 +215,21 @@ describe('guard live modernization preservation', () => {
     H.config = query(undefined);
     H.events = query(undefined);
     const view = renderPage();
-    expect(metric('Guard state')).toHaveAttribute('data-state', 'missing');
-    expect(metric('Unacknowledged')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Unacknowledged')).toHaveAttribute('data-value-state', 'missing');
     expect(section('status').queryByText('No active alerts')).not.toBeInTheDocument();
     H.config = query(config({ enabled: false }));
     H.events = query([]);
     view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
     expect(metric('Guard state')).toHaveTextContent('Disarmed');
     expect(metric('Unacknowledged')).toHaveTextContent('0');
-    expect(metric('Total events')).toHaveAttribute('data-state', 'value');
+    expect(metric('Total events')).toHaveAttribute('data-value-state', 'value');
   });
 
   it('accepts null unsaved config without inventing a saved disabled policy', () => {
     H.config = query(null);
     renderPage();
-    expect(metric('Guard state')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
     expect(section('settings').getByText('No saved guard policy yet')).toBeInTheDocument();
     fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
     expect(H.setConfig.mutate).toHaveBeenCalledWith({
@@ -238,23 +244,23 @@ describe('guard live modernization preservation', () => {
     expect(metric('Lock state')).toHaveTextContent('Unlocked');
     H.state = query(state({ freshness: 'stale' }));
     view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
-    expect(metric('Sentry mode')).toHaveAttribute('data-state', 'missing');
-    expect(metric('Lock state')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
   });
 
   it('does not coerce a verified but absent boolean into false', () => {
     H.state = query(state({ state: { vehicle_id: 42 } }));
     renderPage();
-    expect(metric('Sentry mode')).toHaveAttribute('data-state', 'missing');
-    expect(metric('Lock state')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
   });
 
   it('does not trust unverified fields despite a fresh stream and numeric coordinates', () => {
     H.state = query(state({ verifiedFields: [] }));
     renderPage();
-    expect(metric('Sentry mode')).toHaveAttribute('data-state', 'missing');
-    expect(metric('Lock state')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
   });
 
@@ -523,5 +529,100 @@ describe('guard live modernization preservation', () => {
     expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
       vehicleId: 42, enabled: true, home_geofence_id: null, sensitivity: 'high', auto_panic: true,
     });
+  });
+
+  it('retains all edited settings through permission denial and source recovery without replaying a save', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <MemoryRouter initialEntries={['/guard-mode']}><QueryClientProvider client={client}>
+      <GuardModePage />
+    </QueryClientProvider></MemoryRouter>;
+    const view = render(ui());
+    H.geofences = query([geofence, { ...geofence, id: '9', name: 'Office' }]);
+    view.rerender(ui());
+    fireEvent.change(section('settings').getByRole('combobox', { name: 'Home geofence' }), {
+      target: { value: '9' },
+    });
+    fireEvent.change(section('settings').getByRole('combobox', { name: 'Sensitivity' }), {
+      target: { value: 'low' },
+    });
+    fireEvent.click(section('settings').getByRole('switch', { name: 'Auto-panic on trigger' }));
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    const payload = {
+      vehicleId: 42, enabled: true, home_geofence_id: 9, sensitivity: 'low', auto_panic: false,
+    };
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+    expect(H.setConfig.mutate).toHaveBeenCalledWith(payload);
+
+    H.setConfig.error = new ApiError('Policy denied', 403, 'PERMISSION_DENIED');
+    H.config = query(config(), { isError: true, error: new Error('Policy refresh failed') });
+    view.rerender(ui());
+    expect(section('settings').getByText('Permission denied')).toBeInTheDocument();
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('9');
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).toHaveValue('low');
+    expect(section('settings').getByRole('switch', { name: 'Auto-panic on trigger' }))
+      .toHaveAttribute('aria-checked', 'false');
+    expect(section('settings').getByText(/Policy may have been saved even if arming failed/))
+      .toBeInTheDocument();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Refresh' }));
+    expect(H.config.refetch).toHaveBeenCalledOnce();
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+
+    H.config = query(config({ sensitivity: 'medium', home_geofence_id: 5, auto_panic: true }));
+    H.setConfig.error = null;
+    view.rerender(ui());
+    expect(section('settings').queryByText('Permission denied')).not.toBeInTheDocument();
+    expect(section('settings').getByRole('combobox', { name: 'Home geofence' })).toHaveValue('9');
+    expect(section('settings').getByRole('combobox', { name: 'Sensitivity' })).toHaveValue('low');
+    expect(section('settings').getByRole('switch', { name: 'Auto-panic on trigger' }))
+      .toHaveAttribute('aria-checked', 'false');
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(1);
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledTimes(2);
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith(payload);
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it('requires a fresh confirmation after panic permission failure and keeps pending recovery non-replaying', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <MemoryRouter initialEntries={['/guard-mode']}><QueryClientProvider client={client}>
+      <GuardModePage />
+    </QueryClientProvider></MemoryRouter>;
+    const view = render(ui());
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    expect(H.panic.mutate).toHaveBeenCalledWith(42);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    H.panic.isPending = true;
+    view.rerender(ui());
+    expect(section('panic').getByRole('button', { name: /Sending/ })).toBeDisabled();
+    fireEvent.click(section('panic').getByRole('button', { name: /Sending/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+
+    H.panic.isPending = false;
+    H.panic.error = new ApiError('Panic denied', 403, 'PERMISSION_DENIED');
+    view.rerender(ui());
+    expect(section('panic').getByText('Permission denied')).toBeInTheDocument();
+    expect(section('panic').queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(section('panic').getByRole('button', { name: 'Activate panic' })).toBeEnabled();
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+
+    H.panic.error = null;
+    view.rerender(ui());
+    expect(section('panic').queryByText('Permission denied')).not.toBeInTheDocument();
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    fireEvent.click(section('panic').getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(2);
+    expect(H.panic.mutate).toHaveBeenLastCalledWith(42);
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
   });
 });

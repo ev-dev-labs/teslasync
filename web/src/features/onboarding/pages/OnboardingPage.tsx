@@ -39,7 +39,7 @@ import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
  *   2. Waiting for vehicles to sync from the Fleet API.
  *   3. Waiting for the first telemetry batch to arrive.
  *
- * Laid out as a full-width bento: a setup-status KPI band, a hero row
+ * Laid out as a full-width bento: a compact setup-status OperationalBrief, a hero row
  * pairing the setup checklist with a resources panel, a preview of what
  * unlocks once setup completes, and a footer action band. The page is
  * intentionally self-contained — it does NOT pull in the vehicle picker
@@ -185,7 +185,7 @@ export default function OnboardingPage() {
         className="w-full min-w-0 pb-8 sm:pb-10"
       >
         {onboardingState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
-        {/* 1 — Setup-status KPI band (full-width responsive grid) */}
+        {/* 1 — Existing setup-status summary; the checklist remains interactive below. */}
         <FadeIn>
           <OnboardingSetupStatusBand
             teslaConnected={teslaConnected}
@@ -194,6 +194,8 @@ export default function OnboardingPage() {
             setupComplete={setupComplete}
             isLoading={isLoading}
             hasData={Boolean(data)}
+            retained={onboardingState.status === 'stale'}
+            lastTelemetryAt={data?.last_telemetry_at ?? null}
             error={onboardingState.fatalError}
             onRetry={() => void refetch()}
           />

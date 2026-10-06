@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { DollarSign } from 'lucide-react';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { QueryError, EmptyState } from '@/components/feedback';
 import { useSettings } from '@/hooks/useSettings';
 import type { StatPeriod } from '@/lib/metric-reference';
@@ -62,7 +63,7 @@ export function CostSummaryCards({
   ];
   const hasData = coreStats != null;
   return (
-    <StatStrip metrics={hasData || (isLoading && !error) ? metrics : []} period={period}
+    <ChargingSummaryBrief metrics={metrics} period={period}
       title={t('costAnalysis.kpis', 'Cost summary metrics')} preferences={preferences}
       loading={isLoading} retained={hasData && Boolean(error || isLoading)}
       footer={error && hasData ? <QueryError error={error} onRetry={onRetry} /> : undefined}

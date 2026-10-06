@@ -213,6 +213,24 @@ beforeEach(() => {
 })
 
 describe('TimelinePage', () => {
+  it('reviews original dwell rounding and source bounds in the real evidence drawer', async () => {
+    renderPage()
+    await screen.findByText('10', {}, { timeout: 8000 })
+    const brief = screen.getByTestId('timeline-summary')
+    expect(brief).toHaveAttribute('data-operational-brief')
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4)
+    expect(within(brief).getByText('2h')).toBeInTheDocument()
+    expect(within(brief).getByText('1h')).toBeInTheDocument()
+    expect(within(brief).getByText('25m')).toBeInTheDocument()
+    const calls = mockedRequest.mock.calls.length
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog')
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument()
+    expect(within(drawer).getByText('Time in the driving state, rounded to whole minutes')).toBeInTheDocument()
+    expect(within(drawer).getByText(/continuous observation coverage is unknown/)).toBeInTheDocument()
+    expect(mockedRequest.mock.calls.length).toBe(calls)
+  })
+
   it('filters loaded transitions without recomputing dwell from the remaining rows', async () => {
     renderPage()
     await screen.findByText('10', {}, { timeout: 8000 })
@@ -338,7 +356,8 @@ describe('TimelinePage', () => {
     expect(screen.getByRole('status', { name: 'Loading State distribution' })).toBeInTheDocument()
     expect(screen.getByRole('status', { name: 'Loading Time by state' })).toBeInTheDocument()
     const summary = screen.getByRole('region', { name: 'Summary metrics' })
-    expect(summary.querySelector('[data-stat-strip]')).toHaveAttribute('aria-busy', 'true')
+    expect(summary).toHaveAttribute('aria-busy', 'true')
+    expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(0)
     expect(within(summary).queryByText('10')).toBeNull()
     expect(within(summary).queryByText('2h')).toBeNull()
     expect(screen.getAllByRole('heading', { name: 'Daily breakdown' }).length).toBeGreaterThan(0)

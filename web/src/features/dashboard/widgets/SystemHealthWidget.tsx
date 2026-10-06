@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { Server } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import { useSystemHealth, useDBStats, useConnectionPool } from '@/api/hooks/useAdmin';
 
-import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
+import { combineDataStates, deriveDataState, knownNumber, type DataState } from '@/api/dataState';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { sourcePresentation } from '../components/continuation-dashboard-3/sourcePresentation';
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -115,7 +117,9 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
   const memory = knownNumber(runtime && 'memoryMB' in runtime ? runtime.memoryMB : null);
   const sourceStates = [health, dbStats, pool].map((query) =>
     deriveDataState({ ...query, data: query.data ?? (query.isLoading || query.isError || query.error ? undefined : null) }));
-  const state = { ...sourceStates[0]!, ...combineDataStates(sourceStates) };
+  const state: DataState<unknown> = { ...sourceStates[0]!, ...combineDataStates(sourceStates) };
+  state.hasData = health.data != null || dbStats.data != null || pool.data != null;
+  state.data = state.hasData ? { health: health.data, dbStats: dbStats.data, pool: pool.data } : undefined;
   if (health.data == null && dbStats.data == null && pool.data == null) {
     const fatal = sourceStates.find((source) => source.fatalError)?.fatalError;
     if (fatal) { state.status = 'initialFailure'; state.fatalError = fatal; }
@@ -131,6 +135,30 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
   const isLoading = health.isLoading;
   const hasError = state.fatalError?.message;
   const hasData = health.data != null;
+  const hasDatabaseSize = dbSize !== '—';
+  const databaseSources = [sourceStates[0]!, sourceStates[1]!];
+  const databaseCombined = combineDataStates(databaseSources);
+  const databaseFailure = databaseSources.find((source) => source.fatalError)?.fatalError ?? null;
+  const databaseState: DataState<unknown> = {
+    ...sourceStates[1]!,
+    ...databaseCombined,
+    data: hasDatabaseSize ? dbSize : undefined,
+    hasData: hasDatabaseSize,
+    fatalError: hasDatabaseSize ? null : databaseFailure,
+    refreshError: hasDatabaseSize ? databaseCombined.refreshError ?? databaseFailure : null,
+    status: !hasDatabaseSize && databaseFailure ? 'initialFailure'
+      : !hasDatabaseSize && databaseSources.some((source) => source.status === 'initial') ? 'initial'
+        : databaseCombined.status,
+  };
+  const databaseStats = <WidgetStatGrid cols={2} stats={[
+    { label: t('widget.systemHealth.dbSize', 'DB size'), value: dbSize },
+  ]} />;
+  const poolStats = <WidgetStatGrid cols={2} stats={[
+    { label: t('widget.systemHealth.activeConns', 'Active conns'),
+      value: activeConns == null ? '—' : maxConns != null && maxConns > 0 ? `${fmtInt(activeConns)}/${fmtInt(maxConns)}` : fmtInt(activeConns) },
+    { label: t('widget.systemHealth.memory', 'Memory'), value: memory == null ? '—' : `${fmtInt(memory)} MB` },
+    { label: t('widget.systemHealth.goroutines', 'Goroutines'), value: goroutines == null ? '—' : fmtInt(goroutines) },
+  ]} />;
 
   return (
     <WidgetShell
@@ -157,19 +185,48 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
           /* ── Standard layout (2×4) ── */
           <div className="flex flex-col gap-3 h-full">
             {/* Service status grid */}
-            <WidgetStatusGrid cells={cells} cols={size.cols >= 3 ? 4 : 2} />
+            <SourceContent
+              state={sourcePresentation(sourceStates[0]!, hasData)}
+              label={t('widget.systemHealth.services', 'Services')}
+              emptyMessage={t('widget.systemHealth.noData', 'No system health data')}
+              errorMessage={t('widget.systemHealth.healthError', 'Unable to load service health')}
+              error={sourceStates[0]!.fatalError}
+              errorRecovery={{ onRetry: sourceStates[0]!.retry ?? undefined }}
+              emptyContent={<>
+                <WidgetStatusGrid cells={cells} cols={size.cols >= 3 ? 4 : 2} />
+                <EmptyState /* no-action: unknown services retain shell refresh and independent source retry */
+                  message={t('widget.systemHealth.noData', 'No system health data')} className="py-4" />
+              </>}
+            >
+              <WidgetStatusGrid cells={cells} cols={size.cols >= 3 ? 4 : 2} />
+            </SourceContent>
 
             {/* Stats grid */}
-            <WidgetStatGrid cols={2} stats={[
-              { label: t('widget.systemHealth.dbSize', 'DB size'), value: dbSize },
-              { label: t('widget.systemHealth.activeConns', 'Active conns'),
-                value: activeConns == null ? '—' : maxConns != null && maxConns > 0 ? `${fmtInt(activeConns)}/${fmtInt(maxConns)}` : fmtInt(activeConns) },
-              { label: t('widget.systemHealth.memory', 'Memory'), value: memory == null ? '—' : `${fmtInt(memory)} MB` },
-              { label: t('widget.systemHealth.goroutines', 'Goroutines'), value: goroutines == null ? '—' : fmtInt(goroutines) },
-            ]} />
+            <SourceContent
+              state={sourcePresentation(databaseState, databaseState.hasData)}
+              label={t('widget.systemHealth.dbSize', 'DB size')}
+              emptyMessage={t('widget.systemHealth.noDatabaseData', 'No database size data')}
+              errorMessage={t('widget.systemHealth.databaseError', 'Unable to load database size')}
+              error={databaseState.fatalError}
+              errorRecovery={{ onRetry: () => { void health.refetch(); void dbStats.refetch(); } }}
+              emptyContent={databaseStats}
+            >
+            {databaseStats}
+            </SourceContent>
+            <SourceContent
+              state={sourcePresentation(sourceStates[2]!, pool.data != null)}
+              label={t('widget.systemHealth.activeConns', 'Active conns')}
+              emptyMessage={t('widget.systemHealth.noPoolData', 'No connection pool data')}
+              errorMessage={t('widget.systemHealth.poolError', 'Unable to load connection pool data')}
+              error={sourceStates[2]!.fatalError}
+              errorRecovery={{ onRetry: sourceStates[2]!.retry ?? undefined }}
+              emptyContent={poolStats}
+            >
+            {poolStats}
+            </SourceContent>
           </div>
       )}
-      {!hasData && (
+      {isCompact && !hasData && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Server className="h-5 w-5" />}
           message={t('widget.systemHealth.noData', 'No system health data')}

@@ -437,7 +437,7 @@ describe('TeslaChargingSessionsPage', () => {
     renderPage()
 
     await waitFor(() => expect(
-      screen.getByRole('figure', { name: 'Monthly Tesla charging cost bar chart' }),
+      screen.getByRole('figure', { name: 'Monthly charging cost' }),
     ).toHaveAttribute('aria-busy', 'true'))
     expect(screen.getByTestId('table-skeleton')).toBeInTheDocument()
 

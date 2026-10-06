@@ -7,18 +7,28 @@ import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import type { SoftwareUpdateEvidence } from '../lib/types';
+import { VaultSummaryBrief } from './operationalbrief-all/VaultSummaryBrief';
+import type { VaultEvidenceSource } from '../hooks/useVaultEvidence';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 
 export interface SoftwareUpdateSummaryPanelProps {
   softwareUpdates: SoftwareUpdateEvidence | null;
+  sources?: readonly VaultEvidenceSource[];
 }
 
-export function SoftwareUpdateSummaryPanel({ softwareUpdates }: SoftwareUpdateSummaryPanelProps) {
+export function SoftwareUpdateSummaryPanel({ softwareUpdates, sources }: SoftwareUpdateSummaryPanelProps) {
   const { t } = useTranslation();
+  const description = t('resaleVault.brief.software.description', 'Installed updates observed in the returned history, not a complete lifetime count.');
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'updates', label: t('resaleVault.software.count', 'Updates observed'), rawValue: softwareUpdates?.update_count, description, display: { notation: 'source' } },
+  ];
 
   return (
     <LayoutCard title={t('resaleVault.software.title', 'Software updates')}
       actions={softwareUpdates?.latest_version ? <Badge variant="info">{softwareUpdates.latest_version}</Badge> : undefined}>
-
+      <VaultSummaryBrief id="software" title={t('resaleVault.brief.software.title', 'Observed software history')}
+        description={description} metrics={metrics} hasEvidence={softwareUpdates != null} sources={sources}
+        scope={t('resaleVault.brief.boundsUnknown', 'Complete source coverage and observation bounds are not established')} />
       {!softwareUpdates ? (
         // no-action: mirrors this vehicle's software-update history as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
         <EmptyState message={t('resaleVault.software.empty', 'No software update evidence in this report.')} />
@@ -26,7 +36,6 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates }: SoftwareUpdateSu
         <>
           <KVList
             items={[
-              { label: t('resaleVault.software.count', 'Updates observed'), value: String(softwareUpdates.update_count) },
               { label: t('resaleVault.software.latest', 'Latest installed version'), value: softwareUpdates.latest_version ?? '—' },
             ]}
           />

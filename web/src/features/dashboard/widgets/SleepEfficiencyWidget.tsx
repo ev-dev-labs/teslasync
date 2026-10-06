@@ -6,14 +6,15 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 
 import { WidgetGaugeHero } from './shared';
-import type { GaugeHeroConfig, GaugeHeroStat } from './shared';
+import type { GaugeHeroConfig } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber, sumKnown } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { STATUS_COLORS } from '@/lib/colors';
 
 function efficiencyColor(pct: number): string {
@@ -23,7 +24,7 @@ function efficiencyColor(pct: number): string {
 }
 
 export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const candidate = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
@@ -75,7 +76,6 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   // Derive avg drain %/day from the sentry-off drain rate (%/hr)
   const drainRate = knownNumber(data?.sentry_off_drain_rate);
-  const avgDrainPerDay = drainRate == null ? '—' : fmtNumber(drainRate * 24);
 
   const totalSleepHours = useMemo(() => {
     const dist = safeArray(data?.state_distribution);
@@ -86,12 +86,6 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   }, [data]);
 
   const wakeEventsCount = Array.isArray(data?.recent_events) ? data.recent_events.length : null;
-
-  const stats = useMemo<GaugeHeroStat[]>(() => [
-    { label: t('widget.sleepEfficiency.avgDrain', 'Avg drain/day'), value: avgDrainPerDay, unit: '%' },
-    { label: t('widget.sleepEfficiency.totalSleep', 'Total sleep'), value: totalSleepHours == null ? '—' : fmtNumber(totalSleepHours), unit: t('widget.sleepEfficiency.hours', 'h') },
-    { label: t('widget.sleepEfficiency.wakeEvents', 'Wake events'), value: wakeEventsCount == null ? '—' : fmtInt(wakeEventsCount) },
-  ], [avgDrainPerDay, totalSleepHours, wakeEventsCount, t, fmtNumber, fmtInt]);
 
   const hasData = data != null;
 
@@ -111,11 +105,22 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       isError={isError}
       onRefresh={refresh}
     >
+      {!isCompact && <DashboardSourceBrief
+        metrics={[
+          { metricId: 'rate', rawValue: drainRate == null ? null : drainRate / 3600, label: t('widget.sleepEfficiency.avgDrain', 'Avg drain/day'), description: t('widget.sleepEfficiency.drainDescription', 'Sentry-off drain rate normalized to percentage points per second; daily display preserves the existing 24-hour estimate.'), display: { formatter: raw => ({ value: fmtNumber(Number(raw) * 86400), unit: '%' }) } },
+          { metricId: 'duration', rawValue: totalSleepHours == null ? null : totalSleepHours * 3600, label: t('widget.sleepEfficiency.totalSleep', 'Total sleep'), description: t('widget.sleepEfficiency.sleepDescription', 'Returned asleep and offline state durations in canonical seconds; absent state distribution remains unknown.'), display: { formatter: raw => ({ value: fmtNumber(Number(raw) / 3600), unit: t('widget.sleepEfficiency.hours', 'h') }) } },
+          { metricId: 'count', rawValue: wakeEventsCount, label: t('widget.sleepEfficiency.wakeEvents', 'Wake events'), description: t('widget.sleepEfficiency.eventsDescription', 'Number of returned recent events, not a certified full-window wake count.') },
+        ]}
+        state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+        title={t('widget.sleepEfficiency.summaryTitle', 'Sleep source quantities')}
+        description={t('widget.sleepEfficiency.summaryDescription', 'The efficiency gauge retains its measured percentage; supporting durations, drain estimate and recent-event sample keep their source limitations.')}
+        scope={t('widget.sleepEfficiency.summaryScope', 'Vehicle {{vehicleId}}; returned historical distribution and recent sample, exact bounds unknown', { vehicleId: id ?? '—' })}
+        loading={isLoading && !data} testId="sleep-efficiency-operational-brief"
+      />}
       {hasData ? (
-        efficiencyPct != null ? <WidgetGaugeHero gauge={gauge} stats={stats} compact={isCompact} /> : (
+        efficiencyPct != null ? <WidgetGaugeHero gauge={gauge} compact={isCompact} /> : (
           <div className="flex h-full flex-col justify-center gap-3">
             <WidgetBigNumber value={null} label={t('widget.sleepEfficiency.efficiency', 'Efficiency')} align="center" />
-            {!isCompact && <WidgetStatGrid stats={stats} />}
           </div>
         )
       ) : (

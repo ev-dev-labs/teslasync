@@ -348,7 +348,7 @@ describe('MapOverviewPage — full render', () => {
     expect(screen.getByText('Last updated')).toBeInTheDocument()
 
     // Every section panel is present — nothing stubbed out.
-    expect(screen.getByText('Location details')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Location details' })).toBeInTheDocument()
     expect(screen.getByText('Quick links')).toBeInTheDocument()
     expect(screen.getByText('Recent route playback')).toBeInTheDocument()
     expect(screen.getByText('Recent location history')).toBeInTheDocument()
@@ -488,7 +488,7 @@ describe('MapOverviewPage — per-section errors', () => {
     // Map hero still renders (latest is fine) …
     expect(await screen.findByTestId('map-container')).toBeInTheDocument()
     // … while the location rail shows its own error, not a blank panel.
-    expect(screen.getByText('Location details')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Location details' })).toBeInTheDocument()
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
   })
 
@@ -513,9 +513,12 @@ describe('MapOverviewPage — position loading', () => {
     const { container } = renderPage()
 
     // The page shell mounts (fleet resolved) …
-    expect(await screen.findByText('Location details')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Location details' })).toBeInTheDocument()
     // … but the KPI band shows skeletons, not half-populated metrics.
-    expect(screen.queryByText('Current speed')).toBeNull()
+    const band = screen.getByRole('region', { name: 'Vehicle status' })
+    expect(within(band).getByText('Current speed')).toBeInTheDocument()
+    expect(band).toHaveAttribute('aria-busy', 'true')
+    expect(band.querySelector('[data-operational-value]')).toBeNull()
     expect(screen.queryByText('90.00 km/h')).toBeNull()
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
   })
@@ -524,6 +527,17 @@ describe('MapOverviewPage — position loading', () => {
 /* ── Interactions ─────────────────────────────────────────────────────── */
 
 describe('MapOverviewPage — interactions', () => {
+  it('opens retained position evidence without changing map layers or playback', async () => {
+    renderPage()
+    const band = screen.getByRole('region', { name: 'Vehicle status' })
+    await waitFor(() => expect(within(band).getByText('90.00 km/h')).toBeInTheDocument())
+    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' })
+    expect(within(drawer).getByText('Auto-refreshes every 15 s')).toBeInTheDocument()
+    expect(within(drawer).getAllByText(/latest-50-position history request/).length).toBeGreaterThan(0)
+    expect(screen.getByTestId('map-marker')).toBeInTheDocument()
+    expect(screen.getByTestId('route-playback')).toBeInTheDocument()
+  })
   it('mirrors the chosen map layer into the URL so the view is shareable', async () => {
     renderPage()
 

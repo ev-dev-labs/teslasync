@@ -113,6 +113,17 @@ function render({ media, history, mediaLoading = false, historyLoading = false,
   const cache = { mediaPresentation: pure };
   const resolve = name => {
     if (modules[name]) return modules[name];
+    if (name === '../operationalbrief-all/VehicleOperationalBrief') return {
+      VehicleOperationalBrief: props => {
+        captured.strips.push(props);
+        return h('section', { 'aria-label': props.title }, props.metrics.map(metric => {
+          const formatted = typeof metric.rawValue === 'number' && metric.display?.formatter
+            ? metric.display.formatter(metric.rawValue, {}).value
+            : metric.rawValue == null ? '—' : String(metric.rawValue);
+          return h('div', { key: metric.occurrenceId, 'aria-label': metric.label }, formatted);
+        }));
+      },
+    };
     if (name === '../components/media-player-modernization') return { ...pure, MediaSlot: load('MediaSlot').MediaSlot, MediaStats: load('MediaStats').MediaStats };
     if (name.startsWith('./')) return load(name.slice(2));
     throw Error(`Unapproved fake dependency ${name}`);
@@ -164,8 +175,10 @@ test('unknown/null/nonfinite values never become silence or stopped; legitimate 
   const result = render({ media: row, history: [row] });
   assert.equal(result.gauges[0].value, 0);
   assert.equal(result.gauges[0].max, 11);
-  assert.equal(result.strips[0].metrics[2].rawValue, '0');
-  assert.equal(result.strips[0].metrics[3].rawValue, '0.00');
+  assert.equal(result.strips[0].metrics[2].rawValue, 0);
+  assert.equal(result.strips[0].metrics[3].rawValue, 0);
+  assert.equal(result.strips[0].metrics[2].display.formatter(0, {}).value, '0');
+  assert.equal(result.strips[0].metrics[3].display.formatter(0, {}).value, '0.00');
   assert.ok(result.html.includes('Reported maximum'));
   assert.ok(result.html.includes('0.00'));
   assert.equal(result.charts.find(chart => chart.kind === 'area').data[0].volume, 0);
@@ -215,7 +228,8 @@ test('refresh failures retain every usable source and wire only fake retry callb
   assert.equal(historyOnlyFailed.gauges.length, 1);
   assert.equal(historyOnlyFailed.tables.length, 0);
   assert.equal(historyOnlyFailed.strips[0].metrics[0].rawValue, null);
-  assert.equal(historyOnlyFailed.strips[0].metrics[3].rawValue, '0.50');
+  assert.equal(historyOnlyFailed.strips[0].metrics[3].rawValue, 0.5);
+  assert.equal(historyOnlyFailed.strips[0].metrics[3].display.formatter(0.5, {}).value, '0.50');
 });
 
 test('progress accessibility clamps malformed bounds and never invents unknown elapsed zero', () => {
@@ -252,9 +266,12 @@ test('calculation, chronological history, range guard and source frequency prese
   assert.equal(result.axes[0].domain[1], 6);
   assert.equal(result.strips[0].metrics[0].rawValue, 2);
   assert.equal(result.strips[0].metrics[1].rawValue, 'Spotify');
-  assert.equal(result.strips[0].metrics[2].rawValue, '3');
+  assert.equal(result.strips[0].metrics[2].rawValue, 3);
+  assert.equal(result.strips[0].metrics[2].display.formatter(3, {}).value, '3');
   assert.deepEqual(result.charts.find(chart => chart.kind === 'pie').data.map(slice => [slice.name, slice.value]), [['Spotify', 2], ['Bluetooth', 1]]);
-  assert.equal(render({ media: snapshot(), history: [snapshot()], precision: 3 }).strips[0].metrics[3].rawValue, '0.500');
+  const precise = render({ media: snapshot(), history: [snapshot()], precision: 3 }).strips[0].metrics[3];
+  assert.equal(precise.rawValue, 0.5);
+  assert.equal(precise.display.formatter(precise.rawValue, {}).value, '0.500');
   assert.equal(pure.listeningStats([snapshot({ audio_volume: undefined })]).avgVolume, null);
   assert.equal(pure.listeningStats([snapshot({ audio_volume: 0 })]).avgVolume, 0);
 });

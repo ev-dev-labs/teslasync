@@ -363,7 +363,8 @@ describe('shared chart policy and independent drive control', () => {
   it('keeps all three real chart shells and controls through retained failure', () => {
     const view = mount(<MotorHistoryCharts vehicleId={7} historyQuery={window} />);
     for (const label of ['Motor Power Over Time', 'Motor Torque History', 'Motor RPM History']) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: label })).toBeVisible();
+      expect(screen.getByRole('figure', { name: label })).toBeInTheDocument();
     }
     expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(3);
     expect(view.container.querySelectorAll('[data-card]')).toHaveLength(3);

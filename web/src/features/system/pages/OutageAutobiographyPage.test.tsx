@@ -1,7 +1,12 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import type { OutageAutobiography, SessionCertificate } from '@/types/teslaPhysics';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -72,6 +77,10 @@ vi.mock('@/api/hooks/useTeslaPhysics', () => ({
 
 import OutageAutobiographyPage from './OutageAutobiographyPage';
 
+function renderPage() {
+  return render(<MemoryRouter><OutageAutobiographyPage /></MemoryRouter>);
+}
+
 describe('OutageAutobiographyPage', () => {
   beforeEach(() => {
     sources.outage.mockReturnValue(queryStub(outage));
@@ -79,7 +88,7 @@ describe('OutageAutobiographyPage', () => {
   });
 
   it('treats unknown MQTT as unknown and keeps replay/event-time honesty', () => {
-    render(<OutageAutobiographyPage />);
+    renderPage();
     expect(screen.getByText('Outage autobiography')).toBeInTheDocument();
     expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
     expect(screen.getByText('Replay keeps event time')).toBeInTheDocument();
@@ -95,7 +104,7 @@ describe('OutageAutobiographyPage', () => {
       isError: true,
       refetch: retry,
     });
-    render(<OutageAutobiographyPage />);
+    renderPage();
     expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
     expect(screen.getByText(outage.notes[0])).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Session certificate' })).toBeDisabled();
@@ -106,7 +115,7 @@ describe('OutageAutobiographyPage', () => {
 
   it('keeps the outage panel and certificate visible when no outage data has resolved', () => {
     sources.outage.mockReturnValue(queryStub(undefined));
-    render(<OutageAutobiographyPage />);
+    renderPage();
     expect(screen.getByRole('heading', { name: 'Catch-up after MQTT or carbon loss' })).toBeInTheDocument();
     expect(screen.getByText('No outage evidence has been recorded for this vehicle yet.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
@@ -115,7 +124,7 @@ describe('OutageAutobiographyPage', () => {
   it('retains notes and certificate export affordance after refresh failure', () => {
     sources.outage.mockReturnValue({ ...queryStub(outage), error: new Error('outage refresh'), isError: true });
     sources.certificate.mockReturnValue({ ...queryStub(certificate), error: new Error('certificate refresh'), isError: true });
-    render(<OutageAutobiographyPage />);
+    renderPage();
     expect(screen.getByText(outage.notes[1])).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);

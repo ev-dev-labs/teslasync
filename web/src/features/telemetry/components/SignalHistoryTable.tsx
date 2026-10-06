@@ -125,7 +125,7 @@ export function SignalHistoryTable({
       key: 'time',
       header: t('common.timestamp', 'Timestamp'),
       render: (r) => (
-        <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{formatDateTime(r.created_at)}</span>
+        <Caption className="whitespace-nowrap">{formatDateTime(r.created_at)}</Caption>
       ),
       visibleOnMobile: true,
     },
@@ -136,7 +136,7 @@ export function SignalHistoryTable({
         const idx = safeSelected.indexOf(r.signal);
         const color = idx >= 0 ? CHART_COLORS[idx % CHART_COLORS.length] : undefined;
         return (
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
             {color && (
               <span
                 aria-hidden="true"
@@ -144,12 +144,14 @@ export function SignalHistoryTable({
                 style={{ background: color }}
               />
             )}
-            <span
-              className={cn('font-mono text-xs', idx < 0 && 'text-[var(--text-primary)]')}
+            <Text
+              mono
+              size="xs"
+              className={cn('min-w-0 break-words [overflow-wrap:anywhere]', idx < 0 && 'text-[var(--text-primary)]')}
               style={color ? { color } : undefined}
             >
               {r.signal}
-            </span>
+            </Text>
           </span>
         );
       },
@@ -158,7 +160,7 @@ export function SignalHistoryTable({
     {
       key: 'value',
       header: t('signalHistory.value', 'Value'),
-      render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span>,
+      render: (r) => <Text mono size="xs" color="primary" className="break-words [overflow-wrap:anywhere]">{formatValue(r)}</Text>,
       visibleOnMobile: true,
     },
     {

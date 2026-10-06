@@ -32,6 +32,7 @@ const h = vi.hoisted(() => ({
   isLoading: false,
   isError: false,
   error: null as Error | null,
+  refetch: vi.fn(),
 }));
 
 vi.mock('@/api/hooks/useSignals', () => ({
@@ -40,6 +41,7 @@ vi.mock('@/api/hooks/useSignals', () => ({
     isLoading: h.isLoading,
     isError: h.isError,
     error: h.error,
+    refetch: h.refetch,
   }),
 }));
 
@@ -184,6 +186,7 @@ beforeEach(() => {
   h.isLoading = false;
   h.isError = false;
   h.error = null;
+  h.refetch.mockClear();
 });
 
 describe('SignalCategoryTree', () => {
@@ -225,6 +228,23 @@ describe('SignalCategoryTree', () => {
     render(<Harness />);
     expect(screen.getByText('Failed to load catalog: backend exploded')).toBeInTheDocument();
     expect(screen.queryAllByRole('treeitem')).toHaveLength(0);
+  });
+
+  it('keeps loaded catalog selection, ordering and lazy previews available after a refresh failure', () => {
+    h.data = { signals: SIGNALS };
+    h.isError = true;
+    h.error = new Error('refresh failed');
+    const onChange = vi.fn();
+    render(<Harness initialSelected={['BatteryLevel']} initialExpanded={['charging']} onChange={onChange} />);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load catalog: refresh failed')).toBeNull();
+    expect(leafLabelsInOrder()).toEqual(['ACChargingPower', 'BatteryLevel']);
+    expect(screen.getByRole('treeitem', { name: 'BatteryLevel' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('spark-BatteryLevel')).toHaveAttribute('data-enabled', 'true');
+    fireEvent.click(screen.getByRole('treeitem', { name: 'ACChargingPower' }));
+    expect(onChange).toHaveBeenLastCalledWith(['BatteryLevel', 'ACChargingPower']);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(h.refetch).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to "unknown error" when the error carries no message', () => {

@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Car, DollarSign, Leaf, Globe, Moon,
-  Clock, Award, Flame, TreePine, Home,
+  Car, DollarSign, Globe,
+  Clock, Award,
   Gauge, BatteryCharging,
 } from 'lucide-react';
 
@@ -12,9 +12,9 @@ import {
   GlassPanel, Text, Caption,
 } from '@/components/ui';
 import {
-  AnimatedNumber, ProgressRing, DataFreshnessAuto,
+  AnimatedNumber, DataFreshnessAuto,
 } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 
@@ -28,21 +28,18 @@ import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
 import { cn } from '@/lib/cn';
 
 import {
-  SectionCard, HeroChip, FunFactCard, SavingsBar, EnvStat, RecordCard,
-  MiniStat, LifetimeKeyStats, lifetimeSectionState,
+  SectionCard, HeroChip, SavingsBar, RecordCard, lifetimeSectionState,
 } from '../components/lifetime-modernization';
+import { LifetimeBrief as LifetimeKeyStats } from '../components/operationalbrief-a-m/LifetimeBrief';
+import { LifetimeContextBrief } from '../components/operationalbrief-a-m/LifetimeContextBrief';
 import { AchievementBadge } from '../components/AchievementBadge';
-import { AILifetimeStatsQA } from '@/components/ai/AILifetimeStatsQA';
+import { AILifetimeStatsQA } from '@/components/ai';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SECONDS_PER_HOUR = 3600;
 const METERS_PER_KM = 1000;
-const SAVINGS_PER_COFFEE = 5;
-
-/* Semantic chart/accent colors (toned, color-blind friendly). */
-const CO2_COLOR = '#22c55e';
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 
@@ -74,7 +71,7 @@ export default function LifetimeStatsPage() {
   const hasData = stats != null;
   const fatalError = source.fatalError != null;
   const sectionState = (empty: boolean) => lifetimeSectionState({
-    hasData, isLoading: source.status === 'initial',
+    hasData, isLoading: isLoading && !hasData,
     isError: fatalError || source.status === 'stale', empty,
   });
 
@@ -146,6 +143,19 @@ export default function LifetimeStatsPage() {
               errorMessage={t('error.loadFailed', 'Failed to load data')}
               error={error} errorRecovery={{ onRetry: retry }}
               loadingContent={<Skeleton height={96} />}
+              emptyContent={
+                <div className="text-center">
+                  <EmptyState
+                    message={t('lifetime.noData', 'No driving data yet')}
+                    action={{ label: t('common.refresh', 'Refresh'), onClick: retry }}
+                  />
+                  <Text as="p" size="lg" color="muted">
+                    {t('lifetime.heroSubtitle', 'driven across {{drives}} drives', {
+                      drives: fmtInt(0),
+                    })}
+                  </Text>
+                </div>
+              }
             >
               <div className="flex flex-col items-center gap-6 text-center xl:flex-row xl:justify-between xl:text-left">
                 <div className="min-w-0">
@@ -217,42 +227,8 @@ export default function LifetimeStatsPage() {
       <FadeIn delay={0.15}>
         <CardGrid label={t('lifetime.funFacts', 'Fun facts')} items={[
           { id: 'lifetime-fun-facts', size: 'half', content: (
-          <SectionCard
-            title={t('lifetime.funFacts', 'Fun facts')}
-            icon={<Flame className="h-5 w-5 text-amber-300" aria-hidden="true" />}
-            state={sectionState(!stats)}
-            error={error}
-            onRetry={retry}
-            emptyMessage={t('lifetime.noData', 'No driving data yet')}
-            skeletonHeight={140}
-          >
-            <div className="grid grid-cols-1 gap-3 @[320px]:grid-cols-2 @[640px]:grid-cols-4 @[640px]:gap-4">
-              <FunFactCard
-                icon={<Globe className="h-6 w-6 shrink-0 text-indigo-300" aria-hidden="true" />}
-                value={fmtNumber((stats?.earth_circumferences ?? 0) * 100)}
-                unit="%"
-                label={t('lifetime.earthProgress', 'around the Earth')}
-              />
-              <FunFactCard
-                icon={<Moon className="h-6 w-6 shrink-0 text-slate-300" aria-hidden="true" />}
-                value={fmtNumber((stats?.moon_trips ?? 0) * 100)}
-                unit="%"
-                label={t('lifetime.moonProgress', 'to the Moon')}
-              />
-              <FunFactCard
-                icon={<TreePine className="h-6 w-6 shrink-0 text-emerald-300" aria-hidden="true" />}
-                value={fmtInt(stats?.trees_equivalent ?? 0)}
-                unit=""
-                label={t('lifetime.treesPlanted', 'trees equivalent planted')}
-              />
-              <FunFactCard
-                icon={<Home className="h-6 w-6 shrink-0 text-amber-300" aria-hidden="true" />}
-                value={fmtNumber(stats?.homes_equivalent_days ?? 0)}
-                unit={t('lifetime.days', 'days')}
-                label={t('lifetime.homesPowered', 'of home energy used')}
-              />
-            </div>
-          </SectionCard>
+          <LifetimeContextBrief mode="funfacts" stats={stats} loading={isLoading}
+            error={error} onRetry={retry} />
           ) },
           { id: 'lifetime-savings-comparison', size: 'half', content: (
           <SectionCard
@@ -279,40 +255,8 @@ export default function LifetimeStatsPage() {
       <FadeIn delay={0.2}>
         <CardGrid label={t('lifetime.activitySummary', 'Activity summary')} items={[
           { id: 'lifetime-environmental-impact', size: 'third', content: (
-          <SectionCard
-            title={t('lifetime.environmentalImpact', 'Environmental impact')}
-            icon={<Leaf className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
-            state={sectionState(!stats)}
-            error={error}
-            onRetry={retry}
-            emptyMessage={t('lifetime.noData', 'No driving data yet')}
-            skeletonHeight={200}
-          >
-            <Grid minItemWidth="standard" gap={4}>
-              <EnvStat
-                visual={
-                  <ProgressRing
-                    value={Math.min(((stats?.co2_offset_kg ?? 0) / 1000) * 100, 100)}
-                    size={64}
-                    strokeWidth={5}
-                    color={CO2_COLOR}
-                  />
-                }
-                value={<AnimatedNumber value={stats?.co2_offset_kg ?? 0} decimals={displayPrecision} suffix=" kg" />}
-                label={t('lifetime.co2Offset', 'CO₂ offset')}
-              />
-              <EnvStat
-                visual={<span className="text-4xl" aria-hidden="true">🌳</span>}
-                value={fmtInt(stats?.trees_equivalent ?? 0)}
-                label={t('lifetime.treesEquiv', 'trees equivalent')}
-              />
-              <EnvStat
-                visual={<span className="text-4xl" aria-hidden="true">☕</span>}
-                value={fmtInt(Math.round((stats?.total_savings ?? 0) / SAVINGS_PER_COFFEE))}
-                label={t('lifetime.coffeesEquiv', 'cups of coffee saved')}
-              />
-            </Grid>
-          </SectionCard>
+          <LifetimeContextBrief mode="environment" stats={stats} loading={isLoading}
+            error={error} onRetry={retry} />
           ) },
           { id: 'lifetime-personal-records', size: 'third', content: (
           <SectionCard
@@ -347,41 +291,8 @@ export default function LifetimeStatsPage() {
           </SectionCard>
           ) },
           { id: 'lifetime-activity-summary', size: 'third', content: (
-          <SectionCard
-            title={t('lifetime.activitySummary', 'Activity summary')}
-            icon={<Clock className="h-5 w-5 text-sky-300" aria-hidden="true" />}
-            state={sectionState(!stats)}
-            error={error}
-            onRetry={retry}
-            emptyMessage={t('lifetime.noData', 'No driving data yet')}
-            skeletonHeight={200}
-          >
-            <div className="grid grid-cols-1 gap-3 @[320px]:grid-cols-2 @[640px]:grid-cols-4">
-              <MiniStat
-                label={t('lifetime.mostActiveDay', 'Most active day')}
-                value={stats?.most_active_day_of_week || '—'}
-              />
-              <MiniStat
-                label={t('lifetime.mostActiveHour', 'Peak hour')}
-                value={stats?.most_active_hour != null ? `${stats.most_active_hour}:00` : '—'}
-              />
-              <MiniStat
-                label={t('lifetime.daysOnRoad', 'Days on road')}
-                value={fmtNumber(stats?.days_on_road ?? 0)}
-              />
-              <MiniStat
-                label={t('lifetime.avgEfficiency', 'Avg efficiency')}
-                value={(stats?.avg_efficiency_wh_km ?? 0) > 0
-                  ? `${fmtNumber(stats?.avg_efficiency_wh_km ?? 0)} Wh/km`
-                  : '—'}
-                help={{
-                  i18nKey: 'help.lifetime.avgEfficiency',
-                  defaultValue:
-                    'Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers.',
-                }}
-              />
-            </div>
-          </SectionCard>
+          <LifetimeContextBrief mode="activity" stats={stats} loading={isLoading}
+            error={error} onRetry={retry} />
           ) },
         ]} />
       </FadeIn>

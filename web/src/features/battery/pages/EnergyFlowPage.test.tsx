@@ -266,8 +266,8 @@ function kpiRegion() {
 }
 
 function metricValue(label: string, region: HTMLElement = kpiRegion()): string {
-  const tile = within(region).getByText(label).closest('[data-stat]');
-  return tile?.querySelector('[data-stat-value]')?.parentElement?.textContent ?? '';
+  const tile = within(region).getByText(label).closest('[data-operational-metric]');
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 function historyTable() {
@@ -506,7 +506,7 @@ describe('EnergyFlowPage — historical sections', () => {
     ).toBeInTheDocument();
     // avg 160 Wh/km → "good" bucket.
     expect(screen.getByText('Good')).toBeInTheDocument();
-    expect(metricValue('Avg energy/day', screen.getByText('Avg energy/day').closest('[data-stat-strip]') as HTMLElement)).toBe('6.00 kWh');
+    expect(metricValue('Avg energy/day', screen.getByText('Avg energy/day').closest('[data-operational-brief]') as HTMLElement)).toBe('6.00 kWh');
   });
 
   it('re-fetches stats when a stats-section retry is clicked', async () => {

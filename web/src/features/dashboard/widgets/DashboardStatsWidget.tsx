@@ -11,7 +11,9 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
@@ -46,24 +48,32 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
     ) ?? '—'
     : '—';
 
-  const statItems = useMemo<StatGridItem[]>(() => [
+  const statItems = useMemo<StatMetric[]>(() => [
     {
+      metricId: 'count',
       label: t('widget.dashboardStats.vehicles', 'Vehicles'),
-      value: knownNumber(dashStats?.totalVehicles) == null ? '—' : fmtInt(dashStats?.totalVehicles),
+      rawValue: dashStats?.totalVehicles,
+      description: t('widget.dashboardStats.summary.vehiclesHelp', 'Fleet vehicle total reported by the dashboard stats source.'),
     },
     {
+      metricId: 'count',
       label: t('widget.dashboardStats.trips', 'Trips'),
-      value: knownNumber(dashStats?.totalTrips) == null ? '—' : fmtInt(dashStats?.totalTrips),
+      rawValue: dashStats?.totalTrips,
+      description: t('widget.dashboardStats.summary.tripsHelp', 'Fleet trip total; not the selected vehicle’s recent transition count.'),
     },
     {
+      metricId: 'count',
       label: t('widget.dashboardStats.sessions', 'Charge sessions'),
-      value: knownNumber(dashStats?.totalChargingSessions) == null ? '—' : fmtInt(dashStats?.totalChargingSessions),
+      rawValue: dashStats?.totalChargingSessions,
+      description: t('widget.dashboardStats.summary.sessionsHelp', 'Fleet charging-session total reported by dashboard stats.'),
     },
     {
+      metricId: 'status',
       label: t('widget.dashboardStats.fsmState', 'FSM state'),
-      value: fsmState,
+      rawValue: fsmState === '—' ? null : fsmState,
+      description: t('widget.dashboardStats.summary.fsmHelp', 'Current state for the resolved vehicle only, independently loaded from fleet totals.'),
     },
-  ], [dashStats, fsmState, t, fmtInt]);
+  ], [dashStats, fsmState, t]);
 
   const recentTransitions = useMemo(
     () => (isWide ? safeArray(timeline.data?.data).slice(0, 5) : []),
@@ -123,7 +133,17 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
             />
           ) : (
             <>
-              <WidgetStatGrid stats={statItems} compact={false} cols={2} />
+              <DashboardSourceBrief
+                metrics={statItems}
+                state={dataState}
+                eyebrow={t('widget.dashboardStats.summary.eyebrow', 'Dashboard sources')}
+                title={t('widget.dashboardStats.summary.title', 'Fleet counts and vehicle state')}
+                description={t('widget.dashboardStats.summary.description', 'Fleet-wide totals and the resolved vehicle’s current FSM state are independent sources. Aggregate bounds are not supplied; the wide view’s latest five transitions come from a separate 168-hour history query.')}
+                scope={idStr
+                  ? t('widget.dashboardStats.summary.scope', 'Fleet counts · FSM vehicle {{id}}', { id: idStr })
+                  : t('widget.dashboardStats.summary.noScope', 'Fleet counts · no resolved FSM vehicle')}
+                testId="dashboard-stats-operational-brief"
+              />
 
               {/* FSM badge row */}
               <div className="flex items-center gap-2 min-h-[44px]">

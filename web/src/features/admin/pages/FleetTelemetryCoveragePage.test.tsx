@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -161,11 +161,12 @@ describe('FleetTelemetryCoveragePage', () => {
     // 1 unsubscribed-but-routed, 0 orphans. The presence of the stat
     // tiles confirms the summary path is hit; we don't pin exact text
     // here because StatCard's value rendering is a shared concern.
-    expect(screen.getByTestId('coverage-stat-categories')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-routed')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-subscribed')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-unsubscribed')).toBeInTheDocument()
-    expect(screen.getByTestId('coverage-stat-orphans')).toBeInTheDocument()
+    const summary = screen.getByTestId('coverage-summary')
+    expect(summary).toHaveAttribute('data-operational-brief')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    for (const label of ['Categories', 'Routed fields', 'Subscribed', 'Routed, not subscribed', 'Orphan fields']) {
+      expect(within(summary).getByText(label).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value')
+    }
 
     // Destination breakdown chips render in descending count order.
     expect(screen.getByTestId('coverage-dest-signal_log')).toBeInTheDocument()
@@ -274,5 +275,44 @@ describe('FleetTelemetryCoveragePage', () => {
     await waitFor(() =>
       expect(mockedRequest.mock.calls.length).toBeGreaterThan(callsBefore),
     )
+  })
+
+  it('keeps categories, field metadata, orphan evidence and applied filters after refresh failure', async () => {
+    const snapshot = makeResponse({ orphan_fields: ['MysteriousField'] })
+    mockedRequest.mockImplementation((path: string) =>
+      path === '/tesla/fleet-telemetry/coverage' ? Promise.resolve(snapshot) : Promise.resolve([]),
+    )
+    renderPage()
+    await screen.findByTestId('coverage-category-driving')
+    fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value: 'BrakePedal' } })
+    expect(screen.queryByText('VehicleSpeed')).not.toBeInTheDocument()
+    mockedRequest.mockImplementation((path: string) =>
+      path === '/tesla/fleet-telemetry/coverage'
+        ? Promise.reject(new Error('routing snapshot refresh failed'))
+        : Promise.resolve([]),
+    )
+    fireEvent.click(screen.getByTestId('coverage-refresh-button'))
+    await waitFor(() => expect(screen.getByText('Data may be stale')).toBeInTheDocument())
+
+    const category = screen.getByTestId('coverage-category-driving')
+    expect(within(category).getByText('BrakePedal')).toBeInTheDocument()
+    expect(within(category).getByText('brake_pedal')).toBeInTheDocument()
+    expect(screen.getByText('MysteriousField')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-dest-signal_log')).toHaveTextContent('signal_log: 3')
+    expect(screen.getByTestId('coverage-legend-dual-write')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-filter-input')).toHaveValue('BrakePedal')
+    expect(screen.queryByTestId('coverage-error')).not.toBeInTheDocument()
+  })
+
+  it('shows unknown summary values rather than zero when no routing snapshot ever loaded', async () => {
+    mockedRequest.mockRejectedValue(new Error('routing unavailable'))
+    renderPage()
+    await screen.findByTestId('coverage-error')
+    const tiles = screen.getByTestId('coverage-summary').querySelectorAll('[data-operational-metric]')
+    expect(tiles).toHaveLength(6)
+    for (const tile of tiles) {
+      expect(tile).toHaveAttribute('data-value-state', 'missing')
+      expect(tile.querySelector('[data-operational-value]')).toHaveTextContent('—')
+    }
   })
 })

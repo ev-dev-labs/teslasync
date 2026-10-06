@@ -1,4 +1,5 @@
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Badge, Table, Text } from '@/components/ui';
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -117,14 +118,10 @@ export function CarbonAccountingIdentities({
         'Exact carbon accounting identities and tolerances',
       )}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-2 flex items-center gap-2">
-          <Binary
-            className="h-4 w-4 text-[var(--text-muted)]"
-            aria-hidden="true"
-          />
-          {t('carbon.accounting.title', 'Exact accounting identities')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('carbon.accounting.title', 'Exact accounting identities')}
+        actions={<Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'carbon.accounting.subtitle',
@@ -191,7 +188,7 @@ export function CarbonAccountingIdentities({
             );
           })}
         </ul>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

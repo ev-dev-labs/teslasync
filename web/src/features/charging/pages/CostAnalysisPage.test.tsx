@@ -305,7 +305,10 @@ describe('CostAnalysisPage', () => {
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
     expect(screen.getByText('Monthly cost breakdown')).toBeInTheDocument()
     expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()
-    expect(screen.getAllByText('60.00 kWh').length).toBeGreaterThan(0)
+    const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
+      .getByText('Total Energy').closest('[data-operational-metric]')
+    expect(energy).not.toBeNull()
+    expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('60.00 kWh')
     expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
   })
   it('renders the full dashboard with every section once sessions + forecast load', async () => {
@@ -321,9 +324,9 @@ describe('CostAnalysisPage', () => {
     expect(screen.getAllByText('$6.00').length).toBeGreaterThan(0)
     expect(screen.getAllByText('3 sessions').length).toBeGreaterThan(0)
     const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
-      .getByText('Total Energy').closest('[data-stat]')
+      .getByText('Total Energy').closest('[data-operational-metric]')
     expect(energy).not.toBeNull()
-    expect(energy?.querySelector('[data-stat-value]')?.parentElement).toHaveTextContent('60.00 kWh')
+    expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('60.00 kWh')
 
     // All nine section headings are present — nothing stubbed out.
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
@@ -372,8 +375,8 @@ describe('CostAnalysisPage', () => {
     expect(screen.queryByText('$0.10')).toBeNull()
     expect(screen.queryByText('60.00 kWh')).toBeNull()
     const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
-      .queryByText('Total Energy')?.closest('[data-stat]')
-    expect(energy?.querySelector('[data-stat-value]')?.parentElement).toBeUndefined()
+      .queryByText('Total Energy')?.closest('[data-operational-metric]')
+    expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('—')
   })
 
   it('surfaces retryable error banners and still renders the independent forecast', async () => {

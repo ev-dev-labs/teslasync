@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Grid3X3 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { EmbeddedChart } from '@/components/charts';
+import { Caption } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
@@ -139,6 +141,12 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
+  const cellData = useMemo(() => grid.flatMap((row) => row.map((cell) => ({
+    day: cell.day,
+    hour: cell.hour,
+    avgSpeed: cell.count > 0 ? cell.avgSpeed : null,
+    count: cell.count,
+  }))), [grid]);
 
   // Compact: show peak speed metric
   if (isCompact) {
@@ -178,6 +186,19 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
             { label: t('widget.speedHeatmap.peakSpeed', 'Peak avg {{speed}} {{unit}}', { speed: fmtNumber(maxSpeed), unit: unitPrefs.speed }), value: fmtNumber(maxSpeed), unit: unitPrefs.speed },
           ]}
           chart={
+          <EmbeddedChart
+            title={t('widget.speedHeatmap.title', 'Speed heatmap')}
+            ariaLabel={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
+            chartKey="dashboard-speed-heatmap"
+            className="min-h-36 h-full"
+            data={cellData}
+            dataColumns={[
+              { key: 'day', label: t('widget.speedHeatmap.day', 'Day'), format: (value) => DAY_LABELS_FULL[Number(value)] ?? '—' },
+              { key: 'hour', label: t('widget.speedHeatmap.hour', 'Hour'), format: (value) => `${value}:00` },
+              { key: 'avgSpeed', label: `${t('widget.speedHeatmap.averageSpeed', 'Average speed')} (${unitPrefs.speed})`, format: (value) => value == null ? '—' : fmtNumber(Number(value)) },
+              { key: 'count', label: t('widget.speedHeatmap.driveCount', 'Drive count'), format: (value) => fmtInt(Number(value)) },
+            ]}
+          >
           <div className="flex min-h-36 h-full flex-col">
           <div className="flex-1 min-h-28">
             <HeatmapGrid
@@ -192,9 +213,9 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
 
           {/* Legend */}
           <div className="flex items-center justify-between pt-1 flex-shrink-0">
-            <span className="text-2xs text-[var(--text-muted)]">
+            <Caption>
               {t('widget.speedHeatmap.slow', 'Slow')}
-            </span>
+            </Caption>
             <div className="flex gap-px">
               {[0, 0.25, 0.5, 0.75, 1].map((stop) => (
                 <div
@@ -204,11 +225,12 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
                 />
               ))}
             </div>
-            <span className="text-2xs text-[var(--text-muted)]">
+            <Caption>
               {t('widget.speedHeatmap.fast', 'Fast')}
-            </span>
+            </Caption>
           </div>
           </div>
+          </EmbeddedChart>
           }
         />
       ) : (

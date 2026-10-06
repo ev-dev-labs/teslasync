@@ -36,7 +36,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -283,6 +283,19 @@ describe('SleepEfficiencyWidget states', () => {
 // ── Populated gauge + stats ─────────────────────────────────────────────────
 
 describe('SleepEfficiencyWidget populated', () => {
+  it('reviews actual supporting sources while keeping the efficiency gauge and sample limitations', async () => {
+    renderWidget({ vehicleId: 1 });
+    expect(await screen.findByText('92.00')).toBeInTheDocument();
+    const brief = screen.getByTestId('sleep-efficiency-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('12.00 %')).toBeInTheDocument();
+    expect(within(drawer).getByText('60.00 h')).toBeInTheDocument();
+    expect(within(drawer).getByText('4')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not a certified full-window wake count/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Vehicle 1/)).toBeInTheDocument();
+  });
   it('preserves the source percentage beyond its scale without losing any derived statistics', async () => {
     const data = makeData({ sleep_efficiency_pct: 125 });
     sleepRequest(data);
@@ -290,8 +303,8 @@ describe('SleepEfficiencyWidget populated', () => {
     expect(await screen.findByText('125.00')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).toBeNull();
     expect(screen.getByRole('group', { name: 'Efficiency' })).not.toHaveAttribute('aria-valuenow');
-    expect(screen.getByText('12.00')).toBeInTheDocument();
-    expect(screen.getByText('60.00')).toBeInTheDocument();
+    expect(screen.getByText('12.00 %')).toBeInTheDocument();
+    expect(screen.getByText('60.00 h')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(data.sleep_efficiency_pct).toBe(125);
   });
@@ -304,8 +317,8 @@ describe('SleepEfficiencyWidget populated', () => {
     try {
       act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
       expect(screen.getByText('92,000')).toBeInTheDocument();
-      expect(screen.getByText('12,000')).toBeInTheDocument();
-      expect(screen.getByText('60,000')).toBeInTheDocument();
+      expect(screen.getByText('12,000 %')).toBeInTheDocument();
+      expect(screen.getByText('60,000 h')).toBeInTheDocument();
       expect(data.sleep_efficiency_pct).toBe(92);
     } finally {
       act(() => { setGlobalPrecision(2); setGlobalLocale('en-US'); });
@@ -323,11 +336,11 @@ describe('SleepEfficiencyWidget populated', () => {
 
     // Avg Drain/Day = sentry_off_drain_rate (0.5 %/hr) × 24 → "12.00".
     expect(screen.getByText('Avg drain/day')).toBeInTheDocument();
-    expect(screen.getByText('12.00')).toBeInTheDocument();
+    expect(screen.getByText('12.00 %')).toBeInTheDocument();
 
     // Total Sleep = (3000 asleep + 600 offline) / 60 → "60".
     expect(screen.getByText('Total sleep')).toBeInTheDocument();
-    expect(screen.getByText('60.00')).toBeInTheDocument();
+    expect(screen.getByText('60.00 h')).toBeInTheDocument();
 
     // Wake Events = recent_events.length → 4.
     expect(screen.getByText('Wake events')).toBeInTheDocument();

@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, it, vi, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, vi, expect } from 'vitest';
 import { ChartCard, LayoutCard } from '@/components/layout/layout-reference';
 import { ErrorDisplay, ToastProvider } from '@/components/feedback';
 import { deriveDataState } from '@/api/dataState';
@@ -11,6 +11,15 @@ import type { DataStateSource } from '@/api/dataState';
 import { EfficiencySource } from './EfficiencySource';
 import { EfficiencyChart } from './EfficiencyChart';
 import { fakeQuery } from './fixtures';
+
+const fullscreenSupport = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+beforeEach(() => {
+  Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+});
+afterEach(() => {
+  if (fullscreenSupport) Object.defineProperty(document, 'fullscreenEnabled', fullscreenSupport);
+  else Reflect.deleteProperty(document, 'fullscreenEnabled');
+});
 
 vi.mock('@/api/client', async importOriginal => {
   const actual = await importOriginal<typeof import('@/api/client')>();
@@ -133,6 +142,11 @@ describe('real shared chart/error adapters (AUTHORED NOT RUN)', () => {
     expect(screen.getByRole('button', { name: 'Hide annotations' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /fullscreen/i })).toBeInTheDocument();
+    const figure = screen.getByRole('figure', { name: 'Capability chart' });
+    const requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(figure, 'requestFullscreen', { configurable: true, value: requestFullscreen });
+    fireEvent.click(screen.getByRole('button', { name: /fullscreen/i }));
+    expect(requestFullscreen).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Observed date')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
     expect(screen.getByRole('menuitem', { name: /CSV/ })).toBeInTheDocument();

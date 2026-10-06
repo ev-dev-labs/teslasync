@@ -37,8 +37,8 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
   const columns = table.columns ?? [];
 
   return (
-    <GlassPanel hover glow="cyan" className="flex h-full flex-col p-4 sm:p-5">
-      <div className="mb-3 flex items-start gap-2.5">
+    <GlassPanel className="flex h-full min-w-0 max-w-full flex-col p-4 sm:p-5">
+      <div className="mb-3 flex min-w-0 flex-wrap items-start gap-2.5">
         <span
           className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 p-1.5 ring-1 ring-cyan-400/20"
           aria-hidden="true"
@@ -46,10 +46,10 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
           <Database className="h-4 w-4 text-cyan-300" />
         </span>
         <div className="min-w-0 flex-1">
-          <PanelTitle className="truncate font-mono text-cyan-300">
+          <PanelTitle className="break-words font-mono [overflow-wrap:anywhere]">
             {table.name || EM_DASH}
           </PanelTitle>
-          <Text variant="bodySm" as="p" className="mt-0.5">
+          <Text variant="bodySm" as="p" className="mt-0.5 break-words">
             {table.description || t('powerSql.catalog.noDescription', 'No description')}
           </Text>
         </div>
@@ -58,7 +58,7 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
           size="2xs"
           weight="medium"
           color="muted"
-          className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 tabular-nums"
+          className="max-w-full break-words rounded-full bg-[var(--surface-2)] px-2 py-0.5 tabular-nums"
         >
           {t('powerSql.catalog.columnCount', '{{count}} cols', {
             count: columns.length,
@@ -90,7 +90,7 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
                           aria-label={t('powerSql.catalog.primaryKey', 'Primary key')}
                         />
                       )}
-                      <Text mono size="xs" className="text-emerald-300">{col.name || EM_DASH}</Text>
+                      <Text mono size="xs" className="break-words text-emerald-300 [overflow-wrap:anywhere]">{col.name || EM_DASH}</Text>
                     </div>
                   </th>
                   <td><Text variant="caption">{col.type || EM_DASH}</Text></td>

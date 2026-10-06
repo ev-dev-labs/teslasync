@@ -13,18 +13,29 @@ import { InlineCallout } from '@/components/feedback';
 import { Info } from 'lucide-react';
 import { useUnits } from '@/hooks/useUnits';
 import type { MaintenanceEvidence } from '../lib/types';
+import { VaultSummaryBrief } from './operationalbrief-all/VaultSummaryBrief';
+import type { VaultEvidenceSource } from '../hooks/useVaultEvidence';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 
 export interface MaintenanceSummaryPanelProps {
   maintenance: MaintenanceEvidence | null;
+  sources?: readonly VaultEvidenceSource[];
 }
 
-export function MaintenanceSummaryPanel({ maintenance }: MaintenanceSummaryPanelProps) {
+export function MaintenanceSummaryPanel({ maintenance, sources }: MaintenanceSummaryPanelProps) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
+  const description = t('resaleVault.brief.maintenance.description', 'Account-wide scheduled items and service records, not verified per-vehicle attribution.');
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'scheduled-items', label: t('resaleVault.maintenance.scheduledCount', 'Scheduled items'), rawValue: maintenance?.scheduled_item_count, description, display: { notation: 'source' } },
+    { metricId: 'count', occurrenceId: 'service-records', label: t('resaleVault.maintenance.recordCount', 'Service records'), rawValue: maintenance?.service_record_count, description, display: { notation: 'source' } },
+  ];
 
   return (
     <LayoutCard title={t('resaleVault.maintenance.title', 'Maintenance & service')}>
-
+      <VaultSummaryBrief id="maintenance" title={t('resaleVault.brief.maintenance.title', 'Maintenance record counts')}
+        description={description} metrics={metrics} hasEvidence={maintenance != null} sources={sources}
+        scope={t('resaleVault.brief.maintenance.scope', 'Account-wide source; observation bounds unavailable')} />
       {!maintenance ? (
         // no-action: mirrors Tesla's account-wide maintenance endpoint (see scope note below); no refetch handler reaches this panel.
         <EmptyState message={t('resaleVault.maintenance.empty', 'No maintenance or service evidence in this report.')} />
@@ -39,8 +50,6 @@ export function MaintenanceSummaryPanel({ maintenance }: MaintenanceSummaryPanel
 
           <KVList
             items={[
-              { label: t('resaleVault.maintenance.scheduledCount', 'Scheduled items'), value: String(maintenance.scheduled_item_count) },
-              { label: t('resaleVault.maintenance.recordCount', 'Service records'), value: String(maintenance.service_record_count) },
               {
                 label: t('resaleVault.maintenance.categories', 'Categories'),
                 value: maintenance.categories.length > 0 ? maintenance.categories.join(', ') : '—',

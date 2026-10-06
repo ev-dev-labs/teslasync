@@ -94,6 +94,7 @@ export function RepairCaseDrawer({
                   loading={transition.isPending}
                   disabled={!canWrite}
                   title={!canWrite ? writeBlockReason : undefined}
+                  wrapLabel
                 >
                   {t('dataRepair.cases.beginReview', 'Begin review')}
                 </Button>
@@ -107,6 +108,7 @@ export function RepairCaseDrawer({
                   loading={transition.isPending}
                   disabled={!canWrite}
                   title={!canWrite ? writeBlockReason : undefined}
+                  wrapLabel
                 >
                   {t('dataRepair.cases.reopen', 'Reopen')}
                 </Button>
@@ -120,6 +122,7 @@ export function RepairCaseDrawer({
                 onClick={() => setResolveOpen(true)}
                 disabled={!canWrite}
                 title={!canWrite ? writeBlockReason : undefined}
+                wrapLabel
               >
                 {t('dataRepair.cases.resolve', 'Resolve case')}
               </Button>
@@ -187,17 +190,23 @@ export function RepairCaseDrawer({
         variant="warning"
         loading={transition.isPending}
         details={(
-          <Textarea
-            id="repair-case-resolution-reason"
-            label={t('dataRepair.cases.reasonLabel', 'Operator note')}
-            value={resolveReason}
-            onChange={(event) => setResolveReason(event.target.value)}
-            rows={3}
-            maxLength={4000}
-            placeholder={t('dataRepair.cases.reasonPlaceholder', 'Explain the evidence and decision')}
-          />
+          <>
+            {!canWrite && <Text as="p" variant="caption" role="note">
+              {writeBlockReason ?? t('dataRepair.cases.readOnly', 'Repair controls are read-only')}
+            </Text>}
+            <Textarea
+              id="repair-case-resolution-reason"
+              label={t('dataRepair.cases.reasonLabel', 'Operator note')}
+              value={resolveReason}
+              onChange={(event) => setResolveReason(event.target.value)}
+              rows={3}
+              maxLength={4000}
+              placeholder={t('dataRepair.cases.reasonPlaceholder', 'Explain the evidence and decision')}
+              disabled={!canWrite}
+            />
+          </>
         )}
-        confirmDisabled={!resolveReason.trim()}
+        confirmDisabled={!canWrite || !resolveReason.trim()}
       />
     </Drawer>
   );

@@ -137,7 +137,7 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
     >
         <div className="flex h-full flex-col gap-2">
           {/* Overall status badge */}
-          <div className="flex items-center justify-between">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
             <Caption>
               {t('widget.uptime.overall', 'Overall')}
             </Caption>

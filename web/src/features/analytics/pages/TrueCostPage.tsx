@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
-import { AITCONarration } from '@/components/ai/AITCONarration';
+import { AITCONarration } from '@/components/ai';
 
 import { CardGrid, PageLayout, Section, type CardGridItem } from '@/components/layout';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -15,19 +15,19 @@ import {
   TrueCostBreakEven,
   TrueCostCumulativeChart,
   TrueCostEnergyCostTrend,
-  TrueCostEvidenceLedger,
   TrueCostMethodology,
   TrueCostMonthlyCostChart,
   TrueCostMonthlyDeltaChart,
   TrueCostMonthlyDirectory,
   TrueCostPerDistanceChart,
-  TrueCostSavingsEnvelope,
   TrueCostSensitivityMatrix,
   TrueCostSourceScopeLedger,
   TrueCostTemporalCoverage,
   trueCostQueryState,
   useTrueCostDisplay,
 } from '../components/true-cost';
+import { TrueCostSavingsEnvelope } from '../components/operationalbrief-n-z/TrueCostSavingsEnvelope';
+import { TrueCostEvidenceLedger } from '../components/operationalbrief-n-z/TrueCostEvidenceLedger';
 import { TrueCostFixedLedger, TrueCostLayoutSlot } from '../components/true-cost-modernization';
 import { analyzeTrueCost } from '../lib/trueCost';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';

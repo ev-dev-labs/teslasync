@@ -309,9 +309,22 @@ const sectionIds = [
   'drive-archetypes-methodology',
 ] as const;
 
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+
 function expectEverySection(): void {
   for (const id of sectionIds) {
-    expect(screen.getByTestId(id)).toBeInTheDocument();
+    const section = screen.getByTestId(id);
+    expect(section).toBeInTheDocument();
+    if (![
+      'drive-archetypes-candidates', 'drive-archetypes-centroid-map',
+      'drive-archetypes-composition', 'drive-archetypes-confidence',
+      'drive-archetypes-hourly', 'drive-archetypes-monthly',
+    ].includes(id)) {
+      expect(section.querySelector(['drive-archetypes-kpis', 'drive-archetypes-source', 'drive-archetypes-coverage'].includes(id)
+        ? '[data-operational-brief]' : '[data-card]')).toBeInTheDocument();
+    }
   }
 }
 
@@ -362,6 +375,9 @@ describe('DriveArchetypesPage', () => {
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.hook).toHaveBeenLastCalledWith('7', 1000);
+    expect(screen.getByTestId('drive-archetypes-kpis').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(screen.getByTestId('drive-archetypes-source').querySelectorAll('[data-operational-metric]')).toHaveLength(13);
+    expect(screen.getByTestId('drive-archetypes-coverage').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh evidence' }));
     expect(h.refetch).toHaveBeenCalledTimes(1);
@@ -390,6 +406,11 @@ describe('DriveArchetypesPage', () => {
     expect(screen.getByRole('status', {
       name: 'Loading drive-archetype evidence',
     })).toBeInTheDocument();
+    for (const id of ['drive-archetypes-source', 'drive-archetypes-feature-ranges', 'drive-archetypes-directory']) {
+      const section = within(screen.getByTestId(id));
+      expect(section.getByText('Awaiting drive evidence')).toBeInTheDocument();
+      expect(section.queryByText(/^0 (returned|of 6 active|of 0 shown)$/)).not.toBeInTheDocument();
+    }
   });
 
   it('shows one initial failure retry while every shell remains mounted', () => {

@@ -218,6 +218,24 @@ afterEach(() => {
 });
 
 describe('PeriodComparePage — happy path', () => {
+  it('reviews both source windows and original baselines in the real OperationalBrief drawer', async () => {
+    installRequest();
+    renderPage();
+    await screen.findByText(/Distance traveled was -50\.00% less/);
+    const brief = screen.getByTestId('period-compare-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(within(brief).getByText('Period A: Last 30 days · Period B: Last 90 days')).toBeInTheDocument();
+    const calls = periodStatsCalls();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Period B: 2,000\.00 km/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/-50\.00%/).length).toBeGreaterThan(0);
+    expect(periodStatsCalls()).toEqual(calls);
+  });
+
   it('keeps drive counts integer while mounted measurements and percentages follow settings', async () => {
     installRequest();
     renderPage();

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
 import { LayoutCard } from '@/components/layout/layout-reference';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display/stat-reference';
+import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { QueryError } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -85,11 +86,12 @@ export function CurveSummary({ stats, availability, state, initialLoading, onRet
     },
     {
       // Retain the specialist currency-symbol / precision contract exactly.
-      metricId: 'text',
+      metricId: 'currency',
       occurrenceId: 'totalCost',
       label: t('charging.curve.totalCost', 'Total Cost'),
       description: t('charging.curve.modernization.recordedCostDescription', 'Sum of recorded session costs in the configured currency; no tariff estimate.'),
-      rawValue: stats && availability.cost > 0 ? formatCurrency(stats.totalCost) : null,
+      rawValue: stats && availability.cost > 0 ? stats.totalCost : null,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
       missingReason,
       context: coverage(availability.cost),
     },
@@ -104,7 +106,7 @@ export function CurveSummary({ stats, availability, state, initialLoading, onRet
           resourceName={t('charging.curve.resource', 'Charging sessions')}
         />
       ) : (
-        <StatStrip
+        <ChargingSummaryBrief
           id="charging-curve-summary"
           testId="charging-curve-summary"
           variant="embedded"

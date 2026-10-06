@@ -3,12 +3,11 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Gauge, Battery, Zap, Mountain, Thermometer,
-  Navigation, MapPin, Clock, Route, TrendingUp,
-  ArrowUpRight, ArrowDownRight, RefreshCw,
+  Navigation, MapPin, RefreshCw,
 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
-import { GlassPanel, Button, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, PanelTitle, Text } from '@/components/ui';
 import {
   PlaybackControls,
   type TimelineMarker,
@@ -19,7 +18,6 @@ import { FadeIn } from '@/components/motion';
 import { Sparkline } from '@/components/charts';
 import { useDrive } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
-import type { DistanceUnitPref, SpeedUnitPref } from '@/lib/unitConversion';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -46,6 +44,7 @@ import {
   type TripReplayChartPoint,
 } from '@/features/trips/components/TripReplayCharts';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { TripReplaySummaryBrief } from '../components/operationalbrief-all/TripReplaySummaryBrief';
 
 /* ================================================================== */
 /*  Helpers                                                            */
@@ -120,10 +119,6 @@ export default function TripReplayPage() {
   // Display preferences for position-derived SI fields.
   const { unitPrefs } = useUnits();
 
-
-  const distanceUnit = unitPrefs.distance;
-
-  const speedUnit = unitPrefs.speed;
 
   /* ---- Normalize positions ---- */
   // The /drives/{id} positions array carries only lat/lon/heading/speed
@@ -387,16 +382,6 @@ export default function TripReplayPage() {
   /* ---- Current stat values ---- */
   const cp = replay.currentPosition;
 
-  /* ---- Drive summary stats ---- */
-  // drive.distanceM is meters, drive.durationS is seconds.
-  // Use convertDistanceFromSI/convertSpeedFromSI for SI-aware conversion.
-  const distanceM = drive?.distanceM;
-  const durationS = drive?.durationS;
-  const distanceUserUnit = distanceM != null ? convertDistanceFromSI(distanceM, distanceUnit as DistanceUnitPref) : null;
-  const efficiency = distanceUserUnit != null && distanceUserUnit > 0 && drive?.energyUsedWh != null
-    ? drive.energyUsedWh / distanceUserUnit
-    : null;
-
   /* ---- Elevation gain / loss for the summary band ---- */
   // Elevation is SI metres on every position; sum positive/negative deltas so
   // the summary shows real climb/descent instead of the legacy '—' placeholder.
@@ -444,11 +429,12 @@ export default function TripReplayPage() {
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
           </Button>
-          <Link to={`/drives/${id}`}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />
-              {t('replay.backToDrive', 'Back to Drive')}
-            </Button>
+          <Link
+            to={`/drives/${id}`}
+            className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-9 max-w-full px-3 py-1.5')}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <Text variant="bodySm" className="min-w-0 break-words">{t('replay.backToDrive', 'Back to Drive')}</Text>
           </Link>
         </div>
       }
@@ -459,74 +445,7 @@ export default function TripReplayPage() {
       {/*  they render even when a drive has no position coordinates.        */}
       {/* ================================================================ */}
       <FadeIn>
-        <GlassPanel role="region" aria-label={t('replay.summary.title', 'Drive Summary')} className="p-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-8">
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.distance', 'Distance')}
-                value={distanceUserUnit != null ? fmtNumber(distanceUserUnit) : '—'}
-                unit={distanceUserUnit != null ? distanceUnit : undefined}
-                icon={<Route className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.duration', 'Duration')}
-                value={durationS != null ? fmtDriveTime(durationS / 60) : '—'}
-                icon={<Clock className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.avgSpeed', 'Avg Speed')}
-                value={drive?.avgSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.avgSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
-                unit={drive?.avgSpeedMps != null ? speedUnit : undefined}
-                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.maxSpeed', 'Max Speed')}
-                value={drive?.maxSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.maxSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
-                unit={drive?.maxSpeedMps != null ? speedUnit : undefined}
-                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.efficiency', 'Efficiency')}
-                value={efficiency != null ? fmtNumber(efficiency) : '—'}
-                unit={efficiency != null ? (distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km') : undefined}
-                icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.battery', 'Battery')}
-                value={drive?.startBatteryPct != null && drive?.endBatteryPct != null
-                  ? `${fmtInt(drive.startBatteryPct)}% → ${fmtInt(drive.endBatteryPct)}%`
-                  : '—'}
-                icon={<Battery className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.elevGain', 'Elevation Gain')}
-                value={elevStats.has ? fmtInt(elevStats.gain) : '—'}
-                unit={elevStats.has ? 'm' : undefined}
-                icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-            <div>
-              <TripReplayReadout
-                label={t('replay.summary.elevLoss', 'Elevation Loss')}
-                value={elevStats.has ? fmtInt(elevStats.loss) : '—'}
-                unit={elevStats.has ? 'm' : undefined}
-                icon={<ArrowDownRight className="h-4 w-4" aria-hidden="true" />}
-              />
-            </div>
-          </div>
-        </GlassPanel>
+        <TripReplaySummaryBrief drive={drive} source={driveState} elevation={elevStats} formatDriveTime={fmtDriveTime} />
       </FadeIn>
 
       {positions.length === 0 ? (
@@ -563,7 +482,7 @@ export default function TripReplayPage() {
                   embedded
                 />
               </div>
-              <div className="order-last flex min-w-0 flex-col border-t border-[var(--border-subtle)] p-3 lg:order-none lg:border-t-0 lg:border-l sm:p-4" data-testid="replay-current-stats">
+              <div className="order-last flex min-w-0 flex-col border-t border-[var(--border-subtle)] p-3 lg:order-none lg:border-t-0 lg:border-s sm:p-4" data-testid="replay-current-stats">
                 <PanelTitle className="px-3 pb-2 sm:px-4">
                   {t('replay.currentStats', 'Current Position Stats')}
                 </PanelTitle>

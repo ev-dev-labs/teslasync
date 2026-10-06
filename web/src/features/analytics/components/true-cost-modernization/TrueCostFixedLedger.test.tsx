@@ -38,9 +38,16 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ formatCurrency: (value: number) => `$${value.toFixed(2)}` }),
 }));
-vi.mock('@/hooks/useNumberFormatting', () => ({
-  useNumberFormatting: () => ({ fmtNumber: (value: number) => String(value) }),
-}));
+vi.mock('@/hooks/useNumberFormatting', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useNumberFormatting')>();
+  return {
+    ...actual,
+    useNumberFormatting: () => ({
+      ...actual.useNumberFormatting(),
+      fmtNumber: (value: number) => String(value),
+    }),
+  };
+});
 
 import { TrueCostFixedLedger } from './TrueCostFixedLedger';
 
@@ -124,7 +131,7 @@ describe('modernized fixed-cost ledger retained-source behavior', () => {
     h.isError = true;
     mount();
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Amount' }), { target: { value: '120' } });
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-09-30' } });
+    fireEvent.change(screen.getByLabelText('Date', { selector: 'input[type="date"]' }), { target: { value: '2026-09-30' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Note' }), { target: { value: '  renewal  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Record cost' }));
     expect(h.add).toHaveBeenCalledWith({
@@ -134,7 +141,7 @@ describe('modernized fixed-cost ledger retained-source behavior', () => {
     act(() => h.add.mock.calls[0][1].onSuccess());
     expect(screen.getByRole('spinbutton', { name: 'Amount' })).toHaveValue(null);
     expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('');
-    expect(screen.getByLabelText('Date')).toHaveValue('2026-09-30');
+    expect(screen.getByLabelText('Date', { selector: 'input[type="date"]' })).toHaveValue('2026-09-30');
   });
 
   it('retains the explicit delete confirmation and scoped payload on refresh failure', () => {

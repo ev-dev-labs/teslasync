@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Lightbulb } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingCoach } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -123,9 +123,9 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-baseline gap-2">
             <WidgetBigNumber value={score == null ? null : fmtInt(score)} animated={false} />
-            <span className="text-xs text-[var(--text-muted)]">
+            <Caption>
               {t('widget.drivingCoach.scoreLabel', '/ 100')}
-            </span>
+            </Caption>
           </div>
           {savingsPct != null && savingsPct > 0 && (
             <Badge variant="success" size="sm">

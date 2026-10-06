@@ -4,6 +4,24 @@ import { EvidenceLimitationsPanel } from './EvidenceLimitationsPanel';
 import type { ServiceIntelligenceEvidenceBundle } from '@/api/hooks/useServiceIntelligence';
 
 describe('Service evidence remains domain-owned', () => {
+  it('retains interpretation limits and the supplied disclaimer even when the evidence inventory is genuinely empty', () => {
+    render(
+      <EvidenceLimitationsPanel selected loading={false} error={null}
+        evidence={{
+          schema_version: '1',
+          items: [],
+          limitations: ['No returned maintenance record confirms campaign completion.'],
+          disclaimer: 'An empty evidence inventory is not a clean bill of health.',
+        }}
+        onRetry={vi.fn()} />,
+    );
+    expect(screen.getByRole('heading', { name: 'Evidence & limitations' })).toBeInTheDocument();
+    expect(screen.getByText('0 items')).toBeInTheDocument();
+    expect(screen.getByText('No returned maintenance record confirms campaign completion.')).toBeInTheDocument();
+    expect(screen.getByText('An empty evidence inventory is not a clean bill of health.')).toBeInTheDocument();
+    expect(screen.queryByText('No evidence bundle')).not.toBeInTheDocument();
+  });
+
   it('preserves supplied evidence order, links, limitations and disclaimer without inferring diagnosis', () => {
     const evidence: ServiceIntelligenceEvidenceBundle = {
       schema_version: '1',

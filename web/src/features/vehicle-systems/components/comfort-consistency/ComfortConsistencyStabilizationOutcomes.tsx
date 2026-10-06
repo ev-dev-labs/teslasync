@@ -13,8 +13,9 @@ import {
   YAxis,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import { chartTokens } from '@/lib/tokens';
@@ -31,15 +32,6 @@ interface ComfortConsistencyStabilizationOutcomesProps {
   state: ComfortConsistencyQueryState;
   formatDuration: UnitFormatter;
   formatDelta: TemperatureDeltaFormatter;
-}
-
-function OutcomeMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="body" className="mt-1">{value}</Text>
-    </div>
-  );
 }
 
 export function ComfortConsistencyStabilizationOutcomes({
@@ -78,44 +70,31 @@ export function ComfortConsistencyStabilizationOutcomes({
           requirement="runs"
           skeletonHeight={360}
         >
-          <Grid cols={{ default: 2, md: 4 }} gap={3}>
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.fragments', 'Active fragments')}
-              value={fmtInt(summary.activeRunCount)}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.inBandStarts', 'In-band-first fragments')}
-              value={fmtInt(summary.insideBandStartRuns)}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.candidates', 'Outside-band fragments')}
-              value={fmtInt(summary.stabilizationWindows.length)}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.hotCold', 'Hot / cold fragments')}
-              value={`${fmtInt(summary.hotStartWindows)} / ${fmtInt(summary.coldStartWindows)}`}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.stabilized', 'Sustained-band observed')}
-              value={fmtInt(summary.stabilizedWindows)}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.notObserved', 'Not observed stabilized')}
-              value={fmtInt(summary.unstabilizedWindows)}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.censoredUnstabilized', 'Censored without stabilization')}
-              value={fmtInt(summary.censoredUnstabilizedWindows)}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.medianTime', 'Median observed time to band')}
-              value={formatDuration(summary.medianStabilizationS)}
-            />
-            <OutcomeMetric
-              label={t('comfortConsistency.stabilization.medianOvershoot', 'Median observed overshoot')}
-              value={formatDelta(summary.medianOvershootC)}
-            />
-          </Grid>
+          <VehicleOperationalBrief embedded id="comfort-consistency-stabilization-summary"
+            title={t('comfortConsistency.stabilization.title', 'Stabilization and overshoot outcomes')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('comfortConsistency.stabilization.subtitle', 'Only active fragments whose first observed sample is outside the comfort band enter the stabilization denominator.') }}
+            metrics={[
+              ...[
+                { key: 'fragments', label: t('comfortConsistency.stabilization.fragments', 'Active fragments'), value: summary.activeRunCount },
+                { key: 'in-band', label: t('comfortConsistency.stabilization.inBandStarts', 'In-band-first fragments'), value: summary.insideBandStartRuns },
+                { key: 'outside', label: t('comfortConsistency.stabilization.candidates', 'Outside-band fragments'), value: summary.stabilizationWindows.length },
+                { key: 'stabilized', label: t('comfortConsistency.stabilization.stabilized', 'Sustained-band observed'), value: summary.stabilizedWindows },
+                { key: 'not-observed', label: t('comfortConsistency.stabilization.notObserved', 'Not observed stabilized'), value: summary.unstabilizedWindows },
+                { key: 'censored', label: t('comfortConsistency.stabilization.censoredUnstabilized', 'Censored without stabilization'), value: summary.censoredUnstabilizedWindows },
+              ].map(fact => ({
+                metricId: 'count' as const, occurrenceId: fact.key, label: fact.label, rawValue: fact.value,
+                display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
+              })),
+              { metricId: 'count', occurrenceId: 'hot-cold', label: t('comfortConsistency.stabilization.hotCold', 'Hot / cold fragments'), rawValue: summary.hotStartWindows,
+                display: { formatter: raw => ({ value: `${fmtInt(raw)} / ${fmtInt(summary.coldStartWindows)}`, unit: '' }) } },
+              { metricId: 'duration', occurrenceId: 'median-time', label: t('comfortConsistency.stabilization.medianTime', 'Median observed time to band'), rawValue: summary.medianStabilizationS,
+                display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) } },
+              { metricId: 'number', occurrenceId: 'median-overshoot', label: t('comfortConsistency.stabilization.medianOvershoot', 'Median observed overshoot'), rawValue: summary.medianOvershootC,
+                display: { formatter: raw => ({ value: formatDelta(raw), unit: '' }) } },
+            ]}
+          />
           {summary.stabilizationWindows.length === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="mt-4 py-5"

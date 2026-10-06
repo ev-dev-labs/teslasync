@@ -11,11 +11,12 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
 import {
-  HealthSummary, ThermalPanels, LiveMotorPanel, ChartPanels, HistoryRecords, DetailPanels, MethodologyPanel,
+  ThermalPanels, LiveMotorPanel, ChartPanels, HistoryRecords, DetailPanels, MethodologyPanel,
 } from '../components/drivetrain-health-modernization';
 import {
   sensorsFor, driveSeries, motorSeries, powerSummary,
 } from '../components/drivetrain-health-modernization/model';
+import { DrivetrainSummary } from '../components/operationalbrief-a-m/DrivetrainSummary';
 
 /** Orchestration only. Workspace controls remain owned by the actual app header;
  * all original queries, defaults, polling and derived record ordering survive. */
@@ -71,7 +72,7 @@ export default function DrivetrainHealthPage() {
     >
       <FadeIn className="min-w-0 space-y-6">
         {/* 1–3: overview, complete metric band, health gauge, motor details, stats. */}
-        <HealthSummary
+        <DrivetrainSummary
           health={health} stats={stats} sensors={sensors} power={power}
           healthState={healthState} statsState={statsState} drivesState={drivesState}
           healthLoading={healthQuery.isLoading} statsLoading={statsQuery.isLoading}

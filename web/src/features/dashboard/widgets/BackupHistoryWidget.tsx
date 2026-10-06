@@ -12,7 +12,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { safeArray } from '@/lib/safeArray';
 import { fmtInt as formatDurationNumber, isFiniteNumber } from '@/lib/numberFormat';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber, WidgetEventFeed } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 
 /** Format seconds into human-readable duration (e.g. "2h 15m", "45m", "30s"). */
 export function fmtDuration(seconds: number | null | undefined): string {
@@ -124,6 +125,17 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
         .slice(0, maxEvents),
     [items, maxEvents],
   );
+  const feedItems = useMemo(() => sortedItems.map((event) => ({
+    id: event.id,
+    icon: <Zap aria-hidden className="h-3.5 w-3.5" />,
+    title: t('widget.backupHistory.duration', 'Duration'),
+    subtitle: isCompact ? undefined : `${t('widget.backupHistory.duration', 'Duration')}: ${fmtDuration(event.duration_seconds)}`,
+    timestamp: event.timestamp ?? '',
+    timeLabel: fmtEventTime(event.timestamp ?? ''),
+    color: '#fbbf24',
+    badges: <Badge variant="neutral">{fmtDuration(event.duration_seconds)}</Badge>,
+    wrap: true,
+  })), [sortedItems, isCompact, t, fmtEventTime]);
 
   // ── No energy sites linked ──
   if (!siteId && !isLoading) {
@@ -160,6 +172,17 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
+        <DashboardSourceBrief
+          metrics={[
+            { metricId: 'count', rawValue: Array.isArray(events) ? totalOutages : null, label: t('widget.backupHistory.outages30d', 'Outages (30d)'), description: t('widget.backupHistory.countDescription', 'Count of returned backup events; an absent or malformed event array is not zero.') },
+            { metricId: 'duration', rawValue: avgDurationSec, label: t('widget.backupHistory.avgDuration', 'Avg duration'), description: t('widget.backupHistory.durationDescription', 'Mean of valid non-negative event durations in seconds; missing duration operands leave the mean unknown.'), display: { formatter: raw => ({ value: fmtDuration(Number(raw)), unit: '' }) } },
+          ]}
+          state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+          title={t('widget.backupHistory.summaryTitle', 'Backup event sources')}
+          description={t('widget.backupHistory.summaryDescription', 'Energy-site discovery and backup events retain independent recovery; the recent-event feed is a capped presentation of returned history.')}
+          scope={t('widget.backupHistory.summaryScope', 'Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound', { siteId, since })}
+          loading={isLoading && !Array.isArray(events)} testId="backup-history-operational-brief"
+        />
         {items.length === 0 && !isLoading ? (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<BatteryFull className="h-5 w-5" />}
@@ -173,24 +196,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
               value={fmtInt(totalOutages)}
               size="secondary"
             />
-            <ul className="overflow-y-auto space-y-1.5">
-              {sortedItems.map((ev) => (
-                <li
-                  key={ev.id}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 min-h-[44px]"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Zap aria-hidden className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                    <span className="text-xs text-[var(--text-secondary)] truncate">
-                      {fmtEventTime(ev.timestamp ?? '')}
-                    </span>
-                  </div>
-                  <Badge variant="neutral" className="shrink-0 text-2xs">
-                    {fmtDuration(ev.duration_seconds)}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
+            <WidgetEventFeed items={feedItems} compact order="source" maxItems={maxEvents} />
           </div>
         )}
       </WidgetShell>
@@ -218,38 +224,11 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
         />
       ) : (
         <div className="flex flex-col gap-3 h-full">
-          {/* Stat summary row */}
-          <div className="shrink-0">
-            <WidgetStatGrid stats={[
-              { label: t('widget.backupHistory.outages30d', 'Outages (30d)'), value: fmtInt(totalOutages) },
-              { label: t('widget.backupHistory.avgDuration', 'Avg duration'), value: fmtDuration(avgDurationSec) },
-            ]} cols={2} />
-          </div>
 
           {/* Event list */}
-          <ul className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-            {sortedItems.map((ev) => (
-              <li
-                key={ev.id}
-                className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 min-h-[44px]"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Zap aria-hidden className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-[var(--text-primary)] truncate">
-                      {fmtEventTime(ev.timestamp ?? '')}
-                    </p>
-                    <p className="text-2xs text-[var(--text-muted)]">
-                      {t('widget.backupHistory.duration', 'Duration')}: {fmtDuration(ev.duration_seconds)}
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="neutral" className="shrink-0">
-                  {fmtDuration(ev.duration_seconds)}
-                </Badge>
-              </li>
-            ))}
-          </ul>
+          <div className="flex-1 min-h-0">
+            <WidgetEventFeed items={feedItems} order="source" maxItems={maxEvents} />
+          </div>
         </div>
       )}
     </WidgetShell>

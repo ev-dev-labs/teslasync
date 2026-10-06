@@ -6,10 +6,10 @@ import {
   CartesianGrid, CHART_COLORS, Line, LineChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 
-import { ChartCard, Grid, PageLayout } from '@/components/layout';
+import { ChartCard, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -20,6 +20,7 @@ import {
 } from '@/lib/unitConversion';
 import type { ResiliencePlanRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput, StormGuardPanel } from '../components';
+import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
 
 type ResilienceForm = Omit<ResiliencePlanRequest, 'vehicle_id' | 'confirmed'>;
 
@@ -46,6 +47,14 @@ export default function EmergencyResiliencePage() {
   };
 
   const result = mutation.data;
+  const summaryMetrics: readonly StatMetric[] = [
+    { occurrenceId: 'survival-horizon', metricId: 'duration', rawValue: result?.survival_horizon_s,
+      label: t('advancedIntelligence.resilience.horizon', 'Modeled survival horizon'),
+      description: t('advancedIntelligence.resilience.brief.horizon', 'Energy survival duration from the submitted outage plan; not a weather forecast or guarantee.') },
+    { occurrenceId: 'risk-checkpoints', metricId: 'count', rawValue: result?.risk_timeline?.length,
+      label: t('advancedIntelligence.resilience.timelinePoints', 'Risk checkpoints'),
+      description: t('advancedIntelligence.resilience.brief.checkpoints', 'Number of checkpoints returned in this modeled outage timeline, not a count of observed storms.') },
+  ];
   const chartData = useMemo(() => (result?.risk_timeline ?? []).map((point) => ({
     time: convertDurationFromSI(point.time_s, units.unitPrefs.duration),
     energy: convertEnergyFromSI(point.remaining_energy_wh, units.unitPrefs.energy),
@@ -171,22 +180,22 @@ export default function EmergencyResiliencePage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <InsightPanel
+        <AnalysisBrief
+          id="advanced-intelligence-resilience-brief"
           title={t('advancedIntelligence.resilience.summary.title', 'Survival horizon')}
-          empty={!result}
+          description={t('advancedIntelligence.resilience.brief.description', 'Modeled energy survival and timeline coverage remain separate from Storm guardian forecast and activity sources.')}
+          metrics={summaryMetrics}
+          vehicleId={result?.vehicle_id ?? vehicleId}
+          hasResult={result != null}
+          pending={mutation.isPending}
+          error={mutation.error}
+          quality={result?.data_quality}
+          evidence={result?.evidence}
+          limitations={result?.limitations}
+          generatedAt={result?.generated_at}
+          provenance={t('advancedIntelligence.resilience.brief.source', 'Modeled outage plan')}
           emptyMessage={t('advancedIntelligence.resilience.summary.empty', 'Submit an outage scenario to build a plan.')}
-        >
-          <Grid cols={{ default: 1, sm: 2 }} gap={4}>
-            <StatCard
-              label={t('advancedIntelligence.resilience.horizon', 'Modeled survival horizon')}
-              value={units.formatDuration(result?.survival_horizon_s)}
-            />
-            <StatCard
-              label={t('advancedIntelligence.resilience.timelinePoints', 'Risk checkpoints')}
-              value={result ? result.risk_timeline.length : null}
-            />
-          </Grid>
-        </InsightPanel>
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>

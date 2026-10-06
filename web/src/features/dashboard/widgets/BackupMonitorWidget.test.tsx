@@ -22,7 +22,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -306,6 +306,30 @@ describe('BackupMonitorWidget compact layout', () => {
 // ── Component: wide layout ────────────────────────────────────────────────
 
 describe('BackupMonitorWidget wide layout', () => {
+  it('retains the five newest complete rich rows in a wrapping canonical definition list', () => {
+    const runs = Array.from({ length: 6 }, (_, index) => makeRun({
+      id: `stable-${index}`,
+      completedAt: `2024-05-0${index + 1}T00:05:00Z`,
+      fileSize: 1024 * (index + 1),
+      durationMs: 1000 * (index + 1),
+      status: index === 5 ? 'failed' : 'completed',
+    }));
+    mockUseBackupRuns.mockReturnValue(qr({ data: runs }));
+    const { container } = renderWidget(WIDE);
+    const list = container.querySelector('dl');
+    expect(list).not.toBeNull();
+    expect(list).toHaveClass('@container/kv-list');
+    expect(list?.querySelectorAll('dt')).toHaveLength(5);
+    expect(list?.querySelectorAll('dd')).toHaveLength(5);
+    const terms = Array.from(list?.querySelectorAll('dt') ?? []);
+    expect(terms[0]).toHaveTextContent('6.00 KB');
+    expect(terms[0]).toHaveTextContent('6.00s');
+    expect(terms[4]).toHaveTextContent('2.00 KB');
+    expect(within(list as HTMLElement).getByText('Failed')).toBeInTheDocument();
+    expect(list?.querySelector('.truncate')).toBeNull();
+    expect(runs.map(run => run.id)).toEqual(Array.from({ length: 6 }, (_, index) => `stable-${index}`));
+  });
+
   it('lists recent runs with duration, keeps the row dots decorative, and sorts newest first', () => {
     const a = makeRun({ status: 'completed', completedAt: '2024-02-01T00:00:00Z', durationMs: 4321 });
     const b = makeRun({ status: 'failed', completedAt: '2024-04-01T00:00:00Z', durationMs: null });

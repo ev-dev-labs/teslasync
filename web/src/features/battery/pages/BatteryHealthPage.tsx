@@ -6,9 +6,10 @@ import {
 
 import { Grid, Stack, PageLayout } from '@/components/layout';
 import {
-  BatteryPanelGrid, HealthSummary, HealthStatCell as StatCell,
+  BatteryPanelGrid, HealthSummary,
   HealthThermalPanel, HealthQuickLinksPanel, HealthUnavailableOutline,
 } from '../components/modernization';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 
 import {
   GlassPanel, Badge,
@@ -25,7 +26,7 @@ import {
 } from '@/components/data-display';
 import { EmptyState, LiveStaleDataBanner, SectionErrorBoundary, ChartBlockSkeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { AIBatteryHealthForecastNarrative } from '@/components/ai/AIBatteryHealthForecastNarrative';
+import { AIBatteryHealthForecastNarrative } from '@/components/ai';
 
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
@@ -426,6 +427,7 @@ export default function BatteryHealthPage() {
       <StaleRefreshWarning state={healthDataState} label={t('battery.title', 'Battery Health')} />
 
       <OperationalBrief
+        compact
         testId="battery-operational-brief"
         eyebrow={t('operations.battery.eyebrow', 'Battery posture')}
         title={t('operations.battery.title', 'Long-term pack health remains measurable and actionable')}
@@ -466,6 +468,8 @@ export default function BatteryHealthPage() {
         metrics={[
           {
             key: 'health',
+            rawValue: healthMeasured ? health.current_soh : null,
+            valueState: healthMeasured ? 'value' : 'missing',
             label: t('operations.battery.packScore', 'Pack score'),
             value: healthValue,
             detail: t(
@@ -476,6 +480,8 @@ export default function BatteryHealthPage() {
           },
           {
             key: 'degradation',
+            rawValue: healthMeasured ? health.degradation_rate_pct_per_year : null,
+            valueState: healthMeasured && Number.isFinite(health.degradation_rate_pct_per_year) ? 'value' : 'missing',
             label: t('operations.battery.degradationPace', 'Degradation pace'),
             value: healthMeasured ? `${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}` : '—',
             detail: t(
@@ -486,6 +492,8 @@ export default function BatteryHealthPage() {
           },
           {
             key: 'range-confidence',
+            rawValue: rangeConfidenceLabel,
+            valueState: 'value',
             label: t('operations.battery.rangeConfidence', 'Range confidence'),
             value: rangeConfidenceLabel,
             detail: rangeConfidenceDetail,
@@ -498,6 +506,8 @@ export default function BatteryHealthPage() {
           },
           {
             key: 'charging-stress',
+            rawValue: chargingStressLabel,
+            valueState: 'value',
             label: t('operations.battery.chargingStress', 'Charging stress'),
             value: chargingStressLabel,
             detail: t('operations.battery.chargingStressDetail', {
@@ -510,6 +520,8 @@ export default function BatteryHealthPage() {
           },
           {
             key: 'thermal-impact',
+            rawValue: health.temp_exposure_score,
+            valueState: health.temp_exposure_score == null ? 'missing' : 'value',
             label: t('operations.battery.thermalImpact', 'Thermal impact'),
             value:
               health.temp_exposure_score == null
@@ -529,6 +541,8 @@ export default function BatteryHealthPage() {
           },
           {
             key: 'cycles',
+            rawValue: health.total_cycles,
+            valueState: Number.isFinite(health.total_cycles) ? 'value' : 'missing',
             label: t('operations.battery.cycleExposure', 'Cycle exposure'),
             value: fmtNumber(health.total_cycles),
             detail: t(
@@ -718,48 +732,30 @@ export default function BatteryHealthPage() {
                 <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}
               </PanelTitle>
-              <Grid minItemWidth="compact" gap={4} className="min-w-0">
-                <StatCell
-                  label={t('battery.newVsNow.capNew', 'Capacity When New')}
-                  value={originalCapacityMeasured ? formatEnergy(health.original_capacity_wh) : '—'}
-                />
-                <StatCell
-                  label={t('battery.newVsNow.capNow', 'Capacity Now')}
-                  value={capacityMeasured ? formatEnergy(health.estimated_capacity_wh) : '—'}
-                  accent="text-cyan-300"
-                  note={
-                    capacityMeasured && originalCapacityMeasured ? <Text as="p" size="2xs" className="mt-1 text-rose-300">
-                      -{formatEnergy(
-                        Math.max(0, health.original_capacity_wh - health.estimated_capacity_wh),
-                      )}
-                    </Text> : undefined
-                  }
-                />
-                <StatCell
-                  label={t('battery.newVsNow.rangeNew', 'Range When New')}
-                  value={history.length > 0 ? fmtInt(fromMeters(history[0].range_m)) : '—'}
-                  unit={unitPrefs.distance}
-                />
-                <StatCell
-                  label={t('battery.newVsNow.rangeNow', 'Range Now')}
-                  value={
-                    history.length > 0
-                      ? fmtInt(fromMeters(history[history.length - 1].range_m))
-                      : '—'
-                  }
-                  unit={unitPrefs.distance}
-                  accent="text-emerald-300"
-                  note={
-                    history.length >= 2 ? (
-                      <Text as="p" size="2xs" className="mt-1 text-rose-300">
-                        -{fmtInt(fromMeters(
-                          history[0].range_m - history[history.length - 1].range_m,
-                        ))} {unitPrefs.distance} {t('battery.newVsNow.lost', 'lost')}
-                      </Text>
-                    ) : undefined
-                  }
-                />
-              </Grid>
+              <BatteryEvidenceBrief
+                title={t('battery.newVsNow.brief.summary', 'Capacity and range evidence')}
+                retained={healthDataState.status === 'stale'}
+                period={{ kind: 'unknown', label: t('battery.newVsNow.brief.scope', 'Reference capacity and first / latest range snapshots'),
+                  reason: t('battery.newVsNow.brief.description', 'Capacity values are modeled estimates; range comparison uses the first and latest available history points, not a controlled capacity test.') }}
+                metrics={[
+                  { metricId: 'energy', occurrenceId: 'capacity-new', rawValue: originalCapacityMeasured ? health.original_capacity_wh : null,
+                    label: t('battery.newVsNow.capNew', 'Capacity When New'),
+                    display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+                  { metricId: 'energy', occurrenceId: 'capacity-now', rawValue: capacityMeasured ? health.estimated_capacity_wh : null,
+                    label: t('battery.newVsNow.capNow', 'Capacity Now'),
+                    display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
+                    context: capacityMeasured && originalCapacityMeasured
+                      ? `-${formatEnergy(Math.max(0, health.original_capacity_wh - health.estimated_capacity_wh))}` : undefined },
+                  { metricId: 'distance', occurrenceId: 'range-new', rawValue: history.length > 0 ? history[0].range_m : null,
+                    label: t('battery.newVsNow.rangeNew', 'Range When New'),
+                    display: { formatter: raw => ({ value: fmtInt(fromMeters(raw)), unit: unitPrefs.distance }) } },
+                  { metricId: 'distance', occurrenceId: 'range-now', rawValue: history.length > 0 ? history[history.length - 1].range_m : null,
+                    label: t('battery.newVsNow.rangeNow', 'Range Now'),
+                    display: { formatter: raw => ({ value: fmtInt(fromMeters(raw)), unit: unitPrefs.distance }) },
+                    context: history.length >= 2
+                      ? `-${fmtInt(fromMeters(history[0].range_m - history[history.length - 1].range_m))} ${unitPrefs.distance} ${t('battery.newVsNow.lost', 'lost')}` : undefined },
+                ]}
+              />
             </GlassPanel>
           </SectionErrorBoundary>
         </BatteryPanelGrid>

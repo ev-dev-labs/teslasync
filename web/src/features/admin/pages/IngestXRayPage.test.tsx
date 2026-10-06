@@ -22,7 +22,7 @@
  *     a manual refetch.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -202,6 +202,53 @@ beforeEach(() => {
 });
 
 describe('IngestXRayPage', () => {
+  it('renders the shared OperationalBrief with numeric fractional mean, full captions and intact bucket action', async () => {
+    xrayFn.mockResolvedValue(makeXRay({
+      buckets: [{ bucket_start: '2026-07-03T21:58:00Z', count: 2 },
+        { bucket_start: '2026-07-03T21:59:00Z', count: 9 }],
+    }));
+    renderPage();
+    pickVehicle('1');
+    await screen.findByText('4,096');
+    const strip = screen.getByTestId('ingest-xray-operational-brief');
+    expect(strip).toHaveAttribute('data-operational-brief');
+    expect(strip).toHaveTextContent('Exact query bounds are not supplied');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    const mean = strip.querySelector('[data-operational-metric="mean"]');
+    expect(mean).toHaveAttribute('data-value-state', 'value');
+    expect(mean?.querySelector('[data-operational-value]')?.textContent).toMatch(/^5[.,]5/);
+    for (const caption of ['within selected window', 'unique signal names', 'busiest interval',
+      'mean per interval', 'observation horizon', 'aggregation interval']) {
+      expect(strip).toHaveTextContent(caption);
+    }
+    fireEvent.change(screen.getByLabelText('Bucket'), { target: { value: '30s' } });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(
+      expect.stringContaining('bucket=30s'), expect.anything()));
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+  });
+
+  it('opens actual brief details without changing vehicle, window, bucket or ingest controls', async () => {
+    xrayFn.mockResolvedValue(makeXRay());
+    renderPage();
+    pickVehicle('1');
+    await screen.findByText('4,096');
+    fireEvent.click(within(screen.getByTestId('ingest-xray-operational-brief'))
+      .getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(within(drawer).getByText('within selected window')).toBeInTheDocument();
+    expect(within(drawer).getByText('mean per interval')).toBeInTheDocument();
+    expect(within(drawer).getByText('Exact query bounds are not supplied')).toBeInTheDocument();
+    expect(within(drawer).getByText('4,096')).toBeInTheDocument();
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('1');
+    expect(screen.getByLabelText('Window')).toHaveValue('1h');
+    expect(screen.getByLabelText('Bucket')).toHaveValue('1m');
+    const close = within(drawer).getAllByRole('button', { name: 'Close' });
+    fireEvent.click(close[close.length - 1]);
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh ingest x-ray' })).toBeEnabled();
+  });
+
   it('keeps the query disabled and shows dashes (not a fake 0) for an empty fleet', () => {
     vehicleHook.data = [];
     renderPage();
@@ -294,11 +341,12 @@ describe('IngestXRayPage', () => {
     );
 
     // The failed poll must not blank the table nor swap it for the error panel:
-    // last-good data stays and no error copy appears.
+    // Last-good data stays and no section-level retry replaces it.
     expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
     // KPI band still shows the last-good total, not a dash.
     expect(screen.getByText('4,096')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('ingest-xray-summary')).toHaveAttribute('data-retained', 'true'));
   });
 
   it('refetches with the new window when the window selector changes', async () => {
@@ -346,5 +394,25 @@ describe('IngestXRayPage', () => {
     await waitFor(() =>
       expect(xrayFn.mock.calls.length).toBeGreaterThan(callsBefore),
     );
+  });
+
+  it('retains a known empty ingest snapshot and all section shells after refresh failure', async () => {
+    xrayFn.mockResolvedValueOnce(makeXRay({
+      total_samples: 0,
+      unique_fields: 0,
+      fields: [],
+      buckets: [],
+    }));
+    xrayFn.mockRejectedValue(new Error('refresh failed'));
+    renderPage();
+    pickVehicle('1');
+    await waitFor(() => expect(screen.getAllByText('0').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh ingest x-ray' }));
+    await waitFor(() => expect(screen.getByText('Data may be stale')).toBeInTheDocument());
+
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sample volume' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
   });
 });

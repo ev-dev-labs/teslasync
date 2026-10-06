@@ -98,7 +98,7 @@ function mountPage() {
   return render(<ChargerHealthPage />, { wrapper: Harness });
 }
 function metricTiles(container: HTMLElement) {
-  return container.querySelectorAll('[data-stat]');
+  return container.querySelectorAll('[data-operational-metric]');
 }
 function chart() {
   return screen.getByRole('figure', { name: 'Recent Power vs. Own Baseline' });
@@ -132,11 +132,11 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     resizeAllocatedWidth(1280);
     expect(sources.sessionsHook).toHaveBeenLastCalledWith('7');
     expect(metricTiles(result.container)).toHaveLength(4);
-    expect(metricTiles(result.container)[0]?.querySelector('[data-stat-value]')).toHaveTextContent('1');
-    expect(metricTiles(result.container)[1]?.querySelector('[data-stat-value]')).toHaveTextContent('1');
-    expect(metricTiles(result.container)[2]?.querySelector('[data-stat-value]')).toHaveTextContent('10.00');
-    expect(metricTiles(result.container)[3]?.querySelector('[data-stat-value]')).toHaveTextContent('148');
-    const context = metricTiles(result.container)[0]?.querySelector('[data-stat-context]');
+    expect(metricTiles(result.container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('1');
+    expect(metricTiles(result.container)[1]?.querySelector('[data-operational-value]')).toHaveTextContent('1');
+    expect(metricTiles(result.container)[2]?.querySelector('[data-operational-value]')).toHaveTextContent('10.00');
+    expect(metricTiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('148');
+    const context = metricTiles(result.container)[0]?.querySelector(':scope > div:last-child');
     expect(context).toHaveTextContent('10 scorable sessions');
     const fallback = within(chart()).getByRole('table');
     expect(fallback).toHaveTextContent('70');
@@ -155,7 +155,7 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     sources.sessions = { ...sources.sessions, error: new Error('background failure'), isError: true };
     result.rerender(<ChargerHealthPage />);
     expect(metricTiles(result.container)).toHaveLength(4);
-    expect(metricTiles(result.container)[2]?.querySelector('[data-stat-value]')).toHaveTextContent('10.00');
+    expect(metricTiles(result.container)[2]?.querySelector('[data-operational-value]')).toHaveTextContent('10.00');
     expect(within(chart()).getByRole('table')).toHaveTextContent('70');
     const warnings = screen.getAllByTestId('stale-refresh-warning');
     expect(warnings).toHaveLength(3);
@@ -169,11 +169,11 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     sources.sessions = { ...sources.sessions, fetchStatus: 'paused' };
     result.rerender(<ChargerHealthPage />);
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3);
-    expect(metricTiles(result.container)[2]).toHaveAttribute('data-state', 'value');
+    expect(metricTiles(result.container)[2]).toHaveAttribute('data-value-state', 'value');
     sources.sessions = { fetchStatus: 'paused', isLoading: false, refetch: sources.retry };
     result.rerender(<ChargerHealthPage />);
     expect(metricTiles(result.container)).toHaveLength(4);
-    for (const tile of metricTiles(result.container)) expect(tile).toHaveAttribute('data-state', 'missing');
+    for (const tile of metricTiles(result.container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getAllByText('Charging sessions loading is paused. Connect to resume or retry.').length).toBeGreaterThan(0);
     fireEvent.click(within(locations(result.container)).getByRole('button', { name: 'Retry' }));
     expect(sources.retry).toHaveBeenCalledOnce();
@@ -183,7 +183,9 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
   it('keeps all metric and panel shells through initial loading, fatal failure and successful empty', () => {
     sources.sessions = { isLoading: true, isPending: true, fetchStatus: 'fetching', refetch: sources.retry };
     const result = mountPage();
-    expect(result.container.querySelectorAll('[data-stat][data-state="loading"]')).toHaveLength(4);
+    expect(metricTiles(result.container)).toHaveLength(4);
+    expect(result.container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(result.container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(chart()).toHaveAttribute('aria-busy', 'true');
     expect(locations(result.container)).toBeInTheDocument();
     sources.sessions = { error: new Error('initial failure'), isError: true, fetchStatus: 'idle', refetch: sources.retry };
@@ -195,8 +197,8 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     expect(sources.retry).toHaveBeenCalledOnce();
     sources.sessions = { data: [], fetchStatus: 'idle', refetch: sources.retry };
     result.rerender(<ChargerHealthPage />);
-    expect(metricTiles(result.container)[0]?.querySelector('[data-stat-value]')).toHaveTextContent('0');
-    for (const tile of Array.from(metricTiles(result.container)).slice(1)) expect(tile).toHaveAttribute('data-state', 'missing');
+    expect(metricTiles(result.container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    for (const tile of Array.from(metricTiles(result.container)).slice(1)) expect(tile).toHaveAttribute('data-value-state', 'missing');
     expect(within(locations(result.container)).getByText('No charging locations recorded yet.')).toBeInTheDocument();
     expect(within(chart()).getByText(/No charging location has enough clean sessions/)).toBeInTheDocument();
   });
@@ -205,8 +207,8 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     sources.sessions = { ...sources.sessions, data: [sessions[0]!] };
     const result = mountPage();
     resizeAllocatedWidth(1280);
-    expect(metricTiles(result.container)[0]).toHaveAttribute('data-state', 'value');
-    for (const tile of Array.from(metricTiles(result.container)).slice(1)) expect(tile).toHaveAttribute('data-state', 'missing');
+    expect(metricTiles(result.container)[0]).toHaveAttribute('data-value-state', 'value');
+    for (const tile of Array.from(metricTiles(result.container)).slice(1)) expect(tile).toHaveAttribute('data-value-state', 'missing');
     const table = within(locations(result.container)).getByRole('table', { name: 'Locations' });
     expect(table).toHaveTextContent('Not enough data');
     expect(within(table).queryByRole('cell', { name: '0.00 kW', exact: true })).not.toBeInTheDocument();

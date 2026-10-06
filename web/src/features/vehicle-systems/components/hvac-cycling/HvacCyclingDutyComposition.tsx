@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
@@ -13,15 +14,6 @@ interface HvacCyclingDutyCompositionProps {
   summary: HvacCyclingSummary;
   state: HvacCyclingQueryState;
   formatDuration: UnitFormatter;
-}
-
-function DutyMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="body" className="mt-1">{value}</Text>
-    </div>
-  );
 }
 
 export function HvacCyclingDutyComposition({
@@ -42,34 +34,28 @@ export function HvacCyclingDutyComposition({
           )}
         </Text>
         <HvacCyclingSectionBody summary={summary} state={state} requirement="intervals">
-          <Grid cols={{ default: 2, md: 3 }} gap={3}>
-            <DutyMetric
-              label={t('hvacCycling.duty.onTime', 'Observed on time')}
-              value={formatDuration(summary.totalOnObservedS)}
-            />
-            <DutyMetric
-              label={t('hvacCycling.duty.offTime', 'Observed off time')}
-              value={formatDuration(summary.totalOffObservedS)}
-            />
-            <DutyMetric
-              label={t('hvacCycling.duty.totalTime', 'Total observed time')}
-              value={formatDuration(summary.observedS)}
-            />
-            <DutyMetric
-              label={t('hvacCycling.duty.dutyCycle', 'Duration-weighted on duty')}
-              value={summary.dutyCycle != null
-                ? fmtPercent(summary.dutyCycle * 100)
-                : '—'}
-            />
-            <DutyMetric
-              label={t('hvacCycling.duty.onSamples', 'Known on-state samples')}
-              value={fmtInt(summary.rows.knownOnRows)}
-            />
-            <DutyMetric
-              label={t('hvacCycling.duty.offSamples', 'Known off-state samples')}
-              value={fmtInt(summary.rows.knownOffRows)}
-            />
-          </Grid>
+          <VehicleOperationalBrief embedded id="hvac-cycling-duty-summary"
+            title={t('hvacCycling.duty.title', 'On/off duty composition')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('hvacCycling.duty.subtitle', 'Duration composition uses observed intervals; sample counts remain a separate evidence layer.') }}
+            metrics={[
+              ...[
+                { key: 'on', label: t('hvacCycling.duty.onTime', 'Observed on time'), value: summary.totalOnObservedS },
+                { key: 'off', label: t('hvacCycling.duty.offTime', 'Observed off time'), value: summary.totalOffObservedS },
+                { key: 'total', label: t('hvacCycling.duty.totalTime', 'Total observed time'), value: summary.observedS },
+              ].map(fact => ({
+                metricId: 'duration' as const, occurrenceId: fact.key, label: fact.label, rawValue: fact.value,
+                display: { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) },
+              })),
+              { metricId: 'percent', occurrenceId: 'duty', label: t('hvacCycling.duty.dutyCycle', 'Duration-weighted on duty'), rawValue: summary.dutyCycle != null ? summary.dutyCycle * 100 : null,
+                display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) } },
+              { metricId: 'count', occurrenceId: 'on-samples', label: t('hvacCycling.duty.onSamples', 'Known on-state samples'), rawValue: summary.rows.knownOnRows,
+                display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+              { metricId: 'count', occurrenceId: 'off-samples', label: t('hvacCycling.duty.offSamples', 'Known off-state samples'), rawValue: summary.rows.knownOffRows,
+                display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+            ]}
+          />
           <Text as="p" variant="caption" className="mt-3">
             {t(
               'hvacCycling.duty.identity',

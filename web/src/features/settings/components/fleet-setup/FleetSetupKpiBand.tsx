@@ -1,15 +1,14 @@
 /**
  * Fleet Setup KPI band — account, token, domain key, and stream health.
  *
- * Always renders four cards. Loading uses StatSkeleton; missing data
- * degrades to em-dashes instead of hiding the strip.
+ * Independent setup sources retain their own loading/unknown distinctions in
+ * the compact Brief; a slow domain check never hides a resolved token check.
  */
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KeyRound, Radio, ShieldCheck, ShieldAlert, Wifi, WifiOff } from 'lucide-react'
-import { MetricCard } from '@/components/data-display'
-import { SourceContent } from '@/components/layout'
-import { StatSkeleton } from '@/components/feedback'
+import type { StatMetric } from '@/components/data-display'
+import { SettingsSummaryBrief } from '../operationalbrief-all/SettingsSummaryBrief'
 import type { NeonColor } from '@/lib/tokens'
 import type { FleetApiInfo, PublicKeyStatus } from '@/api/hooks/useFleetSetup'
 import type { OnboardingStatus } from '@/api/hooks/useOnboarding'
@@ -21,6 +20,7 @@ interface FleetSetupKpiBandProps {
   onboarding: OnboardingStatus | undefined
   isLoading: boolean
   sourceLoading?: Partial<Record<KpiCell['key'], boolean>>
+  retained?: boolean
 }
 
 interface KpiCell {
@@ -39,16 +39,9 @@ export function FleetSetupKpiBand({
   onboarding,
   isLoading,
   sourceLoading,
+  retained = false,
 }: FleetSetupKpiBandProps) {
   const { t } = useTranslation('settings')
-
-  if (isLoading && !sourceLoading) {
-    return (
-      <section aria-label={t('fleetSetup.kpi.aria', 'Fleet setup status summary')}>
-        <StatSkeleton count={4} />
-      </section>
-    )
-  }
 
   const dash = t('common.dash', '—')
   const connected = authenticated === true || apiInfo?.has_valid_token === true
@@ -141,33 +134,29 @@ export function FleetSetupKpiBand({
   }
 
   const cells = [accountCell, tokenCell, keyCell, streamCell]
+  const metrics: readonly StatMetric[] = cells.map(cell => ({
+    metricId: 'status',
+    occurrenceId: `fleet-setup-${cell.key}`,
+    label: cell.label,
+    rawValue: (isLoading && !sourceLoading) || sourceLoading?.[cell.key] || cell.value === dash ? null : cell.value,
+    missingReason: sourceLoading?.[cell.key]
+      ? t('summaryBrief.loading', 'Loading source')
+      : undefined,
+    context: <>{cell.icon}{cell.subtitle}</>,
+  }))
 
   return (
     <section
       aria-label={t('fleetSetup.kpi.aria', 'Fleet setup status summary')}
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      aria-busy={isLoading}
     >
-      {cells.map((cell) => sourceLoading?.[cell.key] ? (
-        <SourceContent
-          key={cell.key}
-          state="loading"
-          label={cell.label}
-          emptyMessage=""
-          errorMessage=""
-          loadingContent={<StatSkeleton count={1} />}
-        >
-          {null}
-        </SourceContent>
-      ) : (
-        <MetricCard
-          key={cell.key}
-          label={cell.label}
-          value={cell.value}
-          subtitle={cell.subtitle}
-          color={cell.color}
-          icon={cell.icon}
-        />
-      ))}
+      <SettingsSummaryBrief title={t('fleetSetup.brief.title', 'Fleet setup overview')}
+        description={t('fleetSetup.brief.description', 'Account connection, token refresh, domain publication and telemetry readiness come from independent setup checks.')}
+        source={t('fleetSetup.brief.source', 'Fleet setup checks')}
+        scope={t('fleetSetup.brief.scope', 'Latest account, token and domain checks · telemetry packets in the last 24 hours')}
+        metrics={metrics} loading={isLoading && !sourceLoading} retained={retained}
+        unavailable={cells.some(cell => cell.value === dash) && !isLoading}
+        testId="fleet-setup-summary" />
     </section>
   )
 }

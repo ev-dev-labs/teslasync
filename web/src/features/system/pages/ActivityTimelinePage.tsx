@@ -157,8 +157,11 @@ export default function ActivityTimelinePage() {
           items={items}
           total={total}
           offset={offset}
-          loading={isLoading}
+          loading={isLoading && !state.hasData}
           error={isError}
+          available={state.hasData}
+          retained={state.hasData && query.isError}
+          scope={`${activityWindow.start} – ${activityWindow.end}`}
           timezone={tz}
         />
       </FadeIn>

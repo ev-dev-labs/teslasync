@@ -43,6 +43,13 @@ import type { ReactNode } from 'react'
 
 import type { TOTPStatus } from '@/api/types'
 
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
+    pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 } }),
+}))
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}))
 // Deterministic date formatting: the real useDateFormat threads user settings
 // + timezone; stubbing it pins that `formatDateTime` receives the raw ISO
 // string verbatim and lets us assert an exact, timezone-stable cell value.
@@ -115,15 +122,17 @@ beforeEach(() => {
 })
 
 describe('TotpKpiBand', () => {
-  it('swaps the band for skeleton placeholders while loading and mounts no metric labels', () => {
+  it('retains the Brief labels while loading and suppresses measured-value claims', () => {
     const { container } = render(<TotpKpiBand data={undefined} isLoading />)
 
     // None of the metric cards are mounted during the loading branch.
     for (const label of LABELS) {
-      expect(screen.queryByText(label)).not.toBeInTheDocument()
+      expect(screen.getByText(label)).toBeInTheDocument()
     }
     // Skeleton placeholders stand in for the cards (one pulse per skeleton bar).
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
+    expect(container.querySelectorAll('.motion-safe\\:animate-pulse').length).toBeGreaterThanOrEqual(4)
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
     // The formatter is never touched while there is no data.
     expect(formatDateTime).not.toHaveBeenCalled()
   })

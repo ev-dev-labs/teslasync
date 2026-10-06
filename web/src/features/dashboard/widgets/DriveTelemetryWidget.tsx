@@ -5,6 +5,7 @@ import { ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
 import { ChartTooltip } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import { useDrives, useDriveTelemetry } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -17,6 +18,7 @@ import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -87,6 +89,9 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     isFetching: combinedIsFetching,
     dataUpdatedAt: combinedUpdatedAt,
   }, { provenance: 'historical', partial: Boolean(latestDrive && !telemetry) });
+  const telemetryTrust = useDataState({
+    data: telemetry, isLoading: telemetryLoading, error, isError, isFetching, dataUpdatedAt, refetch,
+  }, { provenance: 'historical' });
   const handleRefresh = useCallback(() => {
     refetchDrives();
     refetch();
@@ -335,7 +340,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           <div className="flex flex-wrap items-center gap-3 pb-2">
             <WidgetChartSummary stats={stats} chart={null} compact />
             {isWide && latestDrive.startAddress && (
-              <Badge variant="neutral" size="sm" className="truncate max-w-[180px]">
+              <Badge variant="neutral" size="sm" className="min-w-0 max-w-full whitespace-normal [overflow-wrap:anywhere]">
                 {latestDrive.startAddress}
               </Badge>
             )}
@@ -343,19 +348,22 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
 
           {/* Chart area */}
           <div className="flex-1 min-h-40">
-            {chartData.length > 0 ? (
-              chart
-            ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            <SourceContent
+              state={sourceBoundaryState(telemetryTrust, chartData.length > 0)}
+              label={t('widget.driveTelemetry.title', 'Drive telemetry')}
+              emptyMessage={t('widget.driveTelemetry.noTelemetry', 'No telemetry for this drive')}
+              loadingContent={<EmptyState /* no-action: loading placeholder; the widget header already owns source refresh */
                 icon={<Activity className="h-5 w-5" />}
-                message={telemetryLoading
-                  ? t('widget.driveTelemetry.telemetryLoading', 'Loading drive telemetry')
-                  : error
-                    ? t('widget.driveTelemetry.telemetryError', 'Drive telemetry unavailable')
-                    : t('widget.driveTelemetry.noTelemetry', 'No telemetry for this drive')}
+                message={t('widget.driveTelemetry.telemetryLoading', 'Loading drive telemetry')}
                 className="py-4"
-              />
-            )}
+              />}
+              errorMessage={t('widget.driveTelemetry.telemetryError', 'Drive telemetry unavailable')}
+              error={telemetryTrust.fatalError}
+              retainedMessage={t('widget.driveTelemetry.telemetryRetained', 'Previously loaded drive telemetry remains visible while this source recovers.')}
+              errorRecovery={{ onRetry: () => { void refetch(); } }}
+            >
+              {chart}
+            </SourceContent>
           </div>
         </div>
       ) : (

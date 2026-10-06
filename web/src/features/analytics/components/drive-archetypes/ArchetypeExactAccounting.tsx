@@ -1,11 +1,10 @@
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { LayoutCard } from '@/components/layout';
 
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
   Table,
   Text,
 } from '@/components/ui';
@@ -140,11 +139,10 @@ export function ArchetypeExactAccounting({
 
   return (
     <section data-testid="drive-archetypes-accounting">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('archetypes.accounting.title', 'Exact accounting identities')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('archetypes.accounting.title', 'Exact accounting identities')}
+        actions={<Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'archetypes.accounting.subtitle',
@@ -176,7 +174,7 @@ export function ArchetypeExactAccounting({
             </tbody>
           </Table>
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Car, RefreshCw, Battery, Gauge, Zap, Activity, ListChecks,
+  Car, RefreshCw, Gauge, Zap, Activity, ListChecks,
   ExternalLink, Lock, Shield, ArrowLeftRight, AlertCircle,
   BatteryCharging, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
@@ -19,7 +19,6 @@ import {
   AnimatedNumber,
   DataProvenanceBadge,
   MetricBar,
-  StatStrip,
   OperationalBrief,
   EntityPreviewDrawer,
   type OperationalAttention,
@@ -37,7 +36,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { knownNumber } from '@/api/dataState';
+import { knownNumber, type DataStatus } from '@/api/dataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
@@ -64,6 +63,8 @@ import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
 import type { TFunction } from 'i18next';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -242,6 +243,7 @@ interface FleetKpisProps {
   totalRange: number | null;
   chargingCount: number;
   chargingCoverageCount: number;
+  sourceStatus: DataStatus;
 }
 
 /** Full-width responsive metric grid summarising the whole fleet. */
@@ -251,24 +253,31 @@ function FleetKpis({
   totalRange,
   chargingCount,
   chargingCoverageCount,
+  sourceStatus,
 }: FleetKpisProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   return (
-    <StatStrip
+    <VehicleEvidenceBrief
       id="fleet-current-summary"
-      period={{ kind: 'snapshot', label: t('vehicles.summarySnapshot', 'Current verified fleet readings'), observedAt: null,
-        provenance: t('dataSources.labels.liveVehicleState', 'Live vehicle state') }}
+      title={t('vehicles.summarySnapshot', 'Current verified fleet readings')}
+      description={t('vehicles.briefSummaryDescription', 'Registered vehicle count and independently verified battery, range, and charge-state readings. Missing coverage is not zero.')}
+      status={sourceStatus === 'ok' && (chargingCoverageCount < totalVehicles || avgBattery == null || totalRange == null) ? 'partial' : sourceStatus}
+      scope={t('vehicles.briefSummaryScope', 'Current field coverage differs by measurement; no common observation timestamp is supplied')}
+      provenance={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
       metrics={[
         { metricId: 'count', occurrenceId: 'fleet-total', label: t('vehicles.totalVehicles', 'Total vehicles'), rawValue: totalVehicles },
-        { metricId: 'text', occurrenceId: 'fleet-average-battery', label: t('vehicles.avgBattery', 'Avg battery'),
-          rawValue: avgBattery == null ? null : `${fmtNumber(avgBattery)}%` },
-        { metricId: 'text', occurrenceId: 'fleet-total-range',
+        { metricId: 'percent', occurrenceId: 'fleet-average-battery', label: t('vehicles.avgBattery', 'Avg battery'),
+          rawValue: avgBattery,
+          display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+        { metricId: 'distance', occurrenceId: 'fleet-total-range',
           label: `${t('vehicles.totalRange', 'Total range')} (${unitPrefs.distance})`,
-          rawValue: totalRange == null ? null : fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance)) },
-        { metricId: 'text', occurrenceId: 'fleet-charging-coverage', label: t('vehicles.chargingLiveState', 'Charging / live state'),
-          rawValue: chargingCoverageCount === 0 ? null : `${chargingCount} / ${chargingCoverageCount}` },
+          rawValue: totalRange,
+          display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, unitPrefs.distance)), unit: '' }) } },
+        { metricId: 'count', occurrenceId: 'fleet-charging-coverage', label: t('vehicles.chargingLiveState', 'Charging / live state'),
+          rawValue: chargingCoverageCount === 0 ? null : chargingCount,
+          display: { countTotal: chargingCoverageCount } },
       ]}
     />
   );
@@ -932,10 +941,7 @@ export default function VehicleListPage() {
         entry={entryById.get(vehicle.id)}
         onDelete={setDeleteTarget}
         onPreview={() => {
-          setPreviewTarget({
-            vehicle,
-            entry: entryById.get(vehicle.id),
-          });
+          setPreviewVehicle(vehicle);
         }}
       />
     ),
@@ -1275,19 +1281,13 @@ export default function VehicleListPage() {
   const syncMut = useSyncVehicles();
   const deleteMut = useDeleteVehicle();
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
-  const [previewTarget, setPreviewTarget] = useState<{
-    vehicle: Vehicle;
-    /**
-     * The FULL fleet entry, not a bare `state`.
-     *
-     * The drawer used to store the raw state and call `deriveVehicleStatus`,
-     * which happily reported a reading retained through a failed refresh as
-     * the vehicle's CURRENT status and rendered every stale metric as if it
-     * were live. Keeping the entry keeps the outcome + freshness +
-     * verified-field provenance attached to the numbers they qualify.
-     */
-    entry: FleetStateEntry | undefined;
-  } | null>(null);
+  const [previewVehicle, setPreviewVehicle] = useState<Vehicle | null>(null);
+  // Selection survives refreshes, but its trust entry must follow the current
+  // batch so an already-open drawer cannot keep certifying an old Live value.
+  const previewTarget = previewVehicle ? {
+    vehicle: vehicleList.find((vehicle) => vehicle.id === previewVehicle.id) ?? previewVehicle,
+    entry: entryById.get(previewVehicle.id),
+  } : null;
   /* Status and trust for the drawer come from the SHARED contract, so the
    * preview can never claim a retained reading is the vehicle's current
    * state — the exact defect this replaces. */
@@ -1319,6 +1319,27 @@ export default function VehicleListPage() {
     });
     navigate(`/vehicle-comparison?${params.toString()}`);
   };
+
+  const postureMetrics = useOperationalMetrics([
+    { metricId: 'count', occurrenceId: 'vehicles', rawValue: vehicleList.length },
+    { metricId: 'count', occurrenceId: 'online', rawValue: fleetStatePending || noCoverage ? null : fleet.liveStateCount,
+      display: { formatter: raw => ({ value: `${raw}/${vehicleList.length}`, unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'readiness', rawValue: fleetStatePending || fleet.batteryCoverageCount === 0 ? null : fleet.readyCount,
+      display: { formatter: raw => ({ value: `${raw}/${fleet.batteryCoverageCount}`, unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'utilization', rawValue: fleetStatePending ? null : utilizationPct,
+      display: { formatter: raw => ({ value: `${raw}%`, unit: '' }) } },
+    { metricId: fleet.softwareVersions.length === 1 ? 'text' : 'count', occurrenceId: 'software',
+      rawValue: fleetStatePending || fleet.softwareVersions.length === 0 ? null
+        : fleet.softwareVersions.length === 1 ? fleet.softwareVersions[0] : fleet.softwareVersions.length,
+      display: { formatter: raw => ({
+        value: t('operations.vehicles.softwareVersionCount', '{{count}} versions', { count: raw }), unit: '',
+      }) } },
+    { metricId: 'count', occurrenceId: 'service',
+      rawValue: workOrdersQuery.isLoading || workOrdersQuery.isError ? null : openWorkOrders.length,
+      display: { formatter: raw => ({
+        value: t('operations.vehicles.openWorkOrders', '{{count}} open', { count: raw }), unit: '',
+      }) } },
+  ]);
 
   /* ── Loading / error short-circuits ── */
   if (isLoading) {
@@ -1435,6 +1456,7 @@ export default function VehicleListPage() {
         label={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
         items={[{ id: 'fleet-operational-posture', size: 'full', content: vehicleList.length > 0 ? (
           <OperationalBrief
+            compact
             testId="fleet-operational-brief"
             eyebrow={t('operations.vehicles.eyebrow', 'Fleet posture')}
             title={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
@@ -1483,7 +1505,9 @@ export default function VehicleListPage() {
               {
                 key: 'vehicles',
                 label: t('vehicles.totalVehicles', 'Total vehicles'),
-                value: vehicleList.length,
+                value: postureMetrics[0].value,
+                rawValue: postureMetrics[0].rawValue,
+                valueState: postureMetrics[0].valueState,
                 detail: t(
                   'operations.vehicles.totalDetail',
                   'Vehicles currently registered in this TeslaSync workspace.',
@@ -1493,9 +1517,9 @@ export default function VehicleListPage() {
               {
                 key: 'online',
                 label: t('operations.vehicles.online', 'Live state available'),
-                value: fleetStatePending || noCoverage
-                  ? '—'
-                  : `${fleet.liveStateCount}/${vehicleList.length}`,
+                value: postureMetrics[1].value,
+                rawValue: postureMetrics[1].rawValue,
+                valueState: postureMetrics[1].valueState,
                 detail: t(
                   'operations.vehicles.onlineDetail',
                   'Vehicles with a current state response available.',
@@ -1511,9 +1535,9 @@ export default function VehicleListPage() {
                 label: t('operations.vehicles.readiness', 'Departure ready'),
                 // Without a fresh reading for ANY vehicle, "0/N ready" is an
                 // assertion that the fleet cannot depart — from no evidence.
-                value: fleetStatePending || fleet.batteryCoverageCount === 0
-                  ? '—'
-                  : `${fleet.readyCount}/${fleet.batteryCoverageCount}`,
+                value: postureMetrics[2].value,
+                rawValue: postureMetrics[2].rawValue,
+                valueState: postureMetrics[2].valueState,
                 detail: [
                   t(
                     'operations.vehicles.readinessDetail',
@@ -1530,9 +1554,9 @@ export default function VehicleListPage() {
               {
                 key: 'utilization',
                 label: t('operations.vehicles.utilization', 'Live utilization'),
-                value: fleetStatePending || utilizationPct == null
-                  ? '—'
-                  : `${utilizationPct}%`,
+                value: postureMetrics[3].value,
+                rawValue: postureMetrics[3].rawValue,
+                valueState: postureMetrics[3].valueState,
                 detail: [
                   t(
                     'operations.vehicles.utilizationDetail',
@@ -1546,15 +1570,9 @@ export default function VehicleListPage() {
               {
                 key: 'software',
                 label: t('operations.vehicles.softwarePosture', 'Software posture'),
-                value: fleetStatePending || fleet.softwareVersions.length === 0
-                  ? '—'
-                  : fleet.softwareVersions.length === 1
-                    ? fleet.softwareVersions[0]
-                    : t(
-                        'operations.vehicles.softwareVersionCount',
-                        '{{count}} versions',
-                        { count: fleet.softwareVersions.length },
-                      ),
+                value: postureMetrics[4].value,
+                rawValue: postureMetrics[4].rawValue,
+                valueState: postureMetrics[4].valueState,
                 detail: t(
                   'operations.vehicles.softwareCoverageDetail',
                   'Based on {{covered}} of {{total}} vehicles with a current software reading.',
@@ -1572,13 +1590,9 @@ export default function VehicleListPage() {
               {
                 key: 'service',
                 label: t('operations.vehicles.serviceAttention', 'Service attention'),
-                value: workOrdersQuery.isLoading || workOrdersQuery.isError
-                  ? '—'
-                  : t(
-                      'operations.vehicles.openWorkOrders',
-                      '{{count}} open',
-                      { count: openWorkOrders.length },
-                    ),
+                value: postureMetrics[5].value,
+                rawValue: postureMetrics[5].rawValue,
+                valueState: postureMetrics[5].valueState,
                 detail: workOrdersQuery.isError
                   ? t(
                       'operations.vehicles.serviceUnavailableMetric',
@@ -1631,6 +1645,7 @@ export default function VehicleListPage() {
                 totalRange={fleet.totalRange}
                 chargingCount={fleet.chargingCount}
                 chargingCoverageCount={fleet.chargingCoverageCount}
+                sourceStatus={fleetStateData.status}
               />
             )}
             </Section>
@@ -1725,7 +1740,7 @@ export default function VehicleListPage() {
       />
       <EntityPreviewDrawer
         open={previewTarget !== null}
-        onClose={() => setPreviewTarget(null)}
+        onClose={() => setPreviewVehicle(null)}
         eyebrow={t('vehicles.preview.eyebrow', 'Vehicle preview')}
         title={
           previewTarget?.vehicle.display_name

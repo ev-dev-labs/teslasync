@@ -110,6 +110,26 @@ vi.mock('../components/vehicle-cost', async () => {
   };
 });
 
+vi.mock('../components/statstrip-audit-vehicle-cost/VehicleCostStatStrip', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+  return {
+    VehicleCostStatStrip: (props: Record<string, unknown>) => {
+      captured.kpis = props;
+      return React.createElement('div', { 'data-testid': 'stub-kpis' });
+    },
+  };
+});
+
+vi.mock('../components/continuation-admin-1/VehicleCostTalkers', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+  return {
+    VehicleCostTalkers: (props: Record<string, unknown>) => {
+      captured.talkers = props;
+      return React.createElement('div', { 'data-testid': 'stub-talkers' });
+    },
+  };
+});
+
 import VehicleCostPage from './VehicleCostPage';
 import { ApiError } from '@/lib/resilience';
 import type {
@@ -332,7 +352,7 @@ describe('VehicleCostPage', () => {
 
     expect((captured.chart.bars as unknown[]).length).toBe(0);
     expect((captured.table.vehicles as unknown[]).length).toBe(0);
-    expect(captured.kpis.vehicleCount).toBe(0);
+    expect(captured.kpis.vehicleCount).toBeNull();
     expect(captured.talkers.totalRows).toBe(RESPONSE.totals.total_rows);
   });
 
@@ -365,5 +385,33 @@ describe('VehicleCostPage', () => {
       screen.getByRole('button', { name: 'Refresh vehicle cost data' }),
     );
     expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains untouched table rows and both distinct rankings after a failed refresh without forwarding the refresh error as fatal', () => {
+    useVehicleCostMock.mockReturnValue(makeQuery({
+      data: RESPONSE, error: new ApiError('refresh unavailable', 503), isError: true,
+    }));
+    renderPage();
+    expect(captured.table.vehicles).toBe(RESPONSE.vehicles);
+    expect(captured.kpis.totals).toBe(RESPONSE.totals);
+    expect(captured.chart.error).toBeNull();
+    expect(captured.table.error).toBeNull();
+    expect(captured.talkers.error).toBeNull();
+    expect(captured.kpis.error).toBeNull();
+    expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(captured.kpis.retained).toBe(true);
+    expect(captured.kpis.refreshError).toBeInstanceOf(ApiError);
+  });
+
+  it('forwards unknown totals and denominator rather than zero when a partial response contains only vehicle rows', () => {
+    const partial = { ...RESPONSE };
+    Reflect.deleteProperty(partial, 'totals');
+    useVehicleCostMock.mockReturnValue(makeQuery({ data: partial }));
+    renderPage();
+    expect(captured.kpis.totals).toBeUndefined();
+    expect(captured.talkers.totalRows).toBeUndefined();
+    expect(captured.kpis.vehicleCount).toBe(3);
+    expect(captured.table.vehicles).toBe(RESPONSE.vehicles);
   });
 });

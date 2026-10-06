@@ -4,7 +4,8 @@ import { Dices } from 'lucide-react';
 
 import { PageLayout, LayoutCard, ChartCard, CardGrid } from '@/components/layout';
 import { Text, Slider, HelpTooltip, Badge } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -73,31 +74,35 @@ export default function RangeSimulatorPage() {
   const isError = drivesState.fatalError != null;
   const summaryMetrics: StatMetric[] = [
     {
-      metricId: 'text', occurrenceId: 'sim-arrival-odds',
+      metricId: 'percent', occurrenceId: 'sim-arrival-odds',
       label: t('rangeSim.odds', 'Arrival Odds'),
-      rawValue: successPct != null ? `${successPct}%` : null,
+      rawValue: successPct,
+      display: { precision: 0 },
       context: <Badge variant={successPct == null ? 'neutral' : successPct >= 95 ? 'success' : successPct >= 70 ? 'warning' : 'danger'}>
         {t('rangeSim.oddsHint', 'arrive with ≥{{pct}}% battery', { pct: SIM_RESERVE_PCT })}
       </Badge>,
     },
     {
-      metricId: 'text', occurrenceId: 'sim-median',
+      metricId: 'percent', occurrenceId: 'sim-median',
       label: t('rangeSim.median', 'Median Arrival'),
-      rawValue: result.p50 != null ? `${result.p50}%` : null,
+      rawValue: result.p50,
+      display: { formatter: raw => ({ value: `${raw}%`, unit: '' }) },
       context: result.p10 != null && result.p90 != null
         ? t('rangeSim.band', 'P10 {{p10}}% · P90 {{p90}}%', { p10: result.p10, p90: result.p90 })
         : undefined,
     },
     {
-      metricId: 'text', occurrenceId: 'sim-pack',
+      metricId: 'energy', occurrenceId: 'sim-pack',
       label: t('rangeSim.pack', 'Self-Measured Pack'),
-      rawValue: result.packWhEstimate != null ? formatEnergy(result.packWhEstimate) : null,
+      rawValue: result.packWhEstimate,
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
       context: t('rangeSim.packHint', 'median implied usable capacity'),
     },
     {
-      metricId: 'text', occurrenceId: 'sim-trials',
+      metricId: 'count', occurrenceId: 'sim-trials',
       label: t('rangeSim.trials', 'Simulated Trips'),
-      rawValue: result.p50 != null ? String(result.trials) : null,
+      rawValue: result.p50 != null ? result.trials : null,
+      display: { formatter: raw => ({ value: String(raw), unit: '' }) },
       context: t('rangeSim.fromDrives', 'from {{count}} real drives', { count: result.sampleSize }),
     },
   ];
@@ -111,8 +116,8 @@ export default function RangeSimulatorPage() {
       <StaleRefreshWarning state={drivesState} label={t('rangeSim.title', 'Range Simulator')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section aria-label={t('rangeSim.kpis', 'Simulation summary metrics')}>
-        <StatStrip title={t('rangeSim.kpis', 'Simulation summary metrics')}
+        <section>
+        <BatteryEvidenceBrief title={t('rangeSim.kpis', 'Simulation summary metrics')}
           metrics={summaryMetrics} loading={isLoading} retained={drivesState.status === 'stale'}
           period={{ kind: 'unknown', label: t('rangeSim.subtitle', 'Monte Carlo trip odds from your own driving history'),
             reason: t('rangeSim.summaryScope', 'Simulation calibrated from returned drive history; no complete-history interval is supplied.') }} />

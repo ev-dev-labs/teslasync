@@ -13,10 +13,11 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowUpDown, Filter, Plus, RefreshCw, X } from 'lucide-react';
+import { Filter, Plus, RefreshCw, X } from 'lucide-react';
 
 import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, SectionTitle, type Column } from '@/components/ui';
-import { StatCard, TimeStamp } from '@/components/data-display';
+import { TimeStamp, type StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from './operationalbrief-all/TelemetrySummaryBrief';
 import { Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
 import { PillFilterBar } from '@/components/forms';
@@ -45,7 +46,7 @@ export interface SignalCatalogPanelProps {
   vehicleId: number;
   /** Optional override title. */
   title?: string;
-  /** Show the 4 summary StatCards at the top. Default true. */
+  /** Show the compact four-metric OperationalBrief. Default true. */
   showSummary?: boolean;
   /** Optional selection state. Adds a checkbox column when provided. */
   selection?: SignalCatalogSelectionProps;
@@ -142,6 +143,20 @@ export function SignalCatalogPanel({
   const activeCount = signals.filter((s) => s.category === 'active').length;
   const staleCount  = signals.filter((s) => s.category === 'stale').length;
   const neverCount  = signals.filter((s) => s.category === 'never').length;
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'total', rawValue: unavailable || vehicleId <= 0 ? null : signals.length,
+      label: t('signalGap.totalSignals', 'Total signals'),
+      description: t('telemetryBrief.catalogScope', 'Whole queried catalog before search and table filters; not the selected-signal count.') },
+    { metricId: 'count', occurrenceId: 'active', rawValue: unavailable || vehicleId <= 0 ? null : activeCount,
+      label: t('signalGap.active', 'Active (<30s)'),
+      description: t('telemetryBrief.catalogActiveDefinition', 'Existing catalog active category includes valid timestamps up to five minutes old; the separate status badge still distinguishes active from aging.') },
+    { metricId: 'count', occurrenceId: 'stale', rawValue: unavailable || vehicleId <= 0 ? null : staleCount,
+      label: t('signalGap.stale', 'Stale (>5min)'),
+      description: t('telemetryBrief.gapDescription', 'Timestamp age buckets from the current signal query; a sleeping vehicle can be stale without being unhealthy.') },
+    { metricId: 'count', occurrenceId: 'never', rawValue: unavailable || vehicleId <= 0 ? null : neverCount,
+      label: t('signalGap.neverReceived', 'Never received'),
+      description: t('telemetryBrief.catalogNever', 'Entries without a valid reported timestamp, including malformed timestamps; not a health verdict.') },
+  ];
 
   const selectedSet = useMemo(() => new Set(selection?.selectedSignals ?? []), [selection?.selectedSignals]);
   const selectionMax = selection?.max;
@@ -233,12 +248,14 @@ export function SignalCatalogPanel({
     <div className={cn('min-w-0 max-w-full space-y-4', className)}>
       {showSummary ? (
         <FadeIn delay={0.05}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard label={t('signalGap.totalSignals',  'Total signals')}     value={unavailable ? '—' : signals.length} icon={<ArrowUpDown className="h-4 w-4" />} />
-            <StatCard label={t('signalGap.active',        'Active (<30s)')}     value={unavailable ? '—' : activeCount}    icon={<RefreshCw className="h-4 w-4" />} />
-            <StatCard label={t('signalGap.stale',         'Stale (>5min)')}     value={unavailable ? '—' : staleCount}     icon={<AlertTriangle className="h-4 w-4" />} />
-            <StatCard label={t('signalGap.neverReceived', 'Never received')}    value={unavailable ? '—' : neverCount}     icon={<AlertTriangle className="h-4 w-4" />} />
-          </div>
+          <TelemetrySummaryBrief title={t('telemetryBrief.catalogTitle', 'Catalog timestamp summary')}
+            metrics={metrics} testId="signal-catalog-summary"
+            unavailable={sourceState.fatalError != null} unknown={vehicleId <= 0} sourceStatus={sourceState.status}
+            loading={isLoading && !sourceState.hasData}
+            retained={sourceState.hasData && (sourceState.isRefreshing || sourceState.status === 'stale' || sourceState.refreshError != null)}
+            scope={t('telemetryBrief.catalogScope', 'Whole queried catalog before search and table filters; not the selected-signal count.')}
+            provenance={t('telemetryBrief.gapProvenance', 'Current signal values and their reported timestamps')}
+            description={t('telemetryBrief.gapDescription', 'Timestamp age buckets from the current signal query; a sleeping vehicle can be stale without being unhealthy.')} />
         </FadeIn>
       ) : null}
 
