@@ -193,6 +193,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
           timestamp: snap.created_at ?? '',
           color: event.color,
           severity: event.severity,
+          wrap: true,
         };
       }),
     [list, t],

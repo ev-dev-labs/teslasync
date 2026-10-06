@@ -41,6 +41,7 @@ const h = vi.hoisted(() => ({
     data: undefined as { data: Array<Record<string, unknown>> } | undefined,
     isLoading: false,
     error: null as unknown,
+    refetch: vi.fn(),
   },
   pinned: { data: [] as Array<{ item_id: string }> },
   live: {
@@ -208,6 +209,40 @@ describe('SignalsWorkspacePage — no vehicle', () => {
 });
 
 describe('SignalsWorkspacePage — default historical mode', () => {
+  it('retains the catalog and live selection after a catalog refresh failure', () => {
+    h.signals.error = new Error('refresh unavailable');
+    renderPage('/signals?signals=battery_level,vehicle_speed');
+    expect(screen.queryByText(/Failed to load data/)).toBeNull();
+    expect(statValue('Selected')).toBe('2');
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }));
+    expect(screen.getByTestId('chart-panel')).toHaveAttribute('data-signals', 'battery_level,vehicle_speed');
+    expect(screen.getByTestId('live-tail')).toBeInTheDocument();
+  });
+
+  it('does not turn a fatal comparison failure into no changes or real zero metrics', () => {
+    h.diff.error = new Error('diff unavailable');
+    renderPage('/signals');
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+    expect(statValue('Changed signals')).toBe('—');
+    expect(statValue('Visible after filter')).toBe('—');
+    expect(screen.queryByText('No changes between snapshots')).toBeNull();
+    expect(screen.queryByTestId('diff-table')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(h.diff.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps retained diff counts, controls and rows while failed refresh offers recovery', () => {
+    h.diff.data = { data: [{ signal: 'battery_level', changed: true, a_num: 10, b_num: 20 }] };
+    h.diff.error = new Error('refresh unavailable');
+    renderPage('/signals');
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+    expect(statValue('Changed signals')).toBe('1');
+    expect(screen.getByTestId('diff-table')).toHaveAttribute('data-rows', '1');
+    expect(screen.getByTestId('compare-controls')).toBeInTheDocument();
+    expect(screen.queryByText(/Failed to load data/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(h.diff.refetch).toHaveBeenCalledTimes(1);
+  });
   it('reflects the URL-selected signals + pins in the KPI strip and prompts to run', () => {
     h.pinned.data = [{ item_id: 'signal:vehicle_speed' }, { item_id: 'widget:not-a-signal' }];
 

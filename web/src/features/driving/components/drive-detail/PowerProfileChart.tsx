@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartTooltip,
+  ChartTooltip,
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { Table, Text } from '@/components/ui';
@@ -43,10 +44,13 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
   return (
     <FadeIn>
       {/* chart-a11y:no-table dense per-sample power trace; max/regen/avg stats appear below the chart */}
-      <ChartContainer
+      <ChartCard
         title={t('driveDetail.powerProfile', 'Power profile')}
         ariaLabel={t('driveDetail.powerProfile.aria', 'Drive power profile area chart over time')}
         height={220}
+        size="standard"
+        toolbar
+        exportable
       >
         {hasChart ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -81,7 +85,7 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
             <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
           </div>
         )}
-      </ChartContainer>
+      </ChartCard>
       <div className="mt-3 space-y-2">
         <Text as="p" variant="caption">{t('driveDetail.report.powerMethod', 'Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.')}</Text>
         <Table variant="embedded" aria-label={t('driveDetail.powerProfile', 'Power profile')}>

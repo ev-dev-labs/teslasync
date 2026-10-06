@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CardGrid } from '@/components/layout/layout-reference';
+import { CardGrid } from '@/components/layout';
 
 interface SafetyPanelGridProps {
   label: string;

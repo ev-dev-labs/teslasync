@@ -44,6 +44,9 @@
       "tires": "Tires",
       "security": "Security & access",
       "other": "Other signals"
-    }
+    },
+    "sourceError": "Signal reconstruction could not be loaded.",
+    "summary": "Reconstruction summary",
+    "summarySource": "Historical signal reconstruction"
   }
 }

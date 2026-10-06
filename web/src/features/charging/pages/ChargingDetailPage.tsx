@@ -18,7 +18,7 @@ import { formatDate, formatTime } from '@/lib/dateFormat';
 
 import { chartTokens } from '@/lib/tokens';
 
-import { PageLayout, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout/layout-reference';
+import { PageLayout, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout';
 import {
   GlassPanel, Badge, HelpTooltip, PrintButton, Button,
   SectionTitle, Text,
@@ -644,6 +644,9 @@ export default function ChargingDetailPage() {
                   // Dense series above the cap omit the SR table (no-table
                   // pattern) — the chart itself still draws every sample.
                   data={isLargeDataset ? undefined : chargeCurve}
+                  exportData={chargeCurve}
+                  exportable
+                  fullscreen
                   dataColumns={[
                     { key: 'soc', label: t('charging.detail.soc', 'SoC') },
                     { key: 'power', label: t('charging.detail.power', 'Power') },
@@ -744,6 +747,9 @@ export default function ChargingDetailPage() {
                         // Dense series above the cap omit the SR table (no-table
                         // pattern) — the chart itself still draws every sample.
                         data={isLargeDataset ? undefined : timeSeriesData}
+                        exportData={timeSeriesData}
+                        exportable
+                        fullscreen
                         dataColumns={[
                           { key: 'time', label: t('charging.detail.time', 'Time') },
                           { key: 'soc', label: t('charging.detail.soc', 'SoC') },
@@ -862,6 +868,9 @@ export default function ChargingDetailPage() {
                           // Dense series above the cap omit the SR table (no-table
                           // pattern) — the chart itself still draws every sample.
                           data={isLargeDataset ? undefined : tempData}
+                          exportData={tempData}
+                          exportable
+                          fullscreen
                           dataColumns={[
                             { key: 'time', label: t('charging.detail.time', 'Time') },
                             { key: 'battery', label: t('charging.detail.batteryTemp', 'Battery') },
@@ -969,6 +978,9 @@ export default function ChargingDetailPage() {
                           // Dense series above the cap omit the SR table (no-table
                           // pattern) — the chart itself still draws every sample.
                           data={isLargeDataset ? undefined : voltCurrentData}
+                          exportData={voltCurrentData}
+                          exportable
+                          fullscreen
                           dataColumns={[
                             { key: 'time', label: t('charging.detail.time', 'Time') },
                             { key: 'voltage', label: t('charging.detail.voltage', 'Voltage') },

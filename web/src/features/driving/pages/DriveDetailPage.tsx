@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
-import { PageLayout } from '@/components/layout/layout-reference';
+import { PageLayout } from '@/components/layout';
 import { Button, PrintButton, Text } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { AlertBanner, QueryError, StaleRefreshWarning } from '@/components/feedback';

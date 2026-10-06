@@ -34,12 +34,13 @@
 process.env.TZ = 'America/New_York';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
-import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo } from '@/types/charging';
+import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo, AutopilotProfile, AutopilotSavings } from '@/types/charging';
+import type { OcppChargePoint, OcppSession } from '@/api/hooks/useOcpp';
 
 // ── i18n stub: resolve the string fallback (or options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ──────
@@ -72,24 +73,23 @@ vi.mock('react-i18next', () => {
 
 // ── framer-motion: strip animation props, keep motion.* + AnimatePresence. ──
 vi.mock('framer-motion', () => {
+  const MotionElement = ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+    const safe: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rest)) {
+      if (
+        ['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'whileInView', 'viewport', 'variants'].includes(
+          k,
+        )
+      )
+        continue;
+      safe[k] = v;
+    }
+    return <div {...(safe as Record<string, unknown>)}>{children}</div>;
+  };
   const motionProxy: Record<string, unknown> = new Proxy(
     {},
     {
-      get:
-        () =>
-        ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
-          const safe: Record<string, unknown> = {};
-          for (const [k, v] of Object.entries(rest)) {
-            if (
-              ['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'whileInView', 'viewport', 'variants'].includes(
-                k,
-              )
-            )
-              continue;
-            safe[k] = v;
-          }
-          return <div {...(safe as Record<string, unknown>)}>{children}</div>;
-        },
+      get: () => MotionElement,
     },
   );
   return {
@@ -189,7 +189,7 @@ const mockOcppPoints = useOcppChargePoints as unknown as ReturnType<typeof vi.fn
 const mockOcppSessions = useOcppSessions as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -207,16 +207,16 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 }
 
  
-function optimizeState(over: Record<string, unknown> = {}): any {
+function optimizeState(over: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
  
-function applyState(over: Record<string, unknown> = {}): any {
+function applyState(over: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
 
  
-function selected(vehicleId: number | null): any {
+function selected(vehicleId: number | null) {
   return {
     vehicleId,
     vehicle: null,
@@ -428,7 +428,7 @@ describe('SmartChargePage — rate plan select', () => {
   it('surfaces the rate-plans error with retry instead of silently substituting the fallback', () => {
     const refetch = vi.fn();
     mockRatePlans.mockReturnValue(
-      makeQuery({ data: [], isError: true, error: new Error('plans down'), status: 'error', refetch }),
+      makeQuery({ data: undefined, isError: true, error: new Error('plans down'), status: 'error', refetch }),
     );
     renderPage();
     const rail = (
@@ -621,6 +621,44 @@ describe('SmartChargePage — after a successful optimization', () => {
     fireEvent.click(optimizeButton());
     expect(screen.getByText('vehicle offline')).toBeInTheDocument();
   });
+
+  it('reports invalid optimizer measurements as unknown without manufacturing zero costs or energy', () => {
+    const invalidResult: OptimizeChargeResponse = {
+      ...RESULT,
+      kwh_needed: Number.NaN,
+      current_soc: Number.NaN,
+      comparison: { ...RESULT.comparison, charge_now_cost: Number.NaN },
+    };
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) =>
+        opts?.onSuccess?.(invalidResult)),
+    }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    const kpi = within(screen.getByRole('region', { name: 'Cost comparison' }));
+    expect(kpi.getAllByText('—')).toHaveLength(2);
+    expect(kpi.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(kpi.queryByText('0.00 kWh')).not.toBeInTheDocument();
+    expect(kpi.getByText('$3.25')).toBeInTheDocument();
+  });
+
+  it('does not display or apply a result that finishes after the selected vehicle changes', () => {
+    let finish: ((result: OptimizeChargeResponse) => void) | undefined;
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) => {
+        finish = opts?.onSuccess;
+      }),
+    }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    mockSelected.mockReturnValue(selected(8));
+    // Native field interaction forces a render with the newly selected scope.
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-17T07:30' } });
+    act(() => finish?.(RESULT));
+    expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
+    const kpi = within(screen.getByRole('region', { name: 'Cost comparison' }));
+    expect(kpi.getAllByText('—')).toHaveLength(4);
+  });
 });
 
 // ─────────────────────────── page: plan history ───────────────────────────
@@ -658,7 +696,7 @@ describe('SmartChargePage — plan history', () => {
     renderPage();
     // Scope to the single history <table> so the rate-plan cells aren't
     // confused with the identically-labelled Rate Plan <select> options.
-    const table = within(screen.getByRole('table'));
+    const table = within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
     expect(table.getByText('PG&E EV2-A')).toBeInTheDocument();
     expect(table.getByText('SCE TOU-D')).toBeInTheDocument();
     // planStatusVariant surfaced through the shared Badge colour classes.
@@ -672,5 +710,101 @@ describe('SmartChargePage — plan history', () => {
     expect(
       screen.getByText('No charge plans yet. Optimize a schedule above to get started.'),
     ).toBeInTheDocument();
+  });
+
+  it('retains history rows and shows an honest warning after a failed background refresh', () => {
+    mockPlans.mockReturnValue(makeQuery({
+      data: [makePlan()],
+      isError: true,
+      error: new Error('history refresh failed'),
+    }));
+    renderPage();
+    const history = within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    expect(history.getByText('PG&E EV2-A')).toBeInTheDocument();
+    expect(history.getByText('$3.25')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps cached rate plans selected and reports an offline refresh without substituting defaults', () => {
+    mockRatePlans.mockReturnValue(makeQuery({ data: backendRatePlans, fetchStatus: 'paused' }));
+    renderPage();
+    expect(screen.getAllByText('LADWP R1B (LADWP)').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/device is offline/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText('SCE TOU-D')).not.toBeInTheDocument();
+  });
+
+  it('sorts recorded history costs without changing their numerical values', () => {
+    mockPlans.mockReturnValue(makeQuery({
+      data: [
+        makePlan({ id: 1, rate_plan: 'Expensive', estimated_cost: 9 }),
+        makePlan({ id: 2, rate_plan: 'Affordable', estimated_cost: 2 }),
+      ],
+    }));
+    renderPage();
+    const liveTable = () => within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    fireEvent.click(liveTable().getByRole('button', { name: 'Cost' }));
+    const descendingRows = liveTable().getAllByRole('row');
+    expect(within(descendingRows[1]).getByText('Expensive')).toBeInTheDocument();
+    expect(within(descendingRows[1]).getByText('$9.00')).toBeInTheDocument();
+    expect(within(descendingRows[2]).getByText('Affordable')).toBeInTheDocument();
+    expect(within(descendingRows[2]).getByText('$2.00')).toBeInTheDocument();
+    fireEvent.click(liveTable().getByRole('button', { name: 'Cost' }));
+    const rows = liveTable().getAllByRole('row');
+    expect(within(rows[1]).getByText('Affordable')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('$2.00')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('$9.00')).toBeInTheDocument();
+  });
+
+  it('preserves autopilot profile controls, preview/run actions and retained realized savings', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const savings: AutopilotSavings = { total_savings: 12.5, runs: 3 };
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({
+      data: savings,
+      isError: true, error: new Error('ledger refresh failed'),
+    }));
+    renderPage();
+    expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('06:45');
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Preview next run' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeEnabled();
+    expect(screen.getByText('$12.50 across 3 runs')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+  });
+
+  it('keeps OCPP charger and transaction readings visible after independent refresh failures', () => {
+    const point: OcppChargePoint = {
+      id: 'charger-1', vendor: 'Vendor', model: 'Model',
+      serial_number: '', firmware_version: '', last_boot_at: null,
+      last_seen_at: '2026-01-16T02:00:00Z', active_sessions: 1,
+      connectors: [{ connector_id: 1, status: 'Charging', error_code: '', info: '',
+        updated_at: '2026-01-16T02:00:00Z' }],
+    };
+    const session: OcppSession = {
+      transaction_id: 12, charge_point_id: 'charger-1', connector_id: 1,
+      started_at: '2026-01-16T02:00:00Z', ended_at: '2026-01-16T03:00:00Z',
+      start_meter_wh: 0, end_meter_wh: 42000, energy_delivered_wh: 42000,
+      stop_reason: 'Local',
+    };
+    mockOcppPoints.mockReturnValue(makeQuery({
+      data: [point],
+      isError: true, error: new Error('inventory refresh failed'),
+    }));
+    mockOcppSessions.mockReturnValue(makeQuery({
+      data: [session],
+      isError: true, error: new Error('transactions refresh failed'),
+    }));
+    renderPage();
+    expect(screen.getByText('Vendor Model')).toBeInTheDocument();
+    expect(screen.getByText('#1 Charging')).toBeInTheDocument();
+    expect(screen.getByText('charger-1 · #12')).toBeInTheDocument();
+    expect(screen.getByText(/42.*kWh/)).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
   });
 });

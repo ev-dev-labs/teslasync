@@ -59,7 +59,9 @@ export default function GForcePanel({ vehicleId }: { vehicleId: number | null | 
           }}
         />
       ) : state.fatalError ? null : (
-        <EmptyState message={t('dynamics.gForceNoData', 'No G-force telemetry received yet')} />
+        // no-action: Without a selected vehicle, the workspace picker owns selection.
+        <EmptyState message={t('dynamics.gForceNoData', 'No G-force telemetry received yet')}
+          action={vehicleId ? { label: t('common.retry', 'Retry'), onClick: () => void query.refetch() } : undefined} />
       )}
     </LayoutCard>
   );

@@ -12,6 +12,7 @@ import { Check, Clock, Search, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Badge, Button as UiButton, Input as UiInput, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
+import { PillFilterBar } from '@/components/forms';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import { WIDGET_DND_MIME, type WidgetCategory, type WidgetDef } from '../widgets/types';
 
@@ -94,6 +95,8 @@ export function WidgetPicker({
   onDragWidgetEnd,
 }: WidgetPickerProps) {
   const { t } = useTranslation('dashboard');
+  const categoryLabel = (category: WidgetCategory) =>
+    t(`widgets.categories.${category}`, CATEGORY_LABELS[category]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WidgetCategory | 'all'>('all');
   const [addedThisSessionIds, setAddedThisSessionIds] = useState<string[]>([]);
@@ -359,7 +362,7 @@ export function WidgetPicker({
               })}
               {query && (
                 <span className="ml-2 text-[var(--text-muted)]">
-                  {CATEGORY_LABELS[w.category]}
+                  {categoryLabel(w.category)}
                 </span>
               )}
             </p>
@@ -415,35 +418,27 @@ export function WidgetPicker({
 
         {/* Categories are filters, not document tabs: pressed state communicates
             the active scope without implying a separate tabpanel relationship. */}
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label={t('widgets.categoryFilter', 'Filter by category')}
-        >
-                  <UiButton
-            type="button"
-            variant={categoryFilter === 'all' ? 'primary' : 'outline'}
-            size="sm"
-            aria-pressed={categoryFilter === 'all'}
-            onClick={() => setCategoryFilter('all')}
-            className="rounded-shape-sm px-3 text-xs"
-          >
-            {t('widgets.allCategories', 'All')}
-                  </UiButton>
-          {availableCategories.map((cat) => (
-            <UiButton
-              key={cat}
-              type="button"
-              variant={categoryFilter === cat ? 'primary' : 'outline'}
-              size="sm"
-              aria-pressed={categoryFilter === cat}
-              onClick={() => setCategoryFilter(cat)}
-              className="rounded-shape-sm px-3 text-xs"
-            >
-              {CATEGORY_LABELS[cat]}
-            </UiButton>
-          ))}
-        </div>
+        <PillFilterBar
+          semanticMode="filters"
+          scrollable={false}
+          className="flex-wrap"
+          ariaLabel={t('widgets.categoryFilter', 'Filter by category')}
+          activeKey={categoryFilter}
+          onChange={(key) => {
+            if (key === 'all') setCategoryFilter('all');
+            else {
+              const category = availableCategories.find((candidate) => candidate === key);
+              if (category) setCategoryFilter(category);
+            }
+          }}
+          items={[
+            { key: 'all', label: t('widgets.allCategories', 'All') },
+            ...availableCategories.map((category) => ({
+              key: category,
+              label: categoryLabel(category),
+            })),
+          ]}
+        />
 
         {/* Recently Added — only on the unfiltered, unsearched view */}
         {recentlyAddedVisible.length > 0 && (
@@ -500,7 +495,7 @@ export function WidgetPicker({
               <div key={cat}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 className="text-xs font-semibold tracking-wider text-[var(--text-muted)]">
-                    {CATEGORY_LABELS[cat]}
+                    {categoryLabel(cat)}
                   </h3>
                     <UiButton
                     variant="ghost"

@@ -143,6 +143,21 @@ beforeEach(() => {
 });
 
 describe('LiveSignalsWidget — rendering', () => {
+  it('retains all four source sections and rich status values in canonical responsive definition lists', () => {
+    setup();
+    const { container } = render(<LiveSignalsWidget size={STANDARD} />);
+    expect(container.querySelectorAll('dt')).toHaveLength(12);
+    expect(container.querySelectorAll('dd')).toHaveLength(12);
+    expect(container.querySelectorAll('dl')).toHaveLength(12);
+    for (const name of ['Motor', 'Climate', 'Tires', 'Security']) {
+      expect(screen.getByRole('heading', { name, level: 4 })).toBeInTheDocument();
+    }
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(Array.from(container.querySelectorAll('dl')).every(node =>
+      node.classList.contains('@container/kv-list'))).toBe(true);
+  });
+
   it('renders every section with SI readings in the default units (°C + bar)', () => {
     setup();
     render(<LiveSignalsWidget size={STANDARD} />);

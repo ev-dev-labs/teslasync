@@ -12,6 +12,7 @@ export function cabinThermalSourceState<T>(
     vehicleSelected,
     isLoading: vehicleSelected && !trust.hasData && source.isLoading,
     isResolved: vehicleSelected && (trust.hasData || source.isSuccess),
+    isPaused: vehicleSelected && trust.isRefreshBlocked,
     // A deselected vehicle has no usable page-scoped cache. Preserve the
     // original no-vehicle gates without promoting that payload into evidence.
     error: vehicleSelected ? trust.fatalError : trust.fatalError ?? trust.refreshError,

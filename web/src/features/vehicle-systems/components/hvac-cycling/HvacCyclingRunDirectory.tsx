@@ -1,13 +1,7 @@
-import { ListTree } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { Badge, MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 
@@ -61,11 +55,7 @@ export function HvacCyclingRunDirectory({
 
   return (
     <section data-testid="hvac-cycling-run-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.directory.title', 'Run evidence directory')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.directory.title', 'Run evidence directory')}>
         <Text as="p" variant="caption">
           {t(
             'hvacCycling.directory.subtitle',
@@ -163,7 +153,7 @@ export function HvacCyclingRunDirectory({
             })}
           </ol>
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

@@ -26,6 +26,8 @@ const h = vi.hoisted(() => ({
     data: undefined as LiveData,
     isLoading: false,
     dataUpdatedAt: 0,
+    error: null as Error | null,
+    refetch: vi.fn(),
   },
 }));
 
@@ -111,6 +113,7 @@ beforeEach(() => {
   h.gaps.data = sampleData();
   h.gaps.isLoading = false;
   h.gaps.dataUpdatedAt = 0;
+  h.gaps.error = null;
   localStorage.clear();
 });
 
@@ -166,6 +169,32 @@ describe('formatStaleness', () => {
 
 // ── SignalCatalogPanel — summary + table ────────────────────────────────────
 describe('SignalCatalogPanel — summary + rows', () => {
+  it('shows fatal recovery instead of a false empty catalog and unknown metric counts', () => {
+    h.gaps.data = undefined;
+    h.gaps.error = new Error('catalog unavailable');
+    renderPanel({ title: 'Catalog' });
+    expect(screen.getByRole('heading', { name: 'Catalog' })).toBeInTheDocument();
+    expect(statValue('Total signals')).toBe('—');
+    expect(screen.queryByText('No signal data available')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(h.gaps.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps full retained values, filters and selection usable through refresh failure', () => {
+    const completeValue = 'complete version and build metadata '.repeat(30);
+    h.gaps.data = { firmware: { value: completeValue, timestamp: tsAgo(5) } };
+    h.gaps.error = new Error('refresh unavailable');
+    const onToggle = vi.fn();
+    renderPanel({ selection: { selectedSignals: [], onToggle } });
+    expect(statValue('Total signals')).toBe('1');
+    expect(screen.getByText(completeValue.trim(), { exact: true })).toBeInTheDocument();
+    const value = screen.getByText(completeValue.trim(), { exact: true });
+    expect(value.className).not.toContain('truncate');
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /Add firmware/ }));
+    expect(onToggle).toHaveBeenCalledWith('firmware');
+  });
   it('renders the four KPI cards partitioned by staleness category', () => {
     renderPanel();
     expect(statValue('Total signals')).toBe('4');

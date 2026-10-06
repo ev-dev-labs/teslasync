@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   AREA_DEFAULTS,
@@ -10,6 +9,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { Table } from '@/components/ui';
@@ -68,10 +68,13 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
         </tbody>
       </Table>
       {/* chart-a11y:no-table dense per-sample temperature trace; min/avg stats appear above the chart in the stat tiles */}
-      <ChartContainer
+      <ChartCard
         title={t('driveDetail.temperatures', 'Temperatures')}
         ariaLabel={t('driveDetail.temperatures.aria', 'Inside, outside, driver and passenger temperature lines over the drive timeline')}
         height={310}
+        size="standard"
+        toolbar
+        exportable
         chartKey="drive-detail-temperature"
       >
         {hasChart ? (
@@ -119,7 +122,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
             <p className="text-xs">{t('driveDetail.noTemperatureData', 'No temperature telemetry is available for this drive.')}</p>
           </div>
         )}
-      </ChartContainer>
+      </ChartCard>
     </FadeIn>
   );
 }

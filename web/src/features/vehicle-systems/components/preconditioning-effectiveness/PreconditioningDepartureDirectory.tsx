@@ -1,7 +1,7 @@
-import { ListTree } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
@@ -34,14 +34,7 @@ export function PreconditioningDepartureDirectory({
 
   return (
     <section data-testid="preconditioning-departure-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.directory.title',
-            'Departure evidence directory',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.directory.title', 'Departure evidence directory')}>
         <Text as="p" variant="caption">
           {t(
             'preconditioningEffectiveness.directory.subtitle',
@@ -77,7 +70,7 @@ export function PreconditioningDepartureDirectory({
             ))}
           </ol>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

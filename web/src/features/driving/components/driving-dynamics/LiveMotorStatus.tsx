@@ -4,8 +4,9 @@ import { Cog, Gauge } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
 import { LinearGauge, BipolarBar, temperatureGaugeRange } from '@/components/charts';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
+import { useDataState } from '@/hooks/useDataState';
 import { INTERVALS } from '@/lib/constants';
 
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
@@ -71,13 +72,10 @@ export default function LiveMotorStatus({
   const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
 
-  const {
-    data: motorLatest,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useMotorLatest(vehicleId ?? 0, INTERVALS.REALTIME);
+  const query = useMotorLatest(vehicleId ?? 0, INTERVALS.REALTIME);
+  const state = useDataState(query);
+  const motorLatest = state.data;
+  const { refetch } = query;
 
   const handleRetry = useCallback(() => {
     void refetch();
@@ -105,7 +103,7 @@ export default function LiveMotorStatus({
     torqueTotal != null || rpmFront != null || rpmRear != null || motorTempC != null;
 
   let body: ReactNode;
-  if (isLoading) {
+  if (query.isLoading && !state.hasData) {
     body = (
       <div
         role="status"
@@ -136,7 +134,7 @@ export default function LiveMotorStatus({
               value={
                 motorTempC != null
                   ? toTemperatureDisplay(motorTempC)
-                  : toTemperatureDisplay(0)
+                  : null
               }
               {...temperatureGaugeRange(toTemperatureDisplay, {
                 maxC: MOTOR_TEMP_FULL_SCALE_C,
@@ -172,7 +170,7 @@ export default function LiveMotorStatus({
 
         <div className="flex flex-col gap-4">
           <BipolarBar
-            value={torqueTotal ?? 0}
+            value={torqueTotal}
             min={TORQUE_REGEN_MAX_NM}
             max={TORQUE_DRIVE_MAX_NM}
             label={t('dynamics.torque', 'Torque')}
@@ -183,7 +181,7 @@ export default function LiveMotorStatus({
             positiveLabel={t('dynamics.drive', 'Drive')}
           />
           <BipolarBar
-            value={rpmFront ?? 0}
+            value={rpmFront}
             min={RPM_REVERSE_MAX}
             max={RPM_FORWARD_MAX}
             label={t('dynamics.rpmFront', 'Front RPM')}
@@ -194,7 +192,7 @@ export default function LiveMotorStatus({
             positiveLabel={t('dynamics.forward', 'Forward')}
           />
           <BipolarBar
-            value={rpmRear ?? 0}
+            value={rpmRear}
             min={RPM_REVERSE_MAX}
             max={RPM_FORWARD_MAX}
             label={t('dynamics.rpmRear', 'Rear RPM')}
@@ -207,13 +205,13 @@ export default function LiveMotorStatus({
         </div>
       </div>
     );
-  } else if (isError) {
+  } else if (state.fatalError) {
     // Surface the failure rather than masking it as an empty panel, but only
     // when there is no prior snapshot to keep showing — a failed background
     // poll must never blank good data.
     body = (
       <QueryError
-        error={error}
+        error={state.fatalError}
         onRetry={handleRetry}
         resourceName={t('dynamics.motorResource', 'Motor telemetry')}
       />
@@ -232,6 +230,7 @@ export default function LiveMotorStatus({
         <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('dynamics.liveMotor', 'Live Motor Status')}
       </PanelTitle>
+      <StaleRefreshWarning state={state} label={t('dynamics.liveMotor', 'Live Motor Status')} />
       {body}
     </GlassPanel>
   );

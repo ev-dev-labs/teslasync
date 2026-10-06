@@ -17,7 +17,9 @@ import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'r
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Target, Info } from 'lucide-react'
-import { GlassPanel, Button, Input } from '@/components/ui'
+import { GlassPanel, Button, Input, PanelTitle, Text, MetricValue, Caption } from '@/components/ui'
+import { QueryError, StaleRefreshWarning } from '@/components/feedback'
+import { useDataState } from '@/hooks/useDataState'
 import { request } from '@/api/client'
 import { cn } from '@/lib/cn'
 import { isFiniteNumber } from '@/lib/numberFormat'
@@ -60,11 +62,13 @@ export function SLOTrackingCard() {
   const [editing, setEditing] = useState(false)
   const [draftTarget, setDraftTarget] = useState<string>(String(target))
 
-  const { data, isLoading, error } = useQuery({
+  const query = useQuery({
     queryKey: ['status-uptime', win],
     queryFn: () => request<UptimeWindow>(`/status/uptime?window=${win}`),
     refetchInterval: 60_000,
   })
+  const { data, isLoading } = query
+  const state = useDataState(query, { provenance: 'historical' })
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -133,7 +137,7 @@ export function SLOTrackingCard() {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('systemStatus.slo.title', 'Uptime & SLO')}</h3>
+          <PanelTitle as="h3">{t('systemStatus.slo.title', 'Uptime & SLO')}</PanelTitle>
         </div>
         {showControls && <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
           {editing ? (
@@ -163,11 +167,12 @@ export function SLOTrackingCard() {
         </div>}
       </div>
 
+      <StaleRefreshWarning state={state} label={t('systemStatus.slo.title', 'Uptime & SLO')} />
       <div className="mt-3 flex flex-wrap items-baseline gap-3">
-        <div className={cn('text-3xl font-semibold tabular-nums', tone)} aria-live="polite">
+        <MetricValue className={cn('tabular-nums', tone)} aria-live="polite">
           {pct == null ? '—' : fmtPercent(pct)}
-        </div>
-        <div className="text-xs text-[var(--text-muted)]">
+        </MetricValue>
+        <Caption as="div">
           {hasHistory
             ? t(WINDOW_LABEL[win])
             : t('systemStatus.currentHealthOnly', 'Current component health')}
@@ -176,7 +181,7 @@ export function SLOTrackingCard() {
             healthy: healthy ?? '—',
             total: totalComponents ?? '—',
           })}
-        </div>
+        </Caption>
       </div>
 
       {showControls && <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={t('systemStatus.slo.windowAria', 'Uptime window selector')}>
@@ -203,16 +208,16 @@ export function SLOTrackingCard() {
       </div>}
 
       {data?.historical_source && data.historical_source !== 'series' && (
-        <p role="note" className="mt-3 inline-flex items-start gap-1.5 text-xs text-amber-200/80">
+        <Text as="p" variant="caption" role="note" className="mt-3 inline-flex items-start gap-1.5 text-amber-300">
           <Info aria-hidden="true" className="h-3 w-3 mt-0.5 shrink-0" />
           <span>
             {data.note ?? t('systemStatus.slo.snapshotNote', 'Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.')}
           </span>
-        </p>
+        </Text>
       )}
 
-      {isLoading && <p role="status" className="mt-3 text-xs text-[var(--text-muted)]">{t('systemStatus.slo.loading', 'Loading uptime…')}</p>}
-      {error && <p role="alert" className="mt-3 text-xs text-red-300">{t('systemStatus.slo.loadError', 'Failed to load uptime data.')}</p>}
+      {isLoading && !state.hasData && <Text as="p" variant="caption" role="status" className="mt-3">{t('systemStatus.slo.loading', 'Loading uptime…')}</Text>}
+      {state.fatalError && <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} />}
     </GlassPanel>
   )
 }

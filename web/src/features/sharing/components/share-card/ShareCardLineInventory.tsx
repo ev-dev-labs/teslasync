@@ -1,7 +1,7 @@
-import { ListChecks } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, Table, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import type { ShareCardLineKey } from '../../lib/shareCard';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardCompositionProps } from './types';
@@ -26,11 +26,7 @@ export function ShareCardLineInventory({
       data-testid="share-card-line-inventory"
       aria-label={t('shareCard.lines.aria', 'Share card six-line content inventory')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-2 flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.lines.title', 'Card content and line inventory')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.lines.title', 'Card content and line inventory')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'shareCard.lines.subtitle',
@@ -77,7 +73,7 @@ export function ShareCardLineInventory({
             </tbody>
           </Table>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

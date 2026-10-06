@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { FileJson } from 'lucide-react';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { CodeBlock, GlassPanel, PanelTitle } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { toPrettyJson, type ServiceEvidencePackDocument } from '../lib/serviceEvidencePack';
 
@@ -29,13 +29,13 @@ export function ServiceEvidencePackPreview({ pack, className }: ServiceEvidenceP
           message={t('serviceEvidencePack.preview.empty', 'Generate a pack above to preview the exact JSON document that will be downloaded.')}
         />
       ) : (
-        <Text
-          as="pre"
-          variant="code"
-          className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[var(--surface-1)] p-3"
-        >
-          {toPrettyJson(pack)}
-        </Text>
+        <CodeBlock
+          text={toPrettyJson(pack)}
+          language="json"
+          wrap
+          ariaLabel={t('serviceEvidencePack.preview.title', 'Pack preview')}
+          className="[&_pre]:max-h-96"
+        />
       )}
     </GlassPanel>
   );

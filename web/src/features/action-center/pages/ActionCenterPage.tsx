@@ -5,8 +5,8 @@ import {
   useActionCenter,
   useApplyActionCenterAction,
 } from '@/api/hooks/useActionCenter';
-import { useToast } from '@/components/feedback';
-import { PageContainer } from '@/components/layout';
+import { StaleRefreshWarning, useToast } from '@/components/feedback';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Pagination } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -183,7 +183,7 @@ export default function ActionCenterPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('actionCenter.page.title', 'Action center')}
       subtitle={t(
         'actionCenter.page.subtitle',
@@ -193,10 +193,11 @@ export default function ActionCenterPage() {
       query={query}
       copyLink
     >
+      <StaleRefreshWarning state={actionCenterState} label={t('actionCenter.page.title', 'Action center')} />
       <FadeIn>
         <ActionCenterSummary
           summary={query.data?.summary ?? null}
-          loading={query.isLoading}
+          loading={!actionCenterState.hasData && query.isLoading}
         />
       </FadeIn>
       <FadeIn delay={0.04}>
@@ -209,14 +210,14 @@ export default function ActionCenterPage() {
       <FadeIn delay={0.08}>
         <ProviderStatusPanel
           providers={query.data?.provider_status ?? []}
-          loading={query.isLoading}
+          loading={!actionCenterState.hasData && query.isLoading}
         />
       </FadeIn>
       <FadeIn delay={0.12}>
         <RecommendationList
           items={query.data?.items ?? []}
-          loading={query.isLoading}
-          error={query.error}
+          loading={!actionCenterState.hasData && query.isLoading}
+          error={actionCenterState.fatalError}
           onRetry={() => void query.refetch()}
           onAction={handleAction}
           actionsDisabled={!operationalMode.canWrite}
@@ -245,6 +246,6 @@ export default function ActionCenterPage() {
         onConfirm={() => void confirmAction()}
         onCancel={() => setPending(null)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

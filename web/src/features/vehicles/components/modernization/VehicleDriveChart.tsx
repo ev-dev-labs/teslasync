@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route } from 'lucide-react';
-import { ChartCard, LayoutCard } from '@/components/layout/layout-reference';
+import { ChartCard, LayoutCard } from '@/components/layout';
 import {
   ChartTooltip, CHART_COLORS, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ChartLegend, AREA_DEFAULTS, areaGradient,
@@ -35,7 +35,8 @@ export function VehicleDriveChart({ drives }: { drives: Drive[] | undefined }) {
     return (
       <LayoutCard title={title}>
         <EmptyState icon={<Route className="h-8 w-8" aria-hidden="true" />}
-          message={t('vehicles.detail.noDriveData', 'No drive data for chart')} />
+          message={t('vehicles.detail.noDriveData', 'No drive data for chart')}
+          actionTo={{ label: t('common.viewAll', 'View all'), to: '/drives' }} />
       </LayoutCard>
     );
   }

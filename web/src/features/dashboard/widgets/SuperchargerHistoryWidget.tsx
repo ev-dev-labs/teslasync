@@ -68,13 +68,17 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
       return {
         id: entry.id,
         label: entry.site_location_name ?? '—',
-        value: wh ?? 0,
+        value: wh,
         formattedValue: wh == null ? '—' : formatEnergy(wh),
         badge: cost != null
           ? { text: formatCurrency(cost), variant: 'neutral' as const }
           : undefined,
         barColor: 'bg-[var(--text-secondary)]',
       };
+    }).sort((a, b) => {
+      if (a.value == null) return b.value == null ? 0 : 1;
+      if (b.value == null) return -1;
+      return b.value - a.value;
     });
   }, [entries, formatCurrency, formatEnergy]);
 
@@ -126,6 +130,8 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
           <div className="flex-1 min-h-0 overflow-y-auto">
             <WidgetRankedList
               items={rankedItems}
+              order="source"
+              wrapContent
               maxItems={10}
               showBars={entries.every((entry) => knownNumber(entry.usage_wh) != null)}
               emptyMessage={t('widget.superchargerHistory.noData', 'No Supercharger sessions')}

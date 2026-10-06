@@ -382,6 +382,20 @@ afterEach(() => {
 });
 
 describe('DashboardPage — shell', () => {
+  it('retains the mounted grid and layout actions when the registry refresh fails', () => {
+    h.vehicles = makeQuery({
+      data: [{ id: 1, display_name: 'Model 3', vin: 'VIN1' }],
+      error: new Error('registry refresh failed'),
+      isError: true,
+    });
+    const { container } = renderPage();
+    expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Customize' })).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('renders the Fleet Operations identity without a fixed posture brief or workflow column', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Fleet operations' })).toBeInTheDocument();

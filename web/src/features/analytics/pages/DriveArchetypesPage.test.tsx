@@ -109,6 +109,11 @@ vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select">Vehicle picker</div>,
 }));
 
+vi.mock('@/components/layout', async () => ({
+  ...(await vi.importActual<typeof import('@/components/layout')>('@/components/layout')),
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
 vi.mock('@/components/charts', () => {
   const Wrapper = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const hiddenSeries = {

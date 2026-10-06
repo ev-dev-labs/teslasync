@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { StatStrip, type StatMetric, type StatPeriod } from '@/components/data-display';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { HelperText } from '@/components/ui';
 import type { GuardPageModel } from './useGuardPageModel';

@@ -4,8 +4,10 @@ import {
   useAuthStatus, useAuthURL, useRefreshAuth,
   useDisconnectAuth, useSyncVehicles,
 } from '@/api/hooks/useSettings'
-import { GlassPanel, Button, ConfirmDialog, IconBox } from '@/components/ui'
+import { GlassPanel, Button, ConfirmDialog, IconBox, Heading, HelperText, Text, Badge } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
+import { SourceContent } from '@/components/layout'
+import { deriveDataState } from '@/api/dataState'
 import { useToast } from '@/components/feedback/Toast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { cn } from '@/lib/cn'
@@ -20,7 +22,9 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 export function TeslaAccountSection() {
   const { t } = useTranslation('settings')
   const toast = useToast()
-  const { data: auth } = useAuthStatus()
+  const authQuery = useAuthStatus()
+  const authState = deriveDataState(authQuery)
+  const auth = authState.data
   const authUrlMut = useAuthURL()
   const refreshMut = useRefreshAuth()
   const disconnectMut = useDisconnectAuth()
@@ -99,86 +103,97 @@ export function TeslaAccountSection() {
           <IconBox color="blue">
             <Shield className="h-5 w-5" />
           </IconBox>
-          <div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('tesla.title', 'Tesla account')}</h2>
-            <p className="text-xs text-[var(--text-muted)]">{t('tesla.subtitle', 'Connect your Tesla account to sync vehicles and data')}</p>
+          <div className="min-w-0">
+            <Heading level="section">{t('tesla.title', 'Tesla account')}</Heading>
+            <HelperText>{t('tesla.subtitle', 'Connect your Tesla account to sync vehicles and data')}</HelperText>
           </div>
         </div>
 
+        <SourceContent
+          state={authState.fatalError ? 'error' : authState.status === 'initial' ? 'loading' : authState.status === 'stale' ? 'retained' : auth ? 'ready' : 'empty'}
+          label={t('tesla.title', 'Tesla account')}
+          emptyMessage={t('tesla.statusUnavailable', 'Tesla account status unavailable.')}
+          errorMessage={t('tesla.statusUnavailable', 'Tesla account status unavailable.')}
+          error={authState.fatalError}
+          errorRecovery={{ onRetry: () => void authQuery.refetch() }}
+        >
         <div
           role="status"
           aria-live="polite"
           data-testid="tesla-connection-status"
-          className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)]"
+          className="flex min-w-0 items-center gap-3 p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)]"
         >
           {auth?.authenticated && !pillDisconnected ? (
             <>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-green/10">
-                <CheckCircle className="h-4 w-4 text-neon-green" aria-hidden="true" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                <CheckCircle className="h-4 w-4 text-emerald-300" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-medium text-emerald-300">{t('tesla.connected', 'Connected')}</p>
+                  <Text as="p" variant="bodySm" weight="medium" className="text-emerald-300">{t('tesla.connected', 'Connected')}</Text>
                   {expiringSoon !== null && (
-                    <span
+                    <Badge
+                      variant="warning"
+                      size="sm"
                       data-testid="tesla-expiring-soon-pill"
-                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-2xs font-semibold tracking-wide text-amber-300"
+                      className="gap-1"
                     >
                       <AlertTriangle className="h-3 w-3" aria-hidden />
                       {t('tesla.expiringSoon', 'Expires in {{days}}d', { days: expiringSoon })}
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 {auth.expires_at && (
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <HelperText as="p">
                     {t('tesla.tokenExpires', 'Token expires')} {formatDateTime(auth.expires_at)}
-                  </p>
+                  </HelperText>
                 )}
               </div>
             </>
           ) : (
             <>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-red/10">
-                <XCircle className="h-4 w-4 text-neon-red" aria-hidden="true" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-500/10">
+                <XCircle className="h-4 w-4 text-rose-300" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-rose-300 font-medium">
+                <Text as="p" variant="bodySm" weight="medium" className="text-rose-300">
                   {pillDisconnected
                     ? t('tesla.disconnected', 'Disconnected')
                     : t('tesla.notConnected', 'Not connected')}
-                </p>
+                </Text>
                 {pillDisconnected && (
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <HelperText as="p">
                     {t('tesla.reauth.body', 'Reconnect to resume live data and commands.')}
-                  </p>
+                  </HelperText>
                 )}
               </div>
             </>
           )}
         </div>
+        </SourceContent>
 
         <div className="flex flex-wrap gap-3">
           {!auth?.authenticated ? (
-            <Button variant="primary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} loading={authUrlMut.isPending}>
+            <Button variant="primary" wrapLabel icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} loading={authUrlMut.isPending}>
               {t('tesla.connect', 'Connect Tesla account')}
             </Button>
           ) : (
             <>
-              <Button variant="secondary" icon={<RefreshCw className={cn('h-4 w-4', refreshMut.isPending && 'animate-spin')} />} onClick={() => refreshMut.mutate(undefined, {
+              <Button variant="secondary" wrapLabel icon={<RefreshCw className={cn('h-4 w-4', refreshMut.isPending && 'animate-spin')} />} onClick={() => refreshMut.mutate(undefined, {
                 onSuccess: () => toast.success(t('toast.tokenRefreshed', 'Token refreshed')),
                 onError: (err: Error) => toast.error(t('toast.tokenRefreshFailed', 'Token refresh failed'), err.message),
               })} disabled={refreshMut.isPending}>
                 {t('tesla.refreshToken', 'Refresh token')}
               </Button>
-              <Button variant="secondary" icon={<Car className={cn('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate(undefined, {
+              <Button variant="secondary" wrapLabel icon={<Car className={cn('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate(undefined, {
                 onError: (err: Error) => toast.error(t('toast.syncFailed', 'Vehicle sync failed'), err.message),
               })} disabled={syncMut.isPending}>
                 {t('tesla.syncVehicles', 'Sync vehicles')}
               </Button>
-              <Button variant="secondary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending} className="!border-neon-cyan/30 !text-neon-cyan hover:!bg-neon-cyan/5">
+              <Button variant="secondary" wrapLabel icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending}>
                 {t('tesla.reauthorize', 'Re-authorize')}
               </Button>
-              <Button variant="danger" icon={<XCircle className="h-4 w-4" />} onClick={handleDisconnect} disabled={disconnectMut.isPending}>
+              <Button variant="danger" wrapLabel icon={<XCircle className="h-4 w-4" />} onClick={handleDisconnect} disabled={disconnectMut.isPending}>
                 {t('tesla.disconnect', 'Disconnect')}
               </Button>
             </>
@@ -186,9 +201,9 @@ export function TeslaAccountSection() {
         </div>
 
         {syncMut.isSuccess && (
-          <p className="text-sm text-emerald-300 animate-in fade-in">
+          <Text as="p" variant="bodySm" className="text-emerald-300 animate-in fade-in">
             {t('tesla.synced', 'Synced {{count}} vehicle(s).', { count: syncMut.data?.synced ?? 0 })}
-          </p>
+          </Text>
         )}
       </GlassPanel>
       {disconnectDialogProps && (

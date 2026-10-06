@@ -53,7 +53,8 @@ vi.mock('@/components/forms', async () => {
   };
 });
 
-vi.mock('@/components/layout', () => ({
+vi.mock('@/components/layout', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/layout')>(),
   PageContainer: ({
     title,
     subtitle,

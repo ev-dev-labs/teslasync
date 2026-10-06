@@ -19,6 +19,8 @@ import { captureCataloguePanel, positionCataloguePanel } from './dashboardCatalo
 import { recordCatalogueObservationSources } from './dashboardCatalogueObservationAge';
 import { assertCatalogueChargeCategories, assertCatalogueChargeHistory, recordCatalogueChargeHistorySources } from './dashboardCatalogueChargeHistory';
 import { assertCatalogueCountReference } from './dashboardCatalogueCountReference';
+import { assertCataloguePressureParity } from './dashboardCataloguePressureParity';
+import { assertCatalogueHeaderCollision } from './dashboardCatalogueHeaderCollision';
 import { drivingReadings } from './dashboardCatalogueDrivingFixtures';
 import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
 import {
@@ -374,6 +376,12 @@ for (const [batch, ids] of Object.entries(batches)) {
             height: element.getBoundingClientRect().height,
           }));
           if (batch.startsWith('catalogue-')) await assertRemainingContent(panel, widget.widgetId, width, test.info());
+          if (widget.widgetId === 'live-signals') {
+            await assertCataloguePressureParity(page, panel, width, theme, test.info());
+          }
+          if (widget.widgetId === 'fleet-posture') {
+            await assertCatalogueHeaderCollision(page, panel, width, theme, test.info());
+          }
           if (widget.widgetId === 'charge-history') {
             await assertCatalogueChargeHistory(page, panel, width, theme, test.info());
           }

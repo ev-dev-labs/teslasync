@@ -214,6 +214,7 @@ function SectionRowItem({ row, onRequestReset, busy }: SectionRowItemProps) {
       </div>
       <Button
         variant="ghost"
+        wrapLabel
         onClick={() => onRequestReset(row)}
         disabled={busy}
         data-testid={`reset-section-button-${row.id}`}
@@ -404,6 +405,7 @@ export function ResetSection() {
             </HelperText>
             <Button
               variant="danger"
+              wrapLabel
               onClick={() => setResetAllOpen(true)}
               disabled={allBusy}
               data-testid="reset-section-reset-all"

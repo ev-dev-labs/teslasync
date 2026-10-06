@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { History, Info, CheckCircle2, Siren, Unlock, Car, AlertTriangle, type LucideIcon } from 'lucide-react';
+import { Info, CheckCircle2, Siren, Unlock, Car, AlertTriangle, type LucideIcon } from 'lucide-react';
 import { useCardPlacement } from '@/components/layout/layout-reference';
-import { GlassPanel, PanelTitle, Badge, Button, Text, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Badge, Button, Text, HelperText } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { isGuardEventAcknowledged, type GuardEvent } from '@/api/hooks/useGuard';
@@ -13,20 +14,20 @@ import type { GuardPageModel } from './useGuardPageModel';
 export function GuardEvents({ model: m }: { model: GuardPageModel }) {
   const { t } = useTranslation();
   const placement = useCardPlacement();
+  const refreshAction = !m.noVehicle && m.eventsState.retry
+    ? { label: t('common.refresh', 'Refresh'), onClick: m.eventsState.retry }
+    : undefined;
+  const vehicleAction = m.noVehicle
+    ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' }
+    : undefined;
   return (
-    <GlassPanel data-guard-section="events"
-      className={cn('min-w-0 space-y-4 p-4 sm:p-5', placement?.className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PanelTitle className="flex items-center gap-2">
-          <History className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-          {t('guard.eventTimeline', 'Event timeline')}
-        </PanelTitle>
-        {m.unacknowledgedCount > 0 && (
+    <div data-guard-section="events" className={cn('min-w-0', placement?.className)}>
+      <LayoutCard title={t('guard.eventTimeline', 'Event timeline')}
+        actions={m.unacknowledgedCount > 0 ? (
           <Badge variant="danger" size="sm">
             {t('guard.unackCount', '{{count}} unacknowledged', { count: m.unacknowledgedCount })}
           </Badge>
-        )}
-      </div>
+        ) : undefined}>
       <HelperText>{t('guard.modernization.eventsCoverage', 'Counts cover the returned security event history, not a theft detection assessment.')}</HelperText>
       <StaleRefreshWarning state={m.eventsState} label={t('guard.eventTimeline', 'Event timeline')} />
       {m.ackEvent.error && <QueryError error={m.ackEvent.error} compact />}
@@ -38,10 +39,12 @@ export function GuardEvents({ model: m }: { model: GuardPageModel }) {
         </div>
       ) : !m.eventsKnown ? (
         <EmptyState icon={<Info className="h-8 w-8" aria-hidden="true" />}
-          message={t('guard.modernization.sourceUnknown', 'Source unavailable; no security conclusion can be drawn.')} />
+          message={t('guard.modernization.sourceUnknown', 'Source unavailable; no security conclusion can be drawn.')}
+          action={refreshAction} actionTo={vehicleAction} />
       ) : m.events.length === 0 ? (
         <EmptyState icon={<Info className="h-8 w-8" aria-hidden="true" />}
-          message={t('guard.noEvents', 'No guard events yet')} />
+          message={t('guard.noEvents', 'No guard events yet')}
+          action={refreshAction} actionTo={vehicleAction} />
       ) : (
         <div className="grid min-w-0 grid-cols-1 gap-3 @3xl:grid-cols-2 @5xl:grid-cols-3">
           {m.events.map(event => (
@@ -50,7 +53,8 @@ export function GuardEvents({ model: m }: { model: GuardPageModel }) {
           ))}
         </div>
       )}
-    </GlassPanel>
+      </LayoutCard>
+    </div>
   );
 }
 

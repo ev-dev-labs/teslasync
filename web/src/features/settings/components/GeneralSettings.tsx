@@ -199,10 +199,10 @@ export function GeneralSettings() {
         ) : (
           <>
             {carPrefs && (carPrefs.setting_distance_unit || carPrefs.setting_temperature_unit) && (
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5 p-4 mb-5">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5 p-4 mb-5">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Car className="h-5 w-5 text-neon-cyan shrink-0" />
-                  <div>
+                  <div className="min-w-0 break-words">
                     <Text as="p" variant="body" className="font-medium">
                       {t('app.carUses', 'Car uses')} {parseSettingEnum(carPrefs.setting_distance_unit, 'distance')} / {parseSettingEnum(carPrefs.setting_temperature_unit, 'temperature')} / {parseSettingEnum(carPrefs.setting_tire_pressure_unit, 'pressure')}
                     </Text>
@@ -211,7 +211,7 @@ export function GeneralSettings() {
                     </HelperText>
                   </div>
                 </div>
-                <Button variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar} className="shrink-0">
+                <Button variant="primary" size="sm" wrapLabel icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar}>
                   {t('app.syncFromCar', 'Sync from car')}
                 </Button>
               </div>
@@ -381,8 +381,8 @@ export function GeneralSettings() {
                 </SettingField>
 
                 <SettingField label={t('app.gasPrice', 'Gas price (for EV vs ICE comparison)')}>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
+                  <div className="flex min-w-0 flex-wrap gap-2">
+                    <div className="min-w-0 flex-1 basis-40">
                       <CurrencyInput
                         ariaLabel={t('app.gasPrice', 'Gas price (for EV vs ICE comparison)')}
                         currency={symbolToIsoCode(form.currency_symbol)}
@@ -420,8 +420,8 @@ export function GeneralSettings() {
           </>
         )}
 
-        <div className="flex items-center gap-4">
-          <Button variant="primary" icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form, {
+        <div className="flex flex-wrap items-center gap-4">
+          <Button variant="primary" wrapLabel icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form, {
             onSuccess: () => { toast.success(t('toast.saved', 'Settings saved'), t('toast.savedDesc', 'Your preferences have been updated')); setSaved(true); setTimeout(() => setSaved(false), 3000) },
             onError: () => toast.error(t('toast.saveFailed', 'Failed to save'), t('toast.saveFailedDesc', 'Could not update settings')),
           })} loading={settingsMut.isPending} disabled={!costValidity.electricity || !costValidity.gas}>

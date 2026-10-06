@@ -337,6 +337,19 @@ describe('RegenEfficiencyWidget — shell states', () => {
 });
 
 describe('RegenEfficiencyWidget — null-safety', () => {
+  it('does not replace an out-of-scale recovery reading with the visual ceiling', () => {
+    const data = makeData({ regenRatio: 125 });
+    mockRegen.mockReturnValue(qr({ data }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('125.00%')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.getByRole('group', { name: '125.00%' })).not.toHaveAttribute('aria-valuenow');
+    expect(screen.getByText('1234 Wh')).toBeInTheDocument();
+    expect(screen.getByText('5000 Wh')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(data.regenRatio).toBe(125);
+  });
+
   it('preserves signed recovered energy and a genuine zero recovery ratio', () => {
     mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 0, totalRegenWh: -1234, freeCharges: 0 }) }));
     renderWidget(STANDARD);

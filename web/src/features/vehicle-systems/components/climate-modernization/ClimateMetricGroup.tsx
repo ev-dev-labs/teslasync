@@ -1,6 +1,6 @@
 import { Children, isValidElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StatGroup, type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { StatGroup, type StatMetric, type StatPeriod } from '@/components/data-display';
 import { Text } from '@/components/ui';
 
 interface ClimateMetricProps {

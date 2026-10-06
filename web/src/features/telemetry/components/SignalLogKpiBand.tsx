@@ -21,6 +21,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 export interface SignalLogKpiBandProps {
   summary: SignalLogSummary;
   loading?: boolean;
+  /** A submitted query failed before any rows were retained; not an empty result. */
+  unavailable?: boolean;
 }
 
 /**
@@ -58,7 +60,7 @@ function formatSpan(earliest: string | null, latest: string | null): string {
   return remHr > 0 ? `${day}d ${remHr}h` : `${day}d`;
 }
 
-export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandProps) {
+export function SignalLogKpiBand({ summary, loading = false, unavailable = false }: SignalLogKpiBandProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const s = summary ?? ZERO_SUMMARY;
@@ -83,14 +85,14 @@ export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandP
       <section aria-label={t('signalLog.kpis', 'Query summary')} className={gridClass}>
         <MetricCard
           label={t('signalLog.kpi.totalRecords', 'Total records')}
-          value={fmtInt(s.totalRecords)}
+          value={unavailable ? '—' : fmtInt(s.totalRecords)}
           icon={<Database className="h-5 w-5" aria-hidden="true" />}
           color="cyan"
         />
         <MetricCard
           label={t('signalLog.kpi.signals', 'Signals')}
           value={fmtInt(s.signalsSelected)}
-          subtitle={t('signalLog.kpi.signalsWithData', '{{count}} with data', {
+          subtitle={unavailable ? '—' : t('signalLog.kpi.signalsWithData', '{{count}} with data', {
             count: s.distinctSignals,
           })}
           icon={<Layers className="h-5 w-5" aria-hidden="true" />}
@@ -98,19 +100,19 @@ export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandP
         />
         <MetricCard
           label={t('signalLog.kpi.numeric', 'Numeric points')}
-          value={fmtInt(s.numericPoints)}
+          value={unavailable ? '—' : fmtInt(s.numericPoints)}
           icon={<Hash className="h-5 w-5" aria-hidden="true" />}
           color="green"
         />
         <MetricCard
           label={t('signalLog.kpi.text', 'Text points')}
-          value={fmtInt(s.textPoints)}
+          value={unavailable ? '—' : fmtInt(s.textPoints)}
           icon={<Type className="h-5 w-5" aria-hidden="true" />}
           color="amber"
         />
         <MetricCard
           label={t('signalLog.kpi.boolean', 'Boolean points')}
-          value={fmtInt(s.boolPoints)}
+          value={unavailable ? '—' : fmtInt(s.boolPoints)}
           icon={<ToggleRight className="h-5 w-5" aria-hidden="true" />}
           color="purple"
         />

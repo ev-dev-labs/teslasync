@@ -210,7 +210,8 @@
       "pendingPassive": "Climate-history availability has not resolved.",
       "refreshError": "Climate history could not refresh. Showing the most recently loaded thermal evidence.",
       "retry": "Retry",
-      "selectVehicleKpi": "Select a vehicle above to load evidence."
+      "selectVehicleKpi": "Select a vehicle above to load evidence.",
+      "paused": "Climate history loading is paused while the network is unavailable; no empty response is inferred."
     },
     "subtitle": "A gate-by-gate audit of parked cabin relaxation, from returned climate rows to accepted Newton-cooling fits",
     "thresholds": {
@@ -235,6 +236,93 @@
     },
     "title": "Cabin thermal Model"
   },
+  "climate": {
+    "aiPreheatPrecool": {
+      "title": "Suggest a preheat or precool schedule",
+      "badge": "Helix",
+      "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
+      "generateButton": "Draft schedule",
+      "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule."
+    },
+    "history": {
+      "emptyMessage": "No climate history has been recorded.",
+      "emptyDescription": "Climate snapshots accumulate after the vehicle reports cabin, ambient, or HVAC telemetry.",
+      "temperatureEmpty": "No temperature history has been recorded.",
+      "temperatureEmptyDescription": "Cabin, ambient, and set-point trends appear after the vehicle reports climate samples.",
+      "hvacEmpty": "No HVAC operating history has been recorded.",
+      "hvacEmptyDescription": "AC state and fan-speed trends appear after the vehicle reports active climate samples.",
+      "hvacAria": "AC on/off state and fan speed over time",
+      "temperatureAria": "Cabin, ambient, and driver set-point temperature over time",
+      "title": "Temperature history"
+    },
+    "page": {
+      "auto": "Auto",
+      "manual": "Manual",
+      "setTemp": "Set temp",
+      "subtitle": "HVAC status, temperatures, and seat heaters",
+      "loadFailed": "Failed to load climate data",
+      "hvacSystem": "HVAC system",
+      "batteryHeater": "Battery heater",
+      "insufficientPowerToHeat": "Insufficient power to heat",
+      "overview": "Climate overview",
+      "temperature": "Temperature",
+      "insideTemp": "Inside temp",
+      "outsideTemp": "Outside temp",
+      "driverSetTemp": "Driver set temp",
+      "thermalComfort": "Thermal comfort",
+      "comfortScore": "Comfort score",
+      "comfortExcellent": "Excellent",
+      "comfortModerate": "Moderate",
+      "comfortPoor": "Poor",
+      "tempDelta": "Temp delta",
+      "nearTarget": "Near target",
+      "aboveTarget": "Above target",
+      "belowTarget": "Below target",
+      "notAvailable": "N/A",
+      "tooWarm": "Too warm",
+      "tooCold": "Too cold",
+      "comfortable": "Comfortable",
+      "climateSystems": "Climate systems",
+      "autoConditioning": "Auto conditioning",
+      "fanStatus": "Fan status",
+      "running": "Running",
+      "idle": "Idle",
+      "code": "Code",
+      "steeringWheelHeater": "Steering wheel heater",
+      "steeringWheelHeatLevel": "Steering wheel heat level",
+      "steeringWheelHeatAuto": "Steering wheel heat auto",
+      "defrostMode": "Defrost mode",
+      "defrostForPreconditioning": "Defrost for preconditioning",
+      "clearingWindshield": "Clearing windshield before drive",
+      "rearDefrost": "Rear defrost",
+      "clearingRearWindow": "Clearing rear window",
+      "wiperHeater": "Wiper heater",
+      "heatingWipers": "Heating windshield wipers",
+      "rearDisplayHvac": "Rear display HVAC",
+      "rearPassengersControl": "Rear passengers can control HVAC",
+      "protectionSafety": "Protection & safety",
+      "overheatProtection": "Overheat protection",
+      "overheatTempLimit": "Overheat temp limit",
+      "passengerSetting": "Passenger setting",
+      "comfortEfficiency": "Comfort & efficiency",
+      "seatHeaters": "Seat heaters",
+      "seatCooling": "Seat cooling",
+      "ventilation": "Ventilation",
+      "rearCenter": "Rear center",
+      "autoClimateLeft": "Auto climate (left)",
+      "autoClimateRight": "Auto climate (right)",
+      "adjusting": "Adjusting",
+      "farFromTarget": "Far from target",
+      "climateEfficiency": "Climate efficiency",
+      "avgFanSpeed": "Avg fan speed",
+      "levelRange": "Level 0–10",
+      "peakFanSpeed": "Peak fan speed",
+      "acOnTime": "AC on time",
+      "acStateFanSpeed": "AC state & fan speed",
+      "acOnOff": "AC on/off",
+      "ofSamples": "of samples"
+    }
+  },
   "comfortConsistency": {
     "title": "Comfort consistency",
     "subtitle": "Evidence-qualified cabin-to-setpoint adherence, stabilization, and overshoot from the returned climate timeline",
@@ -256,7 +344,8 @@
       "noValidTimestamps": "Rows were returned, but none supplied a unique valid timestamp.",
       "noAnalyzedSamples": "Timestamped rows exist, but none passed the active-HVAC, cabin, and setpoint gates.",
       "sampleOnly": "Sample metrics are available, but no adjacent interval supports duration-weighted consistency.",
-      "noStabilization": "Outside-band fragments were observed, but none reached the sustained-band gate; censored endings remain disclosed."
+      "noStabilization": "Outside-band fragments were observed, but none reached the sustained-band gate; censored endings remain disclosed.",
+      "paused": "Climate history loading is paused while the network is unavailable; no empty response is inferred."
     },
     "kpis": {
       "aria": "Comfort consistency evidence ledger",
@@ -516,6 +605,53 @@
   },
   "guard": {
     "title": "Guard mode",
+    "controlSection": "Guard control and live location",
+    "unackCount": "{{count}} unacknowledged",
+    "acknowledgedBy": "Acknowledged by",
+    "acknowledgeEvent": "Acknowledge event",
+    "vehicle": "Vehicle",
+    "kpiState": "Guard state",
+    "kpiSentry": "Sentry mode",
+    "on": "On",
+    "off": "Off",
+    "kpiLock": "Lock state",
+    "kpiSensitivity": "Sensitivity",
+    "kpiUnack": "Unacknowledged",
+    "kpiTotal": "Total events",
+    "overview": "Guard status overview",
+    "vehicleLocked": "Vehicle locked",
+    "vehicleUnlocked": "Vehicle unlocked",
+    "sentryActive": "Sentry mode active",
+    "sentryInactive": "Sentry mode off",
+    "noActiveAlerts": "No active alerts",
+    "sensitivityLowFull": "Low — movement > 1 km",
+    "sensitivityMediumFull": "Medium — movement > 200 m",
+    "sensitivityHighFull": "High — any movement",
+    "sensitivityLow": "Low",
+    "sensitivityHigh": "High",
+    "sensitivityMedium": "Medium",
+    "modernization": {
+      "eventsCoverage": "Counts cover the returned security event history, not a theft detection assessment.",
+      "panels": "Guard location, controls, settings, status, and event history",
+      "notSaved": "No saved guard policy yet",
+      "policyOnly": "Saved policy only; not confirmation of active monitoring or successful arming.",
+      "armingEffect": "Enabling saves policy and requests door locking, then Sentry on. Disabling saves policy only; it does not unlock doors or turn Sentry off.",
+      "panicEffects": "This requests Sentry mode on, then horn honking, then light flashing. It does not lock doors, send notifications, or create a guard event. Commands can fail or complete only partially.",
+      "sourceUnknown": "Source unavailable; no security conclusion can be drawn.",
+      "saveFailure": "Policy may have been saved even if arming failed. Review the refreshed policy and live lock/Sentry status before trying again.",
+      "stepUp": "Saving or enabling policy and activating panic may require step-up authentication.",
+      "eventTrigger": "Triggered denotes the latest unacknowledged non-test event, not confirmed theft or an active monitoring engine.",
+      "sensitivityPolicy": "Saved movement threshold policy; automatic detection is not established.",
+      "unsavedDraft": "Unsaved draft",
+      "overviewSources": "Saved policy, current verified vehicle fields, and returned security event history have independent sources.",
+      "selectVehicle": "Select a vehicle in the workspace header to load guard data.",
+      "engineLimitation": "Automatic guard monitoring, theft detection, and auto-panic are not established by the current service. These settings persist policy; verify vehicle security using current lock and Sentry readings.",
+      "geofencePolicy": "Saved home-area policy; leaving this area is not proof of an active automatic alert service.",
+      "autoPanicPolicy": "Saved auto-panic preference; no automatic execution worker is established.",
+      "policyUpdated": "Policy updated {{time}}",
+      "policyUnknown": "Saved policy unavailable",
+      "lastObserved": "Vehicle source last observed"
+    },
     "noGeofence": "— No home geofence —",
     "subtitle": "Anti-theft monitoring and emergency response",
     "alertTriggered": "Guard alert triggered!",
@@ -575,7 +711,8 @@
       "noIntervals": "Known states exist, but no adjacent interval passed the continuity and maximum-gap rules.",
       "noIntervalsPassive": "Known samples exist, but no adjacent pair passed continuity and gap checks.",
       "noRunsPassive": "No observed interval formed a run fragment.",
-      "censoredOnly": "Active run fragments are present, but none has two observed transition boundaries; short-cycle rate is withheld."
+      "censoredOnly": "Active run fragments are present, but none has two observed transition boundaries; short-cycle rate is withheld.",
+      "paused": "Climate history loading is paused while the network is unavailable; no empty response is inferred."
     },
     "kpis": {
       "aria": "HVAC cycling evidence ledger",
@@ -800,7 +937,117 @@
       "notice": "{{rows}} returned rows, {{runs}} run fragments, and {{complete}} complete active runs support only the disclosed observational summaries; no maintenance diagnosis is inferred."
     }
   },
+  "maintenance": {
+    "aiPredictive": {
+      "title": "Helix maintenance advisor",
+      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
+      "button": "Predict maintenance",
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle first."
+    },
+    "title": "Maintenance",
+    "subtitle": "Service schedule, records, and upcoming maintenance",
+    "kpis": "Maintenance summary",
+    "kpi": {
+      "total": "Total items",
+      "overdue": "Overdue",
+      "soon": "Due soon",
+      "healthy": "Healthy",
+      "completed": "Completed",
+      "categories": "Categories"
+    },
+    "schedule": "Schedule",
+    "refresh": "Refresh maintenance data",
+    "itemsTitle": "Maintenance items",
+    "filterCategory": "Filter by category",
+    "sortBy": "Sort items",
+    "allCategories": "All categories",
+    "sort": {
+      "status": "Status",
+      "name": "Name",
+      "dueDate": "Due date",
+      "category": "Category"
+    },
+    "status": {
+      "good": "Good",
+      "soon": "Due soon",
+      "overdue": "Overdue",
+      "completed": "Completed"
+    },
+    "due": "Due",
+    "noItemsTitle": "No maintenance items",
+    "noItemsFiltered": "No items match the selected category. Try a different filter.",
+    "noItems": "No maintenance items found for this vehicle.",
+    "clearFilterCta": "Clear filter",
+    "projectionsTitle": "Service projections",
+    "noProjections": "No upcoming service projections available.",
+    "costTitle": "Estimated annual cost",
+    "totalSpent": "Total spent",
+    "annualEst": "Annual est.",
+    "perYear": "/yr",
+    "avgService": "Avg / service",
+    "evNote": "EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.",
+    "noCost": "No cost data available yet. Log service records to see cost estimates.",
+    "categoryTitle": "Maintenance by category",
+    "noCategory": "No maintenance items to categorize yet.",
+    "items": "items",
+    "recordsTitle": "Service records",
+    "noRecords": "No service records logged yet.",
+    "noRecordsShort": "No service records found.",
+    "inspectRecord": "Inspect service record",
+    "preview": {
+      "eyebrow": "Service evidence",
+      "title": "Service record",
+      "recordId": "Record ID",
+      "completed": "Completed"
+    },
+    "cost": {
+      "methodology": "Annual estimate uses the span between valid service dates, with a minimum of 0.1 years; fewer than two valid dates use total cost. Average cost uses every returned record."
+    },
+    "details": {
+      "createdAt": "Created",
+      "id": "Item ID",
+      "sourceStatus": "Source status",
+      "lastDate": "Last service date",
+      "dueDistance": "Due odometer",
+      "lastDistance": "Last service odometer",
+      "distanceInterval": "Distance interval",
+      "monthInterval": "Month interval",
+      "title": "Service interval and metadata"
+    },
+    "sources": {
+      "refreshBlocked": "Refresh is paused. Retained data remains available."
+    },
+    "summary": {
+      "provenance": "Counts use all returned maintenance items, before category filtering."
+    },
+    "col": {
+      "date": "Date",
+      "description": "Description",
+      "mileage": "Mileage",
+      "cost": "Cost",
+      "provider": "Provider"
+    }
+  },
   "media": {
+    "modernization": {
+      "unknownStatus": "Unknown status",
+      "retained": "Refresh failed; previously loaded data remains visible for the affected source.",
+      "noSnapshot": "No media snapshot available",
+      "progressUnknown": "Playback progress is unavailable without a reported elapsed time and positive duration.",
+      "reportedMaximum": "Reported maximum",
+      "fallbackScale": "No positive maximum reported; gauge uses the existing fallback scale of 11.",
+      "unavailable": "This source is unavailable",
+      "loading": "Loading this source",
+      "unknownReading": "No reading reported",
+      "uniqueTracksHelp": "Distinct non-empty track titles in the returned history inside the selected dates.",
+      "topSourceHelp": "Most frequent reported playback source in the returned history; missing source names are excluded.",
+      "averageVolumeHelp": "Arithmetic mean of finite audio volume readings in the returned history, rounded as before. Missing readings are excluded.",
+      "volumeStepHelp": "Audio volume increment from the latest media snapshot, not a historical average.",
+      "latestSnapshot": "Latest media snapshot",
+      "returnedHistory": "Returned history: {{start}} – {{end}}",
+      "historyCoverage": "Listening totals describe returned snapshots within the selected dates, not complete listening time. Volume step uses the latest snapshot."
+    },
     "sourceAria": "Pie chart of media source distribution",
     "volumeAria": "Media volume over time area chart"
   },
@@ -1112,6 +1359,19 @@
   },
   "safety": {
     "openFsdInsights": "Open FSD insights",
+    "settings": {
+      "unknown": "Unknown",
+      "reportedSnapshot": "Reported configuration snapshot",
+      "coverageExplanation": "Enabled feature share is a configuration count, not a driving safety rating or verification that assistance is active.",
+      "enabledShare": "Enabled feature share",
+      "shareDescription": "Enabled settings divided by nine tracked settings. Unavailable when any setting is unknown.",
+      "configurationCoverage": "Configuration coverage",
+      "incomplete": "Feature share unavailable: some settings are unknown.",
+      "unknownCount": "{{count}} unknown settings",
+      "signalExplanation": "Last reported security and occupant state; separate from configuration settings. No live verification command is sent.",
+      "readOnly": "Reported vehicle settings only. This page does not edit or save settings, and configured assistance does not establish current intervention or availability.",
+      "historyExplanation": "Recorded configuration snapshots, not intervention events. Gaps represent unknown states; the full history table follows below."
+    },
     "openFsdInsightsHint": "Daily trend & data confidence",
     "liveSignals": "Live safety signals",
     "selectVehicleCta": "Go to vehicles",
@@ -1183,6 +1443,12 @@
   },
   "softwareUpdates": {
     "title": "Software updates",
+    "source": {
+      "unavailable": "Update history is not available. Select a vehicle to load its history.",
+      "failed": "Update history could not be refreshed. Retry to recover.",
+      "period": "Loaded update history",
+      "scope": "Summary and charts describe this page of up to 50 updates in the selected range, not the complete fleet history."
+    },
     "resetRangeCta": "View all time",
     "aiNarration": {
       "title": "Summarize my software update history",
@@ -1194,6 +1460,12 @@
     "subtitle": "Track firmware versions and update history",
     "kpi": {
       "label": "Software update summary",
+      "versionHelp": "Version from the first returned update; not an independently observed installed firmware snapshot.",
+      "totalHelp": "Number of updates on the loaded page.",
+      "installedHelp": "Loaded updates whose status is installed.",
+      "pendingHelp": "All loaded updates minus installed updates; includes every other status.",
+      "lastHelp": "Latest nonempty installation date among loaded installed updates.",
+      "cadenceHelp": "Span in days divided by the number of intervals between valid installation dates on this page.",
       "currentVersion": "Current version",
       "totalUpdates": "Total updates",
       "installed": "Installed",
@@ -1263,6 +1535,57 @@
     "offset": "Most offset",
     "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}"
   },
+  "tirePressure": {
+    "title": "Tire pressure",
+    "subtitle": "Monitor tire pressure readings and history",
+    "col": {
+      "time": "Time",
+      "warnings": "Warnings"
+    },
+    "warn": {
+      "hardShort": "Hard warning",
+      "softShort": "Soft warning",
+      "ok": "OK",
+      "hardTitle": "Hard TPMS warning active",
+      "softTitle": "Soft TPMS warning active",
+      "hardBody": "One or more tires need immediate attention.",
+      "softBody": "One or more tires are outside the recommended range."
+    },
+    "readings": "Current readings and trend",
+    "currentReadings": "Current readings",
+    "resource": "Tire pressure",
+    "noReadings": "No current readings available",
+    "pressureHistory": "Pressure history",
+    "noHistory": "No history data",
+    "historyTable": "History table",
+    "avgPressure": "Avg pressure",
+    "minPressure": "Min pressure",
+    "warningCount": "Warning count",
+    "lastUpdated": "Last updated",
+    "kpis": "Tire pressure summary",
+    "methodology": {
+      "average": "Arithmetic mean of the corners with a pressure reading. Missing corners are excluded.",
+      "minimum": "Lowest reported corner pressure. Missing corners are excluded.",
+      "warningCount": "Reported corners outside the inclusive 250–350 kPa normal band. This is not a count of vehicle TPMS flags.",
+      "lastUpdated": "Newest history row in the selected window; not the observation time of the latest readings."
+    },
+    "reportedCorners": "{{count}} of 4 corners reported",
+    "reportedPressure": "Reported pressure: {{value}} {{unit}}",
+    "retainedRefresh": "Could not refresh {{source}}. Retained readings remain available.",
+    "pausedRefresh": "Refresh of {{source}} is paused. Retained readings remain available.",
+    "aiTrendReasoning": {
+      "title": "Narrate the 30-day tire-pressure trend",
+      "badge": "Helix",
+      "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
+      "generateButton": "Narrate trend"
+    },
+    "pressureHistoryAria": "Tire pressure over time for all four positions"
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
   "activity": {
     "action": {
       "alert": "Alert change",
@@ -1313,25 +1636,20 @@
       "empty": "No recent activity in this window."
     }
   },
-  "annotation": {
-    "add": "Add annotation",
-    "addTitle": "Add annotation",
-    "cat": {
-      "custom": "Custom",
-      "issue": "Issue",
-      "maintenance": "Maintenance",
-      "milestone": "Milestone",
-      "trip": "Trip",
-      "upgrade": "Upgrade"
-    },
-    "category": "Category",
-    "date": "Date",
-    "descPlaceholder": "Optional description...",
-    "description": "Description",
-    "label": "Label",
-    "labelPlaceholder": "e.g., battery replaced",
-    "listTitle": "Annotations",
-    "removeNamed": "Remove annotation: {{label}}"
+  "automations": {
+    "builder": {
+      "signals": {
+        "batteryLevel": "Battery level",
+        "insideTemp": "Inside temperature",
+        "isCharging": "Is charging",
+        "isClimateOn": "Climate on",
+        "isLocked": "Is locked",
+        "outsideTemp": "Outside temperature",
+        "sentryMode": "Sentry Mode",
+        "speed": "Speed",
+        "state": "Vehicle state"
+      }
+    }
   },
   "bulk": {
     "clear": "Clear selection",
@@ -1357,123 +1675,36 @@
     "version": "Calculation version"
   },
   "chart": {
-    "a11y": {
-      "fallbackTableLabel": "{{title}} — data table",
-      "summary": "Chart: {{title}}"
-    },
     "col": {
       "date": "Date",
       "value": "Value"
-    },
-    "export": {
-      "copy": "Copy image to clipboard",
-      "copyFailed": "Failed to copy chart image",
-      "copyFallback": "Clipboard not available — image downloaded instead",
-      "copySuccess": "Chart image copied to clipboard",
-      "csv": "Download data as CSV",
-      "disabledTooltip": "Chart not ready to export",
-      "failed": "Could not prepare the {{format}} export.",
-      "menuLabel": "Export chart",
-      "png": "Save as PNG",
-      "preparing": "Preparing chart export…",
-      "svg": "Save as SVG"
-    },
-    "loading": "Loading chart…",
-    "noData": "No data available",
-    "noDataDescription": "No chartable observations are available for the current selection yet."
-  },
-  "climate": {
-    "aiPreheatPrecool": {
-      "badge": "Helix",
-      "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
-      "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule.",
-      "generateButton": "Draft schedule",
-      "title": "Suggest a preheat or precool schedule"
-    },
-    "history": {
-      "emptyDescription": "Climate snapshots accumulate after the vehicle reports cabin, ambient, or HVAC telemetry.",
-      "emptyMessage": "No climate history has been recorded.",
-      "hvacAria": "AC on/off state and fan speed over time",
-      "hvacEmpty": "No HVAC operating history has been recorded.",
-      "hvacEmptyDescription": "AC state and fan-speed trends appear after the vehicle reports active climate samples.",
-      "temperatureAria": "Cabin, ambient, and driver set-point temperature over time",
-      "temperatureEmpty": "No temperature history has been recorded.",
-      "temperatureEmptyDescription": "Cabin, ambient, and set-point trends appear after the vehicle reports climate samples.",
-      "title": "Temperature history"
-    },
-    "page": {
-      "aboveTarget": "Above target",
-      "acOnOff": "AC on/off",
-      "acOnTime": "AC on time",
-      "acStateFanSpeed": "AC state & fan speed",
-      "auto": "Auto",
-      "autoConditioning": "Auto conditioning",
-      "avgFanSpeed": "Avg fan speed",
-      "batteryHeater": "Battery heater",
-      "belowTarget": "Below target",
-      "clearingRearWindow": "Clearing rear window",
-      "clearingWindshield": "Clearing windshield before drive",
-      "climateEfficiency": "Climate efficiency",
-      "climateSystems": "Climate systems",
-      "code": "Code",
-      "comfortEfficiency": "Comfort & efficiency",
-      "comfortExcellent": "Excellent",
-      "comfortModerate": "Moderate",
-      "comfortPoor": "Poor",
-      "comfortScore": "Comfort score",
-      "comfortable": "Comfortable",
-      "defrostForPreconditioning": "Defrost for preconditioning",
-      "defrostMode": "Defrost mode",
-      "driverSetTemp": "Driver set temp",
-      "fanStatus": "Fan status",
-      "heatingWipers": "Heating windshield wipers",
-      "hvacSystem": "HVAC system",
-      "idle": "Idle",
-      "insideTemp": "Inside temp",
-      "insufficientPowerToHeat": "Insufficient power to heat",
-      "levelRange": "Level 0–10",
-      "loadFailed": "Failed to load climate data",
-      "manual": "Manual",
-      "nearTarget": "Near target",
-      "notAvailable": "N/A",
-      "ofSamples": "of samples",
-      "outsideTemp": "Outside temp",
-      "overheatProtection": "Overheat protection",
-      "overheatTempLimit": "Overheat temp limit",
-      "overview": "Climate overview",
-      "passengerSetting": "Passenger setting",
-      "peakFanSpeed": "Peak fan speed",
-      "protectionSafety": "Protection & safety",
-      "rearDefrost": "Rear defrost",
-      "rearDisplayHvac": "Rear display HVAC",
-      "rearPassengersControl": "Rear passengers can control HVAC",
-      "running": "Running",
-      "seatCooling": "Seat cooling",
-      "seatHeaters": "Seat heaters",
-      "setTemp": "Set temp",
-      "steeringWheelHeatAuto": "Steering wheel heat auto",
-      "steeringWheelHeatLevel": "Steering wheel heat level",
-      "steeringWheelHeater": "Steering wheel heater",
-      "subtitle": "HVAC status, temperatures, and seat heaters",
-      "tempDelta": "Temp delta",
-      "temperature": "Temperature",
-      "thermalComfort": "Thermal comfort",
-      "tooCold": "Too cold",
-      "tooWarm": "Too warm",
-      "ventilation": "Ventilation",
-      "wiperHeater": "Wiper heater"
     }
+  },
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
   },
   "commands": {
     "climate": {
       "campMode": "Camp Mode",
       "climateKeeper": "Climate keeper",
+      "copMedium": "Medium",
       "dogMode": "Dog Mode"
+    }
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
     }
   },
   "date": {
     "preset": {
       "all": "All time",
+      "label": "Quick date range",
       "last1y": "Last year",
       "last24h": "Last 24 hours",
       "last30": "Last 30 days",
@@ -1485,11 +1716,168 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
     }
   },
   "delta": {
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"
+  },
+  "developerReference": {
+    "stats": {
+      "metric": {
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "loading": "Loading measurements",
+        "retained": "Showing retained measurements"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
+    }
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
   },
   "entityContext": {
     "alerts": "Alerts",
@@ -1503,6 +1891,49 @@
   },
   "error": {
     "loadFailed": "Failed to load data"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
   },
   "freshness": {
     "noData": "No recent data",
@@ -1546,82 +1977,19 @@
       "started": "Impersonation started"
     }
   },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "unlocked": "✓ Unlocked"
+  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
     "unknown": "Unknown"
-  },
-  "maintenance": {
-    "aiPredictive": {
-      "badge": "Helix",
-      "button": "Predict maintenance",
-      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
-      "emptyHint": "Select a vehicle first.",
-      "title": "Helix maintenance advisor"
-    },
-    "allCategories": "All categories",
-    "annualEst": "Annual est.",
-    "avgService": "Avg / service",
-    "categoryTitle": "Maintenance by category",
-    "clearFilterCta": "Clear filter",
-    "col": {
-      "cost": "Cost",
-      "date": "Date",
-      "description": "Description",
-      "mileage": "Mileage",
-      "provider": "Provider"
-    },
-    "costTitle": "Estimated annual cost",
-    "due": "Due",
-    "evNote": "EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.",
-    "filterCategory": "Filter by category",
-    "inspectRecord": "Inspect service record",
-    "items": "items",
-    "itemsTitle": "Maintenance items",
-    "kpi": {
-      "categories": "Categories",
-      "completed": "Completed",
-      "healthy": "Healthy",
-      "overdue": "Overdue",
-      "soon": "Due soon",
-      "total": "Total items"
-    },
-    "kpis": "Maintenance summary",
-    "noCategory": "No maintenance items to categorize yet.",
-    "noCost": "No cost data available yet. Log service records to see cost estimates.",
-    "noItems": "No maintenance items found for this vehicle.",
-    "noItemsFiltered": "No items match the selected category. Try a different filter.",
-    "noItemsTitle": "No maintenance items",
-    "noProjections": "No upcoming service projections available.",
-    "noRecords": "No service records logged yet.",
-    "noRecordsShort": "No service records found.",
-    "perYear": "/yr",
-    "preview": {
-      "completed": "Completed",
-      "eyebrow": "Service evidence",
-      "title": "Service record"
-    },
-    "projectionsTitle": "Service projections",
-    "recordsTitle": "Service records",
-    "refresh": "Refresh maintenance data",
-    "schedule": "Schedule",
-    "sort": {
-      "category": "Category",
-      "dueDate": "Due date",
-      "name": "Name",
-      "status": "Status"
-    },
-    "sortBy": "Sort items",
-    "status": {
-      "completed": "Completed",
-      "good": "Good",
-      "overdue": "Overdue",
-      "soon": "Due soon"
-    },
-    "subtitle": "Service schedule, records, and upcoming maintenance",
-    "title": "Maintenance",
-    "totalSpent": "Total spent"
   },
   "maps": {
     "animatedMarker": {
@@ -1637,6 +2005,27 @@
     "routePlayback": {
       "empty": "No GPS points to replay for this route.",
       "mapLabel": "Route playback map"
+    }
+  },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
     }
   },
   "operations": {
@@ -1670,6 +2059,29 @@
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
   },
+  "productPreferences": {
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
+    }
+  },
   "rbac": {
     "toasts": {
       "saved": "RBAC matrix updated."
@@ -1682,6 +2094,9 @@
       "noData": "No elevation data available",
       "title": "Elevation profile"
     }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
   },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
@@ -1707,6 +2122,18 @@
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
   },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
   "sourceLayer": {
     "age": "age",
     "l1": {
@@ -1727,20 +2154,22 @@
       "desc": "Source layer unknown."
     }
   },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
   "telemetry": {
     "fan": "Fan",
     "hvac": "HVAC power"
-  },
-  "tirePressure": {
-    "aiTrendReasoning": {
-      "badge": "Helix",
-      "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
-      "generateButton": "Narrate trend",
-      "title": "Narrate the 30-day tire-pressure trend"
-    },
-    "pressureHistoryAria": "Tire pressure over time for all four positions",
-    "subtitle": "Monitor tire pressure readings and history",
-    "title": "Tire pressure"
   },
   "toast": {
     "admin": {
@@ -1977,6 +2406,13 @@
       }
     }
   },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
+  },
   "widget": {
     "climateHistory": {
       "time": "Time",
@@ -1986,6 +2422,12 @@
       "defrost": "Defrost",
       "fanSpeed": "Fan speed",
       "title": "Climate control"
+    },
+    "doorWindow": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
     },
     "hvac": "HVAC"
   }

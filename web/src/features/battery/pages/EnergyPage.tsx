@@ -7,16 +7,16 @@ import {
   CircleAlert, Thermometer, MapPinned,
 } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout/layout-reference';
+import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
 import {
   BatteryPanelGrid, BatterySpecialistSummary, CostComparisonCard, LifetimeStat,
 } from '../components/modernization';
 import {
-  GlassPanel, DataTable, Badge, PanelTitle, Text, Caption,
+  DataTable, Badge, Text, Caption,
   HelperText, type Column,
 } from '@/components/ui';
 import {
-  ThresholdBar, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
+  ThresholdBar, ChartLegend, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -541,6 +541,12 @@ export default function EnergyPage() {
     }));
   }, [sessions, t]);
 
+  const chargerEvidence = useMemo(() => chargerBreakdown.map(b => ({
+    charger: b.label, sessions: b.count, energy_wh: b.energy,
+    cost: b.pricedCount > 0 ? b.cost : null,
+    costed_energy_wh: b.costedEnergy, priced_sessions: b.pricedCount,
+  })), [chargerBreakdown]);
+
   /* ── Table columns ────────────────────────────────────────────── */
   const sessionColumns: Column<ChargingSession>[] = useMemo(() => [
     {
@@ -972,11 +978,7 @@ export default function EnergyPage() {
       />
 
       <FadeIn delay={0.04}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('energy.drivers.title', 'Efficiency driver investigation')}
-          </PanelTitle>
+        <LayoutCard title={t('energy.drivers.title', 'Efficiency driver investigation')}>
           <Text as="p" variant="bodySm" className="mt-1 max-w-4xl">
             {t(
               'energy.drivers.description',
@@ -1052,7 +1054,7 @@ export default function EnergyPage() {
               className="py-8"
             />
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
 
       {/* ── Hero bento: gauges (primary) + lifetime (context) ───── */}
@@ -1062,11 +1064,7 @@ export default function EnergyPage() {
           ids={['energy-overview', 'energy-lifetime']}
           sizes={['half', 'third']}
         >
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('energy.hero.title', 'Efficiency & cost overview')}
-            </PanelTitle>
+          <LayoutCard title={t('energy.hero.title', 'Efficiency & cost overview')}>
             {isLoading ? <ChartBlockSkeleton height={200} /> : hasNoEnergyData ? (
               <EmptyState /* no-action: surfaces when no energy data exists yet — user must drive/charge to populate */
                 icon={<Zap className="h-10 w-10" />}
@@ -1104,13 +1102,9 @@ export default function EnergyPage() {
                 />
               </div>
             )}
-          </GlassPanel>
+          </LayoutCard>
 
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('energy.lifetime.title', 'Lifetime metrics')}
-            </PanelTitle>
+          <LayoutCard title={t('energy.lifetime.title', 'Lifetime metrics')}>
             {liveChargingQuery.isLoading && !liveChargingDataState.hasData && <Skeleton className="mb-3 h-16 rounded-xl" />}
             {liveChargingDataState.fatalError && <QueryError error={liveChargingDataState.fatalError} onRetry={() => { void liveChargingQuery.refetch(); }} />}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -1133,7 +1127,7 @@ export default function EnergyPage() {
                 accent="text-emerald-300"
               />
             </div>
-          </GlassPanel>
+          </LayoutCard>
         </BatteryPanelGrid>
       </FadeIn>
 
@@ -1169,12 +1163,21 @@ export default function EnergyPage() {
             label={t('energy.dailyCharts', 'Daily energy trends')}
             ids={['energy-cost-daily', 'energy-efficiency-trend']}
           >
-            {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
-            <ChartContainer
+            <ChartCard
+              toolbar size="standard" height={256} mobileHeight={224}
               title={t('energy.chart.energyCostDaily', 'Energy & cost daily')}
               ariaLabel={t('energy.chart.energyCostDailyAria', 'Daily drive consumption and recorded charging cost chart')}
               exportable
               exportFilename="energy-cost-daily"
+              data={dailyConsumptionCostData}
+              exportData={dailyConsumptionCostData}
+              dataColumns={[
+                { key: 'date', label: t('energy.table.date', 'Date') },
+                { key: 'energy', label: t('energy.chart.driveConsumption', 'Drive consumption'),
+                  format: value => value != null ? `${fmtNumber(Number(value))} ${energyUnit}` : '—' },
+                { key: 'cost', label: costSeriesLabel,
+                  format: value => value != null ? formatCurrency(Number(value)) : '—' },
+              ]}
               chartKey="energy-cost-daily"
               annotations={{ vehicleId, scope: 'energy', chartId: 'energy-cost-daily' }}
             >
@@ -1270,14 +1273,21 @@ export default function EnergyPage() {
                   )}
                 </div>
               )}
-            </ChartContainer>
+            </ChartCard>
 
-            {/* chart-a11y:no-table efficiency + distance two-area trend; same daily breakdown is exportable as CSV via the chart menu */}
-            <ChartContainer
+            <ChartCard
+              toolbar size="standard" height={256} mobileHeight={224}
               title={t('energy.chart.efficiencyTrend', 'Efficiency trend')}
               ariaLabel={t('energy.chart.efficiencyTrendAria', 'Daily efficiency and distance area chart')}
               exportable
               exportFilename="efficiency-trend"
+              data={dailyEfficiencyData}
+              exportData={dailyEfficiencyData}
+              dataColumns={[
+                { key: 'date', label: t('energy.table.date', 'Date') },
+                { key: 'efficiency', label: efficiencyUnit },
+                { key: 'distance', label: t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' }) },
+              ]}
               chartKey="energy-efficiency-trend"
             >
               <div className="h-56 sm:h-64">
@@ -1342,7 +1352,7 @@ export default function EnergyPage() {
                   />
                 )}
               </div>
-            </ChartContainer>
+            </ChartCard>
           </BatteryPanelGrid>
         </ChartTimeRangeProvider>
       </FadeIn>
@@ -1353,12 +1363,19 @@ export default function EnergyPage() {
           label={t('energy.patternCharts', 'Charging patterns')}
           ids={['energy-charging-time-of-day', 'energy-charger-breakdown']}
         >
-          {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
-          <ChartContainer
+          <ChartCard
+            toolbar size="standard" height={300} mobileHeight={300}
             title={t('energy.chart.chargingByTime', 'Charging by time of day')}
             ariaLabel={t('energy.chart.chargingByTimeAria', 'Charging energy and session count by time of day bar chart')}
             exportable
             exportFilename="charging-by-time"
+            data={timeOfDayData}
+            exportData={timeOfDayData}
+            dataColumns={[
+              { key: 'name', label: t('energy.chart.chargingByTime', 'Charging by time of day') },
+              { key: 'energy', label: t('energy.chart.energyDisplay', { unit: energyUnit, defaultValue: 'Energy ({{unit}})' }) },
+              { key: 'count', label: t('energy.chart.sessions', 'Sessions') },
+            ]}
             chartKey="energy-charging-time-of-day"
           >
             {sessionsQuery.isLoading ? (
@@ -1425,14 +1442,27 @@ export default function EnergyPage() {
                 className="py-8"
               />
             )}
-          </ChartContainer>
+          </ChartCard>
 
-          {/* chart-a11y:no-table charger-type pie-chart aggregation; CSV download available */}
-          <ChartContainer
+          <ChartCard
+            toolbar size="standard" height={300} mobileHeight={420}
             title={t('energy.chart.chargerBreakdown', 'Charger type breakdown')}
             ariaLabel={t('energy.chart.chargerBreakdownAria', 'Charger type share pie chart')}
             exportable
             exportFilename="charger-breakdown"
+            data={chargerEvidence}
+            exportData={chargerEvidence}
+            dataColumns={[
+              { key: 'charger', label: t('energy.table.type', 'Type') },
+              { key: 'sessions', label: t('energy.chart.sessions', 'Sessions') },
+              { key: 'energy_wh', label: t('energy.table.energy', 'Energy'),
+                format: value => value != null ? formatEnergy(Number(value)) : '—' },
+              { key: 'cost', label: t('energy.table.cost', 'Cost'),
+                format: value => value != null ? formatCurrency(Number(value)) : '—' },
+              { key: 'costed_energy_wh', label: t('energy.chart.costedEnergy', 'Energy with recorded cost'),
+                format: value => value != null ? formatEnergy(Number(value)) : '—' },
+              { key: 'priced_sessions', label: t('energy.chart.pricedSessions', 'Sessions with recorded cost') },
+            ]}
           >
             {sessionsQuery.isLoading ? (
               <Skeleton className="h-60 rounded-xl" />
@@ -1506,17 +1536,13 @@ export default function EnergyPage() {
                 className="py-8"
               />
             )}
-          </ChartContainer>
+          </ChartCard>
         </BatteryPanelGrid>
       </FadeIn>
 
       {/* ── Recent Charging Sessions ─────────────────────────── */}
       <FadeIn delay={0.25}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
-            {t('energy.sessions.title', 'Recent charging sessions')}
-          </PanelTitle>
+        <LayoutCard title={t('energy.sessions.title', 'Recent charging sessions')}>
           {sessionsQuery.isLoading ? (
             <Skeleton className="h-64 rounded-xl" />
           ) : sessionsDataState.fatalError ? (
@@ -1540,7 +1566,7 @@ export default function EnergyPage() {
               className="py-8"
             />
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
     </PageLayout>
   );

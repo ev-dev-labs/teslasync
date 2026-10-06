@@ -150,7 +150,7 @@ if (typeof window.matchMedia !== 'function') {
 
 import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import type { DailyEnergy } from '@/types/energy';
+import type { DailyEnergy, EnergyFlowData } from '@/types/energy';
 import EnergyFlowPage, {
   scaleEfficiency,
   efficiencyRating,
@@ -210,7 +210,7 @@ function makeStatsData(over: Record<string, unknown> = {}) {
   };
 }
 
-function makeFlowData(over: Record<string, unknown> = {}) {
+function makeFlowData(over: Partial<EnergyFlowData> = {}): EnergyFlowData {
   return {
     dc_charging_power: 11,
     ac_charging_power: 0,
@@ -265,6 +265,15 @@ function kpiRegion() {
   return screen.getByRole('region', { name: 'Energy summary metrics' });
 }
 
+function metricValue(label: string, region: HTMLElement = kpiRegion()): string {
+  const tile = within(region).getByText(label).closest('[data-stat]');
+  return tile?.querySelector('[data-stat-value]')?.parentElement?.textContent ?? '';
+}
+
+function historyTable() {
+  return screen.getByRole('table', { name: /Daily energy history/ });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -281,9 +290,14 @@ describe('scaleEfficiency', () => {
     expect(scaleEfficiency(0.16, 'mi')).toBe(257); // round(0.16 * 1609.344)
   });
 
-  it('treats null / undefined as 0 (never NaN)', () => {
-    expect(scaleEfficiency(null, 'km')).toBe(0);
-    expect(scaleEfficiency(undefined, 'mi')).toBe(0);
+  it('preserves null / undefined as unknown, distinct from measured zero', () => {
+    // MDC-025/026/045: absent telemetry is not a measured zero.
+    expect(scaleEfficiency(null, 'km')).toBeNull();
+    expect(scaleEfficiency(undefined, 'mi')).toBeNull();
+    expect(scaleEfficiency(0, 'km')).toBe(0);
+    expect(scaleEfficiency(0, 'mi')).toBe(0);
+    expect(scaleEfficiency(Number.NaN, 'km')).toBeNull();
+    expect(scaleEfficiency(Number.POSITIVE_INFINITY, 'mi')).toBeNull();
   });
 });
 
@@ -305,14 +319,18 @@ describe('efficiencyRating', () => {
 });
 
 describe('computeChargePower', () => {
-  it('sums DC + AC power, treating null legs as 0', () => {
-    expect(computeChargePower({ dc_charging_power: 10, ac_charging_power: 5 } as any)).toBe(15);
-    expect(computeChargePower({ dc_charging_power: null, ac_charging_power: 7 } as any)).toBe(7);
+  it('sums known DC + AC power without fabricating a missing channel', () => {
+    expect(computeChargePower(makeFlowData({ dc_charging_power: 10, ac_charging_power: 5 }))).toBe(15);
+    expect(computeChargePower(makeFlowData({ dc_charging_power: null, ac_charging_power: 7 }))).toBeNull();
+    expect(computeChargePower(makeFlowData({ dc_charging_power: 7, ac_charging_power: null }))).toBeNull();
+    expect(computeChargePower(makeFlowData({ dc_charging_power: 0, ac_charging_power: 7 }))).toBe(7);
+    expect(computeChargePower(makeFlowData({ dc_charging_power: 7, ac_charging_power: 0 }))).toBe(7);
+    expect(computeChargePower(makeFlowData({ dc_charging_power: 0, ac_charging_power: 0 }))).toBe(0);
   });
 
-  it('returns 0 for missing flow data', () => {
-    expect(computeChargePower(null)).toBe(0);
-    expect(computeChargePower(undefined)).toBe(0);
+  it('keeps missing flow data unknown rather than reporting zero charge power', () => {
+    expect(computeChargePower(null)).toBeNull();
+    expect(computeChargePower(undefined)).toBeNull();
   });
 });
 
@@ -329,11 +347,23 @@ describe('buildDailyChartData', () => {
     expect(mi[0].energy).toBe(1); // 1000 Wh → 1 kWh
   });
 
-  it('null-safes missing energy / distance to 0', () => {
-    const rows = [makeDay({ energy_wh: null as any, distance_m: null as any })];
+  it('keeps missing energy / distance as chart gaps, distinct from measured zero', () => {
+    const missing = makeDay();
+    Reflect.set(missing, 'energy_wh', null);
+    Reflect.set(missing, 'distance_m', null);
+    const rows = [missing];
     const out = buildDailyChartData(rows, 'km');
-    expect(out[0].energy).toBe(0);
-    expect(out[0].distance).toBe(0);
+    expect(out[0].energy).toBeNull();
+    expect(out[0].distance).toBeNull();
+    expect(out).toHaveLength(1);
+    const measured = buildDailyChartData([makeDay({ energy_wh: 0, distance_m: 0 })], 'km');
+    expect(measured[0].energy).toBe(0);
+    expect(measured[0].distance).toBe(0);
+    const partialRow = makeDay({ distance_m: 50_000 });
+    Reflect.set(partialRow, 'energy_wh', null);
+    const partial = buildDailyChartData([partialRow], 'mi');
+    expect(partial[0].energy).toBeNull();
+    expect(partial[0].distance).toBeCloseTo(31.06856, 5);
   });
 });
 
@@ -364,12 +394,15 @@ describe('EnergyFlowPage — shell & KPI band', () => {
     renderPage();
     const kpi = kpiRegion();
     expect(within(kpi).getByText('Total energy')).toBeInTheDocument();
-    expect(within(kpi).getByText('42.00 kWh')).toBeInTheDocument();
-    expect(within(kpi).getByText('55.50 kWh')).toBeInTheDocument();
-    expect(within(kpi).getByText('123.00 km')).toBeInTheDocument();
-    expect(within(kpi).getByText('160')).toBeInTheDocument(); // efficiency (Wh/km)
-    expect(within(kpi).getByText('12.30')).toBeInTheDocument(); // CO2
-    expect(within(kpi).getByText('7')).toBeInTheDocument(); // period days
+    expect(metricValue('Total energy', kpi)).toBe('42.00 kWh');
+    expect(metricValue('Total charged', kpi)).toBe('55.50 kWh');
+    expect(metricValue('Distance', kpi)).toBe('123.00 km');
+    expect(Number.parseFloat(metricValue('Efficiency', kpi))).toBe(160); // Wh/km
+    expect(metricValue('Efficiency', kpi)).toBe('160.00 Wh/km');
+    expect(Number.parseFloat(metricValue('CO₂ saved', kpi)).toFixed(2)).toBe('12.30');
+    expect(metricValue('CO₂ saved', kpi)).toBe('12.30 kg');
+    expect(Number.parseFloat(metricValue('Period', kpi))).toBe(7);
+    expect(metricValue('Period', kpi)).toBe('7 days');
   });
 
   it('shows an em-dash placeholder in the KPI band when no vehicle is selected', () => {
@@ -396,9 +429,10 @@ describe('EnergyFlowPage — shell & KPI band', () => {
     unitState.length = 'mi';
     renderPage();
     const kpi = kpiRegion();
-    expect(within(kpi).getByText('76.43 mi')).toBeInTheDocument(); // 123_000 m → mi
-    expect(within(kpi).getByText('257')).toBeInTheDocument(); // 0.16 Wh/m → 257 Wh/mi
-    expect(within(kpi).getAllByText('Wh/mi').length).toBeGreaterThanOrEqual(1);
+    expect(metricValue('Distance', kpi)).toBe('76.43 mi'); // 123_000 m → mi
+    expect(Number.parseFloat(metricValue('Efficiency', kpi))).toBe(257);
+    expect(metricValue('Efficiency', kpi)).toBe('257.00 Wh/mi');
+    expect(metricValue('Efficiency', kpi)).toMatch(/ Wh\/mi$/);
   });
 });
 
@@ -452,7 +486,7 @@ describe('EnergyFlowPage — historical sections', () => {
   it('renders the daily-usage chart section (no empty placeholder) on the happy path', () => {
     renderPage();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Daily energy usage' }),
+      screen.getAllByRole('heading', { level: 3, name: 'Daily energy usage' })[0],
     ).toBeInTheDocument();
     expect(screen.queryByText('No daily energy data available.')).not.toBeInTheDocument();
   });
@@ -472,7 +506,7 @@ describe('EnergyFlowPage — historical sections', () => {
     ).toBeInTheDocument();
     // avg 160 Wh/km → "good" bucket.
     expect(screen.getByText('Good')).toBeInTheDocument();
-    expect(screen.getByText('6.00 kWh')).toBeInTheDocument(); // 42_000 Wh / 7 days
+    expect(metricValue('Avg energy/day', screen.getByText('Avg energy/day').closest('[data-stat-strip]') as HTMLElement)).toBe('6.00 kWh');
   });
 
   it('re-fetches stats when a stats-section retry is clicked', async () => {
@@ -489,7 +523,7 @@ describe('EnergyFlowPage — historical sections', () => {
 
   it('renders the history table and re-sorts when the Energy header is clicked', async () => {
     renderPage();
-    const table = screen.getByRole('table');
+    const table = historyTable();
 
     const firstDataRowText = () => {
       const rows = within(table).getAllByRole('row');

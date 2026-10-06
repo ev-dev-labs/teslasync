@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { ThresholdBar, type ThresholdBand } from '@/components/charts';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Text } from '@/components/ui';
@@ -41,7 +41,8 @@ export function PressureCurrentCard({
           resourceName={t('tirePressure.resource', 'Tire pressure')} />
       ) : !latest ? (
         <EmptyState icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
-          message={t('tirePressure.noReadings', 'No current readings available')} />
+          message={t('tirePressure.noReadings', 'No current readings available')}
+          action={source.retry ? { label: t('common.refresh', 'Refresh'), onClick: source.retry } : undefined} />
       ) : (
         <div className="flex flex-col gap-5">
           {positions.map(pos => {

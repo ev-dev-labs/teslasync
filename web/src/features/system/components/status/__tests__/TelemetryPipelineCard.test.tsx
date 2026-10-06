@@ -8,8 +8,8 @@ import type { Vehicle } from '@/api/types'
 import type { PollEngineStatus } from '@/api/polling'
 import type { TelemetryStatus, VehicleTelemetry } from '@/types/telemetry'
 
-const mockPolling: { data: PollEngineStatus | undefined } = { data: undefined }
-const mockMqtt: { data: (TelemetryStatus & { vehicles: VehicleTelemetry[] }) | undefined } = { data: undefined }
+const mockPolling: { data: PollEngineStatus | undefined; error: Error | null } = { data: undefined, error: null }
+const mockMqtt: { data: (TelemetryStatus & { vehicles: VehicleTelemetry[] }) | undefined; error: Error | null } = { data: undefined, error: null }
 
 vi.mock('@/api/polling', async () => {
   const actual = await vi.importActual<typeof import('@/api/polling')>('@/api/polling')
@@ -23,7 +23,7 @@ vi.mock('@/api/polling', async () => {
 // query-shape object keeps the rest of the component happy without
 // pulling in TanStack Query internals.
 vi.mock('@/api/hooks/useTelemetry', () => ({
-  useMQTTStatus: vi.fn(() => ({ data: mockMqtt.data })),
+  useMQTTStatus: vi.fn(() => ({ data: mockMqtt.data, error: mockMqtt.error, refetch: vi.fn() })),
 }))
 
 // Only the polling-status `useQuery` call lives inside the component.
@@ -33,7 +33,7 @@ vi.mock('@tanstack/react-query', async () => {
   const actual = await vi.importActual<typeof import('@tanstack/react-query')>('@tanstack/react-query')
   return {
     ...actual,
-    useQuery: vi.fn(() => ({ data: mockPolling.data })),
+    useQuery: vi.fn(() => ({ data: mockPolling.data, error: mockPolling.error, refetch: vi.fn() })),
   }
 })
 
@@ -87,6 +87,23 @@ describe('TelemetryPipelineCard', () => {
   beforeEach(() => {
     mockPolling.data = undefined
     mockMqtt.data = undefined
+    mockPolling.error = null
+    mockMqtt.error = null
+  })
+
+  it('retains streaming liveness and fleet metrics independently of a polling source failure', () => {
+    const vehicle = makeVehicle()
+    mockPolling.error = new Error('polling unavailable')
+    mockMqtt.data = makeMqtt([{ vin: vehicle.vin, lastReceivedAgoSec: 30, signalCount: 17 }])
+    mockMqtt.error = new Error('stream refresh')
+    harness(<TelemetryPipelineCard
+      vehicles={[vehicle]} positionCount={123} drivesCount={4}
+      chargingSessionsCount={1} signalLogCount={17} now={NOW}
+    />)
+    expect(screen.getByText('Daily Driver')).toBeInTheDocument()
+    expect(screen.getByText('123')).toBeInTheDocument()
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Daily Driver/ }).closest('li')).toHaveTextContent('sending')
   })
 
   it('renders the empty state when no vehicles are configured', () => {
@@ -102,6 +119,21 @@ describe('TelemetryPipelineCard', () => {
     )
     expect(screen.getByText(/No vehicles configured yet/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Tesla account/ })).toHaveAttribute('href', '/tesla-account')
+  })
+
+  it('does not label an unavailable MQTT source as a confirmed broker disconnection', () => {
+    harness(
+      <TelemetryPipelineCard
+        vehicles={[makeVehicle()]}
+        positionCount={undefined}
+        drivesCount={undefined}
+        chargingSessionsCount={undefined}
+        signalLogCount={undefined}
+        now={NOW}
+      />,
+    )
+    expect(screen.getByText('Fleet Telemetry connection unknown')).toBeInTheDocument()
+    expect(screen.queryByText('MQTT broker disconnected')).toBeNull()
   })
 
   it('renders fleet rollup numbers and per-vehicle row with VIN tail and state', () => {

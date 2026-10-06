@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChartCard } from '@/components/layout/layout-reference';
+import { ChartCard } from '@/components/layout';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ChartTooltip, axisTickSm, type ChartDataColumn,

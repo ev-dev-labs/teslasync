@@ -1,13 +1,7 @@
-import { CalendarRange } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 
@@ -46,11 +40,7 @@ export function HvacCyclingCoverageCadence({
 
   return (
     <section data-testid="hvac-cycling-coverage-cadence">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <CalendarRange className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.coverage.title', 'Chronological coverage and cadence')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.coverage.title', 'Chronological coverage and cadence')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.coverage.subtitle',
@@ -102,7 +92,7 @@ export function HvacCyclingCoverageCadence({
             />
           </Grid>
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

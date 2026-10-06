@@ -62,7 +62,9 @@ export default function PedalUsage({ vehicleId }: { vehicleId: number | null | u
       ) : state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={handleRetry} resourceName={t('dynamics.pedalResource', 'Pedal telemetry')} />
       ) : (
-        <EmptyState message={t('dynamics.pedalNoData', 'No pedal telemetry received yet')} />
+        // no-action: Without a selected vehicle, the workspace picker owns selection.
+        <EmptyState message={t('dynamics.pedalNoData', 'No pedal telemetry received yet')}
+          action={vehicleId ? { label: t('common.retry', 'Retry'), onClick: handleRetry } : undefined} />
       )}
     </LayoutCard>
   );

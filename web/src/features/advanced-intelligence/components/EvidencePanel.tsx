@@ -1,7 +1,8 @@
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
-import { Table, Badge, Text } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
+import { KVList } from '@/components/data-display';
 import { formatDateTime } from '@/lib/dateFormat';
 
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
@@ -52,30 +53,12 @@ export function EvidencePanel({
           {quality ? (
             <>
               <Badge variant={qualityVariant(quality.status)} dot>{quality.status}</Badge>
-              <Table aria-label={t('advancedIntelligence.evidence.title', 'Evidence, quality, and limitations')}><tbody>
-                <tr>
-                  <th scope="row" className="text-[var(--text-muted)]">
-                    {t('advancedIntelligence.quality.samples', 'Samples')}
-                  </th>
-                  <td className="text-right">{fmtInt(quality.sample_count)}</td>
-                </tr>
-                <tr>
-                  <th scope="row" className="text-[var(--text-muted)]">
-                    {t('advancedIntelligence.quality.coverage', 'Coverage')}
-                  </th>
-                  <td className="text-right">{quality.coverage_pct != null ? `${fmtNumber(quality.coverage_pct)}%` : '—'}</td>
-                </tr>
-                <tr>
-                  <th scope="row" className="text-[var(--text-muted)]">
-                    {t('advancedIntelligence.quality.window', 'Observation window')}
-                  </th>
-                  <td className="text-right">
-                    {quality.window_start || quality.window_end
-                      ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`
-                      : '—'}
-                  </td>
-                </tr>
-              </tbody></Table>
+              <KVList layout="responsive" wrap items={[
+                { id: 'samples', label: t('advancedIntelligence.quality.samples', 'Samples'), value: fmtInt(quality.sample_count) },
+                { id: 'coverage', label: t('advancedIntelligence.quality.coverage', 'Coverage'), value: quality.coverage_pct != null ? `${fmtNumber(quality.coverage_pct)}%` : '—' },
+                { id: 'window', label: t('advancedIntelligence.quality.window', 'Observation window'), value: quality.window_start || quality.window_end
+                  ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}` : '—' },
+              ]} />
               {(quality.reasons ?? []).map((reason) => (
                 <Text as="p" variant="caption" key={reason}>• {reason}</Text>
               ))}

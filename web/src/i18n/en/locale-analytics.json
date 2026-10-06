@@ -154,6 +154,10 @@
     },
     "weeklyDigest": {
       "alertsSection": "Alerts",
+      "modernization": {
+        "periodProvenance": "Selected week; based on available history records.",
+        "comparisonPeriod": "Compared with previous week"
+      },
       "alertsBySeverity": "Alerts by severity",
       "alertDistribution": "Alert distribution",
       "batteryHealth": "Battery health",
@@ -815,6 +819,10 @@
   "compare": {
     "title": "Period comparison",
     "subtitle": "Compare key metrics across two time periods",
+    "sources": {
+      "awaitingPair": "Comparison requires both periods. Available period values remain visible below.",
+      "paused": "This period is waiting for a connection. No values are available yet."
+    },
     "vehicle": "Vehicle",
     "periodA": "Period A",
     "periodB": "Period B",
@@ -878,6 +886,14 @@
   },
   "comparison": {
     "selectVehicle": "Select a vehicle",
+    "highlightContext": {
+      "provenance": "Battery readings are snapshots; efficiency, charging cost and CO₂ saved are lifetime statistics.",
+      "period": "Snapshot and lifetime comparison"
+    },
+    "trendContext": {
+      "scope": "Monthly charts use the server’s default window starting 24 months ago, rounded to the start of that month. Distances are in km; lifetime statistics are not limited to this window."
+    },
+    "noVehicles": "Add vehicles to start a fleet comparison.",
     "battery": "Battery",
     "range": "Range",
     "temp": "Temperature",
@@ -1017,6 +1033,23 @@
       "rank": "Rank {{rank}}",
       "dayDetails": "{{count}} drives",
       "noData": "No active driving days to rank yet."
+    },
+    "periodUnavailable": "Exact observation bounds are unavailable.",
+    "sourcePeriod": "Returned drives in the selected workspace range; continuous coverage is unknown."
+  },
+  "firmwareImpact": {
+    "modernization": {
+      "testedHelp": "Each install splits returned drives into before and after windows clipped at neighboring installs. Welch’s t-test compares consumption samples without assuming equal variance. This observational comparison does not isolate a firmware effect.",
+      "significant": "Significant comparisons",
+      "period": "Returned history · install-centered windows",
+      "historyLimit": "Comparisons use only the histories returned by the existing endpoints, not guaranteed complete vehicle history. Each nominal window spans 30 days before or after an install and is clipped at neighboring installs.",
+      "waiting": "Waiting for both drive history and software updates.",
+      "chartHint": "Bars below zero show lower observed consumption after an install, not proof that the update caused the change.",
+      "summary": "Comparison overview",
+      "deltas": "Observed consumption differences",
+      "evidence": "Per-version evidence",
+      "subtitle": "Observational before-and-after comparisons of software installs using Welch’s t-test on recorded consumption",
+      "attribution": "These comparisons are observational, not controlled experiments. Weather, routes, speed, driving habits and other changes can affect consumption. Statistical significance and effect size do not prove that firmware caused a difference."
     }
   },
   "fleetCompare": {
@@ -1026,9 +1059,102 @@
       "cta": "Manage vehicles"
     }
   },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "unlocked": "✓ Unlocked",
+    "title": "Lifetime stats",
+    "allVehicles": "All vehicles",
+    "subtitle": "Your all-time driving achievements and milestones",
+    "source": {
+      "allTime": "All time",
+      "aggregate": "Server lifetime aggregates"
+    },
+    "aiQA": {
+      "title": "Ask about your lifetime stats",
+      "description": "Ask Helix a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
+      "badge": "Helix",
+      "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
+      "askButton": "Ask",
+      "inputLabel": "Your question",
+      "noVehicle": "Select a vehicle to ask about its lifetime stats.",
+      "noQuestion": "Type a question to ask Helix about your lifetime stats."
+    },
+    "heroSubtitle": "driven across {{drives}} drives",
+    "earthCompare": "That's {{x}}x around the Earth!",
+    "since": "Tracking since {{date}} ({{days}} days)",
+    "totalDrives": "Total drives",
+    "hours": "hrs",
+    "totalDistance": "Total distance",
+    "totalEnergy": "Total energy",
+    "sessions": "sessions",
+    "totalSavings": "Total savings",
+    "vsGas": "vs gasoline",
+    "funFacts": "Fun facts",
+    "earthProgress": "around the Earth",
+    "moonProgress": "to the Moon",
+    "treesPlanted": "trees equivalent planted",
+    "days": "days",
+    "homesPowered": "of home energy used",
+    "noData": "No driving data yet",
+    "savingsComparison": "Savings vs gasoline",
+    "noSavingsData": "Complete some drives to see savings",
+    "environmentalImpact": "Environmental impact",
+    "co2Offset": "CO₂ offset",
+    "treesEquiv": "trees equivalent",
+    "coffeesEquiv": "cups of coffee saved",
+    "personalRecords": "Personal records",
+    "longestDrive": "Longest drive",
+    "highestSpeed": "Highest speed",
+    "biggestCharge": "Biggest charge",
+    "activitySummary": "Activity summary",
+    "mostActiveDay": "Most active day",
+    "mostActiveHour": "Peak hour",
+    "daysOnRoad": "Days on road",
+    "avgEfficiency": "Avg efficiency",
+    "achievements": "Achievements",
+    "noAchievements": "Start driving to unlock achievements",
+    "electricCost": "Electric cost",
+    "gasCost": "Gasoline equivalent",
+    "youSaved": "You saved",
+    "avoided": "avoided",
+    "keyStats": "Key stats",
+    "moreInfoAbout": "More info about {{label}}"
+  },
   "mileage": {
     "title": "Mileage",
     "subtitle": "Daily and monthly distance tracking",
+    "summary": {
+      "unavailable": "Mileage summary has not been supplied.",
+      "recordedDistance": "Distance from the lifetime rollup of recorded drives, not the vehicle odometer. Recording completeness is unknown.",
+      "recordedDrives": "Drive count from the lifetime rollup of recorded drives. Recording completeness is unknown.",
+      "dailyMethod": "Recorded distance in the last 30 days divided by 30, including days without drives.",
+      "projectionMethod": "The last-30-day daily average multiplied by 365. This is a projection, not measured annual distance.",
+      "sevenDayMethod": "Recorded drive distance in the server’s fixed trailing 7-day window.",
+      "yearMethod": "Recorded drive distance in the server’s fixed trailing 365-day window.",
+      "periods": "Recorded lifetime · trailing 30-day average · annual projection · trailing 7 / 365 days",
+      "completeness": "These are separate server-defined periods, not a shared analysis range. Recording completeness is not reported."
+    },
+    "source": {
+      "retained": "Refresh failed. Showing the last successful mileage data.",
+      "paused": "Refresh is paused. Showing the last successful mileage data.",
+      "refreshing": "Refreshing mileage data. Previously loaded content remains available.",
+      "odometerPeriod": "Daily source: trailing 90 days. Absolute end-of-day odometer readings; days without a reading are omitted. Recording completeness is unknown."
+    },
+    "windows": {
+      "method": "Fixed trailing 7 / 30 / 365-day distances, scaled against recorded lifetime distance. First and last drive dates describe recorded activity, not guaranteed vehicle lifetime coverage."
+    },
+    "daily": {
+      "period": "Recorded daily drive distance from the trailing 90-day source. Dates use the existing date formatter. Recording completeness is unknown."
+    },
+    "monthly": {
+      "period": "UTC calendar-month buckets from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.",
+      "method": "The same UTC monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows."
+    },
+    "analysis": {
+      "title": "Recorded mileage",
+      "scope": "Vehicle scope comes from the workspace header. Mileage sources use their own fixed periods; they do not accept workspace date bounds.",
+      "cards": "Mileage metrics, charts and monthly detail"
+    },
     "totalDistance": "Total distance",
     "totalDrives": "Total drives",
     "dailyAvg": "Daily avg",
@@ -1106,7 +1232,9 @@
       "body": "The request returned {{limit}} drives. Older term drives may be absent, so pace, term-total, and overage projections are withheld until the selected history is complete.",
       "observed": "At least this much is present; older term drives may be absent",
       "unavailable": "unavailable while history is capped"
-    }
+    },
+    "termPeriod": "Term starting {{start}} · {{months}} months",
+    "termProvenance": "Configured term; observed drive-history coverage may be incomplete."
   },
   "milestones": {
     "title": "Odometer milestones",
@@ -1238,11 +1366,20 @@
       "forecast": "Roadmap dates use unrounded trailing-90-day pace; scenario ranges show sensitivity to other supported windows.",
       "horizon": "Invalid or extreme projections beyond {{days}} days are withheld.",
       "uncertainty": "Driving frequency changes. Every ETA is a projection, never a guarantee."
-    }
+    },
+    "sourcePeriod": "Returned drive-history window",
+    "sourceCoverage": "Bounded observations and calibration; lifetime completeness is unknown."
+  },
+  "regimes": {
+    "sourceWindow": "Returned drive-history window",
+    "coverageUnknown": "Continuous observation coverage is unknown."
   },
   "statistics": {
     "title": "Statistics",
     "subtitle": "Lifetime vehicle statistics and records",
+    "periodSummary": "Totals and averages",
+    "healthAndState": "Battery health and vehicle states",
+    "mileageAndFleet": "Mileage and fleet comparison",
     "selectVehicle": "Select vehicle",
     "averages": "Averages",
     "noData": "No statistics yet",
@@ -1280,11 +1417,20 @@
     "energy": "Energy (kWh)",
     "singleVehicle": "Add more vehicles to compare",
     "singleVehicleDescription": "Fleet comparison requires activity from at least two registered vehicles.",
-    "manageVehicles": "Manage vehicles"
+    "manageVehicles": "Manage vehicles",
+    "stateShare": "Share of recorded state time (%)"
   },
   "tco": {
     "title": "Lifetime operating cost",
     "subtitle": "Evidence-backed recorded charging versus modeled gasoline operating cost",
+    "modernization": {
+      "evidence": {
+        "title": "Operating-cost evidence"
+      },
+      "ledger": {
+        "refreshFailed": "The fixed-cost ledger refresh failed; the most recently loaded entries remain visible."
+      }
+    },
     "states": {
       "noVehicle": "Select a vehicle to load its lifetime operating-cost evidence.",
       "loadingLabel": "Loading operating-cost evidence",
@@ -1673,6 +1819,11 @@
     "hottestDrive": "Hottest drive",
     "coldestDrive": "Coldest drive"
   },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
   "activity": {
     "action": {
       "alert": "Alert change",
@@ -1723,26 +1874,6 @@
       "empty": "No recent activity in this window."
     }
   },
-  "annotation": {
-    "add": "Add annotation",
-    "addTitle": "Add annotation",
-    "cat": {
-      "custom": "Custom",
-      "issue": "Issue",
-      "maintenance": "Maintenance",
-      "milestone": "Milestone",
-      "trip": "Trip",
-      "upgrade": "Upgrade"
-    },
-    "category": "Category",
-    "date": "Date",
-    "descPlaceholder": "Optional description...",
-    "description": "Description",
-    "label": "Label",
-    "labelPlaceholder": "e.g., battery replaced",
-    "listTitle": "Annotations",
-    "removeNamed": "Remove annotation: {{label}}"
-  },
   "bulk": {
     "clear": "Clear selection",
     "itemDefault": "item",
@@ -1767,30 +1898,18 @@
     "version": "Calculation version"
   },
   "chart": {
-    "a11y": {
-      "fallbackTableLabel": "{{title}} — data table",
-      "summary": "Chart: {{title}}"
-    },
     "col": {
       "date": "Date",
       "value": "Value"
+    }
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
     },
-    "export": {
-      "copy": "Copy image to clipboard",
-      "copyFailed": "Failed to copy chart image",
-      "copyFallback": "Clipboard not available — image downloaded instead",
-      "copySuccess": "Chart image copied to clipboard",
-      "csv": "Download data as CSV",
-      "disabledTooltip": "Chart not ready to export",
-      "failed": "Could not prepare the {{format}} export.",
-      "menuLabel": "Export chart",
-      "png": "Save as PNG",
-      "preparing": "Preparing chart export…",
-      "svg": "Save as SVG"
-    },
-    "loading": "Loading chart…",
-    "noData": "No data available",
-    "noDataDescription": "No chartable observations are available for the current selection yet."
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
   },
   "date": {
     "preset": {
@@ -1812,6 +1931,150 @@
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"
   },
+  "developerReference": {
+    "stats": {
+      "metric": {
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "loading": "Loading measurements",
+        "retained": "Showing retained measurements"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
+    }
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
   "entityContext": {
     "alerts": "Alerts",
     "charging": "Charging sessions",
@@ -1824,6 +2087,49 @@
   },
   "error": {
     "loadFailed": "Failed to load data"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
   },
   "freshness": {
     "noData": "No recent data",
@@ -1881,65 +2187,21 @@
       "started": "Impersonation started"
     }
   },
-  "lifetime": {
-    "achievements": "Achievements",
-    "activitySummary": "Activity summary",
-    "aiQA": {
-      "askButton": "Ask",
-      "badge": "Helix",
-      "description": "Ask Helix a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
-      "inputLabel": "Your question",
-      "noQuestion": "Type a question to ask Helix about your lifetime stats.",
-      "noVehicle": "Select a vehicle to ask about its lifetime stats.",
-      "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
-      "title": "Ask about your lifetime stats"
-    },
-    "avgEfficiency": "Avg efficiency",
-    "avoided": "avoided",
-    "biggestCharge": "Biggest charge",
-    "co2Offset": "CO₂ offset",
-    "coffeesEquiv": "cups of coffee saved",
-    "days": "days",
-    "daysOnRoad": "Days on road",
-    "earthCompare": "That's {{x}}x around the Earth!",
-    "earthProgress": "around the Earth",
-    "electricCost": "Electric cost",
-    "environmentalImpact": "Environmental impact",
-    "funFacts": "Fun facts",
-    "gasCost": "Gasoline equivalent",
-    "heroSubtitle": "driven across {{drives}} drives",
-    "highestSpeed": "Highest speed",
-    "homesPowered": "of home energy used",
-    "hours": "hrs",
-    "keyStats": "Key stats",
-    "longestDrive": "Longest drive",
-    "moonProgress": "to the Moon",
-    "moreInfoAbout": "More info about {{label}}",
-    "mostActiveDay": "Most active day",
-    "mostActiveHour": "Peak hour",
-    "noAchievements": "Start driving to unlock achievements",
-    "noData": "No driving data yet",
-    "noSavingsData": "Complete some drives to see savings",
-    "personalRecords": "Personal records",
-    "savingsComparison": "Savings vs gasoline",
-    "sessions": "sessions",
-    "since": "Tracking since {{date}} ({{days}} days)",
-    "subtitle": "Your all-time driving achievements and milestones",
-    "title": "Lifetime stats",
-    "totalDistance": "Total distance",
-    "totalDrives": "Total drives",
-    "totalEnergy": "Total energy",
-    "totalSavings": "Total savings",
-    "treesEquiv": "trees equivalent",
-    "treesPlanted": "trees equivalent planted",
-    "vsGas": "vs gasoline",
-    "youSaved": "You saved"
-  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
     "unknown": "Unknown"
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
   },
   "operations": {
     "attention": "Attention",
@@ -1985,6 +2247,9 @@
       "title": "Elevation profile"
     }
   },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
     "announceCleared": "Saved view cleared",
@@ -2008,6 +2273,18 @@
     "title": "Saved views",
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
   },
   "sourceLayer": {
     "age": "age",
@@ -2033,6 +2310,9 @@
     "actions": "Actions",
     "charging": "Charging",
     "chargingTime": "Charging time",
+    "daily": {
+      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary"
+    },
     "dailyBreakdown": "Daily breakdown",
     "dailyBreakdownAria": "Daily transition counts by vehicle state",
     "day": "Day",
@@ -2044,7 +2324,10 @@
     "idleSleepTime": "Idle / sleep time",
     "inspect": "Inspect",
     "inspectTransition": "Inspect transition {{from}} to {{to}}",
+    "invalidComposition": "Proportional track unavailable for the returned dwell totals; individual state evidence remains visible.",
+    "kpis": "Summary metrics",
     "noDailyData": "No daily data available yet",
+    "noStateData": "No state distribution available yet",
     "noTransitions": "No state transitions recorded",
     "preview": {
       "description": "Recorded {{time}}",
@@ -2054,14 +2337,35 @@
       "triggerField": "Trigger field",
       "triggerValue": "Trigger value"
     },
+    "refresh": "Refresh timeline",
     "sleeping": "Sleeping",
+    "source": {
+      "failed": "Unable to load {{section}}",
+      "loading": "Loading {{section}}",
+      "paused": "{{section}} is paused while the connection is unavailable",
+      "pausedRetained": "Refresh is paused; retained {{section}} remains available",
+      "retained": "Showing retained {{section}} after a refresh failed",
+      "selectVehicle": "Select a vehicle to view its state history",
+      "unknown": "{{section}} is unavailable because the response did not contain the expected records"
+    },
     "stateTimeline": "State timeline",
     "stateTransitions": "State transitions",
     "subtitle": "Vehicle state history and transitions",
+    "summary": {
+      "chargingDescription": "Time in the charging state, rounded to whole minutes",
+      "drivingDescription": "Time in the driving state, rounded to whole minutes",
+      "idleSleepDescription": "Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes",
+      "missing": "No state summary is available for this window",
+      "period": "{{start}} – {{end}} (exclusive) · {{timezone}}",
+      "provenance": "Vehicle FSM summary for the requested window; continuous observation coverage is unknown",
+      "transitionDescription": "Sum of transition counts returned by the state summary for this window"
+    },
     "time": "Time",
+    "timeByState": "Time by state",
     "title": "Timeline",
     "toState": "To state",
-    "totalTransitions": "Total transitions"
+    "totalTransitions": "Total transitions",
+    "trigger": "Trigger"
   },
   "toast": {
     "admin": {
@@ -2277,5 +2581,12 @@
         "success": "Browser push removed for this device"
       }
     }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

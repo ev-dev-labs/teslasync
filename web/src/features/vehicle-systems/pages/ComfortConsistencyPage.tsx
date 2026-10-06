@@ -2,7 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
 import {
   ComfortConsistencyCoverageCadence,
@@ -44,6 +45,7 @@ export default function ComfortConsistencyPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatDuration } = useUnits();
   const climateQuery = useClimateHistory(vehicleIdStr);
+  const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => summarizeComfortConsistency(climateQuery.data ?? []),
     [climateQuery.data],
@@ -63,19 +65,14 @@ export default function ComfortConsistencyPage() {
   const queryState = useMemo<ComfortConsistencyQueryState>(
     () => ({
       vehicleSelected: vehicleId != null,
-      isLoading: climateQuery.isLoading,
+      isLoading: climateQuery.isLoading && !climateSource.hasData,
+      isPaused: climateSource.isRefreshBlocked,
       isResolved:
-        climateQuery.isSuccess
-        || hasData
-        || (!climateQuery.isLoading && !climateQuery.isError),
-      error:
-        climateQuery.isError && !hasData
-          ? climateQuery.error
-          : null,
-      refreshError:
-        climateQuery.isError && hasData
-          ? climateQuery.error
-          : null,
+        hasData || (!climateSource.isRefreshBlocked && (
+          climateQuery.isSuccess || (!climateQuery.isLoading && !climateQuery.isError)
+        )),
+      error: climateSource.fatalError,
+      refreshError: climateSource.refreshError,
       onRetry: () => {
         void climateQuery.refetch();
       },
@@ -86,6 +83,10 @@ export default function ComfortConsistencyPage() {
       climateQuery.isLoading,
       climateQuery.isSuccess,
       climateQuery.refetch,
+      climateSource.fatalError,
+      climateSource.refreshError,
+      climateSource.hasData,
+      climateSource.isRefreshBlocked,
       hasData,
       vehicleId,
     ],
@@ -93,7 +94,7 @@ export default function ComfortConsistencyPage() {
   const locale = unitPrefs.locale ?? 'en-US';
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('comfortConsistency.title', 'Comfort consistency')}
       subtitle={t(
         'comfortConsistency.subtitle',
@@ -198,6 +199,6 @@ export default function ComfortConsistencyPage() {
       <FadeIn delay={0.16}>
         <ComfortConsistencyMethodology summary={summary} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { Button, Text } from '@/components/ui';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { Button } from '../Button';
+import { Text } from '../Typography';
 import type { MobileGridCallbacks, MobileState } from './types';
 
 interface Props { state: MobileState; callbacks: Partial<Pick<MobileGridCallbacks, 'onRetry' | 'onClear'>>; production?: boolean }

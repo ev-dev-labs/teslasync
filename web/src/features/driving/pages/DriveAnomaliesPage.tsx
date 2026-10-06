@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Microscope, AlertTriangle, Sigma, Sparkles } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
@@ -106,7 +106,7 @@ export default function DriveAnomaliesPage() {
   const isError = drivesQuery.isError;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('anomalies.title', 'Anomaly Detective')}
       subtitle={t('anomalies.subtitle', 'Drives that break your own consumption law, explained')}
       query={drivesQuery}
@@ -313,6 +313,6 @@ export default function DriveAnomaliesPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

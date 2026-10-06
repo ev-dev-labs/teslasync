@@ -66,5 +66,8 @@ export function ChargingOverviewStats({
     secondary={secondary} footer={footer}
     emptyContent={error
       ? <QueryError error={error} onRetry={onRetry} />
-      : <EmptyState message={t('charging.noStatsRange', 'No charging sessions in this range')} />} />;
+      : <EmptyState
+        message={t('charging.noStatsRange', 'No charging sessions in this range')}
+        action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
+      />} />;
 }

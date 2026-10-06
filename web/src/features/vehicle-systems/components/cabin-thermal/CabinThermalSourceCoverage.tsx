@@ -1,11 +1,8 @@
-import { CalendarRange } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
+import { LayoutCard, Grid } from '@/components/layout';
 import {
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
@@ -54,11 +51,7 @@ export function CabinThermalSourceCoverage({
 
   return (
     <section data-testid="cabin-thermal-source-coverage">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <CalendarRange className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.coverage.title', 'Source coverage')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.coverage.title', 'Source coverage')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.coverage.subtitle',
@@ -101,7 +94,7 @@ export function CabinThermalSourceCoverage({
             />
           </Grid>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

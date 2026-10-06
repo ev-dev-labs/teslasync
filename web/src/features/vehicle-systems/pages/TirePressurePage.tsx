@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
 
-import { PageLayout, CardGrid } from '@/components/layout/layout-reference';
+import { PageLayout, CardGrid } from '@/components/layout';
 import { Badge, useSortToggle, type Column } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';

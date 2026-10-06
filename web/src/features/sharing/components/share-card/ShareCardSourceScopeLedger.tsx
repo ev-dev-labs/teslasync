@@ -1,7 +1,7 @@
-import { Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, Table, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -17,11 +17,7 @@ export function ShareCardSourceScopeLedger({
       data-testid="share-card-source-scope"
       aria-label={t('shareCard.source.aria', 'Share card source query and scope ledger')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Database className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.source.title', 'Source, query, and scope ledger')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.source.title', 'Source, query, and scope ledger')}>
         <ShareCardSectionBody state={state} showCachedStatus>
           <Table aria-label={t('shareCard.source.title', 'Source, query, and scope ledger')}>
 
@@ -111,7 +107,7 @@ export function ShareCardSourceScopeLedger({
             </tbody>
           </Table>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

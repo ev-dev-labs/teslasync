@@ -103,6 +103,13 @@ function card(label: string) {
 }
 
 describe('SignalGapKpis — populated (hasVehicle=true)', () => {
+  it('distinguishes unavailable source counts from a successful empty catalog', () => {
+    renderKpis({ unavailable: true, buckets: makeBuckets(), freshnessPct: 0 });
+    for (const label of Object.values(LABELS)) {
+      expect(card(label).getByText(DASH)).toBeInTheDocument();
+      expect(card(label).queryByText('0')).toBeNull();
+    }
+  });
   it('renders all six labelled KPI cards', () => {
     renderKpis();
     for (const label of Object.values(LABELS)) {

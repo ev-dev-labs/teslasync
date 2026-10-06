@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { PageContainer } from '@/components/layout';
+import { PageContainer } from '../PageContainer';
 import { cn } from '@/lib/cn';
 
 export type PageLayoutProps = ComponentProps<typeof PageContainer>;

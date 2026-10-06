@@ -25,7 +25,10 @@ export function YearDriveRecord({ drive, id, period }: {
   const efficiencyDisplay = efficiencyWhKm > 0
     ? fmtInt(distanceUnit === 'mi' ? efficiencyWhKm * 1.609344 : efficiencyWhKm) : '—';
 
-  if (!drive) return <EmptyState message={t('yearReview.noDriveData', 'No drive data for this year')} />;
+  if (!drive) return <EmptyState
+    message={t('yearReview.noDriveData', 'No drive data for this year')}
+    actionTo={{ label: t('statistics.viewDrives', 'View drives'), to: '/drives' }}
+  />;
   return (
     <>
       <div className="min-w-0 space-y-2">

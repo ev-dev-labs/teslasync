@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/api/hooks/useBatteryCertificate', () => ({
   useBatteryCertificate: vi.fn(),
@@ -81,9 +82,30 @@ describe('BatteryCertificatePanel', () => {
   });
 
   it('renders an empty state when no certificate is available', () => {
-    mockCert.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    mockCert.mockReturnValue({ data: undefined, isLoading: false, isError: false });
     render(<BatteryCertificatePanel vehicleId="7" />);
     expect(screen.getByText(/No certificate available/)).toBeInTheDocument();
+  });
+
+  it('distinguishes an initial certificate failure from an authoritative empty result', () => {
+    mockCert.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: new Error('certificate failed') });
+    render(<MemoryRouter><BatteryCertificatePanel vehicleId="7" /></MemoryRouter>);
+    expect(screen.getByText('The battery certificate could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByText(/No certificate available/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the snapshot, complete copy actions and signature when refresh fails', () => {
+    mockCert.mockReturnValue({
+      data: { certificate, signature: SIGNATURE },
+      isLoading: false,
+      isError: true,
+      error: new Error('refresh failed'),
+    });
+    render(<BatteryCertificatePanel vehicleId="7" />);
+    expect(screen.getByText('91.50%')).toBeInTheDocument();
+    expect(screen.getByText('Copy certificate')).toBeInTheDocument();
+    expect(screen.getByText('Copy signature')).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
   });
 
   it('surfaces self-verification failures', () => {

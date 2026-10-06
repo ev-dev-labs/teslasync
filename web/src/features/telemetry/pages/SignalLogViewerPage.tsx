@@ -24,9 +24,9 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, AlertCircle, Activity } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Select, Caption } from '@/components/ui';
-import { EmptyState, AlertBanner } from '@/components/feedback';
+import { EmptyState, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -81,7 +81,9 @@ export default function SignalLogViewerPage() {
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
 
-  const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
+  const signalsQuery = useSignals(vehicleId);
+  const { data: availableSignals } = signalsQuery;
+  const catalogState = useDataState(signalsQuery);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
   const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
@@ -123,7 +125,7 @@ export default function SignalLogViewerPage() {
 
   const signalLogQuery = useSignalHistoryBatch(submittedQuery);
   const signalLogState = useDataState(signalLogQuery, { provenance: 'historical' });
-  const { data: historyResponses, isLoading, isFetching, error: dataError } = signalLogQuery;
+  const { data: historyResponses, isLoading, isFetching } = signalLogQuery;
 
   const rowsAll = useMemo<SignalLogEntry[]>(
     () =>
@@ -135,7 +137,7 @@ export default function SignalLogViewerPage() {
     [historyResponses],
   );
   const hasQueried = submittedQuery !== null;
-  const anyError = (signalsError ?? dataError) as Error | undefined;
+  const anyError = catalogState.fatalError ?? signalLogState.fatalError;
   const resultSignals = submittedQuery?.signals ?? [];
   const resultPageSize = submittedQuery?.perPage ?? perPage;
 
@@ -153,7 +155,7 @@ export default function SignalLogViewerPage() {
   }, [page, resultPageSize, rowsAll]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalLog.title', 'Signal log viewer')}
       subtitle={t('signalLog.subtitle', 'Query signal history from Postgres')}
       query={hasQueried ? signalLogQuery : undefined}
@@ -164,6 +166,8 @@ export default function SignalLogViewerPage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
+      <StaleRefreshWarning state={catalogState} label={t('dataSources.labels.signalCatalog', 'Signal catalog')} />
+      {hasQueried && <StaleRefreshWarning state={signalLogState} label={t('signalLog.title', 'Signal log viewer')} />}
 
       {vehicleId === 0 ? (
         // no-action: vehicle picker is in the page header; no inline CTA needed.
@@ -220,7 +224,7 @@ export default function SignalLogViewerPage() {
           </FadeIn>
 
           {/* 2 — KPI band: derived counters, full-width responsive grid */}
-          <SignalLogKpiBand summary={summary} loading={isLoading} />
+          <SignalLogKpiBand summary={summary} loading={isLoading} unavailable={hasQueried && signalLogState.fatalError != null} />
 
           <TransportAgreementPanel
             vehicleId={submittedQuery?.vehicleId ?? 0}
@@ -231,12 +235,14 @@ export default function SignalLogViewerPage() {
 
           {/* 3 — Bento: signal chart (hero, 2fr) + value composition (1fr) */}
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-            <div className="xl:col-span-2">
+            <div className="min-w-0 max-w-full xl:col-span-2">
               <SignalChartPanel
                 selectedSignals={resultSignals}
                 data={chartData}
                 stats={chartStats}
                 loading={isLoading}
+                error={hasQueried ? signalLogState.fatalError : null}
+                onRetry={signalLogState.retry ?? undefined}
                 pointsLoaded={totalRecords}
                 title={t('signalLog.chart', 'Signal chart')}
               />
@@ -245,6 +251,8 @@ export default function SignalLogViewerPage() {
               summary={summary}
               hasQueried={hasQueried}
               loading={isLoading}
+              error={hasQueried ? signalLogState.fatalError : null}
+              onRetry={signalLogState.retry ?? undefined}
             />
           </section>
 
@@ -257,9 +265,11 @@ export default function SignalLogViewerPage() {
             totalRows={totalRecords}
             onPageChange={setPage}
             loading={isLoading}
+            error={hasQueried ? signalLogState.fatalError : null}
+            onRetry={signalLogState.retry ?? undefined}
           />
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

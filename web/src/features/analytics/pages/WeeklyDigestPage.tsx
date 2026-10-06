@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageLayout, CardGrid } from '@/components/layout/layout-reference';
+import { PageLayout, CardGrid, Section } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { AIDigestNarration } from '@/components/ai/AIDigestNarration';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -170,6 +170,7 @@ export default function WeeklyDigestPage() {
 
       {/* Driving + charging bento — two hero panels side-by-side on wide screens */}
       <FadeIn delay={0.1}>
+        <Section id="weekly-digest-activity" title={t('analytics.weeklyDigest.activity', 'Driving & charging activity')}>
         <CardGrid
           label={t('analytics.weeklyDigest.activity', 'Driving & charging activity')}
           items={[
@@ -205,6 +206,7 @@ export default function WeeklyDigestPage() {
             },
           ]}
         />
+        </Section>
       </FadeIn>
 
       <FadeIn delay={0.12}>
@@ -230,6 +232,7 @@ export default function WeeklyDigestPage() {
 
       {/* Battery + alerts bento */}
       <FadeIn delay={0.15}>
+        <Section id="weekly-digest-battery-alerts" title={t('analytics.weeklyDigest.batteryAndAlerts', 'Battery health & alerts')}>
         <CardGrid
           label={t('analytics.weeklyDigest.batteryAndAlerts', 'Battery health & alerts')}
           items={[
@@ -264,6 +267,7 @@ export default function WeeklyDigestPage() {
             },
           ]}
         />
+        </Section>
       </FadeIn>
 
       {/* Week-over-week comparison — full-width detail band */}

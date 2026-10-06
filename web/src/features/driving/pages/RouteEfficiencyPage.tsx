@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, Repeat, Gauge, Activity, TrendingUp, Award, Navigation } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Pagination, PanelTitle, SectionTitle } from '@/components/ui';
 
 import { MetricCard, MetricBar } from '@/components/data-display';
@@ -104,7 +104,7 @@ export default function RouteEfficiencyPage() {
   const effUnit = unit.efficiencyUnit;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('routeEfficiency.title', 'Route Efficiency')}
       subtitle={t('routeEfficiency.subtitle', 'Compare efficiency across your most-driven routes')}
       query={routeQuery}
@@ -316,6 +316,6 @@ export default function RouteEfficiencyPage() {
           )}
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

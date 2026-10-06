@@ -13,7 +13,8 @@ export function recordCatalogueChargeHistorySources(page: Page) {
   records.set(page, state);
   page.on('response', response => {
     if (!['/api/v1/charging', '/api/v1/charging-sessions', '/api/v1/charging/701',
-      '/api/v1/settings', '/api/v1/vehicles', '/api/v1/drives'].includes(new URL(response.url()).pathname)) return;
+      '/api/v1/settings', '/api/v1/vehicles', '/api/v1/drives',
+      '/api/v1/tire-pressure/latest'].includes(new URL(response.url()).pathname)) return;
     const task = (async () => {
       if (!response.ok()) throw new Error(`Charge source HTTP ${response.status()}: ${response.url()}`);
       state.responses.push({ url: response.url(), body: await response.json() });

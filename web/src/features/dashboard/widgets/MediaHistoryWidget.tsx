@@ -84,6 +84,7 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
           timestamp: item.created_at ?? '',
           color: isPlaying ? '#22c55e' : '#6b7280',
           severity: 'info' as const,
+          wrap: true,
         };
       }),
     [list],

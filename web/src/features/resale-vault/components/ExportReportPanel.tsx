@@ -7,8 +7,8 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge, Button } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { Badge, Button, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
 import { Download, FileSignature, ShieldAlert } from 'lucide-react';
 import { signReport } from '../lib/reportSigner';
@@ -66,11 +66,8 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
   };
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.export.title', 'Export signed report')}</PanelTitle>
-        <FileSignature className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
-      </div>
+    <LayoutCard title={t('resaleVault.export.title', 'Export signed report')}
+      actions={<FileSignature className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
 
       <HelperText>
         {t(
@@ -86,10 +83,10 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => void handleSign()} loading={isSigning}>
+        <Button wrapLabel size="sm" onClick={() => void handleSign()} loading={isSigning}>
           {t('resaleVault.export.sign', 'Sign report')}
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => void handleDownload()} disabled={!signed} icon={<Download className="h-3.5 w-3.5" />}>
+        <Button wrapLabel size="sm" variant="secondary" onClick={() => void handleDownload()} disabled={!signed} icon={<Download className="h-3.5 w-3.5" />}>
           {t('resaleVault.export.download', 'Download JSON')}
         </Button>
       </div>
@@ -124,6 +121,6 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
       <InlineCallout variant="info" icon={<ShieldAlert />}>
         {DIGEST_IS_NOT_A_SIGNATURE_NOTE}
       </InlineCallout>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

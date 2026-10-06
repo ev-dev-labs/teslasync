@@ -271,9 +271,11 @@
         "sessionBasis": "{{count}} sessions were evaluated in the active period.",
         "liveLimitedBasis": "Live charging and battery state could not be resolved.",
         "liveBasis": "Current charging and battery state comes from the live vehicle-state record.",
+        "liveRetainedBasis": "Charging and battery state is retained from the last successful vehicle-state read; its refresh has not recovered.",
         "monitorResponse": "No immediate response is indicated; continue monitoring departure readiness and session exceptions.",
         "reliabilityLimitation": "The clear-session ratio is an exception heuristic, not a charger-uptime service level.",
         "liveLimitation": "Departure readiness is incomplete while live vehicle state is unavailable.",
+        "liveRetainedLimitation": "Departure readiness uses retained battery state until the live vehicle-state refresh recovers.",
         "causeLimitation": "Session patterns do not establish whether the vehicle, charger, site, or network caused an exception.",
         "liveMethod": "Provides current battery level, charging state, and estimated time to target.",
         "historyMethod": "Evaluates recorded sessions for energy, cost, duration, power, and telemetry exceptions."

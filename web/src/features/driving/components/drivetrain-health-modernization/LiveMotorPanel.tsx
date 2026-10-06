@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { MotorSnapshot } from '@/api/types';
 import type { DataState } from '@/api/dataState';
 import { LayoutCard } from '@/components/layout/layout-reference';
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import { StatGroup, type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
 import { Badge, DataTable, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -136,6 +136,16 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
     { key: 'label', header: t('drivetrain.modernization.field', 'Field'), render: row => row.label },
     { key: 'value', header: t('drivetrain.modernization.reading', 'Reading'), render: row => row.value },
   ];
+  const period: StatPeriod = {
+    kind: 'snapshot',
+    label: t('drivetrain.liveMotor', 'Live Motor Status'),
+    observedAt: motorLatest?.ts?.trim() || null,
+    provenance: t(
+      'drivetrain.modernization.motorSnapshotScope',
+      'Latest returned motor snapshot; reported source: {{source}}. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.',
+      { source: motorLatest?.source?.trim() || t('drivetrain.modernization.unknown', 'Unknown') },
+    ),
+  };
   return <LayoutCard title={t('drivetrain.liveMotor', 'Live Motor Status')}>
     <Badge variant={connected ? 'success' : 'neutral'}>
       {connected ? t('drivetrain.realTime', 'Real-time telemetry active') : t('drivetrain.modernization.liveNotConnected', 'Live telemetry connection not established')}
@@ -143,7 +153,7 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
     <SourceBoundary state={state} label={t('drivetrain.liveMotor', 'Live Motor Status')}
       loading={loading} empty={!motorLatest} emptyMessage={t('drivetrain.noLiveMotor', 'No live motor telemetry yet')}>
       <StatGroup metrics={metrics} preferences={preferences}
-        period={{ kind: 'snapshot', label: t('drivetrain.liveMotor', 'Live Motor Status'), observedAt: motorLatest?.ts || null }}
+        period={period}
         retained={state.hasData} />
       <DataTable tableId="drivetrain-health:live-details" variant="embedded" data={details} columns={columns}
         keyExtractor={row => row.key} caption={t('drivetrain.modernization.liveDetails', 'Live motor record details')}

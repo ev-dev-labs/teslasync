@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Sun, Home, Info } from 'lucide-react';
-import { GlassPanel, PanelTitle, Badge, Caption } from '@/components/ui';
-import { Grid } from '@/components/layout';
+import { Badge, Caption, Text } from '@/components/ui';
+import { Grid, LayoutCard } from '@/components/layout';
 import type { ForecastQuality, ForecastResult } from '../lib/forecastAdapters';
 
 interface AssumptionsQualityPanelProps {
@@ -30,14 +30,13 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
   };
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('homeEnergy.quality.title', 'Assumptions & forecast quality')}</PanelTitle>
+    <LayoutCard title={t('homeEnergy.quality.title', 'Assumptions & forecast quality')}>
 
       <Grid cols={{ default: 1, sm: 2 }} gap={4} className="mb-4">
         <div className="rounded-lg border border-[var(--border-subtle)] p-3">
-          <div className="mb-1 flex items-center gap-2">
+          <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
             <Sun className="h-4 w-4 text-amber-400" />
-            <span className="text-sm font-medium text-[var(--text-primary)]">{t('homeEnergy.quality.solar', 'Solar forecast')}</span>
+            <Text variant="bodySm" weight="medium">{t('homeEnergy.quality.solar', 'Solar forecast')}</Text>
             <Badge variant={QUALITY_VARIANT[solarForecast.quality]} size="sm">
               {qualityLabel[solarForecast.quality]}
             </Badge>
@@ -50,9 +49,9 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
           </Caption>
         </div>
         <div className="rounded-lg border border-[var(--border-subtle)] p-3">
-          <div className="mb-1 flex items-center gap-2">
+          <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
             <Home className="h-4 w-4 text-cyan-400" />
-            <span className="text-sm font-medium text-[var(--text-primary)]">{t('homeEnergy.quality.load', 'Household load forecast')}</span>
+            <Text variant="bodySm" weight="medium">{t('homeEnergy.quality.load', 'Household load forecast')}</Text>
             <Badge variant={QUALITY_VARIANT[loadForecast.quality]} size="sm">
               {qualityLabel[loadForecast.quality]}
             </Badge>
@@ -66,27 +65,30 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
         </div>
       </Grid>
 
-      <div className="flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 text-xs text-[var(--text-muted)]">
+      <div className="flex min-w-0 items-start gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <div className="space-y-1">
-          <p>
+          <Text as="p" variant="caption">
             {hasEnergySite
-              ? t('homeEnergy.quality.provenanceSite', 'Measured: current vehicle SoC and solar/load history from {{site}}.', {
+              ? t('homeEnergy.quality.availableSiteInputs', 'Source inputs when available: vehicle SoC and solar/load history from {{site}}.', {
                   site: siteName ?? t('homeEnergy.quality.unnamedSite', 'your Tesla energy site'),
                 })
-              : t('homeEnergy.quality.provenanceNoSite', 'Measured: current vehicle state of charge only — no Tesla energy site was found on this account.')}
-          </p>
-          <p>
+              : t('homeEnergy.quality.availableVehicleInputs', 'Source inputs when available: vehicle state of charge — no Tesla energy site was found on this account.')}
+          </Text>
+          <Text as="p" variant="caption">
+            {t('homeEnergy.quality.missingSourceInputs', 'Missing vehicle or home-battery SoC uses a 50% model assumption, not a measurement. Forecast confidence above describes the history actually available.')}
+          </Text>
+          <Text as="p" variant="caption">
             {t(
               'homeEnergy.quality.provenanceAssumed',
               'Assumed (user-editable): tariff rates, grid/panel import-export limits, Powerwall specification, and per-vehicle target SoC, capacity, charge power, and departure time. TeslaSync has no endpoint that reports these as measured fact.',
             )}
-          </p>
-          <p className="font-medium text-[var(--text-secondary)]">
+          </Text>
+          <Text as="p" variant="caption" weight="medium" color="secondary">
             {t('homeEnergy.quality.noAutonomy', 'This plan is a recommendation only. TeslaSync never issues a command to a vehicle, Powerwall, or utility as a result of it.')}
-          </p>
+          </Text>
         </div>
       </div>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

@@ -5,7 +5,7 @@ import { usePhysicsLedger } from '@/api/hooks/usePhysicsLedger';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, GlassPanel, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -51,7 +51,7 @@ export default function PhysicsLedgerPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('physicsLedger.subtitle', 'Predicted vs measured energy and force. Residual is unexplained, never zero-filled.')}
       copyLink
@@ -140,6 +140,6 @@ export default function PhysicsLedgerPage() {
       ) : (
         <PendingPanels loading={state.status === 'initial'} />
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

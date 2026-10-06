@@ -6,22 +6,19 @@ import {
   Trash2, Battery,
   Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
-import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
+import { PageLayout, PageHeaderSticky } from '@/components/layout';
 import { Badge, Caption, GlassPanel, Pagination, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
-import { FadeIn } from '@/components/motion';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
-import { DataStateNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import {
+  DataStateNotice, QueryError, StaleRefreshWarning,
+  EmptyState, InlineCallout, Skeleton,
+} from '@/components/feedback';
 import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { InlineCallout } from '@/components/feedback/InlineCallout';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FilterBar } from '@/components/forms/FilterBar';
-import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
+import {
+  FilterBar, ActiveFilterChips, type FilterChipDescriptor, ListExportMenu,
+} from '@/components/forms';
 import { DensityToggle, type Density } from '@/components/forms/DensityToggle';
 import { SortControl, type SortDirection } from '@/components/forms/SortControl';
-import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
   SavedViewMenu,
   DateGroupedList, type DateGroupedListGroup,
@@ -719,7 +716,12 @@ export default function ChargingListPage() {
           '{{count}} sessions were evaluated in the active period.',
           { count: currentStats.count },
         ),
-        vehicleStateQuery.isError
+        vehicleStateDataState.refreshError != null
+          ? t(
+              'operations.charging.narrative.liveRetainedBasis',
+              'Charging and battery state is retained from the last successful vehicle-state read; its refresh has not recovered.',
+            )
+          : vehicleStateDataState.fatalError != null
           ? t(
               'operations.charging.narrative.liveLimitedBasis',
               'Live charging and battery state could not be resolved.',
@@ -746,7 +748,14 @@ export default function ChargingListPage() {
         'operations.charging.narrative.reliabilityLimitation',
         'The clear-session ratio is an exception heuristic, not a charger-uptime service level.',
       ),
-      ...(vehicleStateQuery.isError
+      ...(vehicleStateDataState.refreshError != null
+        ? [
+            t(
+              'operations.charging.narrative.liveRetainedLimitation',
+              'Departure readiness uses retained battery state until the live vehicle-state refresh recovers.',
+            ),
+          ]
+        : vehicleStateDataState.fatalError != null
         ? [
             t(
               'operations.charging.narrative.liveLimitation',
@@ -790,7 +799,7 @@ export default function ChargingListPage() {
   ) ?? previewFrom;
 
   return (
-    <PageContainer
+    <PageLayout
       compactHeader
       title={t('charging.list.title', 'Charging sessions')}
       subtitle={t(
@@ -824,7 +833,11 @@ export default function ChargingListPage() {
             label={t('charging.list.title', 'Charging sessions')}
           />
         )}
-        {vehicleStateQuery.isError && (
+        <StaleRefreshWarning
+          state={vehicleStateDataState}
+          label={t('operations.charging.liveStateSource', 'Live vehicle state')}
+        />
+        {vehicleStateDataState.fatalError != null && (
           <DataStateNotice
             state="partial"
             title={t(
@@ -986,6 +999,7 @@ export default function ChargingListPage() {
             <BulkActionsToolbar
               selectedIds={Array.from(bulkSelected)}
               total={filteredSessions.length}
+              selectionScope="filtered"
               onClear={clearBulk}
               actions={bulkActions}
               itemNoun={{
@@ -1161,12 +1175,12 @@ export default function ChargingListPage() {
               label: t('operations.charging.currentPosture', 'Current posture'),
               value: vehicleStateQuery.isLoading
                 ? t('operations.charging.checkingLiveState', 'Checking')
-                : vehicleStateQuery.isError || !liveState || !hasChargingPosture
+                : vehicleStateDataState.fatalError != null || !liveState || !hasChargingPosture
                   ? t('common.unavailable', 'Unavailable')
                   : isChargingNow
                     ? t('operations.charging.chargingNow', 'Charging')
                     : t('operations.charging.notCharging', 'Not charging'),
-              detail: vehicleStateQuery.isError || !hasChargingPosture
+              detail: vehicleStateDataState.fatalError != null || !hasChargingPosture
                 ? t(
                     'operations.charging.currentPostureUnavailable',
                     'Live state could not be resolved; session history remains available.',
@@ -1201,7 +1215,7 @@ export default function ChargingListPage() {
                         'operations.charging.currentPostureMissing',
                         'Live state has not arrived; session history remains available.',
                       ),
-              tone: vehicleStateQuery.isLoading || vehicleStateQuery.isError || !liveState || !hasChargingPosture
+              tone: vehicleStateQuery.isLoading || vehicleStateDataState.fatalError != null || !liveState || !hasChargingPosture
                 ? 'neutral'
                 : isChargingNow
                   ? 'info'
@@ -1462,7 +1476,7 @@ export default function ChargingListPage() {
           }
         />
       </PullToRefresh>
-    </PageContainer>
+    </PageLayout>
   );
 }
 

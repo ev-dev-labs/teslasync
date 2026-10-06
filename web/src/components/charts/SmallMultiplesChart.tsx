@@ -39,8 +39,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+} from 'recharts';
+import { ChartTooltip } from './ChartTooltip';
 import { CHART_COLORS } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import { useInView } from '@/hooks/useInView';
@@ -63,8 +63,9 @@ export interface SmallMultiplesChartProps<T extends Record<string, unknown> = Re
   /** Pixel height of each cell. Default 120. */
   cellHeight?: number;
   /**
-   * Min cell width in CSS pixels for the responsive grid. Smaller values
-   * = denser packing on wide screens. Default 280.
+   * Preferred minimum cell width in CSS pixels for the responsive grid,
+   * capped at the grid's allocated width. Smaller values = denser packing
+   * on wide screens. Default 280.
    */
   cellMinWidth?: number;
   /** Force a specific column count (overrides auto-fill). */
@@ -198,7 +199,7 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
     () =>
       columns && columns > 0
         ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
-        : { gridTemplateColumns: `repeat(auto-fill, minmax(${cellMinWidth}px, 1fr))` },
+        : { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${cellMinWidth}px), 1fr))` },
     [columns, cellMinWidth],
   );
 

@@ -6,7 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ChartContainer,
   ChartTooltip,
   CHART_COLORS,
   ResponsiveContainer,
@@ -15,6 +14,7 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
@@ -56,7 +56,8 @@ export function ArchetypeClusterComposition({
 
   return (
     <section data-testid="drive-archetypes-composition">
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t('archetypes.composition.title', 'Cluster share and composition')}
         subtitle={t(
           'archetypes.composition.subtitle',
@@ -143,7 +144,7 @@ export function ArchetypeClusterComposition({
             ))}
           </ul>
         </ArchetypeSectionBody>
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

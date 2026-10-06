@@ -2,7 +2,8 @@ import { Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Button, DataTable, GlassPanel, PanelTitle, StatusPill, type Column } from '@/components/ui';
+import { Button, DataTable, StatusPill, type Column } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { formatDateTime } from '@/lib/dateFormat';
 import type { FleetAssignment } from '@/api/hooks/useFleetOps';
 
@@ -104,9 +105,7 @@ export function AssignmentRoster({
   ], [actionsDisabled, actionsDisabledReason, onDelete, onEdit, t]);
 
   return (
-    <GlassPanel className="p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PanelTitle>{t('fleetOps.assignments.title', 'Assignment roster')}</PanelTitle>
+    <LayoutCard title={t('fleetOps.assignments.title', 'Assignment roster')} actions={
         <Button
           type="button"
           size="sm"
@@ -117,7 +116,7 @@ export function AssignmentRoster({
         >
           {t('fleetOps.assignments.add', 'Add assignment')}
         </Button>
-      </div>
+      }>
       {loading ? <Skeleton lines={5} /> : error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.assignments.resource', 'Assignments')} />
       ) : items.length === 0 ? (
@@ -139,6 +138,6 @@ export function AssignmentRoster({
           pagination
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

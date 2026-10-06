@@ -15,7 +15,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   Badge,
   GlassPanel,
@@ -34,12 +34,14 @@ import {
   EmptyState,
   EditConflictBanner,
   OperationalWriteNotice,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
 import { AINLAutomationBuilder } from '@/components/ai/AINLAutomationBuilder';
 import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai/AIGeofenceAwareAutomationSuggestions';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
@@ -321,11 +323,13 @@ export default function AutomationBuilderPage() {
         : t('automations.builder.createTitle', 'Create automation'),
   );
 
+  const automationQuery = useAutomation(automationId);
+  const automationState = useDataState(automationQuery);
   const {
     data: existingAutomation,
     isLoading: isLoadingAutomation,
-    error: loadError,
-  } = useAutomation(automationId);
+  } = automationQuery;
+  const loadError = automationState.fatalError;
   const { data: vehicles } = useVehicles();
   const { data: channels } = useNotificationChannels();
   const { data: preset } = useAutomationPreset(presetId);
@@ -624,33 +628,33 @@ export default function AutomationBuilderPage() {
     }
   }, [automationId, savedId, testRunMutation]);
 
-  if (isEdit && isLoadingAutomation) {
+  if (isEdit && isLoadingAutomation && !automationState.hasData) {
     return (
-      <PageContainer
+      <PageLayout
         title={t('automations.builder.editTitle', 'Edit automation')}
         loading
         breadcrumbLabels={breadcrumbLabels}
       >
         <div />
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   if (isEdit && loadError) {
     return (
-      <PageContainer
+      <PageLayout
         title={t('automations.builder.editTitle', 'Edit automation')}
         error={loadError instanceof Error ? loadError : new Error(String(loadError))}
         breadcrumbLabels={breadcrumbLabels}
       >
         <div />
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   if (isEdit && !existingAutomation && !isLoadingAutomation) {
     return (
-      <PageContainer
+      <PageLayout
         title={t('automations.builder.editTitle', 'Edit automation')}
         breadcrumbLabels={breadcrumbLabels}
       >
@@ -658,12 +662,12 @@ export default function AutomationBuilderPage() {
           icon={<AlertTriangle className="h-8 w-8" />}
           message={t('automations.builder.notFound', 'Automation not found')}
         />
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={isEdit
         ? t('automations.builder.editTitle', 'Edit automation')
         : t('automations.builder.createTitle', 'Create automation')}
@@ -686,6 +690,7 @@ export default function AutomationBuilderPage() {
         </UiButton>
       )}
     >
+      <StaleRefreshWarning state={automationState} label={t('automations.builder.editTitle', 'Edit automation')} />
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -1024,6 +1029,6 @@ export default function AutomationBuilderPage() {
         </FadeIn>
       </form>
       {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

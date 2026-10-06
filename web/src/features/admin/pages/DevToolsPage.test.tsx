@@ -384,4 +384,38 @@ describe('DevToolsPage', () => {
     )
     expect(within(region).getAllByText('0').length).toBeGreaterThanOrEqual(2)
   })
+
+  it('keeps the successful fleet metric when the neighboring telemetry source fails its first load', async () => {
+    mockedRequest.mockImplementation((path: string) =>
+      path === ERROR_VINS_PATH
+        ? Promise.reject(new Error('telemetry unavailable'))
+        : Promise.resolve(makeVehicles(9)),
+    )
+    renderPage()
+    expect(await screen.findByText(/Failed to load data: telemetry unavailable/)).toBeInTheDocument()
+    const band = overviewRegion()
+    await waitFor(() => expect(within(band).getByText('9')).toBeInTheDocument())
+    expect(within(band).getAllByText('—')).toHaveLength(1)
+    expect(within(band).queryByText('0')).toBeNull()
+    expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
+  })
+
+  it('keeps both last-known metrics with source-specific stale feedback after a failed refresh', async () => {
+    installResolved(makeErrorVins(2), makeVehicles(9))
+    renderPage()
+    await within(overviewRegion()).findByText('9')
+    await waitFor(() => expect(refreshButton()).not.toHaveAttribute('aria-busy'))
+    mockedRequest.mockImplementation((path: string) =>
+      path === ERROR_VINS_PATH
+        ? Promise.reject(new Error('telemetry refresh failed'))
+        : Promise.resolve(makeVehicles(9)),
+    )
+    fireEvent.click(refreshButton())
+    expect(await screen.findByText(/Previously loaded data remains visible.*telemetry refresh failed/)).toBeInTheDocument()
+    expect(within(overviewRegion()).getByText('2')).toBeInTheDocument()
+    expect(within(overviewRegion()).getByText('9')).toBeInTheDocument()
+    expect(within(overviewRegion()).queryAllByText('—')).toHaveLength(0)
+    expect(screen.queryByText(/Failed to load data: telemetry refresh failed/)).toBeNull()
+    expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
+  })
 })

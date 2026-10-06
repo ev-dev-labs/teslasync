@@ -10,7 +10,8 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
@@ -32,20 +33,13 @@ export function BatteryPassportGradeAudit({
 
   return (
     <section data-testid="battery-passport-grade-audit">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Award className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.gradeAudit.title',
             'Grade and scoring reconstruction',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.gradeAudit.subtitle',
             'Transparent frontend reconstruction of the documented server rule; not an independent calibration or hash-bound fact.',
-          )}
-        </Text>
+          )} actions={<Award className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="mb-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <Text as="code" mono variant="bodySm" className="break-words">
@@ -185,7 +179,7 @@ export function BatteryPassportGradeAudit({
             </AlertBanner>
           ) : null}
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

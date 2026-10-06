@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Caption, Text } from '@/components/ui';
+import { Caption, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
@@ -22,6 +23,7 @@ interface ExportStatusBreakdownProps {
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
+  unresolvedMessage?: string;
 }
 
 /**
@@ -34,6 +36,7 @@ export function ExportStatusBreakdown({
   isLoading,
   error,
   onRetry,
+  unresolvedMessage,
 }: ExportStatusBreakdownProps) {
   const { fmtInt, fmtPercent, formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
@@ -45,11 +48,7 @@ export function ExportStatusBreakdown({
   const rows = STATUS_ORDER.filter((s) => (stats.byStatus?.[s] ?? 0) > 0);
 
   return (
-    <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.analytics className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('exportsList.breakdown.title', 'Status breakdown')}
-      </PanelTitle>
+    <LayoutCard title={t('exportsList.breakdown.title', 'Status breakdown')}>
 
       {isLoading ? (
         <div
@@ -71,6 +70,8 @@ export function ExportStatusBreakdown({
           onRetry={onRetry}
           resourceName={t('exportsList.resource', 'Exports')}
         />
+      ) : unresolvedMessage ? (
+        <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
       ) : stats.total === 0 || rows.length === 0 ? (
         <EmptyState /* no-action: transient — nothing to summarize until exports exist */
           icon={<Icons.analytics className="h-8 w-8" aria-hidden="true" />}
@@ -111,6 +112,6 @@ export function ExportStatusBreakdown({
           </div>
         </div>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

@@ -1,10 +1,10 @@
 // Behavioural contract for <QueryReferencePanel>.
 //
 // The panel is a purely presentational, read-only helper shown beside the SQL
-// editor. It has no props, state, or data fetching, so the surface area under
+// editor. It has no data fetching or query execution, so the surface area under
 // test is: the guidance copy (routed through i18n), the four tips list, the
 // read-only status callout, the copy-ready SQL example, and the accessibility
-// invariants (decorative glyphs hidden, no interactive controls, a captioned
+// invariants (decorative glyphs hidden, only a copy control, a captioned
 // figure for the example).
 //
 // react-i18next is mocked so `t(key, fallback)` is deterministic: it returns a
@@ -13,7 +13,7 @@
 // English) without depending on the global i18n bundle.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 
 const { translations } = vi.hoisted(() => ({
   translations: {} as Record<string, string>,
@@ -39,6 +39,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  delete (navigator as { clipboard?: unknown }).clipboard;
 });
 
 describe('QueryReferencePanel', () => {
@@ -88,17 +89,30 @@ describe('QueryReferencePanel', () => {
     expect(pre?.textContent).toBe(EXPECTED_SQL);
   });
 
-  it('is a non-interactive surface with decorative glyphs hidden from AT', () => {
+  it('offers only the example copy action, never query execution, with decorative glyphs hidden from AT', () => {
     const { container } = render(<QueryReferencePanel />);
 
-    // "Nothing runs in the browser" — there are no controls on this surface.
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
 
     // The heading icon is decorative and must be hidden from assistive tech.
     const heading = screen.getByRole('heading', {
       name: /working with queries/i,
+    });
+
+    it('keeps the complete SQL example selectable after denial and retries the exact payload', async () => {
+      const writeText = vi.fn()
+        .mockRejectedValueOnce(new Error('permission denied'))
+        .mockResolvedValueOnce(undefined);
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+      const { container } = render(<QueryReferencePanel />);
+      fireEvent.click(screen.getByRole('button'));
+      expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
+      expect(container.querySelector('pre')?.textContent).toBe(EXPECTED_SQL);
+      fireEvent.click(screen.getByRole('button'));
+      await waitFor(() => expect(screen.queryByText(/Select the text manually/)).toBeNull());
+      expect(writeText.mock.calls).toEqual([[EXPECTED_SQL], [EXPECTED_SQL]]);
     });
     expect(heading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
 

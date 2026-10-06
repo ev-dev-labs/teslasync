@@ -1,7 +1,7 @@
-import { Activity, CalendarCheck2, Route, Wallet } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
+import { StatStrip } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
@@ -56,78 +56,25 @@ export function UtilizationKpis({
           ))
         ) : (
           <>
-            <MetricCard
-              label={t('utilization.drivingShare', 'Time driving')}
-              value={
-                summary.drivingShare != null
-                  ? `${fmtNumber(summary.drivingShare * 100)}%`
-                  : '—'
-              }
-              subtitle={t(
-                'utilization.ofWindow',
-                'of the observed window',
-              )}
-              icon={
-                <Activity className="h-5 w-5" aria-hidden="true" />
-              }
-              color="cyan"
-            />
-            <MetricCard
-              label={t('utilization.activeDays', 'Days used')}
-              value={
-                summary.activeDayShare != null
-                  ? `${fmtNumber(summary.activeDayShare * 100)}%`
-                  : '—'
-              }
-              subtitle={t(
-                'utilization.observedCalendarDays',
-                '{{active}} of {{days}} observed UTC days',
-                {
-                  active: fmtInt(summary.consistency.activeDays),
-                  days: fmtInt(summary.observedCalendarDays),
-                },
-              )}
-              icon={
-                <CalendarCheck2
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                />
-              }
-              color="purple"
-            />
-            <MetricCard
-              label={t('utilization.perDay', 'Distance per day')}
-              value={
-                summary.distancePerDayM != null
-                  ? formatDistance(summary.distancePerDayM)
-                  : '—'
-              }
-              subtitle={t(
-                'utilization.driveCount',
-                '{{count}} drives',
-                { count: summary.drives },
-              )}
-              icon={<Route className="h-5 w-5" aria-hidden="true" />}
-              color="green"
-            />
-            <MetricCard
-              label={t(
-                'utilization.costPerKmCard',
-                'Cost per distance',
-              )}
-              value={
-                costPerDisplayDistance != null
-                  ? `${formatCurrency(
-                      costPerDisplayDistance,
-                    )}/${distanceUnit}`
-                  : '—'
-              }
-              subtitle={t(
-                'utilization.energyOnly',
-                'energy only',
-              )}
-              icon={<Wallet className="h-5 w-5" aria-hidden="true" />}
-              color="amber"
+            <StatStrip id="utilization-summary" className="col-span-full"
+              period={{ kind: 'unknown', label: t('utilization.kpis', 'Utilization summary metrics'),
+                reason: t('utilization.ofWindow', 'of the observed window') }}
+              metrics={[
+                { metricId: 'text', occurrenceId: 'driving-share', label: t('utilization.drivingShare', 'Time driving'),
+                  rawValue: summary.drivingShare != null ? `${fmtNumber(summary.drivingShare * 100)}%` : null,
+                  context: t('utilization.ofWindow', 'of the observed window') },
+                { metricId: 'text', occurrenceId: 'active-days', label: t('utilization.activeDays', 'Days used'),
+                  rawValue: summary.activeDayShare != null ? `${fmtNumber(summary.activeDayShare * 100)}%` : null,
+                  context: t('utilization.observedCalendarDays', '{{active}} of {{days}} observed UTC days', {
+                    active: fmtInt(summary.consistency.activeDays), days: fmtInt(summary.observedCalendarDays),
+                  }) },
+                { metricId: 'text', occurrenceId: 'distance-per-day', label: t('utilization.perDay', 'Distance per day'),
+                  rawValue: summary.distancePerDayM != null ? formatDistance(summary.distancePerDayM) : null,
+                  context: t('utilization.driveCount', '{{count}} drives', { count: summary.drives }) },
+                { metricId: 'text', occurrenceId: 'cost-per-distance', label: t('utilization.costPerKmCard', 'Cost per distance'),
+                  rawValue: costPerDisplayDistance != null ? `${formatCurrency(costPerDisplayDistance)}/${distanceUnit}` : null,
+                  context: t('utilization.energyOnly', 'energy only') },
+              ]}
             />
             {summary.accounting.eligibleRows === 0 ? (
               <EmptyState

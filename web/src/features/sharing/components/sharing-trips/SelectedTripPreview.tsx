@@ -7,7 +7,8 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin, ShieldCheck } from 'lucide-react'
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui'
+import { Text } from '@/components/ui'
+import { LayoutCard } from '@/components/layout'
 import { KVList, Currency } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { formatDate } from '@/lib/dateFormat'
@@ -80,11 +81,7 @@ export function SelectedTripPreview({
   )
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('sharing.trips.preview.heading', 'Share preview')}
-      </PanelTitle>
+    <LayoutCard title={t('sharing.trips.preview.heading', 'Share preview')}>
 
       {trip ? (
         <div className="space-y-3">
@@ -98,7 +95,7 @@ export function SelectedTripPreview({
             </Text>
           </div>
 
-          <KVList items={items} />
+          <KVList items={items} layout="responsive" wrap />
 
           <Text as="p" variant="helper" className="flex items-start gap-1.5">
             <ShieldCheck
@@ -122,6 +119,6 @@ export function SelectedTripPreview({
           )}
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   )
 }

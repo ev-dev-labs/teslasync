@@ -249,6 +249,21 @@ afterEach(() => {
 });
 
 describe('DataExportPage — Project Apex elevation', () => {
+  it('uses a native grouped radio for every export type while retaining descriptions and selection', async () => {
+    renderPage();
+    const group = await screen.findByRole('radiogroup', { name: 'STEP 1 — select data type' });
+    const choices = within(group).getAllByRole('radio');
+    expect(choices.length).toBeGreaterThan(1);
+    expect(choices.every((choice) => choice.tagName === 'INPUT' && choice.getAttribute('name') === 'export-type')).toBe(true);
+    expect(within(group).getByRole('radio', { name: 'Drives' })).toBeChecked();
+    const charging = within(group).getByRole('radio', { name: 'Charging' });
+    charging.focus();
+    expect(charging).toHaveFocus();
+    fireEvent.click(charging);
+    expect(charging).toBeChecked();
+    expect(within(group).getByRole('radio', { name: 'Drives' })).not.toBeChecked();
+  });
+
   it('renders the KPI band, export wizard and history once data resolves', async () => {
     renderPage();
 

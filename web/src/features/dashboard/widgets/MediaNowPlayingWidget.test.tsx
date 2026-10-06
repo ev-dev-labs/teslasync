@@ -322,7 +322,7 @@ describe('MediaNowPlayingWidget — standard (non-tall)', () => {
     );
     renderWidget(STD);
     const bar = screen.getByRole('progressbar', { name: 'Playback progress' });
-    expect(bar).toHaveAttribute('aria-valuenow', '35'); // 65s / 185s ≈ 35%
+    expect(bar).toHaveAttribute('aria-valuenow', String(progressPercent(65_000, 185_000)));
     expect(screen.getByText('1:05')).toBeInTheDocument();
     expect(screen.getByText('3:05')).toBeInTheDocument();
   });
@@ -372,9 +372,10 @@ describe('MediaNowPlayingWidget — tall', () => {
     expect(vol).toHaveAttribute('aria-valuenow', '5');
     expect(vol).toHaveAttribute('aria-valuemax', '10');
     // Regression pin: the fill must NOT reuse the track colour (it was invisible).
-    const fill = vol.querySelector('div');
-    expect(fill?.className).toContain('bg-[var(--text-secondary)]');
-    expect(fill?.className).not.toContain('bg-[var(--surface-2)]');
+    const fill = vol.querySelector('[data-metric-fill]');
+    expect(fill).toHaveStyle({ background: 'var(--text-secondary)' });
+    expect(fill).not.toHaveClass('bg-[var(--surface-2)]');
+    expect(vol.querySelector('[data-metric-track]')).toHaveClass('h-1');
   });
 
   it('hides the volume bar when no volume reading is present', () => {
@@ -390,6 +391,21 @@ describe('MediaNowPlayingWidget — tall', () => {
     renderWidget(TALL);
     const vol = screen.getByRole('progressbar', { name: 'Volume' });
     expect(vol).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('keeps both passive tracks non-seeking and retains media metadata', () => {
+    renderWidget(TALL);
+    const volume = screen.getByRole('progressbar', { name: 'Volume' });
+    const progress = screen.getByRole('progressbar', { name: 'Playback progress' });
+    expect(volume).not.toHaveAttribute('tabindex');
+    expect(progress).not.toHaveAttribute('tabindex');
+    expect(screen.queryByRole('slider')).toBeNull();
+    expect(screen.getByText('Queen')).toBeInTheDocument();
+    expect(screen.getByText('A Night at the Opera')).toBeInTheDocument();
+    expect(screen.getByText('Spotify')).toBeInTheDocument();
+    expect(screen.getByText('Spotify')).not.toHaveClass('truncate');
+    expect(volume.querySelector('[data-metric-track]')).toHaveClass('forced-colors:!bg-[Canvas]');
+    expect(progress.querySelector('[data-metric-fill]')).toHaveClass('forced-colors:!bg-[Highlight]');
   });
 });
 

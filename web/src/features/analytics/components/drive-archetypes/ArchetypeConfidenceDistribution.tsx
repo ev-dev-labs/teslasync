@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
   ChartTooltip,
   CHART_COLORS,
   ResponsiveContainer,
@@ -14,6 +13,7 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
@@ -57,7 +57,8 @@ export function ArchetypeConfidenceDistribution({
 
   return (
     <section data-testid="drive-archetypes-confidence">
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t('archetypes.confidence.title', 'Assignment confidence and margin distribution')}
         subtitle={t(
           'archetypes.confidence.subtitle',
@@ -121,7 +122,7 @@ export function ArchetypeConfidenceDistribution({
             </Badge>
           </div>
         </ArchetypeSectionBody>
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

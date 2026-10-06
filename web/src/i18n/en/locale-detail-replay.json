@@ -8,11 +8,19 @@
     },
     "controls": {
       "reset": "Reset",
+      "restart": "Restart",
       "pause": "Pause",
       "play": "Play",
       "stop": "Stop",
       "speed": "Playback speed",
       "progress": "Playback progress"
+    },
+    "overview": {
+      "label": "Event overview",
+      "clusterCount": "{{count}} events",
+      "clusterCount_one": "{{count}} event",
+      "clusterCount_other": "{{count}} events",
+      "positionUnavailable": "Position unavailable"
     },
     "shortcuts": {
       "title": "Trip replay shortcuts",

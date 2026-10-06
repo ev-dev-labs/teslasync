@@ -12,14 +12,16 @@ import {
   Text,
   type Column,
 } from '@/components/ui'
-import { PageContainer } from '@/components/layout'
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
+import { PageLayout } from '@/components/layout'
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { UserCell } from '@/components/data-display'
 import { Icons } from '@/lib/icons'
+import { isFiniteNumber } from '@/lib/numberFormat'
 import { type NeonColor } from '@/lib/tokens'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { useDataState } from '@/hooks/useDataState'
 import {
   useBulkUpdateFeedback,
   useFeedbackList,
@@ -35,6 +37,7 @@ import {
   StatusBadge,
   StatusDistribution,
 } from '../components/feedback-queue'
+import { FeedbackFacetPanel } from '../components/feedback-queue/FeedbackFacetPanel'
 
 // Admin feedback queue — modern-ui full-width redesign.
 //
@@ -66,7 +69,8 @@ export default function FeedbackQueuePage() {
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   })
-  const { data, isLoading, isError, error, refetch, isFetching } = listQuery
+  const { data, isLoading, refetch, isFetching } = listQuery
+  const listState = useDataState(listQuery)
   const update = useUpdateFeedback()
   const bulkUpdate = useBulkUpdateFeedback()
 
@@ -78,6 +82,12 @@ export default function FeedbackQueuePage() {
   const bugQ = useFeedbackList({ category: 'bug', limit: 1 })
   const featureQ = useFeedbackList({ category: 'feature', limit: 1 })
   const otherQ = useFeedbackList({ category: 'other', limit: 1 })
+  const newState = useDataState(newQ)
+  const triagedState = useDataState(triagedQ)
+  const closedState = useDataState(closedQ)
+  const bugState = useDataState(bugQ)
+  const featureState = useDataState(featureQ)
+  const otherState = useDataState(otherQ)
 
   const counts = {
     new: newQ.data?.total,
@@ -87,12 +97,10 @@ export default function FeedbackQueuePage() {
     feature: featureQ.data?.total,
     other: otherQ.data?.total,
   }
-  const statusTotal = (counts.new ?? 0) + (counts.triaged ?? 0) + (counts.closed ?? 0)
-  const categoryTotal = (counts.bug ?? 0) + (counts.feature ?? 0) + (counts.other ?? 0)
-  const statusLoading = newQ.isLoading || triagedQ.isLoading || closedQ.isLoading
-  const statusError = newQ.error || triagedQ.error || closedQ.error
-  const categoryLoading = bugQ.isLoading || featureQ.isLoading || otherQ.isLoading
-  const categoryError = bugQ.error || featureQ.error || otherQ.error
+  const statusTotal = isFiniteNumber(counts.new) && isFiniteNumber(counts.triaged) && isFiniteNumber(counts.closed)
+    ? counts.new + counts.triaged + counts.closed : undefined
+  const statusLoading = (newQ.isLoading && !newState.hasData) ||
+    (triagedQ.isLoading && !triagedState.hasData) || (closedQ.isLoading && !closedState.hasData)
 
   // A page-level refresh reloads the table AND the six whole-queue count
   // queries so the KPI band + insights stay consistent with the table
@@ -148,13 +156,13 @@ export default function FeedbackQueuePage() {
   const statTiles = useMemo(
     () => [
       { key: 'total', label: t('feedback.queue.kpi.total', 'Total feedback'), icon: <Icons.fileText className="h-5 w-5" />, color: 'cyan' as NeonColor, value: statusTotal, loading: statusLoading },
-      { key: 'new', label: t('feedback.queue.status.new', 'New'), icon: <Icons.sparkles className="h-5 w-5" />, color: 'amber' as NeonColor, value: counts.new, loading: newQ.isLoading },
-      { key: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), icon: <Icons.success className="h-5 w-5" />, color: 'green' as NeonColor, value: counts.triaged, loading: triagedQ.isLoading },
-      { key: 'closed', label: t('feedback.queue.status.closed', 'Closed'), icon: <Icons.archive className="h-5 w-5" />, color: 'blue' as NeonColor, value: counts.closed, loading: closedQ.isLoading },
-      { key: 'bug', label: t('feedback.category.bug', 'Bug report'), icon: <Icons.bug className="h-5 w-5" />, color: 'red' as NeonColor, value: counts.bug, loading: bugQ.isLoading },
-      { key: 'feature', label: t('feedback.category.feature', 'Feature request'), icon: <Icons.lightbulb className="h-5 w-5" />, color: 'purple' as NeonColor, value: counts.feature, loading: featureQ.isLoading },
+      { key: 'new', label: t('feedback.queue.status.new', 'New'), icon: <Icons.sparkles className="h-5 w-5" />, color: 'amber' as NeonColor, value: counts.new, loading: newQ.isLoading && !newState.hasData },
+      { key: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), icon: <Icons.success className="h-5 w-5" />, color: 'green' as NeonColor, value: counts.triaged, loading: triagedQ.isLoading && !triagedState.hasData },
+      { key: 'closed', label: t('feedback.queue.status.closed', 'Closed'), icon: <Icons.archive className="h-5 w-5" />, color: 'blue' as NeonColor, value: counts.closed, loading: closedQ.isLoading && !closedState.hasData },
+      { key: 'bug', label: t('feedback.category.bug', 'Bug report'), icon: <Icons.bug className="h-5 w-5" />, color: 'red' as NeonColor, value: counts.bug, loading: bugQ.isLoading && !bugState.hasData },
+      { key: 'feature', label: t('feedback.category.feature', 'Feature request'), icon: <Icons.lightbulb className="h-5 w-5" />, color: 'purple' as NeonColor, value: counts.feature, loading: featureQ.isLoading && !featureState.hasData },
     ],
-    [t, statusTotal, statusLoading, counts.new, counts.triaged, counts.closed, counts.bug, counts.feature, newQ.isLoading, triagedQ.isLoading, closedQ.isLoading, bugQ.isLoading, featureQ.isLoading],
+    [t, statusTotal, statusLoading, counts.new, counts.triaged, counts.closed, counts.bug, counts.feature, newQ.isLoading, triagedQ.isLoading, closedQ.isLoading, bugQ.isLoading, featureQ.isLoading, newState.hasData, triagedState.hasData, closedState.hasData, bugState.hasData, featureState.hasData],
   )
 
   const statusOptions = useMemo(
@@ -312,7 +320,7 @@ export default function FeedbackQueuePage() {
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('feedback.queue.title', 'Feedback queue')}
       subtitle={t('feedback.queue.subtitle', 'Triage user-submitted bug reports and feature requests')}
       secondaryActions={actions}
@@ -331,6 +339,7 @@ export default function FeedbackQueuePage() {
               color={tile.color}
               value={tile.value}
               loading={tile.loading}
+              unknown={!isFiniteNumber(tile.value) && !tile.loading}
             />
           ))}
         </section>
@@ -339,48 +348,48 @@ export default function FeedbackQueuePage() {
       {/* 2 — Insights bento: triage progress (hero) + category mix / bridge */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Icons.workflow className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('feedback.queue.triageProgress', 'Triage progress')}
-            </PanelTitle>
-            {statusLoading ? (
-              <Skeleton height={140} />
-            ) : statusError ? (
-              <QueryError error={statusError} onRetry={handleRetryStatusCounts} />
-            ) : statusTotal === 0 ? (
-              // no-action: mirrors the queue table below — a refetch can't
-              // manufacture feedback rows that were never submitted.
-              <EmptyState
-                icon={<Icons.workflow className="h-8 w-8" aria-hidden="true" />}
-                message={t('feedback.queue.noStatusData', 'No feedback to triage yet.')}
+          <div className="min-w-0 xl:col-span-2">
+            <FeedbackFacetPanel
+              title={t('feedback.queue.triageProgress', 'Triage progress')}
+              icon={<Icons.workflow className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+              emptyIcon={<Icons.workflow className="h-8 w-8" aria-hidden="true" />}
+              counts={[
+                { id: 'new', label: t('feedback.queue.status.new', 'New'), value: counts.new },
+                { id: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), value: counts.triaged },
+                { id: 'closed', label: t('feedback.queue.status.closed', 'Closed'), value: counts.closed },
+              ]}
+              sources={[newState, triagedState, closedState]}
+              onRetry={handleRetryStatusCounts}
+              emptyMessage={t('feedback.queue.noStatusData', 'No feedback to triage yet.')}
+              skeletonHeight={140}
+            >
+              <StatusDistribution counts={counts} total={statusTotal ?? 0} />
+            </FeedbackFacetPanel>
+          </div>
+          <FeedbackFacetPanel
+            title={t('feedback.queue.categoryMix', 'Category mix')}
+            icon={<Icons.pieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            emptyIcon={<Icons.pieChart className="h-8 w-8" aria-hidden="true" />}
+            counts={[
+              { id: 'bug', label: t('feedback.category.bug', 'Bug report'), value: counts.bug },
+              { id: 'feature', label: t('feedback.category.feature', 'Feature request'), value: counts.feature },
+              { id: 'other', label: t('feedback.category.other', 'Other / question'), value: counts.other },
+            ]}
+            sources={[bugState, featureState, otherState]}
+            onRetry={handleRetryCategoryCounts}
+            emptyMessage={t('feedback.queue.noCategoryData', 'No categories to show yet.')}
+            skeletonHeight={120}
+            footer={
+              <BridgeStatus
+                enabled={bridgeEnabled}
+                repo={bridgeRepo}
+                loading={isLoading && !listState.hasData}
+                unknown={!listState.hasData}
               />
-            ) : (
-              <StatusDistribution counts={counts} total={statusTotal} />
-            )}
-          </GlassPanel>
-
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Icons.pieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('feedback.queue.categoryMix', 'Category mix')}
-            </PanelTitle>
-            {categoryLoading ? (
-              <Skeleton height={120} />
-            ) : categoryError ? (
-              <QueryError error={categoryError} onRetry={handleRetryCategoryCounts} />
-            ) : categoryTotal === 0 ? (
-              // no-action: derived from the same user-submitted feedback rows
-              // as the triage panel — none submitted yet means nothing to chart.
-              <EmptyState
-                icon={<Icons.pieChart className="h-8 w-8" aria-hidden="true" />}
-                message={t('feedback.queue.noCategoryData', 'No categories to show yet.')}
-              />
-            ) : (
-              <CategoryMix counts={counts} />
-            )}
-            <BridgeStatus enabled={bridgeEnabled} repo={bridgeRepo} loading={isLoading} />
-          </GlassPanel>
+            }
+          >
+            <CategoryMix counts={counts} />
+          </FeedbackFacetPanel>
         </section>
       </FadeIn>
 
@@ -415,10 +424,11 @@ export default function FeedbackQueuePage() {
             </div>
           </div>
 
-          {isLoading ? (
+          <StaleRefreshWarning state={listState} label={t('feedback.queue.tableTitle', 'Queue')} hideRetry />
+          {isLoading && !listState.hasData ? (
             <Skeleton height={44} lines={6} />
-          ) : isError ? (
-            <QueryError error={error} onRetry={() => refetch()} />
+          ) : listState.fatalError ? (
+            <QueryError error={listState.fatalError} onRetry={() => refetch()} />
           ) : items.length === 0 ? (
             // no-action: feedback arrives by user submission, no admin CTA possible
             <EmptyState
@@ -493,6 +503,6 @@ export default function FeedbackQueuePage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

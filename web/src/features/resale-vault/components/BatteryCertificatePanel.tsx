@@ -9,7 +9,10 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BadgeCheck, ShieldCheck } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, HelperText, Badge, CopyButton, ErrorText } from '@/components/ui';
+import { HelperText, Badge, CopyButton, ErrorText } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -31,6 +34,7 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
   const { formatEnergy } = useUnits();
 
   const certQuery = useBatteryCertificate(vehicleId);
+  const certState = useDataState(certQuery);
   const verifyMutation = useVerifyBatteryCertificate();
 
   const issued = certQuery.data ?? null;
@@ -47,19 +51,17 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
   const verified = verifyMutation.data?.valid === true;
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <PanelTitle className="flex items-center gap-2">
-          <BadgeCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          {t('resaleVault.certificate.title', 'Battery certificate')}
-        </PanelTitle>
+    <LayoutCard title={t('resaleVault.certificate.title', 'Battery certificate')}
+      actions={<div className="flex flex-wrap items-center gap-2">
+        <BadgeCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
         {verified && (
           <Badge variant="success" size="sm" className="gap-1">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             {t('resaleVault.certificate.verified', 'Signature verified')}
           </Badge>
         )}
-      </div>
+      </div>}
+    >
 
       <HelperText>
         {t(
@@ -68,14 +70,21 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
         )}
       </HelperText>
 
-      {certQuery.isLoading ? (
-        <Skeleton height={160} />
-      ) : certQuery.isError || !issued ? (
+      <StaleRefreshWarning state={certState} label={t('resaleVault.certificate.title', 'Battery certificate')} />
+      <SourceContent
+        state={certState.fatalError ? 'error' : !certState.hasData && certQuery.isLoading ? 'loading' : !issued ? 'empty' : 'ready'}
+        label={t('resaleVault.certificate.title', 'Battery certificate')}
+        error={certState.fatalError}
+        errorMessage={t('resaleVault.certificate.loadError', 'The battery certificate could not be loaded.')}
+        errorRecovery={certState.retry ? { onRetry: certState.retry } : undefined}
+        emptyMessage={t('resaleVault.certificate.empty', 'No certificate available for this vehicle.')}
+        loadingContent={<Skeleton height={160} />}
+        emptyContent={
         <EmptyState /* no-action: informational empty — no CTA */
           message={t('resaleVault.certificate.empty', 'No certificate available for this vehicle.')}
-        />
-      ) : (
-        <>
+        />}
+      >
+        {issued ? <>
           <KVList
             items={[
               {
@@ -126,8 +135,8 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
               {t('resaleVault.certificate.verifyError', 'Self-verification failed — the signature may be stale.')}
             </ErrorText>
           )}
-        </>
-      )}
-    </GlassPanel>
+        </> : null}
+      </SourceContent>
+    </LayoutCard>
   );
 }

@@ -191,7 +191,7 @@ describe('JourneyPanel', () => {
     const mutate = vi.fn();
     mockCreate.mockReturnValue({ mutate, isPending: false });
     renderPanel();
-    fireEvent.click(screen.getByText('Plan journey'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Plan journey' })[0]);
     fireEvent.change(screen.getByLabelText(/Journey name/), {
       target: { value: 'Vegas weekend' },
     });
@@ -232,6 +232,28 @@ describe('JourneyPanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('keeps retained sessions, plan versions and server transitions during refresh failures', () => {
+    mockList.mockReturnValue(idle({ data: sessions, isError: true, error: new Error('list refresh failed') }));
+    mockDetail.mockReturnValue(idle({ data: detail, isError: true, error: new Error('detail refresh failed') }));
+    renderPanel();
+
+    expect(screen.getByText('Home → Tahoe')).toBeInTheDocument();
+    expect(screen.getByText(/v1 · initial/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abort' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('surfaces an initial detail failure instead of the misleading selection-empty state', () => {
+    const refetch = vi.fn();
+    mockDetail.mockReturnValue(idle({ isError: true, error: new Error('detail failed'), refetch }));
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.queryByText('Select a journey to manage its lifecycle and plans.')).not.toBeInTheDocument();
   });
 
   it('renders when Go sends null slices on a planned journey', () => {

@@ -1,11 +1,9 @@
-import { CheckCheck } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
@@ -49,11 +47,7 @@ export function CabinThermalAcceptedDirectory({
 
   return (
     <section data-testid="cabin-thermal-accepted-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <CheckCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.accepted.title', 'Accepted-event directory')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.accepted.title', 'Accepted-event directory')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.accepted.subtitle',
@@ -85,7 +79,7 @@ export function CabinThermalAcceptedDirectory({
             ))}
           </ol>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

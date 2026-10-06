@@ -169,6 +169,20 @@ describe('PresetGallery — loading state', () => {
 
 // ── Error state ──────────────────────────────────────────────────────────────
 describe('PresetGallery — error state', () => {
+  it('offers nonblocking source recovery without removing cached templates or install navigation', () => {
+    const refetch = vi.fn();
+    mockUsePresets.mockReturnValue(hookResult({
+      data: { categories: [], presets: [makePreset({ id: 'retained', name: 'Retained template' })] },
+      isError: true, error: new Error('Refresh offline'), refetch,
+    }));
+    renderGallery();
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Install Retained template' }));
+    expect(navigateMock).toHaveBeenCalledWith('/automations/new?preset=retained');
+  });
+
   it('renders QueryError with a Retry that re-fetches when the query fails', () => {
     const refetch = vi.fn();
     mockUsePresets.mockReturnValue(
@@ -308,6 +322,7 @@ describe('PresetGallery — card content', () => {
     expect(screen.getByRole('heading', { name: 'Night Lock' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Morning HVAC' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Filter presets by category' })).toHaveClass('flex-wrap');
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Security (1)' }));
     expect(screen.getByRole('heading', { name: 'Night Lock' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Morning HVAC' })).not.toBeInTheDocument();

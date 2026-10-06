@@ -9,8 +9,9 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileJson, Upload } from 'lucide-react';
-import { Button, Input, Textarea } from '@/components/ui';
+import { Button, Input, Text, Textarea } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
+import { FormSection } from '@/components/forms';
 import { useInstalledPacks } from '../hooks/useInstalledPacks';
 import { downloadEnvelope, parseImportedEnvelopeText, readFileAsText } from '../lib/manifestImportExport';
 import { PackDetailModal } from './PackDetailModal';
@@ -62,14 +63,13 @@ export function ImportExportPanel() {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('intelPacks.import.title', 'Import a manifest')}</h3>
-        <p className="text-xs text-[var(--text-secondary)]">
-          {t(
+      <FormSection
+        title={t('intelPacks.import.title', 'Import a manifest')}
+        description={t(
             'intelPacks.import.description',
             'Import re-runs the full parser, structural limits, expression-safety checks, and signature verification — nothing is trusted just because it came from a file.',
-          )}
-        </p>
+        )}
+      >
 
         <Input
           ref={fileInputRef}
@@ -107,12 +107,11 @@ export function ImportExportPanel() {
             </ul>
           </AlertBanner>
         )}
-      </section>
+      </FormSection>
 
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('intelPacks.export.title', 'Export an installed pack')}</h3>
+      <FormSection title={t('intelPacks.export.title', 'Export an installed pack')}>
         {installedRecords.length === 0 ? (
-          <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.export.empty', 'No installed packs to export yet.')}</p>
+          <Text as="p" variant="caption">{t('intelPacks.export.empty', 'No installed packs to export yet.')}</Text>
         ) : (
           <ul className="space-y-2">
             {installedRecords.map((r) => (
@@ -128,7 +127,7 @@ export function ImportExportPanel() {
             ))}
           </ul>
         )}
-      </section>
+      </FormSection>
 
       <PackDetailModal entry={importedEntry} open={importedEntry != null} onClose={() => setImported(null)} />
     </div>

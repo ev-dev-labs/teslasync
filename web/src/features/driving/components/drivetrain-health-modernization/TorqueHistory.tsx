@@ -19,6 +19,7 @@ export function TorqueHistory({ rows, state, loading }: MotorHistoryChartProps) 
       title={t('drivetrain.torqueHistory', 'Motor Torque')}
       subtitle={t('drivetrain.torqueHistorySub', 'Drive inverter torque output over time')}
       ariaLabel={t('drivetrain.torqueHistory.aria', 'Motor inverter torque output history area chart')}
+      ariaDescription={t('drivetrain.modernization.torqueHistoryDescription', 'Torque uses the front motor reading when supplied, otherwise the rear motor reading, in newton-metres. Missing readings remain gaps, not zero.')}
       height={280}
       loading={loading && !state.hasData}
       empty={rows.length <= 1 || !rows.some(row => row.torque != null)}

@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-react';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -93,7 +93,7 @@ export default function DriveArchetypesPage() {
   }, [historyQuery.refetch, vehicleId]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('archetypes.title', 'Drive archetypes')}
       subtitle={t(
         'archetypes.subtitle',
@@ -110,6 +110,7 @@ export default function DriveArchetypesPage() {
             disabled={vehicleId == null}
             loading={historyQuery.isFetching && vehicleId != null}
             icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            wrapLabel
           >
             {t('archetypes.actions.refresh', 'Refresh evidence')}
           </Button>
@@ -193,6 +194,6 @@ export default function DriveArchetypesPage() {
           display={display}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

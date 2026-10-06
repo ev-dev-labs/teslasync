@@ -4,22 +4,22 @@ import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Car, DollarSign, Leaf, Globe, Moon,
   Clock, Award, Flame, TreePine, Home,
-  Trophy, Gauge, BatteryCharging,
+  Gauge, BatteryCharging,
 } from 'lucide-react';
 
-import { Grid } from '@/components/layout';
-import { PageLayout, Section, CardGrid } from '@/components/layout/layout-reference';
+import { Grid, PageLayout, Section, CardGrid, LayoutCard, SourceContent } from '@/components/layout';
 import {
-  GlassPanel, SectionTitle, Text, Caption,
+  GlassPanel, Text, Caption,
 } from '@/components/ui';
 import {
   AnimatedNumber, ProgressRing, DataFreshnessAuto,
 } from '@/components/data-display';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
+import { deriveDataState } from '@/api/dataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
@@ -61,7 +61,8 @@ export default function LifetimeStatsPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const lifetimeQuery = useLifetimeStats(vehicleId != null ? String(vehicleId) : undefined);
-  const { data: stats, isLoading, isError, error } = lifetimeQuery;
+  const { data: stats, isLoading, error } = lifetimeQuery;
+  const source = deriveDataState({ ...lifetimeQuery, data: stats ?? undefined }, { provenance: 'historical' });
   const retry = () => { void lifetimeQuery.refetch(); };
 
   const achievements = stats?.achievements ?? [];
@@ -71,10 +72,10 @@ export default function LifetimeStatsPage() {
   // renders its own loading / error / empty independently (never gate the
   // whole page behind a single `{data && …}`).
   const hasData = stats != null;
-  const fatalError = isError && !hasData;
-  const initialLoading = isLoading && !hasData;
+  const fatalError = source.fatalError != null;
   const sectionState = (empty: boolean) => lifetimeSectionState({
-    hasData, isLoading, isError, empty,
+    hasData, isLoading: source.status === 'initial',
+    isError: fatalError || source.status === 'stale', empty,
   });
 
   const heroDistance = stats ? fromKm(stats.total_distance_km) : 0;
@@ -139,12 +140,13 @@ export default function LifetimeStatsPage() {
       <FadeIn>
         <section aria-label={t('lifetime.title', 'Lifetime stats')}>
           <GlassPanel className="p-6 sm:p-8">
-            {hasData && isError && <QueryError error={error} onRetry={retry} />}
-            {fatalError ? (
-              <QueryError error={error} onRetry={retry} />
-            ) : initialLoading ? (
-              <Skeleton height={96} />
-            ) : (
+            <SourceContent state={sectionState(!stats)}
+              label={t('lifetime.title', 'Lifetime stats')}
+              emptyMessage={t('lifetime.noData', 'No driving data yet')}
+              errorMessage={t('error.loadFailed', 'Failed to load data')}
+              error={error} errorRecovery={{ onRetry: retry }}
+              loadingContent={<Skeleton height={96} />}
+            >
               <div className="flex flex-col items-center gap-6 text-center xl:flex-row xl:justify-between xl:text-left">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center justify-center gap-3 xl:justify-start">
@@ -186,7 +188,7 @@ export default function LifetimeStatsPage() {
                   )}
                 </div>
               </div>
-            )}
+            </SourceContent>
           </GlassPanel>
         </section>
       </FadeIn>
@@ -386,26 +388,18 @@ export default function LifetimeStatsPage() {
 
       {/* ── Achievement Gallery — full-width detail band ─────────── */}
       <FadeIn delay={0.25}>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <SectionTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-300" aria-hidden="true" />
-              {t('lifetime.achievements', 'Achievements')}
-            </SectionTitle>
-            <Caption>
-              {unlockedCount}/{achievements.length} {t('lifetime.unlocked', 'unlocked')}
-            </Caption>
-          </div>
-          {hasData && isError && <QueryError error={error} onRetry={retry} />}
-          {initialLoading ? (
-            <Skeleton height={200} />
-          ) : fatalError ? (
-            <QueryError error={error} onRetry={retry} />
-          ) : achievements.length === 0 ? (
-            <EmptyState /* no-action: transient empty state — surfaces when the vehicle has no unlocked or in-progress achievements yet */
-              message={t('lifetime.noAchievements', 'Start driving to unlock achievements')}
-            />
-          ) : (
+        <LayoutCard title={t('lifetime.achievements', 'Achievements')}
+          actions={<Caption>
+            {hasData ? `${unlockedCount}/${achievements.length}` : '—/—'} {t('lifetime.unlocked', 'unlocked')}
+          </Caption>}
+        >
+          <SourceContent state={sectionState(achievements.length === 0)}
+            label={t('lifetime.achievements', 'Achievements')}
+            emptyMessage={t('lifetime.noAchievements', 'Start driving to unlock achievements')}
+            errorMessage={t('error.loadFailed', 'Failed to load data')}
+            error={error} errorRecovery={{ onRetry: retry }}
+            loadingContent={<Skeleton height={200} />}
+          >
             <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8">
               {achievements.map(a => {
                 const isPulsing = pulsedId === a.id;
@@ -429,8 +423,8 @@ export default function LifetimeStatsPage() {
                 );
               })}
             </StaggerContainer>
-          )}
-        </GlassPanel>
+          </SourceContent>
+        </LayoutCard>
       </FadeIn>
     </PageLayout>
   );

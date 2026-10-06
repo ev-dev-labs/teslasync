@@ -113,7 +113,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  return render(
+  const rendered = render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -122,6 +122,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...rendered, client: qc }
 }
 
 function kpiRegion() {
@@ -345,6 +346,32 @@ describe('PrivacyPage — cross-tab sync', () => {
     // subscribeRecentPages hook must lift the counter without a remount.
     act(() => {
       recordPageView({ path: '/vehicles/9', title: 'Nine', now: 2000 })
+    })
+
+    describe('PrivacyPage — retained policy', () => {
+      it('keeps the required policy and browser-local consent controls after a failed refresh', async () => {
+        seedRecentPages(2)
+        setConsent('accepted')
+        mockedRequest.mockResolvedValue(versionResponse({ require_cookie_consent: true }))
+        const { client, container } = renderPage()
+        await within(kpiRegion()).findByText('Required')
+        expect(container.querySelector('[data-layout-reference]')).not.toBeNull()
+
+        mockedRequest.mockRejectedValue(new ApiError('Refresh unavailable', 500, 'INTERNAL'))
+        await act(async () => {
+          await client.invalidateQueries({ queryKey: ['version'] })
+        })
+        await waitFor(() => expect(client.getQueryState(['version'])?.status).toBe('error'))
+
+        expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+        expect(within(kpiRegion()).getByText('Required')).toBeInTheDocument()
+        expect(within(kpiRegion()).queryByText('Optional')).toBeNull()
+        expect(screen.getByTestId('privacy-recent-count')).toHaveTextContent('2 entries stored')
+        expect(screen.getByTestId('privacy-consent-state')).toHaveAttribute('data-consent-state', 'accepted')
+        expect(screen.getByTestId('privacy-consent-accept')).toBeDisabled()
+        expect(screen.getByTestId('privacy-consent-decline')).not.toBeDisabled()
+        expect(getConsent()).toBe('accepted')
+      })
     })
 
     await waitFor(() =>

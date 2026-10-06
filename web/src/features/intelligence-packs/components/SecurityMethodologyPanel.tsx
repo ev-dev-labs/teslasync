@@ -5,8 +5,9 @@
  * content; it never fetches anything.
  */
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ShieldCheck } from 'lucide-react';
-import { GlassPanel, Table } from '@/components/ui';
+import { AlertTriangle } from 'lucide-react';
+import { Table } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { Text } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import { PACK_CAPABILITY_CATALOG, MANIFEST_LIMITS } from '../lib/manifestTypes';
@@ -43,34 +44,23 @@ export function SecurityMethodologyPanel() {
     <div className="space-y-6">
       <TrustDistinctionNote />
 
-      <GlassPanel padding="md">
-        <Text variant="bodySm" className="font-semibold mb-2 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-emerald-400" aria-hidden />
-          {t('intelPacks.security.guaranteesTitle', 'Guarantees')}
-        </Text>
+      <LayoutCard title={t('intelPacks.security.guaranteesTitle', 'Guarantees')}>
         <ul className="list-disc pl-5 space-y-1.5 text-xs text-[var(--text-secondary)]">
           {guarantees.map((g, i) => (
             <li key={i}>{g}</li>
           ))}
         </ul>
-      </GlassPanel>
+      </LayoutCard>
 
-      <GlassPanel padding="md">
-        <Text variant="bodySm" className="font-semibold mb-2 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-400" aria-hidden />
-          {t('intelPacks.security.nonGuaranteesTitle', 'Explicit non-guarantees')}
-        </Text>
+      <LayoutCard title={t('intelPacks.security.nonGuaranteesTitle', 'Explicit non-guarantees')}>
         <ul className="list-disc pl-5 space-y-1.5 text-xs text-[var(--text-secondary)]">
           {nonGuarantees.map((g, i) => (
             <li key={i}>{g}</li>
           ))}
         </ul>
-      </GlassPanel>
+      </LayoutCard>
 
-      <GlassPanel padding="md">
-        <Text variant="bodySm" className="font-semibold mb-2">
-          {t('intelPacks.security.limitsTitle', 'Resource ceilings & budgets in this build')}
-        </Text>
+      <LayoutCard title={t('intelPacks.security.limitsTitle', 'Resource ceilings & budgets in this build')}>
         <Table aria-label={t('intelPacks.security.limitsTitle', 'Resource ceilings & budgets in this build')}>
 
           <tbody>
@@ -84,15 +74,12 @@ export function SecurityMethodologyPanel() {
             <tr><th scope="row">{t('intelPacks.security.sandboxRows', 'Max sandbox sample rows')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxRows}</td></tr>
           </tbody>
         </Table>
-      </GlassPanel>
+      </LayoutCard>
 
-      <GlassPanel padding="md">
-        <Text variant="bodySm" className="font-semibold mb-2">
-          {t('intelPacks.security.capabilitiesTitle', 'The complete capability allowlist')}
-        </Text>
-        <p className="text-xs text-[var(--text-muted)] mb-2">
+      <LayoutCard title={t('intelPacks.security.capabilitiesTitle', 'The complete capability allowlist')}>
+        <Text as="p" variant="caption" className="mb-2">
           {t('intelPacks.security.capabilitiesIntro', 'There is no field for a "write", "command", or "network" capability anywhere in the schema — requesting one is structurally impossible, not merely denied.')}
-        </p>
+        </Text>
         <ul className="space-y-1.5">
           {PACK_CAPABILITY_CATALOG.map((c) => (
             <li key={c.id} className="text-xs">
@@ -101,7 +88,7 @@ export function SecurityMethodologyPanel() {
             </li>
           ))}
         </ul>
-      </GlassPanel>
+      </LayoutCard>
 
       <InlineCallout variant="warning" icon={<AlertTriangle />}>
         {t(

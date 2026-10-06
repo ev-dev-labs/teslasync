@@ -21,13 +21,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Activity, AlertCircle, Clock, Database, Radio } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Badge, HelpTooltip, Select } from '@/components/ui';
-import { EmptyState, AlertBanner } from '@/components/feedback';
+import { EmptyState, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlArray, useUrlNumber, useUrlBatch, type UrlBatchUpdate } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -70,7 +71,9 @@ export default function SignalExplorerPage() {
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
 
-  const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
+  const signalsQuery = useSignals(vehicleId);
+  const { data: availableSignals } = signalsQuery;
+  const catalogState = useDataState(signalsQuery);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
   const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
@@ -107,7 +110,7 @@ export default function SignalExplorerPage() {
     setExploreKey(null);
   }, [vehicleId]);
 
-  const { data: historicalRows, isLoading: historicalLoading, isFetching, error: historicalError } = useQuery<SignalLogEntry[]>({
+  const historicalQuery = useQuery<SignalLogEntry[]>({
     queryKey: ['signal-explorer', vehicleId, exploreKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -123,6 +126,8 @@ export default function SignalExplorerPage() {
     },
     enabled: !isLive && exploreKey !== null,
   });
+  const { data: historicalRows, isLoading: historicalLoading, isFetching } = historicalQuery;
+  const historicalState = useDataState(historicalQuery, { provenance: 'historical' });
 
   const live = useLiveSignalStream({
     enabled: isLive,
@@ -171,7 +176,7 @@ export default function SignalExplorerPage() {
   const activeChart = isLive ? live.chartData : chartData;
   const activeStats = isLive ? live.chartStats : historicalStats;
   const hasHistorical = exploreKey !== null;
-  const anyError = (signalsError ?? historicalError) as Error | undefined;
+  const anyError = catalogState.fatalError ?? (!isLive && hasHistorical ? historicalState.fatalError : null);
 
   // Inclusive day span for the KPI band — mirrors the historical query window.
   const rangeDays = useMemo(() => {
@@ -184,6 +189,7 @@ export default function SignalExplorerPage() {
 
   // KPI-band derivations — null-safe scalars valid in both historical & live modes.
   const pointCount = isLive ? live.chartPointCount : totalRecords;
+  const historyUnavailable = !isLive && hasHistorical && !historicalState.hasData;
   const statSignalCount = activeStats.length;
   const statusLabel = isLive
     ? live.connected
@@ -234,7 +240,7 @@ export default function SignalExplorerPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalExplorer.title', 'Signal explorer')}
       subtitle={t('signalExplorer.subtitle', 'Visualise signal history with chart and stats — or stream live')}
       metadataActions={
@@ -252,6 +258,8 @@ export default function SignalExplorerPage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       ) : null}
+      <StaleRefreshWarning state={catalogState} label={t('dataSources.labels.signalCatalog', 'Signal catalog')} />
+      {!isLive && hasHistorical && <StaleRefreshWarning state={historicalState} label={t('signalHistory.title', 'Signal data')} />}
 
       {vehicleId === 0 ? (
         // no-action: vehicle picker is in the page header; no inline CTA needed.
@@ -279,7 +287,7 @@ export default function SignalExplorerPage() {
               />
               <MetricCard
                 label={isLive ? t('signalExplorer.kpi.liveEvents', 'Live events') : t('signalExplorer.kpi.records', 'Records')}
-                value={fmtInt(pointCount)}
+                value={historyUnavailable ? '—' : fmtInt(pointCount)}
                 subtitle={isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded')}
                 icon={<Database className="h-5 w-5" aria-hidden="true" />}
                 color="purple"
@@ -306,7 +314,7 @@ export default function SignalExplorerPage() {
               <MetricCard
                 label={t('signalExplorer.kpi.status', 'Status')}
                 value={statusLabel}
-                subtitle={t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount })}
+                subtitle={historyUnavailable ? '—' : t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount })}
                 icon={<Radio className="h-5 w-5" aria-hidden="true" />}
                 color={isLive ? (live.connected ? 'green' : 'red') : hasHistorical ? 'cyan' : 'amber'}
               />
@@ -406,24 +414,28 @@ export default function SignalExplorerPage() {
               className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
             >
               {/* Hero — the multi-signal chart spans two of three columns on wide screens. */}
-              <div className="xl:col-span-2">
+              <div className="min-w-0 max-w-full xl:col-span-2">
                 <SignalChartPanel
                   selectedSignals={selectedSignals}
                   data={activeChart}
                   stats={activeStats}
                   isLive={isLive}
                   loading={historicalLoading && !isLive}
+                  error={!isLive ? historicalState.fatalError : null}
+                  onRetry={historicalState.retry ?? undefined}
                   pointsLoaded={historicalRows?.length}
                   liveEventCount={live.chartPointCount}
                 />
               </div>
 
               {/* Context — per-signal min/max/avg/count summary beside the chart. */}
-              <div className="xl:col-span-1">
+              <div className="min-w-0 xl:col-span-1">
                 <SignalStatsPanel
                   stats={activeStats}
                   selectedSignals={selectedSignals}
                   loading={historicalLoading && !isLive}
+                  error={!isLive ? historicalState.fatalError : null}
+                  onRetry={historicalState.retry ?? undefined}
                 />
               </div>
 
@@ -438,6 +450,8 @@ export default function SignalExplorerPage() {
                     totalRows={totalRecords}
                     onPageChange={setPage}
                     loading={historicalLoading}
+                    error={historicalState.fatalError}
+                    onRetry={historicalState.retry ?? undefined}
                   />
                 </div>
               ) : null}
@@ -445,6 +459,6 @@ export default function SignalExplorerPage() {
           )}
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

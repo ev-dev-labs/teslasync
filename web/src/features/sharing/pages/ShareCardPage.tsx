@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -74,7 +74,7 @@ export default function ShareCardPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('shareCard.title', 'Share card studio')}
       subtitle={t(
         'shareCard.subtitle',
@@ -103,6 +103,6 @@ export default function ShareCardPage() {
       <FadeIn delay={0.12}><ShareCardRepresentativeDirectory {...sectionProps} /></FadeIn>
       <FadeIn delay={0.13}><ShareCardAccountingIdentities {...sectionProps} /></FadeIn>
       <FadeIn delay={0.14}><ShareCardMethodology {...sectionProps} /></FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

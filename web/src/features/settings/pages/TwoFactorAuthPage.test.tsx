@@ -71,7 +71,7 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-import { request } from '@/api/client'
+import { request, ApiError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import TwoFactorAuthPage from './TwoFactorAuthPage'
 
@@ -304,5 +304,22 @@ describe('TwoFactorAuthPage — loading', () => {
     // …but the static guidance panels are always mounted.
     expect(screen.getByText('How setup works')).toBeInTheDocument()
     expect(screen.getByText('Compatible apps')).toBeInTheDocument()
+  })
+
+  describe('TwoFactorAuthPage — source failure', () => {
+    it('does not misrepresent a failed status request as open auth mode or expose credentials', async () => {
+      mockedRequest.mockRejectedValue(new ApiError('Status unavailable', 500, 'INTERNAL'))
+      renderPage()
+      expect(await screen.findByText('Server error')).toBeInTheDocument()
+      expect(screen.queryByTestId('totp-section-open-mode')).toBeNull()
+      expect(screen.queryByTestId('totp-enroll')).toBeNull()
+      expect(screen.queryByTestId('totp-secret')).toBeNull()
+      expect(screen.queryByTestId('totp-backup-list')).toBeNull()
+      expect(screen.getByText('How setup works')).toBeInTheDocument()
+      expect(screen.getByText('Compatible apps')).toBeInTheDocument()
+      expect(screen.getByText('Recovery & good habits')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument()
+      expect(mockedRequest.mock.calls.every(call => call[0] === '/auth/totp')).toBe(true)
+    })
   })
 })

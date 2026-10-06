@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wifi, Cog, Thermometer, CircleDot } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Subhead } from '@/components/ui';
+import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   useVehicles,
@@ -30,14 +32,9 @@ function snapshotSource<T extends object | null>(query: DataStateSource<T>): Dat
   };
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-      <span className={dashboardTokens.metricLabel}>{label}</span>
-      <span className={`${dashboardTokens.title} min-w-0 break-all tabular-nums`}>
-        {value}
-      </span>
-    </div>
+    <KVList layout="responsive" wrap items={[{ label, value: <span className="tabular-nums">{value}</span> }]} />
   );
 }
 
@@ -102,9 +99,9 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
         <div className={`grid ${dashboardTokens.columns[2]} gap-4 h-full overflow-y-auto`}>
           {/* Drivetrain */}
           <div className="space-y-1.5">
-            <h4 className={`${dashboardTokens.title} flex items-center gap-1`}>
+            <Subhead as="h4" className="flex items-center gap-1">
               <Cog className="h-3 w-3 text-purple-300" /> {t('widget.motor', 'Motor')}
-            </h4>
+            </Subhead>
             {motor ? (
               <>
                 <Row
@@ -128,9 +125,9 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Climate */}
           <div className="space-y-1.5">
-            <h4 className={`${dashboardTokens.title} flex items-center gap-1`}>
+            <Subhead as="h4" className="flex items-center gap-1">
               <Thermometer className="h-3 w-3 text-cyan-300" /> {t('widget.climate', 'Climate')}
-            </h4>
+            </Subhead>
             {climate ? (
               <>
                 <Row
@@ -165,9 +162,9 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Tires */}
           <div className="space-y-1.5">
-            <h4 className={`${dashboardTokens.title} flex items-center gap-1`}>
+            <Subhead as="h4" className="flex items-center gap-1">
               <CircleDot className="h-3 w-3 text-cyan-300" /> {t('widget.tires', 'Tires')}
-            </h4>
+            </Subhead>
             {tires ? (
               <>
                 <Row
@@ -210,27 +207,21 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Security summary */}
           <div className="space-y-1.5">
-            <h4 className={`${dashboardTokens.title} flex items-center gap-1`}>
+            <Subhead as="h4" className="flex items-center gap-1">
               <span aria-hidden="true">🛡️</span> {t('widget.security', 'Security')}
-            </h4>
+            </Subhead>
             {security ? (
               <>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xs text-[var(--text-secondary)]">
-                    {t('widget.lock', 'Lock')}
-                  </span>
+                <Row label={t('widget.lock', 'Lock')} value={
                   <Badge variant={typeof security.locked !== 'boolean' ? 'neutral' : security.locked ? 'success' : 'danger'}>
                     {typeof security.locked !== 'boolean' ? '—' : security.locked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked')}
                   </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xs text-[var(--text-secondary)]">
-                    {t('widget.sentry', 'Sentry')}
-                  </span>
+                } />
+                <Row label={t('widget.sentry', 'Sentry')} value={
                   <Badge variant={security.sentry_mode === true ? 'success' : 'neutral'}>
                     {typeof security.sentry_mode !== 'boolean' ? '—' : security.sentry_mode ? t('widget.active', 'Active') : t('widget.off', 'Off')}
                   </Badge>
-                </div>
+                } />
               </>
             ) : (
               securityState.fatalError ? <QueryError error={securityState.fatalError} onRetry={() => { void securityQuery.refetch(); }} /> : securityQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.security', 'Security')} value="—" />

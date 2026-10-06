@@ -53,7 +53,7 @@ describe('Owned mobility page headers', () => {
   });
 
   it.each(pages)('%s uses the shared compact header without a legacy action rail', (_path, source) => {
-    expect(source).toMatch(/<PageContainer\b/);
+    expect(source).toMatch(/<(?:PageLayout|PageContainer)\b/);
     expect(source).not.toMatch(/compactHeader\s*=\s*\{false\}/);
     expect(source).not.toMatch(/^\s{6}actions=/m);
     expect(source).not.toMatch(/<h1\b|<PageHeader\b|<PageTitle\b/);

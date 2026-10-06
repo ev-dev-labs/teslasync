@@ -270,7 +270,7 @@ describe('WatchFacePage', () => {
 
   it('is null-safe: renders "NaN"-free output when numeric fields are missing', () => {
     // Simulate a partial payload (fields the Go contract types as present but a
-    // degraded backend could omit). The ?? 0 guards must keep the UI clean.
+    // degraded backend could omit). Unknown readings must not imply real zero.
     hooks.summary = {
       data: {
         vehicle_name: 'Partial Car',
@@ -286,8 +286,9 @@ describe('WatchFacePage', () => {
     }
     renderPage()
 
-    expect(screen.getByText('0%')).toBeInTheDocument()
-    expect(screen.getByText('0 km')).toBeInTheDocument()
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+    expect(screen.queryByText('0 km')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Battery Unknown; range —' })).toBeInTheDocument()
     expect(document.body.textContent).not.toContain('NaN')
   })
 })
@@ -304,7 +305,10 @@ describe('BatteryGauge', () => {
     const arcs = container.querySelectorAll('circle')
     expect(arcs).toHaveLength(2)
     expect(arcs[1]).toHaveAttribute('stroke', '#22c55e')
-    expect(arcs[1]).toHaveAttribute('stroke-dasharray', `${72 * 2.64} 264`)
+    const circumference = 2 * Math.PI * 59
+    expect(Number(arcs[1].getAttribute('stroke-dasharray'))).toBeCloseTo(circumference)
+    expect(Number(arcs[1].getAttribute('stroke-dashoffset'))).toBeCloseTo(circumference * 0.28)
+    expect(screen.getByRole('img', { name: 'Battery 72%; range 300 km' })).toBeInTheDocument()
   })
 
   it('uses the red arc for a critically low level', () => {
@@ -313,8 +317,18 @@ describe('BatteryGauge', () => {
     )
     const arcs = container.querySelectorAll('circle')
     expect(arcs[1]).toHaveAttribute('stroke', '#ef4444')
-    expect(arcs[1]).toHaveAttribute('stroke-dasharray', `${10 * 2.64} 264`)
+    expect(Number(arcs[1].getAttribute('stroke-dashoffset'))).toBeCloseTo(2 * Math.PI * 59 * 0.9)
     expect(screen.getByText('0 mi')).toBeInTheDocument()
+  })
+
+  it('distinguishes unknown charge and range from a measured zero', () => {
+    const { rerender } = render(<BatteryGauge level={null} rangeDisplay={null} distanceUnit="km" />)
+    expect(screen.getByRole('img', { name: 'Battery Unknown; range —' })).toBeInTheDocument()
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+    rerender(<BatteryGauge level={0} rangeDisplay={0} distanceUnit="km" />)
+    expect(screen.getByText('0%')).toBeInTheDocument()
+    expect(screen.getByText('0 km')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Battery 0%; range 0 km' })).toBeInTheDocument()
   })
 })
 

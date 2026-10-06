@@ -15,15 +15,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Braces, Columns3, Copy, Database, LayoutDashboard, ListChecks, Table2, Trash2,
+  Braces, Columns3, Database, LayoutDashboard, ListChecks, Table2, Trash2,
 } from 'lucide-react';
 
 import {
   AINLGrafanaPanel,
   type GrafanaPanelDraft,
 } from '@/components/ai/AINLGrafanaPanel';
-import { PageContainer } from '@/components/layout';
-import { Button, Code, GlassPanel, PanelTitle, Text, Textarea } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { Button, Code, CopyButton, GlassPanel, PanelTitle, Text, Textarea } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -222,18 +222,7 @@ export default function GrafanaPanelPage() {
     setStatus(null);
   }, []);
 
-  const handleCopy = useCallback(async () => {
-    const trimmed = panelJson.trim();
-    if (!trimmed) {
-      setStatus({
-        variant: 'warning',
-        message: t(
-          'powerGrafana.editor.copyEmpty',
-          'Type or paste a Grafana panel JSON envelope above before copying.',
-        ),
-      });
-      return;
-    }
+  const handleCopyError = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
       setStatus({
         variant: 'warning',
@@ -244,25 +233,24 @@ export default function GrafanaPanelPage() {
       });
       return;
     }
-    try {
-      await navigator.clipboard.writeText(trimmed);
-      setStatus({
-        variant: 'success',
-        message: t(
-          'powerGrafana.editor.copySuccess',
-          'Copied. Paste the JSON into your Grafana dashboard editor (add panel → edit JSON).',
-        ),
-      });
-    } catch {
-      setStatus({
-        variant: 'danger',
-        message: t(
-          'powerGrafana.editor.copyFailed',
-          'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
-        ),
-      });
-    }
-  }, [panelJson, t]);
+    setStatus({
+      variant: 'danger',
+      message: t(
+        'powerGrafana.editor.copyFailed',
+        'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
+      ),
+    });
+  }, [t]);
+
+  const handleCopied = useCallback(() => {
+    setStatus({
+      variant: 'success',
+      message: t(
+        'powerGrafana.editor.copySuccess',
+        'Copied. Paste the JSON into your Grafana dashboard editor (add panel → edit JSON).',
+      ),
+    });
+  }, [t]);
 
   const sortedPanelTypes = useMemo(
     () => [...CURATED_PANEL_TYPES].sort((a, b) => a.name.localeCompare(b.name)),
@@ -280,7 +268,7 @@ export default function GrafanaPanelPage() {
   const canCopy = panelJson.trim().length > 0;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('powerGrafana.title', 'Grafana panel builder')}
       subtitle={t(
         'powerGrafana.subtitle',
@@ -337,7 +325,7 @@ export default function GrafanaPanelPage() {
               <div className="space-y-4">
                 <Textarea
                   value={panelJson}
-                  onChange={(e) => setPanelJson(e.target.value)}
+                  onChange={(e) => { setPanelJson(e.target.value); setStatus(null); }}
                   placeholder={t(
                     'powerGrafana.editor.placeholder',
                     '{\n  "title": "Drives per day",\n  "type": "timeseries",\n  "datasource": { "type": "postgres", "uid": "tesla-postgres" },\n  "targets": [],\n  "grid_pos": { "x": 0, "y": 0, "w": 12, "h": 8 }\n}',
@@ -348,17 +336,18 @@ export default function GrafanaPanelPage() {
                   className="font-mono"
                 />
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
+                  <CopyButton
+                    text={panelJson.trim()}
                     variant="primary"
-                    onClick={handleCopy}
+                    size="md"
+                    onCopy={handleCopied}
+                    onCopyError={handleCopyError}
                     disabled={!canCopy}
-                    aria-disabled={!canCopy ? 'true' : 'false'}
-                    icon={<Copy className="h-4 w-4" aria-hidden="true" />}
-                  >
-                    {t('powerGrafana.editor.copy', 'Copy to clipboard')}
-                  </Button>
+                    label={t('powerGrafana.editor.copy', 'Copy to clipboard')}
+                  />
                   <Button
                     variant="secondary"
+                    wrapLabel
                     onClick={handleClear}
                     disabled={!canCopy}
                     icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
@@ -520,7 +509,7 @@ export default function GrafanaPanelPage() {
                 message={t('powerGrafana.tables.empty', 'No tables available.')}
               />
             ) : (
-              <ul className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]">
+              <ul className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
                 {sortedTables.map((table) => (
                   <li
                     key={table.name}
@@ -555,6 +544,6 @@ export default function GrafanaPanelPage() {
           </GlassPanel>
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

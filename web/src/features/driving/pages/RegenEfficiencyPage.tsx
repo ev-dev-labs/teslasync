@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives, useRegenEfficiency } from '@/api/hooks/useDriving';
 
-import { CardGrid, PageLayout } from '@/components/layout/layout-reference';
+import { CardGrid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';

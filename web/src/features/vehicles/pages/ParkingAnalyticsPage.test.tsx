@@ -84,7 +84,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -226,7 +226,7 @@ describe('ParkingAnalyticsPage', () => {
 
   it.each([
     ['loading', query({ isLoading: true })],
-    ['error', query({ isError: true, error: new Error('unavailable') })],
+    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
   ])('threads the %s state to every mounted section', (expected, result) => {
     useDrivesMock.mockReturnValue(result);
     render(<ParkingAnalyticsPage />);
@@ -270,5 +270,13 @@ describe('ParkingAnalyticsPage', () => {
       'Parking analytics',
     );
     expect(screen.queryByTestId('parking-duration')).not.toBeInTheDocument();
+  });
+
+  it('keeps every section available on a failed cached refresh without changing range bounds', () => {
+    useDrivesMock.mockReturnValue(query({ data: [], isError: true, error: new Error('refresh failed') }));
+    render(<ParkingAnalyticsPage />);
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(useDrivesMock).toHaveBeenCalledWith('42', { start: '2026-07-01', end: '2026-08-07', limit: 1_000 });
   });
 });

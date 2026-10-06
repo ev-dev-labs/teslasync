@@ -21,9 +21,10 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
-import { GlassPanel, Badge, DataTable, Pagination, SectionTitle, type Column } from '@/components/ui';
+import { CodeBlock, CopyButton, GlassPanel, Badge, DataTable, Pagination, SectionTitle, Caption, Text, type Column } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { SourceContent } from '@/components/layout';
 import { CHART_COLORS } from '@/lib/colors';
 
 import { cn } from '@/lib/cn';
@@ -50,6 +51,9 @@ export interface SignalHistoryTableProps {
   totalRows: number;
   onPageChange: (page: number) => void;
   loading?: boolean;
+  /** Initial failure only; retained rows must remain visible after refresh errors. */
+  error?: Error | null;
+  onRetry?: () => void;
   /** Override panel title. */
   title?: string;
   /** Show the "Page X · N total" badge in the header. Default true. */
@@ -67,6 +71,8 @@ export function SignalHistoryTable({
   totalRows,
   onPageChange,
   loading = false,
+  error,
+  onRetry,
   title,
   showHeaderMeta = true,
   expandable = true,
@@ -103,9 +109,13 @@ export function SignalHistoryTable({
 
   const renderExpanded = useCallback(
     (r: SignalLogEntry) => (
-      <pre className="whitespace-pre-wrap break-all text-2xs font-mono text-[var(--text-secondary)]">
-        {JSON.stringify(r, null, 2)}
-      </pre>
+      <CodeBlock
+        text={JSON.stringify(r, null, 2)}
+        language="json"
+        heading={<Text mono variant="caption">{r.signal}</Text>}
+        wrap
+        action={<CopyButton text={JSON.stringify(r, null, 2)} withToast />}
+      />
     ),
     [],
   );
@@ -162,18 +172,26 @@ export function SignalHistoryTable({
   ], [safeSelected, t, formatDateTime]);
 
   return (
-    <FadeIn>
-      <GlassPanel role="region" aria-labelledby={headingId} className={cn('p-4 sm:p-5', className)}>
-        <div className="flex items-center gap-2 mb-3">
+    <FadeIn className="min-w-0 max-w-full">
+      <GlassPanel role="region" aria-labelledby={headingId} className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+        <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
           <Activity aria-hidden="true" className="h-4 w-4 text-cyan-300" />
-          <SectionTitle id={headingId}>{heading}</SectionTitle>
+          <SectionTitle id={headingId} className="min-w-0 break-words">{heading}</SectionTitle>
           {showHeaderMeta ? (
-            <span className="ml-auto text-2xs text-[var(--text-muted)]">
-              {t('signalHistory.page', 'Page')} {page} · {fmtInt(totalRows)} {t('total')}
-            </span>
+            <Caption className="ms-auto">
+              {t('signalHistory.page', 'Page')} {page} · {error ? '—' : fmtInt(totalRows)} {t('total')}
+            </Caption>
           ) : null}
         </div>
 
+        <SourceContent
+          state={error ? 'error' : 'ready'}
+          label={heading}
+          error={error}
+          errorMessage={t('error.loadFailed', 'Failed to load data')}
+          emptyMessage={t('signalHistory.emptyTitle', 'No signal samples')}
+          errorRecovery={{ onRetry }}
+        >
         {loading ? (
           <div role="status" aria-label={t('signalHistory.loading', 'Loading signal data')} className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-8" />)}
@@ -216,6 +234,7 @@ export function SignalHistoryTable({
             )}
           />
         )}
+        </SourceContent>
       </GlassPanel>
     </FadeIn>
   );

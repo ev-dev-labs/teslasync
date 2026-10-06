@@ -7,7 +7,7 @@ import {
 } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -88,14 +88,12 @@ export default function CausalExperimentationPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.causal.title', 'Causal experimentation')}
       subtitle={t(
         'advancedIntelligence.causal.subtitle',
         'Compare explicit baseline and treatment windows with confounder coverage disclosure.',
       )}
-      loading={vehicleId != null && query.isLoading}
-      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="warning"
@@ -109,6 +107,7 @@ export default function CausalExperimentationPage() {
 
       <FadeIn>
         <InsightPanel
+          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.causal.history.title', 'Experiment history')}
           empty={experiments.length === 0}
           emptyMessage={vehicleId == null
@@ -267,6 +266,6 @@ export default function CausalExperimentationPage() {
         onConfirm={confirmExperiment}
         onCancel={() => setConfirmOpen(false)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -16,6 +16,16 @@ export interface MetricPreferences {
   /** Existing symbol semantics are preserved. Never guess an ISO code from "$". */
   readonly currency: { readonly kind: 'symbol' | 'iso'; readonly value: string };
 }
+/** Explicit caller display contracts, never a change to saved preferences or raw inputs. */
+export interface MetricDisplayOptions {
+  readonly precision?: number;
+  readonly units?: Partial<UnitPref>;
+  /** Retain an existing fmtCompact contract, including its existing locale/threshold behavior. */
+  readonly notation?: 'compact';
+  readonly compactThreshold?: number;
+  /** Retain the existing rounded-minute presentation; input remains canonical seconds. */
+  readonly durationStyle?: 'roundedMinutes';
+}
 export interface FormattedMetric {
   readonly value: string;
   readonly unit: string;

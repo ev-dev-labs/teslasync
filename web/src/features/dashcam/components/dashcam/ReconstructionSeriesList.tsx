@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, Text } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import type { AlignedSignalSeries } from '../../lib/timelineAlignment';
 import { COVERAGE_BADGE_VARIANT, COVERAGE_LABELS } from './constants';
@@ -28,25 +28,25 @@ export function ReconstructionSeriesList({ series }: ReconstructionSeriesListPro
         return (
           <li key={s.signal} className="rounded-lg border border-[var(--border-subtle)] p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-sm font-medium text-[var(--text-primary)]">{s.signal}</span>
-              <div className="flex items-center gap-2">
+              <Text variant="label" className="break-words">{s.signal}</Text>
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge size="sm" variant={COVERAGE_BADGE_VARIANT[s.coverage]}>
                   {t(`dashcam.reconstruction.coverage.${s.coverage}`, COVERAGE_LABELS[s.coverage])}
                 </Badge>
-                <span className="text-xs text-[var(--text-muted)]">
+                <Caption>
                   {t('dashcam.reconstruction.pointCount', '{{count}} sample(s)', { count: s.points.length })}
-                </span>
+                </Caption>
               </div>
             </div>
             {first && last && (
-              <p className="mt-1 text-xs text-[var(--text-muted)]">
+              <Text as="p" variant="caption" className="mt-1 break-words">
                 {t('dashcam.reconstruction.firstLast', 'First: {{first}} at t={{firstAt}}s · last: {{last}} at t={{lastAt}}s', {
                   first: String(first.value ?? '—'),
                   firstAt: fmtNumber(first.atSeconds),
                   last: String(last.value ?? '—'),
                   lastAt: fmtNumber(last.atSeconds),
                 })}
-              </p>
+              </Text>
             )}
             {s.gapNotes.map((note, i) => (
               <InlineCallout key={i} variant="warning" className="mt-2">

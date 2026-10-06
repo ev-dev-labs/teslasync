@@ -28,8 +28,8 @@ vi.mock('@/hooks/useRangeState', () => ({
 vi.mock('@/hooks/useUrlState', () => ({ useUrlString: () => [source.driveParam, source.setDrive] }));
 vi.mock('@/hooks/useSignalQueryInvalidation', () => ({ useSignalQueryInvalidation: source.signalCalls }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
-vi.mock('@/components/layout/layout-reference', async importOriginal => {
-  const actual = await importOriginal<typeof import('@/components/layout/layout-reference')>();
+vi.mock('@/components/layout', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/layout')>();
   return { ...actual, PageLayout: ({ title, children }: ComponentProps<typeof actual.PageLayout>) =>
     <section aria-label={title}>{children}</section> };
 });
@@ -116,7 +116,13 @@ describe('Driving Dynamics full source orchestration', () => {
     expect(screen.getByRole('heading', { name: 'Inside this ride' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Vehicle now' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Beyond this ride' })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/vehicle|date range/i)).not.toBeInTheDocument();
+    // Target workspace controls, not the named Vehicle now / date-range
+    // sections that must remain visible. Keep the independent drive selector.
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Analysis window:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'View settings' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Start date')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('End date')).not.toBeInTheDocument();
   });
   it('keeps selected identity, all raw drive facts and the URL callback', () => {
     source.driveParam = '82';

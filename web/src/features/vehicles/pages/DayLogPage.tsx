@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { useDayLog } from '@/api/hooks/useDayLog';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
@@ -66,7 +67,7 @@ export default function DayLogPage() {
   const fatalError = state.fatalError;
 
   return (
-    <PageContainer
+    <PageLayout
       actionLayout="scope-first"
       title={title}
       subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
@@ -79,6 +80,7 @@ export default function DayLogPage() {
       copyLink
       contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
     >
+      <StaleRefreshWarning state={state} label={title} />
       <FadeIn delay={0.05}>
         <DayLogSummary summary={data?.summary ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
       </FadeIn>
@@ -98,6 +100,6 @@ export default function DayLogPage() {
       <FadeIn delay={0.15}>
         <DayLogSources sources={data?.sources ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

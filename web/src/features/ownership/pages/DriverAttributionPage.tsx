@@ -26,7 +26,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -441,14 +441,13 @@ export default function DriverAttributionPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.driver.title', 'Driver fingerprinting & attribution')}
       subtitle={t(
         'ownership.driver.subtitle',
         'Group drives by how they were driven — speed discipline, power draw, regen use and departure hour — then attach a name once and let every future drive inherit it.',
       )}
-      loading={reportQuery.isLoading}
-      error={reportQuery.error as Error | null}
+      query={[reportQuery, profilesQuery]}
       contextActions={
         <div className="flex items-center gap-2">
           <Select
@@ -488,7 +487,8 @@ export default function DriverAttributionPage() {
       </FadeIn>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.driver.summary.title', 'Separation quality')}>
+        <OwnershipPanel title={t('ownership.driver.summary.title', 'Separation quality')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <StatGrid
             stats={[
               {
@@ -540,6 +540,8 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.driver.chart.title', 'Cluster mix and driving intensity')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           empty={shareData.length === 0}
           emptyMessage={t(
             'ownership.driver.chart.empty',
@@ -605,6 +607,8 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.driver.clusters.title', 'Cluster characteristics')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.driver.clusters.subtitle',
             'Cohesion is the mean feature distance inside the cluster — lower is tighter.',
@@ -625,6 +629,9 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.driver.profiles.title', 'Named drivers')}
+          source={profilesQuery}
+          sourceEnabled={vehicleId != null}
+          editing={profileOpen}
           description={t(
             'ownership.driver.profiles.subtitle',
             'Name a cluster once by labelling any drive it contains; the whole cluster inherits the name.',
@@ -697,6 +704,9 @@ export default function DriverAttributionPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.driver.fingerprints.title', 'Drive fingerprints')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
+          editing={assignOpen}
           description={t(
             'ownership.driver.fingerprints.subtitle',
             'Every drive scored against each cluster centroid. Labelling one drive re-anchors the whole cluster.',
@@ -773,7 +783,8 @@ export default function DriverAttributionPage() {
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <OwnershipPanel title={t('ownership.driver.verdict.title', 'Interpretation')}>
+        <OwnershipPanel title={t('ownership.driver.verdict.title', 'Interpretation')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <div className="flex flex-wrap items-center gap-3">
             <VerdictBadge value={report?.separation_verdict ?? 'unknown'} />
             <Text as="p" variant="bodySm">
@@ -798,6 +809,8 @@ export default function DriverAttributionPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -813,6 +826,6 @@ export default function DriverAttributionPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

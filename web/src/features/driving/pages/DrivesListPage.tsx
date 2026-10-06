@@ -1542,6 +1542,7 @@ export default function DrivesListPage() {
         {!desktopEvidence && <FadeIn>
           <PillFilterBar
             items={filterPills}
+            semanticMode="filters"
             activeKey={activeFilterKey}
             onChange={(key) => {
               if (key === 'combined') return;
@@ -1553,7 +1554,7 @@ export default function DrivesListPage() {
             }}
             ariaLabel={`${t('drives.collections.aria', 'Filter drives by collection')} · ${t('drives.fsdFilter.aria', 'Filter drives by FSD evidence')}`}
             testId="drives-filters"
-            className="py-1 [&_[role=tab]]:h-11 sm:[&_[role=tab]]:h-9 sm:[&_[role=tab]]:px-2"
+            className="py-1 [&_[aria-pressed]]:h-11 sm:[&_[aria-pressed]]:h-9 sm:[&_[aria-pressed]]:px-2"
           />
         </FadeIn>}
 
@@ -1650,6 +1651,7 @@ export default function DrivesListPage() {
             {bulkSelected.size > 0 && <BulkActionsToolbar
               selectedIds={Array.from(bulkSelected)}
               total={filteredDrives.length}
+              selectionScope="filtered"
               onClear={clearBulk}
               actions={bulkDriveActions}
               itemNoun={{

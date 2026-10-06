@@ -23,17 +23,18 @@ import {
   ArrowLeft, AlertCircle, CheckCircle2, Clock, MessageSquare,
   Activity, Layers, Radio, CalendarClock,
 } from 'lucide-react'
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import {
   GlassPanel, Button, Badge, ConfirmDialog, PanelTitle, Text, Label,
 } from '@/components/ui'
 import { MetricCard, KVList } from '@/components/data-display'
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useIncident, usePatchIncident } from '@/api/hooks/useIncidents'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDataState } from '@/hooks/useDataState'
 import { AIIncidentTimelineSummarizer } from '@/components/ai/AIIncidentTimelineSummarizer'
 import {
   IncidentTimelineList, IncidentUpdateForm, IncidentSeverityChip,
@@ -54,7 +55,9 @@ export default function IncidentTimelinePage() {
   }, [id])
 
   const incidentQuery = useIncident(numericId)
-  const { data: incident, isLoading, error, refetch } = incidentQuery
+  const { data: incident, isLoading, refetch } = incidentQuery
+  const incidentState = useDataState(incidentQuery)
+  const error = incidentState.fatalError
   const patch = usePatchIncident()
 
   const [confirmResolve, setConfirmResolve] = useState(false)
@@ -73,9 +76,9 @@ export default function IncidentTimelinePage() {
     </Button>
   )
 
-  if (isLoading) {
+  if (isLoading && !incident) {
     return (
-      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.loading', 'Loading incident…')} secondaryActions={backAction}>
+      <PageLayout title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.loading', 'Loading incident…')} secondaryActions={backAction}>
         <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} height={84} />
@@ -85,13 +88,13 @@ export default function IncidentTimelinePage() {
           <div className="xl:col-span-2"><Skeleton height={240} /></div>
           <Skeleton height={240} />
         </div>
-      </PageContainer>
+      </PageLayout>
     )
   }
 
   if (error || !incident) {
     return (
-      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.notFound', 'Not found')} secondaryActions={backAction}>
+      <PageLayout title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.notFound', 'Not found')} secondaryActions={backAction}>
         <FadeIn>
           <GlassPanel className="p-4 sm:p-5">
             {error ? (
@@ -111,7 +114,7 @@ export default function IncidentTimelinePage() {
             )}
           </GlassPanel>
         </FadeIn>
-      </PageContainer>
+      </PageLayout>
     )
   }
 
@@ -141,12 +144,13 @@ export default function IncidentTimelinePage() {
   ]
 
   return (
-    <PageContainer
+    <PageLayout
       title={incident.title}
       subtitle={`${t('incidentTimeline.idPrefix', 'Incident')} #${incident.id}`}
       secondaryActions={backAction}
       query={incidentQuery}
     >
+      <StaleRefreshWarning state={incidentState} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section aria-label={t('incidentTimeline.kpis', 'Incident metrics')} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
@@ -254,6 +258,6 @@ export default function IncidentTimelinePage() {
         cancelLabel={t('incidentTimeline.cancel', 'Cancel')}
         loading={patch.isPending}
       />
-    </PageContainer>
+    </PageLayout>
   )
 }

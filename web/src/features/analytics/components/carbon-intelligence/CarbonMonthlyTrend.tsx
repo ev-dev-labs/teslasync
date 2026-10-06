@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   ComposedChart,
@@ -16,6 +15,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -58,7 +58,8 @@ export function CarbonMonthlyTrend({
         'Selected-period monthly carbon and energy trend',
       )}
     >
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t(
           'carbon.monthly.title',
           'Selected-period monthly CO₂ and energy',
@@ -183,7 +184,7 @@ export function CarbonMonthlyTrend({
             )}
           </CarbonSectionBody>
         )}
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

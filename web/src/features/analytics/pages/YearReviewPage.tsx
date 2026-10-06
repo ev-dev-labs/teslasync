@@ -3,9 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout/layout-reference';
+import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { StatStrip, type StatMetric } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AIYearReviewNarration } from '@/components/ai/AIYearReviewNarration';

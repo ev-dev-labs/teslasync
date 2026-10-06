@@ -109,7 +109,8 @@ vi.mock('@/api/hooks/useLocations', () => ({
 }));
 
 /* Header action wiring (store/query-backed) is out of scope. */
-vi.mock('@/components/forms', () => ({
+vi.mock('@/components/forms', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/forms')>(),
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
 
@@ -246,6 +247,18 @@ function renderPage() {
 
 const kpi = () => within(screen.getByRole('region', { name: 'Guard status overview' }));
 
+function section(name: string) {
+  const element = document.querySelector(`[data-guard-section="${name}"]`);
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing guard ${name} section`);
+  return within(element);
+}
+
+function metric(label: string) {
+  const element = kpi().getByText(label, { selector: '[data-stat-label]' }).closest('[data-stat]');
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing guard ${label} metric`);
+  return element;
+}
+
 beforeEach(() => {
   H.vehicle.vehicleId = 42;
   H.vehicle.vehicle = { display_name: 'Model Y Test' };
@@ -322,8 +335,10 @@ describe('GuardModePage — status surfaces', () => {
     install({ state: makeQuery({ data: unverified }) });
     renderPage();
 
-    expect(screen.getByText('Lock state unavailable')).toBeInTheDocument();
-    expect(screen.getByText('Sentry status unavailable')).toBeInTheDocument();
+    expect(section('status').getByText('Lock state unavailable')).toBeInTheDocument();
+    expect(section('status').getByText('Sentry status unavailable')).toBeInTheDocument();
+    expect(metric('Lock state')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Sentry mode')).toHaveAttribute('data-state', 'missing');
     expect(screen.queryByText('Vehicle unlocked')).not.toBeInTheDocument();
     expect(screen.queryByText('Sentry mode off')).not.toBeInTheDocument();
     expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
@@ -334,10 +349,19 @@ describe('GuardModePage — status surfaces', () => {
     install({ config: makeQuery<GuardConfig>({ isLoading: true, data: undefined }) });
     renderPage();
 
-    // The <section aria-label="Guard status overview"> is replaced by a
-    // skeleton grid while loading, so the metric labels are absent.
-    expect(screen.queryByRole('region', { name: 'Guard status overview' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Guard state')).not.toBeInTheDocument();
+    // Shared stats retain their labelled shell. A loading policy cannot erase
+    // the independently resolved live readings or event counts.
+    expect(screen.getByRole('region', { name: 'Guard status overview' })).toBeInTheDocument();
+    expect(metric('Guard state')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Guard state')).toHaveTextContent('Updating…');
+    expect(metric('Guard state')).not.toHaveTextContent('Armed');
+    expect(metric('Sensitivity')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Lock state')).toHaveTextContent('Locked');
+    expect(metric('Total events')).toHaveTextContent('0');
+    expect(document.querySelector('[data-guard-section="settings"] .animate-pulse')).toBeInTheDocument();
+    expect(section('settings').getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
     // The page shell (title) still renders.
     expect(screen.getByRole('heading', { level: 1, name: 'Guard mode' })).toBeInTheDocument();
   });
@@ -448,7 +472,11 @@ describe('GuardModePage — emergency panic', () => {
     expect(screen.getByRole('button', { name: 'Save settings' })).toBeDisabled();
 
     // Guard toggle is a no-op with no vehicle (guarded by activeVehicleId <= 0).
-    fireEvent.click(screen.getByRole('switch', { name: 'Guard mode' }));
+    const guardSwitch = screen.getByRole('switch', { name: 'Guard mode' });
+    expect(guardSwitch).toBeDisabled();
+    expect(section('arming').getByText('Saved policy unavailable')).toBeInTheDocument();
+    expect(section('arming').getByText('Source unavailable; no security conclusion can be drawn.')).toBeInTheDocument();
+    fireEvent.click(guardSwitch);
     expect(H.setConfig.mutate).not.toHaveBeenCalled();
   });
 });
@@ -494,8 +522,11 @@ describe('GuardModePage — event timeline', () => {
     install({ events: errored });
     const { rerender } = renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(section('events').getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(section('events').getByRole('button', { name: 'Retry' }));
     expect(errored.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('guard-map')).toBeInTheDocument();
+    expect(metric('Lock state')).toHaveTextContent('Locked');
 
     // Now flip to an empty (but successful) feed → honest empty state, no error.
     install({ events: makeQuery<GuardEvent[]>({ data: [] }) });
@@ -528,7 +559,12 @@ describe('GuardModePage — live map', () => {
 
   it('shows the no-location empty state, and the map error branch offers Retry', () => {
     // (a) location absent → empty state.
-    install({ state: makeQuery({ data: makeState({ latitude: 0, longitude: 0 }) }) });
+    // A fresh *verified* 0,0 is a valid coordinate, not missing data. Here the
+    // default zero coordinates were never reported by the vehicle.
+    install({ state: makeQuery({ data: {
+      ...makeState({ latitude: 0, longitude: 0 }),
+      verifiedFields: ['is_locked', 'sentry_mode'],
+    } }) });
     const { unmount } = renderPage();
     expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
@@ -538,7 +574,8 @@ describe('GuardModePage — live map', () => {
     const errored = makeQuery({ isError: true, error: new Error('state boom'), data: undefined });
     install({ state: errored, events: makeQuery<GuardEvent[]>({ data: [] }) });
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(section('map').getByRole('button', { name: 'Retry' }));
     expect(errored.refetch).toHaveBeenCalledTimes(1);
+    expect(section('events').getByText('No guard events yet')).toBeInTheDocument();
   });
 });

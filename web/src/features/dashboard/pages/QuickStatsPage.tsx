@@ -6,10 +6,11 @@ import {
   RefreshCw, LayoutDashboard, BarChart3,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Button, Caption } from '@/components/ui';
+import { PageLayout, Section } from '@/components/layout';
+import { GlassPanel, Button, Caption } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StatGridSkeleton, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { VehicleHeroCard } from '@/components/vehicles';
 import { FleetComparisonPanel } from '@/features/dashboard/components/FleetComparisonPanel';
@@ -21,6 +22,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { knownNumber } from '@/api/dataState';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -29,6 +31,11 @@ const METERS_PER_KM = 1000;
 const KM_PER_MILE = 1.609344;
 
 const ANALYTICS_WINDOW_DAYS = 30;
+
+function formatKnown(value: unknown, formatter: (value: number) => string): string {
+  const reading = knownNumber(value);
+  return reading == null ? '—' : formatter(reading);
+}
 
 export default function QuickStatsPage() {
   const { fmtInt, fmtNumber } = useNumberFormatting();
@@ -49,19 +56,18 @@ export default function QuickStatsPage() {
   const {
     data: analytics,
     isLoading: analyticsLoading,
-    error: analyticsError,
     refetch: refetchAnalytics,
   } = analyticsQuery;
+  const analyticsState = useDataState(analyticsQuery, { provenance: 'historical' });
 
-  // Spotlight vehicle: URL > sticky store > first vehicle. The picker only
-  // re-scopes the spotlight — the KPI band stays fleet-wide.
-  const { vehicleId, vehicle, vehicles, setVehicleId } = useSelectedVehicle();
+  // Workspace selection scopes the spotlight; the KPI band stays fleet-wide.
+  const { vehicleId, vehicle } = useSelectedVehicle();
   const vehiclesQuery = useVehicles();
   const {
     isLoading: vehiclesLoading,
-    error: vehiclesError,
     refetch: refetchVehicles,
   } = vehiclesQuery;
+  const vehiclesState = useDataState(vehiclesQuery);
   const stateQuery = useVehicleState(vehicleId ?? 0);
   const { data: stateData, refetch: refetchState } = stateQuery;
   const dataSources = useMemo(
@@ -86,28 +92,8 @@ export default function QuickStatsPage() {
     [analyticsQuery, stateQuery, t, vehicleId, vehiclesQuery],
   );
 
-  const onPickVehicle = (id: string) => {
-    const n = Number(id);
-    if (Number.isFinite(n) && n > 0) setVehicleId(n);
-  };
-
-  const vehicleOptions = vehicles.map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
-
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      {vehicles.length > 1 && (
-        <Select
-          options={vehicleOptions}
-          value={vehicleId != null ? String(vehicleId) : ''}
-          onChange={(e) => onPickVehicle(e.target.value)}
-          placeholder={t('quickStats.selectVehicle', 'Select vehicle')}
-          aria-label={t('quickStats.selectVehicle', 'Select vehicle')}
-          size="sm"
-        />
-      )}
       <Button
         variant="ghost"
         size="sm"
@@ -125,20 +111,22 @@ export default function QuickStatsPage() {
 
   return (
     <main>
-    <PageContainer
+    <PageLayout
       title={t('quickStats.title', 'Quick stats')}
       subtitle={t('quickStats.subtitle', 'Fleet snapshot · last 30 days')}
       actions={actions}
       query={[analyticsQuery, vehiclesQuery, stateQuery]}
       dataSources={dataSources}
     >
+      <StaleRefreshWarning state={analyticsState} label={t('dataSources.labels.fleetAnalytics', 'Fleet analytics')} />
+      <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
       {/* 1 — Fleet KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section aria-label={t('quickStats.kpis', 'Fleet metrics')}>
-          {analyticsLoading ? (
+        <Section id="quick-stats-metrics" title={t('quickStats.kpis', 'Fleet metrics')}>
+          {analyticsLoading && !analytics ? (
             <StatGridSkeleton cards={8} />
-          ) : analyticsError ? (
-            <QueryError error={analyticsError} onRetry={refetchAnalytics} />
+          ) : analyticsState.fatalError ? (
+            <QueryError error={analyticsState.fatalError} onRetry={refetchAnalytics} />
           ) : !analytics ? (
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState
@@ -151,55 +139,55 @@ export default function QuickStatsPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
               <MetricCard
                 label={t('quickStats.distanceDriven', 'Distance driven')}
-                value={`${fmtNumber(fromKm(analytics.totalDistanceKm ?? 0))} ${distanceUnit}`}
+                value={formatKnown(analytics.totalDistanceKm, value => `${fmtNumber(fromKm(value))} ${distanceUnit}`)}
                 icon={<MapPin className="h-4 w-4" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('quickStats.drives', 'Drives')}
-                value={fmtInt(analytics.totalDrives ?? 0)}
+                value={formatKnown(analytics.totalDrives, value => fmtInt(value))}
                 icon={<Route className="h-4 w-4" />}
                 color="green"
               />
               <MetricCard
                 label={t('quickStats.chargingSessions', 'Charging sessions')}
-                value={fmtInt(analytics.totalChargingSessions ?? 0)}
+                value={formatKnown(analytics.totalChargingSessions, value => fmtInt(value))}
                 icon={<BatteryCharging className="h-4 w-4" />}
                 color="blue"
               />
               <MetricCard
                 label={t('quickStats.energyUsed', 'Energy used')}
-                value={formatEnergy((analytics.totalEnergyKwh ?? 0) * 1000)}
+                value={formatKnown(analytics.totalEnergyKwh, value => formatEnergy(value * 1000))}
                 icon={<Zap className="h-4 w-4" />}
                 color="amber"
               />
               <MetricCard
                 label={t('quickStats.totalCost', 'Total cost')}
-                value={formatCurrency(analytics.totalCost ?? 0)}
+                value={formatKnown(analytics.totalCost, value => formatCurrency(value))}
                 icon={<DollarSign className="h-4 w-4" />}
                 color="purple"
               />
               <MetricCard
                 label={t('quickStats.avgEfficiency', 'Avg efficiency')}
-                value={`${fmtNumber(whPerKmToDisplay(analytics.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`}
+                value={formatKnown(analytics.avgEfficiencyWhKm, value => `${fmtNumber(whPerKmToDisplay(value))} ${efficiencyUnit}`)}
                 icon={<Gauge className="h-4 w-4" />}
                 color="green"
               />
               <MetricCard
                 label={t('quickStats.co2Saved', 'CO₂ saved')}
-                value={`${fmtNumber(analytics.co2SavedKg ?? 0)} kg`}
+                value={formatKnown(analytics.co2SavedKg, value => `${fmtNumber(value)} kg`)}
                 icon={<Leaf className="h-4 w-4" />}
                 color="green"
               />
               <MetricCard
                 label={t('quickStats.fleetVehicles', 'Fleet vehicles')}
-                value={fmtInt(analytics.totalVehicles ?? 0)}
+                value={formatKnown(analytics.totalVehicles, value => fmtInt(value))}
                 icon={<Car className="h-4 w-4" />}
                 color="cyan"
               />
             </div>
           )}
-        </section>
+        </Section>
       </FadeIn>
 
       {/* 2 — Spotlight bento: hero vehicle (spans wide) + fleet comparison */}
@@ -209,13 +197,13 @@ export default function QuickStatsPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
           <div className="xl:col-span-2">
-            {vehiclesLoading ? (
+            {vehiclesLoading && !vehicle ? (
               <GlassPanel className="p-4 sm:p-5">
                 <Skeleton height={300} />
               </GlassPanel>
-            ) : vehiclesError ? (
+            ) : vehiclesState.fatalError ? (
               <GlassPanel className="p-4 sm:p-5">
-                <QueryError error={vehiclesError} onRetry={refetchVehicles} />
+                <QueryError error={vehiclesState.fatalError} onRetry={refetchVehicles} />
               </GlassPanel>
             ) : !vehicle ? (
               <GlassPanel className="p-4 sm:p-5">
@@ -241,8 +229,8 @@ export default function QuickStatsPage() {
 
           <FleetComparisonPanel
             entries={analytics?.vehicleComparison ?? []}
-            loading={analyticsLoading}
-            error={analyticsError}
+            loading={analyticsLoading && !analytics}
+            error={analyticsState.fatalError}
             onRetry={refetchAnalytics}
             className="xl:col-span-1"
           />
@@ -285,7 +273,7 @@ export default function QuickStatsPage() {
           </div>
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
     </main>
   );
 }

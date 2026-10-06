@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CardGrid, PageLayout, Section, type CardGridItem } from '@/components/layout/layout-reference';
+import { CardGrid, PageLayout, Section, type CardGridItem } from '@/components/layout';
 import { Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDrives } from '@/api/hooks/useDriving';

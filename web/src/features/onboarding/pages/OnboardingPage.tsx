@@ -11,10 +11,12 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { PersonaSelect } from '@/components/forms';
 import { GlassPanel, Button, IconBox, SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
+import { DataStateNotice } from '@/components/feedback';
+import { deriveDataState } from '@/api/dataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
@@ -49,7 +51,9 @@ export default function OnboardingPage() {
   const { t } = useTranslation();
   usePageTitle(t('onboarding.pageTitle', 'Welcome to TeslaSync'));
   const navigate = useNavigate();
-  const { data, isLoading, isError, error, refetch, isFetching } = useOnboardingStatus();
+  const onboardingQuery = useOnboardingStatus();
+  const { data, isLoading, refetch, isFetching } = onboardingQuery;
+  const onboardingState = deriveDataState(onboardingQuery);
   const { skip } = useOnboardingSkip();
   const { preferences, updatePreferences } = useProductPreferences();
 
@@ -116,6 +120,7 @@ export default function OnboardingPage() {
       return (
         <Button
           variant="primary"
+          wrapLabel
           size="sm"
           onClick={() => navigate(step.cta!.to!)}
           icon={<ArrowRight className="h-4 w-4" />}
@@ -134,6 +139,7 @@ export default function OnboardingPage() {
         >
           <Button
             variant="outline"
+            wrapLabel
             size="sm"
             className="w-full sm:w-auto"
             icon={<BookOpen className="h-4 w-4" />}
@@ -149,6 +155,7 @@ export default function OnboardingPage() {
     return (
       <Button
         variant="outline"
+        wrapLabel
         size="sm"
         className="w-full sm:w-auto"
         onClick={step.cta.onClick}
@@ -165,7 +172,7 @@ export default function OnboardingPage() {
       data-testid="onboarding-scroll-container"
       className="h-screen h-dvh overflow-y-auto overscroll-y-contain bg-[var(--bg)] px-3 py-4 pb-safe [touch-action:pan-y] sm:px-5 sm:py-6 lg:px-8 lg:py-8"
     >
-      <PageContainer
+      <PageLayout
         title={t('onboarding.welcome', 'Welcome to TeslaSync')}
         subtitle={
           setupComplete
@@ -175,8 +182,9 @@ export default function OnboardingPage() {
               )
             : t('onboarding.subtitle', 'Three quick steps before your dashboard is ready.')
         }
-        className="mx-auto w-full max-w-[1600px] pb-8 sm:pb-10"
+        className="w-full min-w-0 pb-8 sm:pb-10"
       >
+        {onboardingState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
         {/* 1 — Setup-status KPI band (full-width responsive grid) */}
         <FadeIn>
           <OnboardingSetupStatusBand
@@ -186,7 +194,7 @@ export default function OnboardingPage() {
             setupComplete={setupComplete}
             isLoading={isLoading}
             hasData={Boolean(data)}
-            error={isError ? error : null}
+            error={onboardingState.fatalError}
             onRetry={() => void refetch()}
           />
         </FadeIn>
@@ -279,6 +287,7 @@ export default function OnboardingPage() {
               <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                 <Button
                   variant="ghost"
+                  wrapLabel
                   className="w-full sm:w-auto"
                   onClick={() => {
                     void refetch();
@@ -291,6 +300,7 @@ export default function OnboardingPage() {
                 {!isComplete && (
                   <Button
                     variant="outline"
+                    wrapLabel
                     className="w-full sm:w-auto"
                     onClick={() => {
                       skip();
@@ -308,6 +318,7 @@ export default function OnboardingPage() {
                 {isComplete && (
                   <Button
                     variant="primary"
+                    wrapLabel
                     className="w-full sm:w-auto"
                     onClick={() => navigate('/')}
                     icon={<ArrowRight className="h-4 w-4" />}
@@ -319,7 +330,7 @@ export default function OnboardingPage() {
             </div>
           </GlassPanel>
         </FadeIn>
-      </PageContainer>
+      </PageLayout>
     </main>
   );
 }

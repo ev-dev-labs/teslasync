@@ -65,7 +65,8 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const efficiencyPct = knownNumber(data?.sleep_efficiency_pct);
 
   const gauge = useMemo<GaugeHeroConfig>(() => ({
-    value: efficiencyPct ?? 0,
+    value: efficiencyPct,
+    preserveReadingAndScale: true,
     max: 100,
     label: isCompact ? '' : t('widget.sleepEfficiency.efficiency', 'Efficiency'),
     unit: '%',

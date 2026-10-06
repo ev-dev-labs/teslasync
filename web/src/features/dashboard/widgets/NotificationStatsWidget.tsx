@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Send, AlertTriangle, Radio, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { Badge, DataTable, type Column } from '@/components/ui';
+import { Badge, DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 
@@ -123,7 +123,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       header: t('widget.notificationStats.notificationTitle', 'Title'),
       className: 'max-w-[120px]',
       render: (log) => (
-        <span className="block truncate text-[var(--text-secondary)]">
+        <span className="block whitespace-normal break-words [overflow-wrap:anywhere] text-[var(--text-secondary)]">
           {log.title ?? '—'}
         </span>
       ),
@@ -133,7 +133,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       header: t('widget.notificationStats.notificationMessage', 'Message'),
       className: 'max-w-[100px]',
       render: (log) => (
-        <span className="block truncate text-[var(--text-secondary)]">
+        <span className="block whitespace-normal break-words [overflow-wrap:anywhere] text-[var(--text-secondary)]">
           {log.message ?? '—'}
         </span>
       ),
@@ -162,6 +162,18 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       ),
     },
   ], [t, formatLogTime]);
+
+  const logMobile = useMemo<MobileDataTablePresentation<NotificationLog>>(() => ({
+    variant: 'cards',
+    roles: { title: 'title', message: 'primary', status: 'badge', time: 'meta' },
+    displayValue: (log, key) => {
+      if (key === 'title') return log.title;
+      if (key === 'message') return log.message;
+      if (key === 'status') return log.status;
+      if (key === 'time') return formatLogTime(log.created_at);
+      return null;
+    },
+  }), [formatLogTime]);
 
   const handleRefresh = useCallback(() => {
     void statsRefetch();
@@ -255,6 +267,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
               tableId="dashboard:notification-stats-recent"
               columns={logColumns}
               mobileColumns={['title', 'status', 'time']}
+              mobilePresentation={logMobile}
               data={recentLogs}
               keyExtractor={(log) => log.id}
               compact

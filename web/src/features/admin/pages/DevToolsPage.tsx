@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next'
 import {
   Globe, Radio, Server, Wrench, BookOpen, RefreshCw, AlertCircle,
 } from 'lucide-react'
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { TabNav, Button } from '@/components/ui'
-import { AlertBanner } from '@/components/feedback'
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDataState } from '@/hooks/useDataState'
 import { useUrlEnum } from '@/hooks/useUrlState'
 import { useFleetTelemetryErrorVINs } from '@/api/hooks/useTelemetry'
 import { useVehicles } from '@/api/hooks/useVehicles'
@@ -43,23 +44,14 @@ export default function DevToolsPage() {
 
   const telemetryQuery = useFleetTelemetryErrorVINs()
   const vehiclesQuery = useVehicles()
+  const telemetryState = useDataState(telemetryQuery)
+  const vehiclesState = useDataState(vehiclesQuery)
 
   const errorVins = telemetryQuery.data ?? []
   const vehicles = vehiclesQuery.data ?? []
 
-  // KPI placeholders track the *initial* load only (`isLoading`) so a manual
-  // refresh doesn't blank the last-known counts. The refresh button, by
-  // contrast, must reflect *any* fetch in flight (`isFetching`) — otherwise it
-  // gives no feedback once data has loaded once and `isLoading` stays false.
-  const overviewLoading = telemetryQuery.isLoading || vehiclesQuery.isLoading
   const overviewFetching = telemetryQuery.isFetching || vehiclesQuery.isFetching
-  const overviewError = telemetryQuery.error ?? vehiclesQuery.error
-
-  // When a live source fails with no data to fall back on, the KPI band must
-  // show "—" rather than a fabricated `0` that reads as a healthy fleet.
-  // Stale data from a prior success is still shown (react-query keeps it).
-  const overviewErrored =
-    Boolean(overviewError) && errorVins.length === 0 && vehicles.length === 0
+  const overviewError = telemetryState.fatalError ?? vehiclesState.fatalError
 
   const refreshOverview = useCallback(() => {
     void telemetryQuery.refetch()
@@ -90,7 +82,7 @@ export default function DevToolsPage() {
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('devtools.title', 'Developer tools')}
       subtitle={t('devtools.subtitle', 'Fleet API, telemetry, infrastructure & utilities')}
       secondaryActions={actions}
@@ -102,14 +94,30 @@ export default function DevToolsPage() {
             {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(overviewError)}
           </AlertBanner>
         )}
+        <StaleRefreshWarning
+          state={telemetryState}
+          label={t('devtools.overview.telemetryErrors', 'Telemetry errors')}
+          hideRetry
+          message={telemetryState.refreshError
+            ? `${t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')} ${getErrorMessage(telemetryState.refreshError)}`
+            : undefined}
+        />
+        <StaleRefreshWarning
+          state={vehiclesState}
+          label={t('devtools.overview.vehicles', 'Vehicles')}
+          hideRetry
+          message={vehiclesState.refreshError
+            ? `${t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')} ${getErrorMessage(vehiclesState.refreshError)}`
+            : undefined}
+        />
 
         {/* 1 — KPI cockpit band: always-visible live + catalog status */}
         <FadeIn>
           <DevToolsOverview
             errorVinCount={errorVins.length}
             vehicleCount={vehicles.length}
-            loading={overviewLoading}
-            errored={overviewErrored}
+            telemetryUnknown={!telemetryState.hasData}
+            vehiclesUnknown={!vehiclesState.hasData}
           />
         </FadeIn>
 
@@ -128,6 +136,6 @@ export default function DevToolsPage() {
           </section>
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   )
 }

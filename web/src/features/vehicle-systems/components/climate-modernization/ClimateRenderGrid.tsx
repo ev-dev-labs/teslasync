@@ -1,5 +1,6 @@
 import { Children, type ReactElement, type ReactNode } from 'react';
-import { CardGrid, useCardPlacement, type CardGridItem } from '@/components/layout/layout-reference';
+import { CardGrid, type CardGridItem } from '@/components/layout';
+import { useCardPlacement } from '@/components/layout/layout-reference';
 import { FadeIn } from '@/components/motion';
 import { cn } from '@/lib/cn';
 

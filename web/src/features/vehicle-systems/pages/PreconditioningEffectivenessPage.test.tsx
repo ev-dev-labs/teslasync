@@ -98,7 +98,7 @@ vi.mock('@/components/charts', () => {
     CartesianGrid: () => null,
     ChartLegend: () => null,
     ChartTooltip: () => null,
-    ChartContainer: ({
+    EmbeddedChart: ({
       children,
       title,
       ariaLabel,

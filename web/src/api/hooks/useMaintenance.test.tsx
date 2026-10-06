@@ -73,8 +73,8 @@ describe('canonical maintenance read hooks', () => {
       expect(result.current.records.isSuccess).toBe(true);
     });
     expect(requestMock.mock.calls).toEqual([
-      ['/maintenance?vehicle_id=42'],
-      ['/maintenance/records?vehicle_id=42'],
+      ['/maintenance?vehicle_id=42', { signal: expect.any(AbortSignal) }],
+      ['/maintenance/records?vehicle_id=42', { signal: expect.any(AbortSignal) }],
     ]);
     expect(result.current.items.data).toEqual([item]);
     expect(result.current.records.data).toEqual([record]);
@@ -107,7 +107,7 @@ describe('canonical maintenance read hooks', () => {
     const { wrapper } = setup();
     const { result } = renderHook(() => useMaintenance(0), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(requestMock).toHaveBeenCalledWith('/maintenance?vehicle_id=0');
+    expect(requestMock).toHaveBeenCalledWith('/maintenance?vehicle_id=0', { signal: expect.any(AbortSignal) });
     // Real backend rejects 0; this only guards the inherited query enablement.
   });
 
@@ -121,8 +121,8 @@ describe('canonical maintenance read hooks', () => {
     await waitFor(() => expect(result.current.records.isSuccess).toBe(true));
     rerender({ vehicleId: 7 });
     await waitFor(() => expect(requestMock).toHaveBeenCalledTimes(4));
-    expect(requestMock).toHaveBeenCalledWith('/maintenance?vehicle_id=7');
-    expect(requestMock).toHaveBeenCalledWith('/maintenance/records?vehicle_id=7');
+    expect(requestMock).toHaveBeenCalledWith('/maintenance?vehicle_id=7', { signal: expect.any(AbortSignal) });
+    expect(requestMock).toHaveBeenCalledWith('/maintenance/records?vehicle_id=7', { signal: expect.any(AbortSignal) });
     expect(client.getQueryCache().getAll().map((query) => query.queryKey)).toEqual([
       ['maintenance', 42], ['maintenance-records', 42],
       ['maintenance', 7], ['maintenance-records', 7],
@@ -155,5 +155,26 @@ describe('canonical maintenance read hooks', () => {
     const { result } = renderHook(() => useServiceRecords(42), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
+  });
+
+  it('aborts both in-flight sources when their observers unmount', async () => {
+    const signals: AbortSignal[] = [];
+    requestMock.mockImplementation((_path: string, { signal }: { signal: AbortSignal }) => {
+      signals.push(signal);
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
+      });
+    });
+    const { client, wrapper } = setup();
+    const { unmount } = renderHook(() => ({
+      items: useMaintenance(42),
+      records: useServiceRecords(42),
+    }), { wrapper });
+    await waitFor(() => expect(signals).toHaveLength(2));
+    expect(signals.every(signal => !signal.aborted)).toBe(true);
+    unmount();
+    expect(signals.every(signal => signal.aborted)).toBe(true);
+    expect(client.getQueryData(['maintenance', 42])).toBeUndefined();
+    expect(client.getQueryData(['maintenance-records', 42])).toBeUndefined();
   });
 });

@@ -332,13 +332,14 @@ describe('VehicleAccessPage — populated tables + overview', () => {
 });
 
 describe('VehicleAccessPage — loading', () => {
-  it('shows skeletons (no tables/empty copy) and a zeroed KPI band', () => {
+  it('shows skeletons with unknown counts rather than a fabricated zeroed KPI band', () => {
     mockDrivers.mockReturnValue(makeQuery({ data: undefined, isLoading: true, isFetching: true }));
     mockInvitations.mockReturnValue(makeQuery({ data: undefined, isLoading: true, isFetching: true }));
 
     renderPage();
 
-    expect(within(kpiRegion()).getAllByText('0')).toHaveLength(4);
+    expect(within(kpiRegion()).getAllByText('—')).toHaveLength(4);
+    expect(within(kpiRegion()).queryByText('0')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByText('No drivers found. Refresh to sync from Tesla.')).toBeNull();
   });
@@ -359,6 +360,18 @@ describe('VehicleAccessPage — empty', () => {
 });
 
 describe('VehicleAccessPage — error handling', () => {
+  it('keeps both retained tables, status composition and actions on background failures', () => {
+    mockDrivers.mockReturnValue(makeQuery({ data: populatedDrivers, isError: true, error: new Error('driver refresh failed') }));
+    mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, isError: true, error: new Error('invitation refresh failed') }));
+    renderPage();
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(screen.getByText('Owner')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Revoke invitation' })).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Remove driver' })).toBeInTheDocument();
+  });
   it('renders a working Retry when the drivers query fails', () => {
     const refetchDrivers = vi.fn();
     mockDrivers.mockReturnValue(

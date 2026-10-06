@@ -143,6 +143,33 @@ beforeEach(() => {
 });
 
 describe('ChargingReconciliationPage — confirm-gated delete', () => {
+  it('keeps imported statements and all audit shells visible during a register refresh error', () => {
+    const refetch = vi.fn();
+    mockInvoices.mockReturnValue({
+      ...makeQuery({ items: [makeInvoice()] }),
+      error: new Error('refresh failed'),
+      isError: true,
+      refetch,
+    });
+    renderPage();
+    expect(screen.getByText('INV-001')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Line-by-line audit' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Variance attribution' })).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
+  });
+
+  it('keeps the import action and audit prerequisites reachable after an initial register failure', () => {
+    mockInvoices.mockReturnValue({ ...makeQuery(undefined), error: new Error('initial failure') });
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'Provider statements' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Dispute desk' })).toBeInTheDocument();
+    expect(screen.getByText('Select a statement above to run the audit.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
   it('does not advertise checklist filters over the first server invoice page', () => {
     mockInvoices.mockReturnValue(makeQuery({
       items: [makeInvoice()],

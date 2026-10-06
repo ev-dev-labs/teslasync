@@ -2,7 +2,7 @@ import { Fragment, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Mountain, Snowflake, Trophy, Thermometer } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, HelpTooltip } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
@@ -96,7 +96,7 @@ export default function EfficiencyLandscapePage() {
   const hasScale = landscape.minWhPerKm != null && landscape.maxWhPerKm != null;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('landscape.title', 'Efficiency Landscape')}
       subtitle={t('landscape.subtitle', 'Your car’s real consumption across speed and temperature')}
       query={drivesQuery}
@@ -274,6 +274,6 @@ export default function EfficiencyLandscapePage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

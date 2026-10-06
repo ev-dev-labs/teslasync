@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { AlertCircle } from 'lucide-react'
 
-import { PageLayout, Section } from '@/components/layout/layout-reference'
+import { PageLayout, Section } from '@/components/layout'
 import { GlassPanel } from '@/components/ui'
 import { DataProvenanceBadge } from '@/components/data-display'
 import { LiveStaleDataBanner, SectionErrorBoundary, EmptyState, QueryError, StaleRefreshWarning, useToast } from '@/components/feedback'

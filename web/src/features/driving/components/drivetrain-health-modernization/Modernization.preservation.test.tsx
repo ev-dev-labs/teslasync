@@ -1,10 +1,10 @@
 /**
- * AUTHORED NOT RUN. Fake source/presenter inputs, real shared chart frames,
+ * Fake source/presenter inputs, real shared chart frames,
  * error recovery, stats and mobile table pipeline. Runtime/visual acceptance
  * belongs to the parent's serialized validation window.
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import type { ComponentProps, ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import { getFormatterPreferences, setGlobalPrecision, setGlobalLocale } from '@/
 import DrivetrainHealthPage from '../../pages/DrivetrainHealthPage';
 import { SourceBoundary } from './SourceBoundary';
 import { RecommendationsPanel } from './RecommendationsPanel';
+import { LiveMotorPanel } from './LiveMotorPanel';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { Button, Text } from '@/components/ui';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
@@ -150,6 +151,19 @@ afterEach(() => {
 });
 
 describe('drivetrain live modernization preservation (authored)', () => {
+  it('reports actual latest-motor provenance without claiming freshness or continuous coverage or inventing an unknown source', () => {
+    const latest = motorFixture({ source: 'reported-source', ts: '' });
+    const { rerender } = render(<LiveMotorPanel motorLatest={latest}
+      state={deriveDataState({ data: latest })} isolationResistance={0}
+      loading={false} connected={false} />, { wrapper: Providers });
+    expect(screen.getByText('Latest returned motor snapshot; reported source: reported-source. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.')).toBeTruthy();
+    const unknown = motorFixture({ source: null, ts: '' });
+    rerender(<LiveMotorPanel motorLatest={unknown}
+      state={deriveDataState({ data: unknown })} isolationResistance={0}
+      loading={false} connected={false} />);
+    expect(screen.getByText('Latest returned motor snapshot; reported source: Unknown. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.')).toBeTruthy();
+  });
+
   it('renders every original section plus complete record details with unchanged query calls', () => {
     const { container } = render(<DrivetrainHealthPage />, { wrapper: Providers });
     for (const label of ['Health Score', 'Motor Details', 'Drive Statistics', 'Temperature Gauges',
@@ -224,17 +238,83 @@ describe('drivetrain live modernization preservation (authored)', () => {
     expect(after).not.toContain('Infinity');
   });
 
-  it('keeps every motor field available through the real mobile quick-view details', () => {
-    render(<DrivetrainHealthPage />, { wrapper: Providers });
-    const motorTable = screen.getByLabelText('Motor history records');
-    fireEvent.click(within(motorTable).getAllByRole('button', { name: 'Quick view' })[0]);
-    const dialog = screen.getByRole('dialog');
-    for (const label of ['Time', 'Stator', 'Rear-Left', 'Rear-Right', 'Torque (Nm)',
-      'Direct power signal (not supplied)', 'Axle speed (RPM)']) {
-      expect(within(dialog).getAllByText(label).length).toBeGreaterThan(0);
+  it('keeps every motor field available through the real mobile quick-view details', async () => {
+    // Match the existing real DataTable mobile-adapter tests: clientWidth is
+    // not the controller's measurement. Deliver the actual allocated width
+    // through ResizeObserver instead of mocking the table or mobile branch.
+    const observations = new Map<Element, { callback: ResizeObserverCallback; observer: ResizeObserver }>();
+    vi.stubGlobal('ResizeObserver', class implements ResizeObserver {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observations.set(element, { callback: this.callback, observer: this }); }
+      unobserve(element: Element) { observations.delete(element); }
+      disconnect() {
+        for (const [element, observation] of observations) {
+          if (observation.observer === this) observations.delete(element);
+        }
+      }
+    });
+    try {
+      // One identified history record makes its action unambiguous; the
+      // separate live table still exercises ALL thirteen original readings.
+      sources.history = ready([motorFixture()]);
+      render(<DrivetrainHealthPage />, { wrapper: Providers });
+      expect(screen.getByRole('table', { name: 'Live motor record details' })).toBeTruthy();
+      act(() => {
+        for (const [element, { callback, observer }] of Array.from(observations)) {
+          callback([{ target: element, contentRect: { width: 375, height: 240 } } as ResizeObserverEntry], observer);
+        }
+      });
+      await waitFor(() => {
+        expect(screen.getByLabelText('Live motor record details').hasAttribute('data-mobile-table')).toBe(true);
+      });
+      const liveTable = screen.getByLabelText('Live motor record details');
+      const liveFields = [
+        'Shift State', 'Power', 'Regen', 'Source', 'Front Motor RPM', 'Rear Motor RPM',
+        'Front Torque', 'Rear Torque', 'Front Motor Temp', 'Rear Motor Temp',
+        'Inverter Temp', 'Battery Temp', 'HV Isolation',
+      ];
+      expect(liveTable.querySelectorAll('[data-card]')).toHaveLength(13);
+      for (const label of liveFields) {
+        const summary = within(liveTable).getByRole('button', { name: label });
+        const value = summary.querySelector('[data-card-primary]')?.textContent;
+        expect(value).toBeTruthy();
+        // Resolve the sibling action group belonging to THIS named field;
+        // never pick the first of several indistinguishable table actions.
+        const actions = Array.from(liveTable.querySelectorAll<HTMLElement>('[data-mobile-row-actions]'))
+          .find(group => group.parentElement?.contains(summary));
+        if (!actions) throw new Error(`Missing mobile action group for ${label}`);
+        const trigger = within(actions).getByRole('button', { name: 'Quick view' });
+        trigger.focus();
+        fireEvent.click(trigger);
+        const dialog = screen.getByRole('dialog', { name: 'Live motor record details' });
+        expect(within(dialog).getByText('Field')).toBeTruthy();
+        expect(within(dialog).getByText('Reading')).toBeTruthy();
+        expect(within(dialog).getByText(label)).toBeTruthy();
+        expect(within(dialog).getByText(value ?? '')).toBeTruthy();
+        fireEvent.keyDown(dialog, { key: 'Escape' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        await waitFor(() => expect(document.activeElement).toBe(trigger));
+      }
+
+      const motorTable = screen.getByLabelText('Motor history records');
+      expect(motorTable.hasAttribute('data-mobile-table')).toBe(true);
+      expect(motorTable.querySelectorAll('[data-card]')).toHaveLength(1);
+      const hiddenFields = ['Rear-Left', 'Rear-Right', 'Direct power signal (not supplied)', 'Axle speed (RPM)'];
+      for (const label of hiddenFields) expect(within(motorTable).queryByText(label)).toBeNull();
+      const historyTrigger = within(motorTable).getByRole('button', { name: 'Quick view' });
+      historyTrigger.focus();
+      fireEvent.click(historyTrigger);
+      const dialog = screen.getByRole('dialog', { name: 'Motor history records' });
+      for (const label of ['Time', 'Stator', 'Rear-Left', 'Rear-Right', 'Torque (Nm)',
+        'Direct power signal (not supplied)', 'Axle speed (RPM)']) {
+        expect(within(dialog).getAllByText(label).length).toBeGreaterThan(0);
+      }
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      await waitFor(() => expect(document.activeElement).toBe(historyTrigger));
+    } finally {
+      vi.unstubAllGlobals();
     }
-    fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close' })[0]);
-    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('preserves genuine zero values without manufacturing missing readings', () => {
@@ -272,6 +352,20 @@ describe('drivetrain live modernization preservation (authored)', () => {
     const { container } = render(<RecommendationsPanel status={status} />, { wrapper: Providers });
     expect(container.querySelectorAll('[data-recommendation]')).toHaveLength(status === 'critical' ? 9 : status === 'warning' ? 7 : 4);
     if (status === 'critical') expect(screen.getAllByText('Urgent recommendation:')).toHaveLength(2);
+  });
+
+  it('keeps the empty source shell and refreshes through its real query callback', () => {
+    const state = deriveDataState(ready([]));
+    render(<LayoutCard title="Fixture source">
+      <SourceBoundary state={state} label="Fixture source" empty emptyMessage="Fixture empty">
+        <span>Fixture content</span>
+      </SourceBoundary>
+    </LayoutCard>, { wrapper: Providers });
+    expect(screen.getByText('Fixture source')).toBeTruthy();
+    expect(screen.getByText('Fixture empty')).toBeTruthy();
+    expect(screen.queryByText('Fixture content')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(sources.retry).toHaveBeenCalledTimes(1);
   });
 
   it('uses the real error provider path inside a permanent shell and restores retained content', () => {

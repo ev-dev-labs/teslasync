@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, Activity, Ruler, Waypoints } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
@@ -18,6 +18,7 @@ import {
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
 import { chartTokens } from '@/lib/tokens';
@@ -39,6 +40,8 @@ export default function SignalTrendPage() {
 
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyState = useDataState(historyQuery, { provenance: 'historical' });
   const chosen = signalName !== '';
   const dataSources = useMemo(
     () => [
@@ -82,6 +85,7 @@ export default function SignalTrendPage() {
       baseline: Math.round((intercept + slope * ((p.ms - baseMs) / 3_600_000)) * 1000) / 1000,
       bandBase: null as number | null,
       bandRange: null as number | null,
+      bandHigh: null as number | null,
     }));
     const forecast = summary.forecast.map((f) => ({
       ms: f.ms,
@@ -90,6 +94,7 @@ export default function SignalTrendPage() {
       baseline: f.baseline,
       bandBase: f.low,
       bandRange: Math.round((f.high - f.low) * 1000) / 1000,
+      bandHigh: f.high,
     }));
     return [...historical, ...forecast].sort((a, b) => a.ms - b.ms);
   }, [historyQuery.data, summary.slopePerHour, summary.interceptAtStart, summary.forecast]);
@@ -100,13 +105,13 @@ export default function SignalTrendPage() {
 
   const historyHasData = historyQuery.data !== undefined;
   const isLoading = chosen && !historyHasData && historyQuery.isLoading;
-  const isError = chosen && historyQuery.isError && !historyHasData;
-  const error = historyQuery.error;
+  const isError = chosen && historyState.fatalError != null;
+  const error = historyState.fatalError;
   const hasData = chosen && summary.samples > 0;
   const mk = summary.mannKendall;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalTrend.title', 'Signal trend')}
       subtitle={t(
         'signalTrend.subtitle',
@@ -128,8 +133,8 @@ export default function SignalTrendPage() {
               ariaLabel={t('help.signalTrend.iconLabel', 'More info about signal selection')}
             />
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={80} />
           ) : options.length === 0 ? (
@@ -220,6 +225,8 @@ export default function SignalTrendPage() {
             ariaLabel={t('signalTrend.chartAria', 'Composed chart of actual signal values, the fitted robust baseline, and an evidence-limited forecast band')}
             chartKey="signal-trend-forecast"
             loading={isLoading}
+            error={isError ? error : null}
+            onRetry={() => historyQuery.refetch()}
             empty={combined.length === 0}
             height={340}
             data={combined}
@@ -228,6 +235,7 @@ export default function SignalTrendPage() {
               { key: 'actual', label: t('signalTrend.col.actual', 'Actual') },
               { key: 'baseline', label: t('signalTrend.col.baseline', 'Baseline') },
               { key: 'bandBase', label: t('signalTrend.col.low', 'Forecast low') },
+              { key: 'bandHigh', label: t('signalTrend.col.high', 'Forecast high') },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -254,7 +262,11 @@ export default function SignalTrendPage() {
             <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalTrend.reading', 'Reading the result')}
           </PanelTitle>
-          {!hasData ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => historyQuery.refetch()} />
+          ) : !hasData ? (
             <EmptyState /* no-action: the interpretation follows from the trend fit above. */
               icon={<TrendingUp className="h-8 w-8" />}
               message={t('signalTrend.noReading', 'Pick a signal to see how its trend should be read.')}
@@ -287,6 +299,6 @@ export default function SignalTrendPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

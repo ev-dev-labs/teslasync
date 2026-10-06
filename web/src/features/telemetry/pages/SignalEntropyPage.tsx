@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Binary, Gauge, Repeat, Waypoints } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
@@ -18,6 +18,7 @@ import {
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 
 import { chartTokens } from '@/lib/tokens';
 
@@ -38,6 +39,8 @@ export default function SignalEntropyPage() {
 
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyState = useDataState(historyQuery, { provenance: 'historical' });
   const chosen = signalName !== '';
   const dataSources = useMemo(
     () => [
@@ -91,12 +94,12 @@ export default function SignalEntropyPage() {
 
   const historyHasData = historyQuery.data !== undefined;
   const isLoading = chosen && !historyHasData && historyQuery.isLoading;
-  const isError = chosen && historyQuery.isError && !historyHasData;
-  const error = historyQuery.error;
+  const isError = chosen && historyState.fatalError != null;
+  const error = historyState.fatalError;
   const hasData = chosen && summary.samples > 0;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalEntropy.title', 'Signal entropy')}
       subtitle={t(
         'signalEntropy.subtitle',
@@ -118,8 +121,8 @@ export default function SignalEntropyPage() {
               ariaLabel={t('help.signalEntropy.iconLabel', 'More info about signal selection')}
             />
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={80} />
           ) : options.length === 0 ? (
@@ -210,6 +213,8 @@ export default function SignalEntropyPage() {
             subtitle={t('signalEntropy.rollingHint', 'Entropy recomputed over a sliding window using the same global bin edges, so spikes reflect genuinely eventful stretches')}
             ariaLabel={t('signalEntropy.rollingAria', 'Line chart of rolling Shannon entropy in bits over time for the selected signal')}
             loading={isLoading}
+            error={isError ? error : null}
+            onRetry={() => historyQuery.refetch()}
             empty={rollingSeries.length === 0}
             height={300}
             data={rollingSeries}
@@ -239,6 +244,8 @@ export default function SignalEntropyPage() {
           subtitle={t('signalEntropy.distributionHint', 'Sample counts per equal-frequency bin — a lopsided distribution here explains a low entropy score')}
           ariaLabel={t('signalEntropy.distributionAria', 'Bar chart of sample counts across quantile bins for the selected signal')}
           loading={isLoading}
+          error={isError ? error : null}
+          onRetry={() => historyQuery.refetch()}
           empty={binSeries.length === 0}
           height={260}
           data={binSeries}
@@ -266,7 +273,11 @@ export default function SignalEntropyPage() {
             <Repeat className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalEntropy.reading', 'Reading the result')}
           </PanelTitle>
-          {!hasData ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => historyQuery.refetch()} />
+          ) : !hasData ? (
             <EmptyState /* no-action: the interpretation follows from the entropy computed above. */
               icon={<Binary className="h-8 w-8" />}
               message={t('signalEntropy.noReading', 'Pick a signal to see how its entropy should be read.')}
@@ -304,6 +315,6 @@ export default function SignalEntropyPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

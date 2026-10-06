@@ -350,6 +350,24 @@ describe('RouteEfficiencyWidget unit conversion', () => {
 // ── Layout variants ─────────────────────────────────────────────────────────
 
 describe('RouteEfficiencyWidget layout variants', () => {
+  it('keeps lower-intensity ranking local, preserves ties, and leaves unknown magnitudes unpainted', async () => {
+    routeRequest(routeData([
+      makeRoute({ startLocation: 'Unknown', endLocation: 'Route', avgEfficiency: undefined as unknown as number }),
+      makeRoute({ startLocation: 'Higher', endLocation: 'Intensity', avgEfficiency: 300 }),
+      makeRoute({ startLocation: 'First', endLocation: 'Tie', avgEfficiency: 100 }),
+      makeRoute({ startLocation: 'Second', endLocation: 'Tie', avgEfficiency: 100 }),
+    ]));
+    renderWidget({ vehicleId: 1 });
+    await screen.findByText('Unknown → Route');
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('First → Tie');
+    expect(rows[1]).toHaveTextContent('Second → Tie');
+    expect(rows[2]).toHaveTextContent('Higher → Intensity');
+    expect(rows[3]).toHaveTextContent('Unknown → Route');
+    expect(rows[3].querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByText('First → Tie')).toHaveClass('whitespace-normal');
+  });
+
   it('renders the compact (titled) layout for a 1-column widget', async () => {
     routeRequest(
       routeData([makeRoute({ startLocation: 'Home', endLocation: 'Gym', avgEfficiency: 210 })]),

@@ -156,7 +156,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
       <div className="flex flex-col h-full gap-4">
         {/* Progress header */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
             <span className="font-medium text-[var(--text-primary)]">
               {t('checklist.progress', '{{done}}/{{total}} complete', {
                 done: fmtInt(completed),
@@ -239,6 +239,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
                     <Button
                       variant="ghost"
                       size="sm"
+                      wrapLabel
                       onClick={() => handleCta(task.ctaTo)}
                       className="min-h-11 flex-shrink-0 text-[var(--theme-primary)]"
                     >

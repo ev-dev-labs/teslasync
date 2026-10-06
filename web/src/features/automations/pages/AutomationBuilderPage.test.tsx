@@ -221,7 +221,7 @@ import AutomationBuilderPage, {
 
 function renderPage(entry = '/automations/new') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[entry]}>
         <ToastProvider>
@@ -232,8 +232,10 @@ function renderPage(entry = '/automations/new') {
           </Routes>
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(tree());
+  return { ...result, refresh: () => result.rerender(tree()) };
 }
 
 const EDIT_AUTOMATION: AutomationFull = {
@@ -616,6 +618,19 @@ describe('AutomationBuilderPage — create mode', () => {
 // ────────────────────────────── Edit mode ──────────────────────────────
 
 describe('AutomationBuilderPage — edit mode', () => {
+  it('keeps the hydrated form and unsaved values during failed source recovery', async () => {
+    H.automationState = { data: EDIT_AUTOMATION, isLoading: false, error: null };
+    const { refresh } = renderPage('/automations/5/edit');
+    const name = await screen.findByDisplayValue('Existing One');
+    fireEvent.change(name, { target: { value: 'Unsaved retained edit' } });
+    H.automationState = { data: EDIT_AUTOMATION, isLoading: false, error: new Error('Refresh offline') };
+    refresh();
+    expect(screen.getByDisplayValue('Unsaved retained edit')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
+  });
+
   it('renders the loading state and hides the form while the automation loads', () => {
     H.automationState = { data: undefined, isLoading: true, error: null };
     renderPage('/automations/5/edit');

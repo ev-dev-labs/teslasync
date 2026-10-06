@@ -23,7 +23,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -423,14 +423,13 @@ export default function ModelTrustPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.trust.title', 'Prediction accuracy & model trust lab')}
       subtitle={t(
         'ownership.trust.subtitle',
         'Every forecast this platform makes is written down, then scored against what actually happened. Bias, calibration, skill against a naive baseline, and drift over time decide whether a model earns your trust.',
       )}
-      loading={trustQuery.isLoading}
-      error={trustQuery.error as Error | null}
+      query={trustQuery}
       contextActions={
         <div className="flex items-center gap-2">
           <Select
@@ -456,7 +455,8 @@ export default function ModelTrustPage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.trust.summary.title', 'Portfolio trust')}>
+        <OwnershipPanel title={t('ownership.trust.summary.title', 'Portfolio trust')}
+          source={trustQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <StatGrid
             stats={[
               {
@@ -504,6 +504,8 @@ export default function ModelTrustPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.trust.cards.title', 'Model scorecards')}
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.trust.cards.subtitle',
             'Drift ratio compares recent-half error against early-half error. Above 1.5 means the model is getting worse.',
@@ -527,6 +529,8 @@ export default function ModelTrustPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.trust.calibration.title', 'Calibration by prediction magnitude')}
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
           description={
             selectedCard
               ? t('ownership.trust.calibration.for', 'Showing {{model}} → {{target}}', {
@@ -624,6 +628,9 @@ export default function ModelTrustPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.trust.predictions.title', 'Prediction ledger')}
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
+          editing={predictOpen || outcomeFor != null}
           description={t(
             'ownership.trust.predictions.subtitle',
             'Record a forecast before the fact, then score it once the outcome is known. Nothing here can be edited after the fact.',
@@ -789,6 +796,8 @@ export default function ModelTrustPage() {
 
       <FadeIn delay={0.2}>
         <EvidencePanel
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -803,6 +812,6 @@ export default function ModelTrustPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

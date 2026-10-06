@@ -368,6 +368,33 @@ describe('SettingsPage — KPI band derivation', () => {
 // ── KPI band — loading / empty states ───────────────────────────────────────
 
 describe('SettingsPage — loading & empty placeholders', () => {
+  it('keeps every settings category mounted on an initial source failure and retries only the read', () => {
+    const refetch = vi.fn()
+    useSettingsMock.mockReturnValue({
+      data: undefined, isLoading: false, isError: true, error: new Error('Read failed'), refetch,
+    })
+    renderPage()
+    expect(screen.getByTestId('stub-general')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-workspace')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-appearance')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-typography')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-advanced')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-reset')).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0])
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves preference readouts and mounted drafts after a retained source failure', () => {
+    useSettingsMock.mockReturnValue({
+      data: makeSettings(), isLoading: false, isError: true, error: new Error('Refresh failed'), refetch: vi.fn(),
+    })
+    renderPage()
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-general')).toBeInTheDocument()
+    expect(screen.getByLabelText('Draft setting')).toHaveValue('Original')
+    expect(screen.getByTestId('stub-workspace')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
   it('renders skeleton cards (no metric labels) while settings load', () => {
     setSettings(undefined, { isLoading: true })
 

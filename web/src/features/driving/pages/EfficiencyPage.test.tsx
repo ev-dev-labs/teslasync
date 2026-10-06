@@ -353,14 +353,19 @@ describe('EfficiencyPage', () => {
     expect(screen.getByText('Drive history')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
     // Sections never disappear — the KPI band degrades to a placeholder.
-    expect(screen.getByText('No efficiency data available yet')).toBeInTheDocument();
+    const kpis = screen.getByRole('region', { name: 'Key metrics' });
+    expect(within(kpis).getByText('Unable to load Key metrics')).toBeInTheDocument();
+    expect(within(kpis).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(within(kpis).queryByText('Avg consumption')).not.toBeInTheDocument();
   });
 
   it('renders an empty-state placeholder (never a blank panel) when there are no stats', () => {
     setDriving({ data: undefined }, { data: [] });
     renderPage();
 
-    expect(screen.getByText('No efficiency data available yet')).toBeInTheDocument();
+    const kpis = screen.getByRole('region', { name: 'Key metrics' });
+    expect(within(kpis).getByText('The source has not supplied measurements for this vehicle.')).toBeInTheDocument();
+    expect(within(kpis).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     // A benign empty result is not an error.
     expect(screen.queryByText(/Failed to load data/)).toBeNull();
     expect(screen.getByRole('heading', { level: 1, name: 'Efficiency' })).toBeInTheDocument();
@@ -368,30 +373,33 @@ describe('EfficiencyPage', () => {
 
   it('renders km stats without the legacy SI-converter inflation bug', () => {
     renderPage();
+    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
 
     // avgSpeedKmh=60 must display as 60.00 km/h — the pre-fix code fed km/h
     // straight into convertSpeedFromSI (an m/s converter) → 216.00.
-    expect(screen.getByText('60.00')).toBeInTheDocument();
+    expect(kpis.getByText('60.00')).toBeInTheDocument();
     expect(screen.queryByText('216.00')).toBeNull();
     // topSpeedKmh=120 → 120 (pre-fix: 432); totalDistanceKm=5000 → 5,000
     // (pre-fix: 5 because km was treated as metres).
-    expect(screen.getByText('120')).toBeInTheDocument();
+    expect(kpis.getByText('120')).toBeInTheDocument();
     expect(screen.queryByText('432')).toBeNull();
-    expect(screen.getByText('5,000')).toBeInTheDocument();
+    expect(kpis.getByText('5,000')).toBeInTheDocument();
     // Efficiency (5.0 km/kWh), CO₂ (300 kg) and drive count (42) round-trip.
-    expect(screen.getByText('5.00')).toBeInTheDocument();
-    expect(screen.getByText('300')).toBeInTheDocument();
-    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(kpis.getByText('5.00')).toBeInTheDocument();
+    const co2 = kpis.getByLabelText('CO₂ saved: 300 kg');
+    expect(within(co2).getByText('300 kg', { selector: '[data-stat-value]' })).toBeInTheDocument();
+    expect(kpis.getByText('42')).toBeInTheDocument();
   });
 
   it('re-derives every stat for an imperial (mi / mph) preference', () => {
     H.units.current = miUnits();
     renderPage();
+    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
 
     // 60 km/h → 37.28 mph, 5000 km → 3,107 mi, 200 Wh/km → 321.87 Wh/mi.
-    expect(screen.getByText('37.28')).toBeInTheDocument();
-    expect(screen.getByText('3,107')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Key metrics' })).getByText('321.87')).toBeInTheDocument();
+    expect(kpis.getByText('37.28')).toBeInTheDocument();
+    expect(kpis.getByText('3,107')).toBeInTheDocument();
+    expect(kpis.getByText('321.87')).toBeInTheDocument();
     expect(screen.getAllByText('Wh/mi').length).toBeGreaterThan(0);
     // The km figures must NOT leak through under the imperial preference.
     expect(screen.queryByText('60.00')).toBeNull();

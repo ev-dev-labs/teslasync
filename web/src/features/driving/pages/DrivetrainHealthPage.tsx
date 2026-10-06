@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageLayout } from '@/components/layout/layout-reference';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { DataProvenanceBadge } from '@/components/data-display';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
@@ -39,7 +39,7 @@ export default function ScienceLabPage() {
   const scope = { vehicleId: vehicleIdStr, start: window.start, end: window.end };
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('science.subtitle', 'Every claim is a fit: n, uncertainty, firmware epoch, holdout.')}
       copyLink
@@ -74,6 +74,6 @@ export default function ScienceLabPage() {
         <section id="science-tires" className="scroll-mt-24"><TiresPanel window={scope} /></section>
         <section id="science-notebook" className="scroll-mt-24"><NotebookPanel window={scope} /></section>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

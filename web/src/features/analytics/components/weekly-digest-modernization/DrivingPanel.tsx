@@ -128,6 +128,7 @@ export function DrivingPanel({
         ) : (
           <EmptyState
             message={t('analytics.weeklyDigest.noTopDrive', 'No top drive is available for this week yet.')}
+            actionTo={{ label: t('statistics.viewDrives', 'View drives'), to: '/drives' }}
             className="py-6"
           />
         )}

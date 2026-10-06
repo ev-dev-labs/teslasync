@@ -192,6 +192,9 @@
         "unarchive": "Restore"
       },
       "bulk": {
+        "memberSelection": "{{count}} selected notification members",
+        "loadedSelection": "{{count}} selected · {{loaded}} loaded notifications · {{total}} matching",
+        "unknownSelection": "{{count}} selected · {{loaded}} loaded notifications · total unavailable",
         "markRead": "Mark read",
         "archive": "Archive",
         "restore": "Restore",

@@ -1,12 +1,9 @@
-import { ClipboardCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
   Text,
 } from '@/components/ui';
 
@@ -88,11 +85,7 @@ export function ComfortConsistencyDataAvailability({
 
   return (
     <section data-testid="comfort-consistency-availability">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.availability.title', 'Data-availability matrix')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.availability.title', 'Data-availability matrix')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.availability.subtitle',
@@ -121,7 +114,7 @@ export function ComfortConsistencyDataAvailability({
             ))}
           </Grid>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

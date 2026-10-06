@@ -26,18 +26,18 @@ import {
   Badge,
   Button,
   GlassPanel,
-  Select,
-  SectionTitle,
   PanelTitle,
   Subhead,
   Text,
   Caption,
 } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
-import { FreshnessIndicator, MetricCard } from '@/components/data-display';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { FreshnessIndicator, MetricCard, KVList } from '@/components/data-display';
+import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { PageContainer } from '@/components/layout';
+import { PageLayout, Section, SourceContent } from '@/components/layout';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
 import {
   useVehicles,
   useVehicleState,
@@ -93,6 +93,7 @@ function QuickAction({ icon: Icon, label, onClick, disabled, loading }: QuickAct
       onClick={onClick}
       disabled={disabled}
       loading={loading}
+      wrapLabel
       aria-label={label}
       className="flex min-h-[4.5rem] min-w-[5.5rem] flex-1 flex-col items-center justify-center gap-1.5
         rounded-xl border border-white/[0.06] bg-[var(--surface-2)] p-3 hover:border-white/[0.12]"
@@ -112,13 +113,15 @@ interface DetailRowProps {
 /** Icon + label on the left, primary-coloured value on the right. */
 function DetailRow({ icon: Icon, label, value }: DetailRowProps) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <span className="flex min-w-0 items-center gap-2">
-        <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-        <Caption className="truncate">{label}</Caption>
-      </span>
-      <Text variant="body" className="shrink-0 tabular-nums">{value}</Text>
-    </div>
+    <KVList
+      layout="responsive"
+      wrap
+      items={[{
+        label,
+        leading: <Icon className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />,
+        value: <span className="tabular-nums">{value}</span>,
+      }]}
+    />
   );
 }
 
@@ -131,13 +134,15 @@ interface StatusRowProps {
 /** Icon + label on the left, a status <Badge> (or similar) on the right. */
 function StatusRow({ icon: Icon, label, children }: StatusRowProps) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <span className="flex min-w-0 items-center gap-2">
-        <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-        <Caption className="truncate">{label}</Caption>
-      </span>
-      {children}
-    </div>
+    <KVList
+      layout="responsive"
+      wrap
+      items={[{
+        label,
+        leading: <Icon className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />,
+        value: children,
+      }]}
+    />
   );
 }
 
@@ -149,15 +154,12 @@ export default function GlancePage() {
   const title = t('glance.title', 'Quick glance');
   usePageTitle(title);
 
-  const {
-    isLoading: vehiclesLoading,
-    error: vehiclesError,
-  } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { isLoading: vehiclesLoading } = vehiclesQuery;
+  const vehiclesState = useDataState(vehiclesQuery);
   const {
     vehicle,
     vehicleId: selectedVehicleId,
-    vehicles,
-    setVehicleId,
   } = useSelectedVehicle();
   const vehicleId = selectedVehicleId ?? 0;
 
@@ -172,13 +174,14 @@ export default function GlancePage() {
     data: stateData,
     dataUpdatedAt,
     isLoading: stateLoading,
-    isError: stateIsError,
-    error: stateError,
     refetch,
   } = stateQuery;
   const state = stateData?.state;
+  const stateTrust = useDataState(stateQuery, { provenance: 'live' });
 
-  const { data: location } = useLocationSnapshotLatest(vehicleId, 30_000);
+  const locationQuery = useLocationSnapshotLatest(vehicleId, 30_000);
+  const { data: location } = locationQuery;
+  const locationTrust = useDataState(locationQuery, { provenance: 'live' });
 
   const { formatDistance, formatSpeed, formatTemperature } = useUnits();
   const sendCommand = useVehicleCommand();
@@ -195,30 +198,8 @@ export default function GlancePage() {
     [dataUpdatedAt],
   );
 
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.model || v.vin,
-      })),
-    [vehicles],
-  );
-
-  const onPickVehicle = (id: string) => {
-    const next = Number(id);
-    setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
-  };
-
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      {vehicleOptions.length > 1 && (
-        <Select
-          options={vehicleOptions}
-          value={String(vehicleId || '')}
-          onChange={(e) => onPickVehicle(e.target.value)}
-          aria-label={t('glance.selectVehicle', 'Select vehicle')}
-        />
-      )}
       <Button
         variant="ghost"
         onClick={() => refetch()}
@@ -232,25 +213,42 @@ export default function GlancePage() {
 
   // Shared placeholder for state-bound panels — self-sufficient per section.
   const renderPanelState = (skeletonHeight: number, emptyMessage: string) => {
-    if (stateLoading) return <Skeleton height={skeletonHeight} />;
-    if (stateIsError) return <QueryError error={stateError} onRetry={() => refetch()} />;
+    if (stateTrust.fatalError) return <QueryError error={stateTrust.fatalError} onRetry={() => refetch()} />;
     return (
-      <EmptyState /* no-action: transient empty state — vehicle has not emitted live telemetry yet */
-        icon={<Battery className="h-8 w-8" />}
-        message={emptyMessage}
-      />
+      <SourceContent
+        state={stateLoading ? 'loading' : 'empty'}
+        label={t('glance.liveStatus', 'Live status')}
+        emptyMessage={emptyMessage}
+        errorMessage={emptyMessage}
+        loadingContent={<Skeleton height={skeletonHeight} />}
+        emptyContent={
+          <EmptyState /* no-action: transient empty state — vehicle has not emitted live telemetry yet */
+            icon={<Battery className="h-8 w-8" />}
+            message={emptyMessage}
+          />
+        }
+      >
+        {null}
+      </SourceContent>
     );
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('glance.subtitle', 'A quick, live snapshot of your vehicle')}
       actions={vehicle ? actions : undefined}
-      loading={vehiclesLoading}
-      error={vehiclesError as Error | null}
+      loading={vehiclesLoading && !vehiclesState.hasData}
+      error={vehiclesState.fatalError}
       query={vehicleId > 0 ? stateQuery : undefined}
+      dataSources={[
+        { id: 'vehicle-registry', label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'), query: vehiclesQuery },
+        { id: 'live-vehicle-state', label: t('dataSources.labels.liveVehicleState', 'Live vehicle state'), query: stateQuery, enabled: vehicleId > 0 },
+        { id: 'live-location', label: t('glance.locationLabel', 'Location'), query: locationQuery, enabled: vehicleId > 0 },
+      ]}
     >
+      <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
+      <StaleRefreshWarning state={stateTrust} label={t('glance.liveStatus', 'Live status')} />
       {!vehicle ? (
         <GlassPanel className="p-8">
           <EmptyState
@@ -286,13 +284,13 @@ export default function GlancePage() {
                 <>
                   <MetricCard
                     label={t('glance.battery', 'Battery')}
-                    value={state ? `${fmtNumber(state.battery_level ?? 0)}%` : '—'}
+                    value={state?.battery_level != null && Number.isFinite(state.battery_level) ? `${fmtNumber(state.battery_level)}%` : '—'}
                     icon={<Battery className="h-5 w-5" />}
                     color={batteryNeon(state?.battery_level)}
                   />
                   <MetricCard
                     label={t('glance.range', 'Range')}
-                    value={state ? formatDistance(state.rated_range ?? 0) : '—'}
+                    value={state ? formatDistance(state.rated_range) : '—'}
                     icon={<Gauge className="h-5 w-5" />}
                     color="green"
                   />
@@ -310,13 +308,13 @@ export default function GlancePage() {
                   />
                   <MetricCard
                     label={t('glance.odometer', 'Odometer')}
-                    value={state ? formatDistance(state.odometer ?? 0) : '—'}
+                    value={state ? formatDistance(state.odometer) : '—'}
                     icon={<Route className="h-5 w-5" />}
                     color="purple"
                   />
                   <MetricCard
                     label={t('glance.speed', 'Speed')}
-                    value={state ? formatSpeed(state.speed ?? 0) : '—'}
+                    value={state ? formatSpeed(state.speed) : '—'}
                     icon={<Navigation className="h-5 w-5" />}
                     color="blue"
                   />
@@ -327,11 +325,7 @@ export default function GlancePage() {
 
           {/* 2 — Live status bento: hero battery + charging/climate + security/location */}
           <FadeIn delay={0.1}>
-            <section
-              aria-label={t('glance.liveStatusAria', 'Live status')}
-              className="space-y-3"
-            >
-              <SectionTitle>{t('glance.liveStatus', 'Live status')}</SectionTitle>
+            <Section id="glance-live-status" title={t('glance.liveStatus', 'Live status')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {/* Hero — vehicle identity + battery ring */}
                 <GlassPanel className="p-4 sm:p-5 md:col-span-2 xl:col-span-1">
@@ -349,7 +343,8 @@ export default function GlancePage() {
                     <div className="mt-4 flex flex-col items-center">
                       <div className="relative flex w-full justify-center">
                         <LinearGauge
-                          value={state.battery_level ?? 0}
+                          value={state.battery_level}
+                          preserveReadingAndScale
                           max={100}
                           label={t('glance.battery', 'Battery')}
                           unit="%"
@@ -365,7 +360,7 @@ export default function GlancePage() {
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                         <Badge variant="neutral" size="sm">
                           <Battery className="h-3.5 w-3.5" aria-hidden="true" />
-                          {formatDistance(state.rated_range ?? 0)}
+                          {formatDistance(state.rated_range)}
                         </Badge>
                         {state.is_charging && (
                           <Badge variant="info" size="sm" dot>
@@ -398,7 +393,9 @@ export default function GlancePage() {
                             dot
                             size="sm"
                           >
-                            {state.is_charging
+                            {state.is_charging == null
+                              ? t('common.unknown', 'Unknown')
+                              : state.is_charging
                               ? t('glance.charging.active', 'Charging')
                               : t('glance.charging.idle', 'Idle')}
                           </Badge>
@@ -408,18 +405,18 @@ export default function GlancePage() {
                             <DetailRow
                               icon={Zap}
                               label={t('glance.charging.power', 'Charger power')}
-                              value={`${fmtNumber(state.charger_power ?? 0)} kW`}
+                              value={knownNumber(state.charger_power) == null ? '—' : `${fmtNumber(state.charger_power)} kW`}
                             />
                             <DetailRow
                               icon={BatteryCharging}
                               label={t('glance.charging.rate', 'Charge rate')}
-                              value={`${formatDistance(state.charge_rate ?? 0)}/h`}
+                              value={knownNumber(state.charge_rate) == null ? '—' : `${formatDistance(state.charge_rate)}/h`}
                             />
                             <DetailRow
                               icon={Clock}
                               label={t('glance.charging.timeToFull', 'Time to full')}
                               value={
-                                (state.time_to_full_charge ?? 0) > 0
+                                (knownNumber(state.time_to_full_charge) ?? 0) > 0
                                   ? `${fmtNumber(state.time_to_full_charge)} h`
                                   : '—'
                               }
@@ -427,7 +424,9 @@ export default function GlancePage() {
                           </>
                         ) : (
                           <Text variant="bodySm">
-                            {t('glance.charging.notCharging', 'Not currently charging')}
+                            {state.is_charging == null
+                              ? t('common.unknown', 'Unknown')
+                              : t('glance.charging.notCharging', 'Not currently charging')}
                           </Text>
                         )}
                       </div>
@@ -439,7 +438,9 @@ export default function GlancePage() {
                             dot
                             size="sm"
                           >
-                            {state.is_climate_on
+                            {state.is_climate_on == null
+                              ? t('common.unknown', 'Unknown')
+                              : state.is_climate_on
                               ? t('glance.climate.on', 'On')
                               : t('glance.climate.off', 'Off')}
                           </Badge>
@@ -465,10 +466,10 @@ export default function GlancePage() {
                     <Shield className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                     {t('glance.securityLocation', 'Security & location')}
                   </PanelTitle>
-                  {!state ? (
-                    renderPanelState(200, t('glance.noState', 'No live data for this vehicle yet'))
-                  ) : (
-                    <div className="space-y-4">
+                  <div className="space-y-4">
+                    {!state ? (
+                      renderPanelState(200, t('glance.noState', 'No live data for this vehicle yet'))
+                    ) : (
                       <div className="space-y-1">
                         <Subhead>{t('glance.security', 'Security')}</Subhead>
                         <StatusRow
@@ -476,11 +477,13 @@ export default function GlancePage() {
                           label={t('glance.lockStatus', 'Doors')}
                         >
                           <Badge
-                            variant={state.is_locked ? 'success' : 'warning'}
+                            variant={state.is_locked == null ? 'neutral' : state.is_locked ? 'success' : 'warning'}
                             dot
                             size="sm"
                           >
-                            {state.is_locked
+                            {state.is_locked == null
+                              ? t('common.unknown', 'Unknown')
+                              : state.is_locked
                               ? t('glance.locked', 'Locked')
                               : t('glance.unlocked', 'Unlocked')}
                           </Badge>
@@ -494,14 +497,21 @@ export default function GlancePage() {
                             dot
                             size="sm"
                           >
-                            {state.sentry_mode
+                            {state.sentry_mode == null
+                              ? t('common.unknown', 'Unknown')
+                              : state.sentry_mode
                               ? t('common.on', 'On')
                               : t('common.off', 'Off')}
                           </Badge>
                         </StatusRow>
                       </div>
+                    )}
                       <div className="space-y-1 border-t border-white/[0.06] pt-3">
                         <Subhead>{t('glance.locationLabel', 'Location')}</Subhead>
+                        <StaleRefreshWarning state={locationTrust} label={t('glance.locationLabel', 'Location')} />
+                        {locationTrust.fatalError && (
+                          <QueryError error={locationTrust.fatalError} onRetry={() => { void locationQuery.refetch(); }} />
+                        )}
                         <DetailRow
                           icon={MapPin}
                           label={t('glance.place', 'Place')}
@@ -514,7 +524,7 @@ export default function GlancePage() {
                             value={location.destination_name}
                           />
                         )}
-                        {(location?.minutes_to_arrival ?? 0) > 0 && (
+                        {(knownNumber(location?.minutes_to_arrival) ?? 0) > 0 && (
                           <DetailRow
                             icon={Route}
                             label={t('glance.eta', 'ETA')}
@@ -523,22 +533,17 @@ export default function GlancePage() {
                         )}
                       </div>
                       <Caption className="block border-t border-white/[0.06] pt-3">
-                        {t('glance.software', 'Software')}: {state.software_version || '—'}
+                        {t('glance.software', 'Software')}: {state?.software_version || '—'}
                       </Caption>
-                    </div>
-                  )}
+                  </div>
                 </GlassPanel>
               </div>
-            </section>
+            </Section>
           </FadeIn>
 
           {/* 3 — Controls: full-width quick-action band */}
           <FadeIn delay={0.2}>
-            <section
-              aria-label={t('glance.controlsAria', 'Controls')}
-              className="space-y-3"
-            >
-              <SectionTitle>{t('glance.controls', 'Controls')}</SectionTitle>
+            <Section id="glance-controls" title={t('glance.controls', 'Controls')}>
               <GlassPanel className="p-4 sm:p-5">
                 {!isOnline && (
                   <Text variant="bodySm" className={cn('mb-3 block')}>
@@ -598,7 +603,7 @@ export default function GlancePage() {
                   />
                 </div>
               </GlassPanel>
-            </section>
+            </Section>
           </FadeIn>
 
           {/* 4 — Footer: link to full app */}
@@ -612,6 +617,6 @@ export default function GlancePage() {
           </div>
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

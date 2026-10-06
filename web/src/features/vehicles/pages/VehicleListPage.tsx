@@ -8,8 +8,7 @@ import {
   BatteryCharging, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
-import { PrefetchLink } from '@/components/layout';
-import { PageLayout, Section } from '@/components/layout/layout-reference';
+import { PrefetchLink, PageLayout, Section } from '@/components/layout';
 import { VehiclePanelGrid } from '../components/modernization';
 import { VirtualizedVehicleGrid } from '@/components/vehicles';
 import {
@@ -20,7 +19,7 @@ import {
   AnimatedNumber,
   DataProvenanceBadge,
   MetricBar,
-  MetricCard,
+  StatStrip,
   OperationalBrief,
   EntityPreviewDrawer,
   type OperationalAttention,
@@ -256,39 +255,20 @@ function FleetKpis({
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
-  const unknownLabel = t('common.unknownValue', '—');
   return (
-    <VehiclePanelGrid
-      label={t('vehicles.summary', 'Fleet summary')}
-      items={[
-        { id: 'fleet-total', size: 'quarter', content: <MetricCard
-        label={t('vehicles.totalVehicles', 'Total vehicles')}
-        value={totalVehicles}
-        icon={<Car className="h-5 w-5" />}
-        color="cyan"
-      /> },
-        { id: 'fleet-average-battery', size: 'quarter', content: <MetricCard
-        label={t('vehicles.avgBattery', 'Avg battery')}
-        value={avgBattery == null ? unknownLabel : `${fmtNumber(avgBattery)}%`}
-        icon={<Battery className="h-5 w-5" />}
-        color="green"
-      /> },
-        { id: 'fleet-total-range', size: 'quarter', content: <MetricCard
-        label={`${t('vehicles.totalRange', 'Total range')} (${unitPrefs.distance})`}
-        value={totalRange == null
-          ? unknownLabel
-          : fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance))}
-        icon={<Gauge className="h-5 w-5" />}
-        color="purple"
-      /> },
-        { id: 'fleet-charging-coverage', size: 'quarter', content: <MetricCard
-        label={t('vehicles.chargingLiveState', 'Charging / live state')}
-        value={chargingCoverageCount === 0
-          ? unknownLabel
-          : `${chargingCount} / ${chargingCoverageCount}`}
-        icon={<Zap className="h-5 w-5" />}
-        color="green"
-      /> },
+    <StatStrip
+      id="fleet-current-summary"
+      period={{ kind: 'snapshot', label: t('vehicles.summarySnapshot', 'Current verified fleet readings'), observedAt: null,
+        provenance: t('dataSources.labels.liveVehicleState', 'Live vehicle state') }}
+      metrics={[
+        { metricId: 'count', occurrenceId: 'fleet-total', label: t('vehicles.totalVehicles', 'Total vehicles'), rawValue: totalVehicles },
+        { metricId: 'text', occurrenceId: 'fleet-average-battery', label: t('vehicles.avgBattery', 'Avg battery'),
+          rawValue: avgBattery == null ? null : `${fmtNumber(avgBattery)}%` },
+        { metricId: 'text', occurrenceId: 'fleet-total-range',
+          label: `${t('vehicles.totalRange', 'Total range')} (${unitPrefs.distance})`,
+          rawValue: totalRange == null ? null : fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance)) },
+        { metricId: 'text', occurrenceId: 'fleet-charging-coverage', label: t('vehicles.chargingLiveState', 'Charging / live state'),
+          rawValue: chargingCoverageCount === 0 ? null : `${chargingCount} / ${chargingCoverageCount}` },
       ]}
     />
   );
@@ -1626,6 +1606,7 @@ export default function VehicleListPage() {
           />
         ) : (
           <GlassPanel padding="md">
+            {/* // no-action: No registered fleet to assess; the header and fleet-empty Sync from Tesla controls recover this source. */}
             <EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
               section: t('operations.vehicles.eyebrow', 'Fleet posture'),
             })} />
@@ -1637,6 +1618,7 @@ export default function VehicleListPage() {
           <FadeIn delay={0.05}>
             <Section id="fleet-summary" title={t('vehicles.summary', 'Fleet summary')}>
             {vehicleList.length === 0 ? (
+              // no-action: Summary needs registered vehicles; use the existing header or fleet-empty Sync from Tesla action.
               <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
                 section: t('vehicles.summary', 'Fleet summary'),
               })} /></GlassPanel>
@@ -1686,6 +1668,7 @@ export default function VehicleListPage() {
               ]}
             />
             ) : (
+              // no-action: Overview has no fleet to inspect; existing page-level Sync from Tesla controls already recover registration.
               <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
                 section: t('vehicles.overview', 'Fleet overview'),
               })} /></GlassPanel>
@@ -1714,6 +1697,7 @@ export default function VehicleListPage() {
               </StaggerContainer>
             )}
             {sortedVehicleList.length === 0 && (
+              // no-action: This is an empty registered fleet, not a local filter; header and fleet-empty Sync from Tesla already provide recovery.
               <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
                 section: t('vehicles.allVehicles', 'All vehicles'),
               })} /></GlassPanel>

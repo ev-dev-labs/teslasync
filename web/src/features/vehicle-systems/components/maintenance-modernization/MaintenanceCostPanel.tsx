@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { StatStrip } from '@/components/data-display/stat-reference';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { StatStrip } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import type { CostStatistics, ServiceRecord } from './maintenanceModel';
@@ -23,7 +23,9 @@ export function MaintenanceCostPanel({
 }) {
   const { t } = useTranslation();
   const empty = (
-    <EmptyState message={t('maintenance.noCost', 'No cost data available yet. Log service records to see cost estimates.')} />
+    <EmptyState message={t('maintenance.noCost', 'No cost data available yet. Log service records to see cost estimates.')}
+      action={enabled && source.retry ? { label: t('common.refresh', 'Refresh'), onClick: source.retry } : undefined}
+      actionTo={!enabled ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />
   );
   const metrics = [
     {

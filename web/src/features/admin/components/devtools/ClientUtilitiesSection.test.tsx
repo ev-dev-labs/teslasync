@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 vi.mock('react-i18next', async () => {
@@ -159,11 +159,15 @@ describe('ClientUtilitiesSection', () => {
 
     // The disclosure region is programmatically associated with its trigger.
     const region = screen.getByRole('region', { name: 'VIN decoder' })
-    expect(region.id).toBe('devtools-tool-panel-vin')
+    expect(region.id).not.toBe('')
     expect(vinToggle).toHaveAttribute('aria-controls', region.id)
+    expect(region).toHaveAttribute('aria-labelledby', vinToggle.getAttribute('aria-labelledby'))
+    expect(document.getElementById('devtools-tool-panel-vin')).toContainElement(
+      screen.getByPlaceholderText(VIN_PLACEHOLDER),
+    )
   })
 
-  it('collapses the card again on a second click', () => {
+  it('collapses the card again on a second click', async () => {
     render(<ClientUtilitiesSection />)
 
     fireEvent.click(screen.getByRole('button', { name: /VIN decoder/i }))
@@ -174,11 +178,13 @@ describe('ClientUtilitiesSection', () => {
     expect(
       screen.getByRole('button', { name: /VIN decoder/i }),
     ).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByPlaceholderText(VIN_PLACEHOLDER)).toBeNull()
-    expect(screen.queryByRole('region')).toBeNull()
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(VIN_PLACEHOLDER)).toBeNull()
+      expect(screen.queryByRole('region')).toBeNull()
+    })
   })
 
-  it('acts as an accordion — opening a second tool closes the first', () => {
+  it('acts as an accordion — opening a second tool closes the first', async () => {
     render(<ClientUtilitiesSection />)
 
     fireEvent.click(screen.getByRole('button', { name: /VIN decoder/i }))
@@ -197,10 +203,10 @@ describe('ClientUtilitiesSection', () => {
     ).toHaveAttribute('aria-expanded', 'true')
     // The first tool's body unmounts; exactly one region remains and it is
     // JWT's (asserted via the a11y region label, not a brittle placeholder).
-    expect(screen.queryByPlaceholderText(VIN_PLACEHOLDER)).toBeNull()
-    expect(
-      screen.queryByRole('region', { name: 'VIN decoder' }),
-    ).toBeNull()
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(VIN_PLACEHOLDER)).toBeNull()
+      expect(screen.queryByRole('region', { name: 'VIN decoder' })).toBeNull()
+    })
     expect(
       screen.getByRole('region', { name: 'JWT decoder' }),
     ).toBeInTheDocument()
@@ -220,5 +226,18 @@ describe('ClientUtilitiesSection', () => {
     expect(
       within(vinToggle).getByText('VIN decoder'),
     ).toBeInTheDocument()
+  })
+
+  it('associates the stacked description separately from the tool name while collapsed and expanded', () => {
+    render(<ClientUtilitiesSection />)
+    const toggle = screen.getByRole('button', { name: 'Timestamp' })
+    const descriptionId = toggle.getAttribute('aria-describedby')
+    expect(descriptionId).toBeTruthy()
+    expect(document.getElementById(descriptionId!)).toHaveTextContent('Convert between Unix and ISO 8601 timestamps')
+    expect(toggle).toHaveAccessibleDescription('Convert between Unix and ISO 8601 timestamps')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('region', { name: 'Timestamp' })).toHaveAttribute('id', toggle.getAttribute('aria-controls'))
+    expect(toggle).toHaveAccessibleDescription('Convert between Unix and ISO 8601 timestamps')
   })
 })

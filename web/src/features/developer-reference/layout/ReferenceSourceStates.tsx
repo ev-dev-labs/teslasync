@@ -29,7 +29,10 @@ export function ReferenceSourceStates() {
         { id: 'source-a', size: 'half', content: <LayoutCard title={source}>
           <SourceContent state={state} label={source}
             emptyMessage={t('developerReference.layout.states.emptyMessage', 'The first synthetic source returned no records.')}
-            errorMessage={t('developerReference.layout.states.errorMessage', 'The first synthetic source failed; its neighbor is unaffected.')}>
+            errorMessage={t('developerReference.layout.states.errorMessage', 'The first synthetic source failed; its neighbor is unaffected.')}
+            retainedMessage={t('developerReference.layout.source.retained', 'The synthetic refresh failed. Retained content remains available.')}
+            errorRecovery={{ onRetry: () => setState('ready') }}
+            emptyRecovery={{ action: { label: t('error.retry', 'Retry'), onClick: () => setState('ready') } }}>
             <Text as="p" variant="bodySm">{t('developerReference.layout.states.firstBody', 'This source’s retained synthetic content remains reachable when only its refresh fails.')}</Text>
           </SourceContent>
         </LayoutCard> },

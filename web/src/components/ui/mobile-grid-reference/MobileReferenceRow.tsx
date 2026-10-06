@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Checkbox, Text } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { Badge } from '../Badge';
+import { Checkbox } from '../Checkbox';
+import { Text } from '../Typography';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { cn } from '@/lib/cn';
 import { rowMappingIssues, safeProgress } from './helpers';
 import type { MobileRow, MobileVariant } from './types';
@@ -59,7 +61,7 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0 flex-1">
             <Text data-card-label="" title={row.title} className="mgr-title block truncate">{row.title}</Text>
-            {keyValue && row.rawLabel && <Text mono className="block truncate text-[11px] text-[var(--text-muted)]" title={row.rawLabel}>{row.rawLabel}</Text>}
+            {keyValue && row.rawLabel && <Text variant="caption" mono className="block truncate" title={row.rawLabel}>{row.rawLabel}</Text>}
           </div>
           {actions && <div className="shrink-0 p-2">{actions}</div>}
           {!keyValue && row.tag && <Badge variant="neutral" className="max-w-20 truncate">{row.tag}</Badge>}

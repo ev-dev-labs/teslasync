@@ -15,8 +15,8 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Tabs, type TabItem } from '@/components/ui';
+import { LayoutCard, PageLayout } from '@/components/layout';
+import { Tabs, type TabItem } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { PackRepositoryProvider } from '../hooks/packRepositoryContext';
@@ -51,14 +51,14 @@ function MarketplaceTabs() {
         ariaLabel={t('intelPacks.tabs.ariaLabel', 'Intelligence-pack marketplace sections')}
       />
       <FadeIn key={activeTab}>
-        <GlassPanel padding="lg">
+        <LayoutCard title={tabs.find(tab => tab.key === activeTab)?.label ?? ''}>
           {activeTab === 'catalog' && <CatalogPanel />}
           {activeTab === 'installed' && <InstalledInventoryPanel />}
           {activeTab === 'sandbox' && <SandboxPreviewPanel />}
           {activeTab === 'audit' && <AuditLogPanel />}
           {activeTab === 'importExport' && <ImportExportPanel />}
           {activeTab === 'security' && <SecurityMethodologyPanel />}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
     </div>
   );
@@ -69,7 +69,7 @@ export default function IntelligencePackMarketplacePage() {
   usePageTitle(t('intelPacks.page.title', 'Intelligence-pack marketplace'));
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('intelPacks.page.title', 'Intelligence-pack marketplace')}
       subtitle={t(
         'intelPacks.page.subtitle',
@@ -79,6 +79,6 @@ export default function IntelligencePackMarketplacePage() {
       <PackRepositoryProvider>
         <MarketplaceTabs />
       </PackRepositoryProvider>
-    </PageContainer>
+    </PageLayout>
   );
 }

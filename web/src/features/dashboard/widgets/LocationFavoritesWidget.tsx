@@ -81,10 +81,14 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
     return locs.filter((loc) => loc != null).map((loc) => ({
       id: loc.id,
       label: loc.addressName ?? '—',
-      value: loc.visitCount != null && Number.isFinite(loc.visitCount) ? loc.visitCount : 0,
+      value: loc.visitCount != null && Number.isFinite(loc.visitCount) ? loc.visitCount : null,
       formattedValue: `${loc.visitCount != null && Number.isFinite(loc.visitCount) ? fmtInt(loc.visitCount) + '×' : '—'} · ${loc.lastVisited ? formatRelative(loc.lastVisited) : '—'}`,
       barColor: 'bg-blue-400',
-    }));
+    })).sort((a, b) => {
+      if (a.value == null) return b.value == null ? 0 : 1;
+      if (b.value == null) return -1;
+      return b.value - a.value;
+    });
   }, [locations, fmtInt]);
 
   // Both queries feed this widget: the snapshot drives the presence badge
@@ -153,6 +157,8 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
       ) : items.length > 0 ? (
         <WidgetRankedList
           items={items}
+          order="source"
+          wrapContent
           emptyMessage={t('widget.locationFavorites.noData', 'No favorite locations')}
           emptyIcon={<MapPin className="h-5 w-5" />}
         />

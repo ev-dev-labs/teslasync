@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { SlidersHorizontal } from 'lucide-react';
 import { useCardPlacement } from '@/components/layout/layout-reference';
-import { GlassPanel, Button, Select, Toggle, PanelTitle, HelperText } from '@/components/ui';
+import { FormSection } from '@/components/forms';
+import { Button, Select, Toggle, HelperText } from '@/components/ui';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import type { GuardPageModel } from './useGuardPageModel';
@@ -12,13 +12,9 @@ export function GuardSettings({ model: m }: { model: GuardPageModel }) {
   const configReady = m.configQuery.data !== undefined;
   const disabled = m.noVehicle || m.setConfig.isPending || !configReady;
   return (
-    <GlassPanel data-guard-section="settings"
-      className={cn('min-w-0 space-y-4 p-4 sm:p-5', placement?.className)}>
-      <PanelTitle className="flex items-center gap-2">
-        <SlidersHorizontal className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-        {t('guard.settings', 'Guard settings')}
-      </PanelTitle>
-      <HelperText>{t('guard.modernization.engineLimitation', 'Automatic guard monitoring, theft detection, and auto-panic are not established by the current service. These settings persist policy; verify vehicle security using current lock and Sentry readings.')}</HelperText>
+    <div data-guard-section="settings" className={cn('min-w-0', placement?.className)}>
+      <FormSection title={t('guard.settings', 'Guard settings')}
+        description={t('guard.modernization.engineLimitation', 'Automatic guard monitoring, theft detection, and auto-panic are not established by the current service. These settings persist policy; verify vehicle security using current lock and Sentry readings.')}>
       {m.guardConfig === null && <HelperText>{t('guard.modernization.notSaved', 'No saved guard policy yet')}</HelperText>}
       <StaleRefreshWarning state={m.configState} label={t('guard.settings', 'Guard settings')} />
       <StaleRefreshWarning state={m.geofencesState} label={t('guard.homeGeofence', 'Home geofence')} />
@@ -48,15 +44,16 @@ export function GuardSettings({ model: m }: { model: GuardPageModel }) {
               <HelperText>{t('guard.modernization.autoPanicPolicy', 'Saved auto-panic preference; no automatic execution worker is established.')}</HelperText>
             </div>
           </div>
-          <div className="flex flex-wrap justify-end">
-            <Button onClick={m.handleSaveSettings} loading={m.setConfig.isPending} disabled={disabled}>
-              {t('guard.saveSettings', 'Save settings')}
-            </Button>
-          </div>
         </>
       ) : <HelperText>{t('guard.modernization.sourceUnknown', 'Source unavailable; no security conclusion can be drawn.')}</HelperText>}
+      <div className="flex flex-wrap justify-end">
+        <Button wrapLabel onClick={m.handleSaveSettings} loading={m.setConfig.isPending} disabled={disabled}>
+          {t('guard.saveSettings', 'Save settings')}
+        </Button>
+      </div>
       {m.setConfig.error && <QueryError error={m.setConfig.error} compact />}
       {m.setConfig.error && <HelperText>{t('guard.modernization.saveFailure', 'Policy may have been saved even if arming failed. Review the refreshed policy and live lock/Sentry status before trying again.')}</HelperText>}
-    </GlassPanel>
+      </FormSection>
+    </div>
   );
 }

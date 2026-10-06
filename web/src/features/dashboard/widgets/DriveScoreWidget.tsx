@@ -86,6 +86,7 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
   }, [refetch]);
 
   const gauge = useMemo<GaugeHeroConfig>(() => ({
+    preserveReadingAndScale: true,
     value: score,
     max: 100,
     label: t('widget.score', 'Score'),

@@ -18,9 +18,8 @@
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Tabs, type TabItem } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { Tabs, HelperText, type TabItem } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { InlineCallout } from '@/components/feedback';
 import { ShieldCheck } from 'lucide-react';
@@ -61,7 +60,7 @@ export default function WarrantyResaleVaultPage() {
   const vehicleId = numericVehicleId != null ? String(numericVehicleId) : null;
 
   const disclosure = useDisclosureSelection();
-  const { evidence, isLoading, hasPartialErrors } = useVaultEvidence(vehicleId, disclosure.selection.sensitive);
+  const { evidence, isLoading, hasPartialErrors, sources } = useVaultEvidence(vehicleId, disclosure.selection.sensitive);
   const vault = useSigningVault();
 
   const report = useMemo(
@@ -84,7 +83,7 @@ export default function WarrantyResaleVaultPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={pageTitle}
       subtitle={t(
         'resaleVault.page.subtitle',
@@ -92,18 +91,15 @@ export default function WarrantyResaleVaultPage() {
       )}
     >
       <FadeIn>
-        <GlassPanel padding="lg" className="space-y-2">
-          <PanelTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
-            {t('resaleVault.intro.title', 'Local-first, selectively disclosed')}
-          </PanelTitle>
+        <LayoutCard title={t('resaleVault.intro.title', 'Local-first, selectively disclosed')}
+          actions={<ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
           <HelperText>
             {t(
               'resaleVault.intro.body',
               'Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).',
             )}
           </HelperText>
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
 
       <Tabs
@@ -129,6 +125,7 @@ export default function WarrantyResaleVaultPage() {
                 selection={disclosure.selection}
                 isLoading={isLoading}
                 hasPartialErrors={hasPartialErrors}
+                sources={sources}
               />
               <BatterySummaryPanel battery={evidence.battery} />
               <BatteryCertificatePanel vehicleId={vehicleId} />
@@ -176,6 +173,6 @@ export default function WarrantyResaleVaultPage() {
           </FadeIn>
         )}
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

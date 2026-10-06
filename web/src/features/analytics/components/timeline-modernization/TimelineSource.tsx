@@ -23,6 +23,7 @@ export function TimelineSource({ source, label, children }: TimelineSourceProps)
   const { t } = useTranslation();
   if (!source.available) {
     if (!source.enabled) {
+      // no-action: the workspace header/mobile vehicle picker owns selection; another selector or navigation would duplicate that recovery control.
       return <EmptyState message={t('timeline.source.selectVehicle', 'Select a vehicle to view its state history')} />;
     }
     if (source.error) {
@@ -35,6 +36,7 @@ export function TimelineSource({ source, label, children }: TimelineSourceProps)
       </>;
     }
     if (source.paused) {
+      // no-action: this query resumes on reconnect; retrying while offline cannot recover it, and the header retains vehicle/range controls.
       return <EmptyState message={t('timeline.source.paused', '{{section}} is paused while the connection is unavailable', { section: label })} />;
     }
     if (source.loading) {
@@ -42,7 +44,10 @@ export function TimelineSource({ source, label, children }: TimelineSourceProps)
         <Skeleton className="h-24 w-full" />
       </div>;
     }
-    return <EmptyState message={t('timeline.source.unknown', '{{section}} is unavailable because the response did not contain the expected records', { section: label })} />;
+    return <EmptyState
+      message={t('timeline.source.unknown', '{{section}} is unavailable because the response did not contain the expected records', { section: label })}
+      actionTo={{ label: t('routes.stateMachineDebugger', 'State machine debugger'), to: '/state-debugger' }}
+    />;
   }
   return <>
     {Boolean(source.error) && (

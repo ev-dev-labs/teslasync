@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useTeslaExclusive } from '@/api/hooks/useTeslaPhysics';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { PageContainer } from '@/components/layout';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { Badge, GlassPanel, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -65,15 +65,14 @@ export function PhysicsPageShell({ physics, children, navigation }: {
   const evidence = report?.evidence;
   const limited = evidence && (!evidence.history_available || !evidence.black_box_available || evidence.history_truncated ||
     evidence.black_box_truncated || evidence.drive_sessions_truncated || evidence.charge_sessions_truncated);
-  return <PageContainer title={pageTitle} subtitle={t('teslaOnly.workbench.subtitle', 'A bounded evidence workbench: conclusions first, raw observations on demand.')}
+  return <PageLayout title={pageTitle} subtitle={t('teslaOnly.workbench.subtitle', 'A bounded evidence workbench: conclusions first, raw observations on demand.')}
     query={query} copyLink metadataActions={<div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
       <DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />
     </div>}>
     <StaleRefreshWarning state={state} label={title} />
     {navigation}
     {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} /> : report ? <div className="space-y-6">
-      <GlassPanel className="space-y-3 p-4 sm:p-5">
-        <PanelTitle>{t('teslaOnly.scopeTitle', 'Evidence boundaries')}</PanelTitle>
+      <LayoutCard title={t('teslaOnly.scopeTitle', 'Evidence boundaries')}>
         {limited && <Badge variant="warning" size="sm">{t('teslaOnly.partialEvidence', 'Partial or unavailable evidence — do not interpret counts as complete')}</Badge>}
         {evidence ? <>
           <Text as="p" variant="bodySm">{t('teslaOnly.scopeRequested', 'Requested: {{from}} → {{to}}', { from: time(evidence.requested_from, t), to: time(evidence.requested_to, t) })}</Text>
@@ -90,7 +89,7 @@ export function PhysicsPageShell({ physics, children, navigation }: {
           </div>
         </> : <Text as="p" variant="bodySm">{t('teslaOnly.scopeUnavailable', 'Evidence coverage metadata was not returned; counts cannot establish completeness.')}</Text>}
         <Text as="p" variant="caption">{t('teslaOnly.scopeCaution', 'The exclusive report covers at most 14 days. Row caps, missing history, and partial session coverage limit conclusions; a zero finding is not lifetime proof.')}</Text>
-      </GlassPanel>
+      </LayoutCard>
       {slice && !report[slice] ? <GlassPanel className="p-4 sm:p-5">
         {/* no-action: missing evidence cannot be restored from a display-only page. */}
         <EmptyState title={title} message={t('teslaOnly.missingSlice', 'This evidence slice was not returned. No measurement is inferred from its absence.')} />
@@ -99,5 +98,5 @@ export function PhysicsPageShell({ physics, children, navigation }: {
       {/* no-action: VehicleSelect is already in the header. */}
       <EmptyState title={title} message={t('teslaOnly.empty', 'Select a vehicle to load Tesla physics.')} />
     </>}
-  </PageContainer>;
+  </PageLayout>;
 }

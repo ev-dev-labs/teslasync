@@ -44,10 +44,11 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { GlassPanel, Heading, Text, type BadgeProps } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
+import { DataStateNotice, QueryError } from '@/components/feedback'
 import { type NeonColor } from '@/lib/tokens'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useSettings } from '@/hooks/useSettings'
@@ -211,7 +212,9 @@ function coalesceBlank(value: string | null | undefined, fallback: string): stri
 export default function SafetyPage() {
   const { t } = useTranslation()
   usePageTitle(t('safetySettings.pageTitle', 'Safety settings'))
-  const { settings } = useSettings()
+  const { settings, settingsState } = useSettings()
+  const unavailable = settingsState?.hasData === false
+  const dash = t('common.dash', '—')
 
   // Deterministic safety-posture summary derived from the same settings the
   // listing renders — no invented data, no extra network calls.
@@ -230,13 +233,16 @@ export default function SafetyPage() {
   const apiActive = !settings.api_suspended
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('safetySettings.pageTitle', 'Safety settings')}
       subtitle={t(
         'safetySettings.pageSubtitle',
         'Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to change a value.',
       )}
     >
+      {settingsState?.fatalError && <QueryError error={settingsState.fatalError} />}
+      {settingsState?.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
+      {settingsState?.status === 'initial' && <Text as="p" variant="bodySm" role="status">{t('common.loading', 'Loading…')}</Text>}
       {/* 1 — Safety-posture KPI band: full-width responsive metric grid. */}
       <FadeIn>
         <section
@@ -245,25 +251,25 @@ export default function SafetyPage() {
         >
           <MetricCard
             label={t('safetySettings.kpi.safeguards', 'Active safeguards')}
-            value={`${safeguardsOn} / ${safeguards.length}`}
+            value={unavailable ? dash : `${safeguardsOn} / ${safeguards.length}`}
             icon={<ShieldCheck className="h-5 w-5" />}
-            color={safeguardsOn === safeguards.length ? 'green' : 'cyan'}
+            color={!unavailable && safeguardsOn === safeguards.length ? 'green' : 'cyan'}
             subtitle={t('safetySettings.kpi.safeguardsHint', 'Protections enabled')}
           />
           <MetricCard
             label={t('safetySettings.kpi.quietWindow', 'Quiet window')}
-            value={quietWindow}
+            value={unavailable ? dash : quietWindow}
             icon={<Moon className="h-5 w-5" />}
             color="blue"
             subtitle={
-              settings.quiet_hours_enabled
+              unavailable ? undefined : settings.quiet_hours_enabled
                 ? t('safetySettings.kpi.quietWindowOn', 'Deferring non-critical')
                 : t('safetySettings.kpi.quietWindowOffHint', 'Always delivering')
             }
           />
           <MetricCard
             label={t('safetySettings.kpi.cadence', 'Alert cadence')}
-            value={digestLabel}
+            value={unavailable ? dash : digestLabel}
             icon={<BellRing className="h-5 w-5" />}
             color="cyan"
             subtitle={t('safetySettings.kpi.cadenceHint', 'Digest batching')}
@@ -271,12 +277,12 @@ export default function SafetyPage() {
           <MetricCard
             label={t('safetySettings.kpi.fleetApi', 'Fleet API')}
             value={
-              apiActive
+              unavailable ? dash : apiActive
                 ? t('safetySettings.value.active', 'Active')
                 : t('safetySettings.value.suspended', 'Suspended')
             }
             icon={<PlugZap className="h-5 w-5" />}
-            color={apiActive ? 'green' : 'amber'}
+            color={unavailable ? 'cyan' : apiActive ? 'green' : 'amber'}
             subtitle={t('safetySettings.kpi.fleetApiHint', 'Outbound requests')}
           />
         </section>
@@ -306,7 +312,7 @@ export default function SafetyPage() {
             </header>
 
             <ul
-              className="grid gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))]"
+              className="grid min-w-0 gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))]"
               data-testid="safety-settings-rows"
             >
               {SAFETY_ROWS.map((row) => {
@@ -318,8 +324,8 @@ export default function SafetyPage() {
                     icon={<row.icon className="h-4 w-4" aria-hidden="true" />}
                     accent={row.accent}
                     title={title}
-                    value={row.renderValue(settings, t)}
-                    valueVariant={row.badgeVariant(settings)}
+                    value={unavailable ? dash : row.renderValue(settings, t)}
+                    valueVariant={unavailable ? 'neutral' : row.badgeVariant(settings)}
                     description={t(row.descKey, row.descFallback)}
                     docsHref={row.docsAnchor}
                     docsLabel={t('safetySettings.listing.docsLink', 'Docs')}
@@ -342,6 +348,6 @@ export default function SafetyPage() {
           </div>
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

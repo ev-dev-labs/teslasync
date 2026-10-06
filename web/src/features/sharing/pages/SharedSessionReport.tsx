@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, Clock, Battery, Gauge, DollarSign, MapPin } from 'lucide-react';
 import { GlassPanel, Logo, Text } from '@/components/ui';
-import { Grid, PageHeader } from '@/components/layout';
+import { ChartCard, Grid, LayoutCard, PageHeader } from '@/components/layout';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import {
-  ChartContainer, ChartGradient, chartGrid, axisTick,
+  ChartGradient, chartGrid, axisTick,
   ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
@@ -53,7 +53,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <div className="w-full min-w-0 px-4 py-8 space-y-6">
         <div>
           <PageHeader
             title={data.title}
@@ -121,17 +121,9 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
         {/* Vehicle badge */}
         {data.vehicle && (
           <FadeIn delay={0.1}>
-            <GlassPanel className="p-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/[0.05] flex items-center justify-center">
-                <Zap className="h-4 w-4 text-[var(--theme-primary)]" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Tesla {data.vehicle.model}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">{data.vehicle.color}</p>
-              </div>
-            </GlassPanel>
+            <LayoutCard title={`Tesla ${data.vehicle.model}`}>
+              <Text as="p" variant="caption">{data.vehicle.color}</Text>
+            </LayoutCard>
           </FadeIn>
         )}
 
@@ -140,7 +132,10 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
           <FadeIn delay={0.15}>
             {/* chart-a11y:no-table dense per-sample shared-session trace */}
             {/* chart-legend-audit:skip public share-link report has no URL state; power+SoC stay visible together */}
-            <ChartContainer
+            <ChartCard
+              size="standard"
+              toolbar
+              exportable
               title={t('share.curve', 'Charge curve')}
               ariaLabel={t('share.curve.aria', 'Shared session power and battery chart by minute')}
               height={220}
@@ -191,7 +186,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
                   />
                 </ComposedChart>
               </ResponsiveContainer>
-            </ChartContainer>
+            </ChartCard>
           </FadeIn>
         )}
 
@@ -207,8 +202,8 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
 
         {/* Footer */}
         <FadeIn delay={0.25}>
-          <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center text-[var(--text-muted)] text-xs space-y-1">
-            <p>{t('share.footer', 'Shared via TeslaSync — self-hosted Tesla fleet intelligence')}</p>
+          <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center space-y-1">
+            <Text as="p" variant="caption">{t('share.footer', 'Shared via TeslaSync — self-hosted Tesla fleet intelligence')}</Text>
             <a
               href="https://github.com/ev-dev-labs/teslasync"
               target="_blank"

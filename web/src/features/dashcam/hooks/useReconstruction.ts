@@ -9,9 +9,12 @@ export interface UseReconstructionResult {
   /** Hours of telemetry lookback actually requested (bounded by the evidence-bundle hook, from-now only). */
   lookbackHours: number;
   reconstruction: ReconstructionResult | null;
+  /** Alignment is computed before requests resolve; a received signal response is the retained-source boundary. */
+  hasRetainedHistory: boolean;
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
+  refetch: () => Promise<void>;
   /** True when the clip predates what a "last N hours from now" query can reach without server-side history retention. */
   possiblyOutOfLookbackRange: boolean;
 }
@@ -63,9 +66,11 @@ export function useReconstruction(
     clipEpochMs,
     lookbackHours,
     reconstruction,
+    hasRetainedHistory: bundle.data.length > 0,
     isLoading: bundle.isLoading,
     isError: bundle.isError,
     error: bundle.error,
+    refetch: bundle.refetch,
     possiblyOutOfLookbackRange,
   };
 }

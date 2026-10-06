@@ -335,12 +335,30 @@ describe('ExplorePage — visibility gates', () => {
   it('is null-safe when the vehicles query has no data yet', () => {
     state.vehicles = undefined;
     renderPage();
-    expect(kpiValue('Vehicles')).toBe('0');
+    expect(kpiValue('Vehicles')).toBe('—');
     expect(screen.queryByTestId('explore-card-/vehicle-comparison')).toBeNull();
   });
 });
 
 describe('ExplorePage — keyboard', () => {
+  it('uses pressed filter buttons, not document tabs or arrow-driven selection', () => {
+    const { getLocation } = renderPage('/explore?q=charging');
+    const group = screen.getByRole('group', { name: 'Filter features by category' });
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    const buttons = within(group).getAllByRole('button');
+    expect(buttons.every(button => button.tabIndex === 0)).toBe(true);
+    const before = getLocation().search;
+    fireEvent.keyDown(buttons[0], { key: 'ArrowRight' });
+    expect(getLocation().search).toBe(before);
+    const charging = buttons.find(button => button.textContent?.startsWith('Charging'));
+    expect(charging).toBeDefined();
+    fireEvent.click(charging!);
+    expect(getLocation().search).toContain('q=charging');
+    expect(getLocation().search).toContain('section=charging');
+    expect(charging).toHaveAttribute('aria-pressed', 'true');
+    expect(charging).not.toHaveAttribute('aria-selected');
+  });
+
   it('focuses the search box on "/" and ignores other keys', () => {
     renderPage();
     const input = screen.getByTestId('explore-search');

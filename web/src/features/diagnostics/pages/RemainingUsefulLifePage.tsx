@@ -5,7 +5,7 @@ import {
   Circle, Disc, Wind, Gauge, type LucideIcon,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
@@ -14,12 +14,13 @@ import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
   EmbeddedChart,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useRUL, useComponentRUL, type ComponentRUL, type RULStatus } from '@/api/hooks/useRUL';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 
 import { cn } from '@/lib/cn';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -69,7 +70,9 @@ export default function RemainingUsefulLifePage() {
   const noVehicle = vehicleId === null;
 
   const boardQuery = useRUL(vehicleId);
-  const { data: board, isLoading: boardLoading, error: boardError, refetch: refetchBoard } = boardQuery;
+  const { data: board, isLoading: boardLoading, refetch: refetchBoard } = boardQuery;
+  const boardState = useDataState(boardQuery, { provenance: 'inferred' });
+  const boardError = boardState.fatalError;
 
   const components = board?.components ?? [];
   const nextService = board?.next_service ?? null;
@@ -84,7 +87,9 @@ export default function RemainingUsefulLifePage() {
   );
 
   const detailQuery = useComponentRUL(vehicleId, activeComponent);
-  const { data: detail, isLoading: detailLoading, error: detailError, refetch: refetchDetail } = detailQuery;
+  const { data: detail, isLoading: detailLoading, refetch: refetchDetail } = detailQuery;
+  const detailState = useDataState(detailQuery, { provenance: 'inferred' });
+  const detailError = detailState.fatalError;
 
   const handleSelect = useCallback((component: string) => setSelected(component), []);
   const onRetryBoard = useCallback(() => { refetchBoard(); }, [refetchBoard]);
@@ -135,11 +140,12 @@ export default function RemainingUsefulLifePage() {
   const selectVehicleMsg = t('rul.selectVehicle', 'Select a vehicle to view its component prognostics.');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('rul.title', 'Remaining useful life')}
       subtitle={t('rul.subtitle', 'Predictive end-of-life forecasts for your wear components')}
       query={boardQuery}
     >
+      <StaleRefreshWarning state={boardState} label={t('rul.board.title', 'Component health')} />
       {/* ── 1. Next-service banner ─────────────────────────────────────── */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
@@ -221,7 +227,7 @@ export default function RemainingUsefulLifePage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <Icon className={cn('h-4 w-4 shrink-0', meta.text)} aria-hidden="true" />
-                        <Text as="span" variant="subhead" weight="semibold" className="truncate">
+                        <Text as="span" variant="subhead" weight="semibold" className="break-words">
                           {c.label}
                         </Text>
                       </div>
@@ -284,6 +290,7 @@ export default function RemainingUsefulLifePage() {
             {t('rul.forecast.title', 'Health forecast')}
             {detail ? <span className={cn('text-sm font-normal', activeMeta.text)}>· {detail.label}</span> : null}
           </PanelTitle>
+          <StaleRefreshWarning state={detailState} label={t('rul.forecast.title', 'Health forecast')} />
           <Text as="p" variant="caption" className="mb-3">
             {t('rul.forecast.subtitle', 'Projected health decaying to the end-of-life threshold, with a confidence band.')}
           </Text>
@@ -392,6 +399,6 @@ export default function RemainingUsefulLifePage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

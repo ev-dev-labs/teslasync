@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { useDrive, useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -154,7 +154,7 @@ export default function DriveComparePage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('driveCompare.title', 'Drive Compare')}
       subtitle={t('driveCompare.subtitle', 'Compare context, efficiency, and telemetry from any two drives')}
       query={[drivesQuery, driveAQuery, driveBQuery]}
@@ -228,6 +228,6 @@ export default function DriveComparePage() {
           state={compareState}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

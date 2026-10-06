@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { StatStrip, type StatMetric } from '@/components/data-display';
 import { useCardPlacement } from '@/components/layout/layout-reference';
 import { formatDateTime } from '@/lib/dateFormat';
 import { PASCALS_PER_KPA, type UnitPref } from '@/lib/unitConversion';

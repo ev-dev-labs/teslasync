@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, Car, Clock } from 'lucide-react';
 
-import { PageLayout, Section, CardGrid } from '@/components/layout/layout-reference';
+import { PageLayout, Section, CardGrid, ChartCard } from '@/components/layout';
 import { Button } from '@/components/ui';
 import { SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
-  ChartTooltip, ChartContainer, ChartLegend,
+  ChartTooltip, ChartLegend,
   chartGrid, axisTickSm,
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -180,13 +180,19 @@ export default function StatisticsPage() {
             { id: 'statistics-battery', size: 'half', content: <BatteryStatistics query={batteryQuery} /> },
             { id: 'statistics-state', size: 'half', content: (
           <StatisticsChartPlacement>
-          {/* chart-a11y:no-table pie-chart slices are aggregated state counts; SR users get the same info via the State page */}
-          <ChartContainer
+          <ChartCard
+            size="standard"
             title={t('statistics.stateDistribution', 'State distribution')}
             ariaLabel={t('statistics.stateDistribution.aria', 'Vehicle state distribution pie chart')}
             exportable
             exportFilename="state-distribution"
             height={280}
+            data={stateData}
+            dataColumns={[
+              { key: 'name', label: t('timeline.toState', 'To state') },
+              { key: 'value', label: t('statistics.stateShare', 'Share of recorded state time (%)') },
+            ]}
+            exportData={stateData}
           >
             <StatisticsSource
               hasData={stateSummary != null}
@@ -200,6 +206,7 @@ export default function StatisticsPage() {
                   icon={<Clock className="h-8 w-8" aria-hidden="true" />}
                   message={t('statistics.noStates', 'No state distribution data')}
                   description={t('statistics.noStatesDescription', 'Driving, charging, and parked-state history will populate this distribution over time.')}
+                  actionTo={{ label: t('routes.stateMachineDebugger', 'State machine debugger'), to: '/state-debugger' }}
                   className="py-8"
                 />
               }
@@ -214,7 +221,7 @@ export default function StatisticsPage() {
                 </PieChart>
               </ResponsiveContainer>
             </StatisticsSource>
-          </ChartContainer>
+          </ChartCard>
           </StatisticsChartPlacement>
             ) },
           ]} />
@@ -227,14 +234,21 @@ export default function StatisticsPage() {
             { id: 'statistics-mileage', size: 'third', content: <MileageStatistics query={mileageQuery} fromKm={fromKm} distanceUnit={distanceUnit} /> },
             { id: 'statistics-fleet', size: 'half', content: (
           <StatisticsChartPlacement>
-          {/* chart-a11y:no-table multi-vehicle bar chart — fleet rollup with per-vehicle drill-down available */}
-          <ChartContainer
+          <ChartCard
+            size="standard"
             title={t('statistics.vehicleComparison', 'Vehicle comparison')}
             ariaLabel={t('statistics.vehicleComparison.aria', 'Distance and energy bar chart comparing all vehicles in the fleet')}
             chartKey="fleet-vehicle-comparison"
             exportable
             exportFilename="vehicle-comparison"
             height={300}
+            data={compData}
+            dataColumns={[
+              { key: 'name', label: t('compare.vehicle', 'Vehicle') },
+              { key: 'distance', label: `${t('statistics.distance', 'Distance')} (${distanceUnit})` },
+              { key: 'energy', label: t('statistics.energy', 'Energy (kWh)') },
+            ]}
+            exportData={compData}
           >
             <StatisticsSource
               hasData={fleet != null}
@@ -265,7 +279,7 @@ export default function StatisticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             </StatisticsSource>
-          </ChartContainer>
+          </ChartCard>
           </StatisticsChartPlacement>
             ) },
           ]} />

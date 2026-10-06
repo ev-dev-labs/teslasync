@@ -5,7 +5,7 @@ import {
   BatteryCharging, Timer, Zap,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
@@ -27,6 +27,7 @@ import {
   type TirePreset,
   type EnergyBreakdown,
 } from '../lib/whatIfModel';
+import { WhatIfEnergyBreakdown } from '../components/WhatIfEnergyBreakdown';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type ComponentKey = keyof Omit<EnergyBreakdown, 'total'>;
@@ -51,48 +52,6 @@ const COMPONENTS: {
   { key: 'climate',   i18nKey: 'whatIf.compClimate',   fallback: 'Climate',   color: chartTokens.series[6] },
   { key: 'other',     i18nKey: 'whatIf.compOther',     fallback: 'Other',     color: 'var(--text-muted)' },
 ];
-
-/** One labelled stacked bar (actual or what-if) in the breakdown panel. */
-function BreakdownRow({
-  caption,
-  breakdown,
-  max,
-  labels,
-  formatWh,
-}: {
-  caption: string;
-  breakdown: EnergyBreakdown;
-  max: number;
-  labels: Record<ComponentKey, string>;
-  formatWh: (wh: number) => string;
-}) {
-  return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <Text variant="caption">{caption}</Text>
-        <Text variant="caption" className="font-mono tabular-nums">{formatWh(breakdown.total)}</Text>
-      </div>
-      <div
-        className="flex h-7 w-full overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]"
-        role="img"
-        aria-label={`${caption} — ${formatWh(breakdown.total)}`}
-      >
-        {COMPONENTS.map((c) => {
-          const pct = max > 0 ? (breakdown[c.key] / max) * 100 : 0;
-          // Sub-0.5% slivers render as a hairline of colour with no readable
-          // area — drop them so the bar stays clean rather than fringed.
-          return pct > 0.5 ? (
-            <div
-              key={c.key}
-              style={{ width: `${pct}%`, background: c.color }}
-              title={`${labels[c.key]}: ${formatWh(breakdown[c.key])}`}
-            />
-          ) : null;
-        })}
-      </div>
-    </div>
-  );
-}
 
 export default function WhatIfPage() {
   const { fmtNumber } = useNumberFormatting();
@@ -150,7 +109,7 @@ export default function WhatIfPage() {
   const loading = drivesQuery.isLoading || driveQuery.isLoading || telemetryQuery.isLoading;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('whatIf.title', 'What-If Simulator')}
       subtitle={t('whatIf.subtitle', 'Replay a real drive under different conditions')}
       query={[drivesQuery, driveQuery, telemetryQuery]}
@@ -313,19 +272,21 @@ export default function WhatIfPage() {
                   </PanelTitle>
 
                   <div className="space-y-4">
-                    <BreakdownRow
+                    <WhatIfEnergyBreakdown
                       caption={t('whatIf.baseline', 'Actual drive')}
                       breakdown={result.baseline}
                       max={maxTotal}
                       labels={componentLabels}
                       formatWh={kwh}
+                      components={COMPONENTS}
                     />
-                    <BreakdownRow
+                    <WhatIfEnergyBreakdown
                       caption={t('whatIf.scenario', 'What-if')}
                       breakdown={result.scenario}
                       max={maxTotal}
                       labels={componentLabels}
                       formatWh={kwh}
+                      components={COMPONENTS}
                     />
                   </div>
 
@@ -373,6 +334,6 @@ export default function WhatIfPage() {
           </FadeIn>
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

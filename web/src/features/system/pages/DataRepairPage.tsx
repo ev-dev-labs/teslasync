@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { VehicleSelect } from '@/components/forms';
 import { ListSkeleton, OperationalWriteNotice } from '@/components/feedback';
 import { GlassPanel } from '@/components/ui';
@@ -23,7 +23,7 @@ export default function DataRepairPage() {
   const { vehicleId } = useSelectedVehicle();
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('dataRepair.title', 'Data repair')}
       subtitle={t(
         'dataRepair.subtitle.workspace',
@@ -58,6 +58,6 @@ export default function DataRepairPage() {
           </Suspense>
         )}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

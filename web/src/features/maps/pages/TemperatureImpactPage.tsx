@@ -5,8 +5,9 @@ import {
   BarChart3, CalendarRange, Car,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, PanelTitle, Caption, Text, HelperText, DataTable, type Column } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
+import { Badge, Caption, Text, HelperText, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -140,7 +141,9 @@ export default function TemperatureImpactPage() {
 
   /* --- data --- */
   const query = useTemperatureImpact(vehicleId);
-  const { data, isLoading, isError } = query;
+  const { data } = query;
+  const source = deriveDataState(query, { provenance: 'historical' });
+  const isLoading = query.isLoading && !source.hasData;
   const points = useMemo<TemperatureImpactPoint[]>(() => data?.points ?? [], [data]);
   const monthlyTrend = useMemo(() => data?.monthly_trend ?? [], [data]);
 
@@ -301,7 +304,7 @@ export default function TemperatureImpactPage() {
       // failed background refetch — in that case each section keeps rendering
       // its last-good content and the header freshness chip owns the degraded
       // signal, rather than collapsing the whole page into retry panels.
-      if (isError && isEmpty) return <QueryError error={query.error} onRetry={() => query.refetch()} />;
+      if (source.fatalError) return <QueryError error={source.fatalError} onRetry={() => query.refetch()} />;
       if (isEmpty) {
         return (
           <EmptyState
@@ -318,7 +321,7 @@ export default function TemperatureImpactPage() {
       }
       return null;
     },
-    [isLoading, isError, query, emptyMessage, noVehicle, t],
+    [isLoading, source.fatalError, query, emptyMessage, noVehicle, t],
   );
 
   const hasPoints = points.length > 0;
@@ -329,10 +332,11 @@ export default function TemperatureImpactPage() {
   /* ================================================================ */
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('tempImpact.title', 'Temperature impact')}
       subtitle={t('tempImpact.subtitle', 'How outside temperature affects driving efficiency')}
       query={query}
+      dataSources={[{ id: 'temperature-impact', label: t('tempImpact.title', 'Temperature impact'), query, enabled: !noVehicle }]}
     >
       {/* AI cabin-temperature-impact narrator. Rendered ABOVE the deterministic
           charts so the narration contextualises the bucketed-efficiency chart
@@ -368,7 +372,7 @@ export default function TemperatureImpactPage() {
           />
           <MetricCard
             label={t('tempImpact.totalPoints', 'Total data points')}
-            value={stats?.total ?? 0}
+            value={stats?.total ?? (source.hasData ? 0 : '—')}
             icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
@@ -388,11 +392,8 @@ export default function TemperatureImpactPage() {
           aria-label={t('tempImpact.regionScatter', 'Temperature vs efficiency analysis')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.scatterTitle', 'Temperature vs efficiency')}
-            </PanelTitle>
+          <div className="min-w-0 xl:col-span-2">
+          <LayoutCard title={t('tempImpact.scatterTitle', 'Temperature vs efficiency')}>
             {sectionFallback(!hasPoints, {
               skeletonHeight: 288,
               icon: <Thermometer className="h-8 w-8" aria-hidden="true" />,
@@ -453,13 +454,10 @@ export default function TemperatureImpactPage() {
                 </div>
               </>
             )}
-          </GlassPanel>
+          </LayoutCard>
+          </div>
 
-          <GlassPanel glow="green" className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('tempImpact.optimalTitle', 'Optimal temperature analysis')}
-            </PanelTitle>
+          <LayoutCard title={t('tempImpact.optimalTitle', 'Optimal temperature analysis')}>
             {sectionFallback(!stats?.best, {
               skeletonHeight: 220,
               icon: <Thermometer className="h-8 w-8" aria-hidden="true" />,
@@ -501,7 +499,7 @@ export default function TemperatureImpactPage() {
                 </div>
               </div>
             ) : null)}
-          </GlassPanel>
+          </LayoutCard>
         </section>
       </FadeIn>
 
@@ -511,11 +509,7 @@ export default function TemperatureImpactPage() {
           aria-label={t('tempImpact.regionTrends', 'Efficiency and seasonal trends')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-2"
         >
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.bucketTitle', 'Efficiency by temperature range')}
-            </PanelTitle>
+          <LayoutCard title={t('tempImpact.bucketTitle', 'Efficiency by temperature range')}>
             {sectionFallback(!hasPoints, {
               skeletonHeight: 240,
               icon: <BarChart3 className="h-8 w-8" aria-hidden="true" />,
@@ -550,13 +544,9 @@ export default function TemperatureImpactPage() {
                 </EmbeddedChart>
               </div>
             )}
-          </GlassPanel>
+          </LayoutCard>
 
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <CalendarRange className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.monthlyTitle', 'Monthly seasonal trend')}
-            </PanelTitle>
+          <LayoutCard title={t('tempImpact.monthlyTitle', 'Monthly seasonal trend')}>
             {sectionFallback(!hasMonthly, {
               skeletonHeight: 240,
               icon: <CalendarRange className="h-8 w-8" aria-hidden="true" />,
@@ -612,7 +602,7 @@ export default function TemperatureImpactPage() {
                 </EmbeddedChart>
               </div>
             )}
-          </GlassPanel>
+          </LayoutCard>
         </section>
       </FadeIn>
 
@@ -622,11 +612,7 @@ export default function TemperatureImpactPage() {
           aria-label={t('tempImpact.regionRecs', 'Recommendations and recent drives')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />
-              {t('tempImpact.tipsTitle', 'Recommendations')}
-            </PanelTitle>
+          <LayoutCard title={t('tempImpact.tipsTitle', 'Recommendations')}>
             {sectionFallback(tips.length === 0, {
               skeletonHeight: 180,
               icon: <Lightbulb className="h-8 w-8" aria-hidden="true" />,
@@ -645,13 +631,10 @@ export default function TemperatureImpactPage() {
                 })}
               </ul>
             )}
-          </GlassPanel>
+          </LayoutCard>
 
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.recentDrivesTitle', 'Recent drives')}
-            </PanelTitle>
+          <div className="min-w-0 xl:col-span-2">
+          <LayoutCard title={t('tempImpact.recentDrivesTitle', 'Recent drives')}>
             {sectionFallback(!hasPoints, {
               skeletonHeight: 260,
               icon: <Car className="h-8 w-8" aria-hidden="true" />,
@@ -666,9 +649,10 @@ export default function TemperatureImpactPage() {
                 pagination
               />
             )}
-          </GlassPanel>
+          </LayoutCard>
+          </div>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -14,14 +14,14 @@ export interface TirePressureReading {
   created_at: string;
 }
 
-// Preserve the page's strict null gate, inherited QueryClient policy and
-// one-argument request calls (no new polling or signal consumption).
+// Preserve the page's strict null gate and inherited QueryClient policy.
 export function usePressurePageLatest(activeVehicleId: number | null) {
   return useQuery({
     queryKey: ['tire-pressure-latest', activeVehicleId],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<TirePressureReading | null>(
         `/tire-pressure/latest?vehicle_id=${activeVehicleId}`,
+        { signal },
       ),
     enabled: activeVehicleId !== null,
   });
@@ -36,9 +36,10 @@ export function usePressurePageHistory(
 ) {
   return useQuery({
     queryKey: ['tire-pressure-history', activeVehicleId, start, end],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<TirePressureReading[]>(
         `/tire-pressure?vehicle_id=${activeVehicleId}&start=${start}&end=${end}`,
+        { signal },
       ),
     enabled: activeVehicleId !== null,
   });

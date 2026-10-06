@@ -246,6 +246,20 @@ describe('DriveScoreGaugeWidget empty (no scored drives)', () => {
 // ── Standard layout (gauge + stat row, no sub-score bars) ───────────────────
 
 describe('DriveScoreGaugeWidget standard layout', () => {
+  it('preserves an out-of-scale source score, its grade and all component scores', () => {
+    const score = makeScore({ overall: 125, grade: 'A' });
+    mockUseDriveScore.mockReturnValue(qr({ data: score }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('125.00')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.getByRole('group', { name: 'A' })).not.toHaveAttribute('aria-valuenow');
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Smoothness')).toBeInTheDocument();
+    expect(screen.getByText('Speed discipline')).toBeInTheDocument();
+    expect(score.overall).toBe(125);
+  });
+
   it('renders the title, gauge value, grade and the three summary stats once each', () => {
     mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
     renderWidget(STANDARD);

@@ -136,4 +136,14 @@ describe('live charging overview source preservation', () => {
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
     expect(retry).toHaveBeenCalledOnce();
   });
+  it('retries a successful empty range without dropping secondary facts or inventing metrics', () => {
+    const retry = vi.fn();
+    const { container } = render(<ChargingOverviewStats {...props}
+      stats={{ ...chargingStats, count: 0 }} onRetry={retry} />);
+    expect(screen.getByText('No charging sessions in this range')).toBeInTheDocument();
+    expect(screen.getByText(props.secondary)).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
 });

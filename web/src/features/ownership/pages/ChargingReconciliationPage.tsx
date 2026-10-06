@@ -10,7 +10,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -441,14 +441,13 @@ export default function ChargingReconciliationPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.reconcile.title', 'Charging invoice reconciliation')}
       subtitle={t(
         'ownership.reconcile.subtitle',
         'Match every billed line against the session your car actually recorded, attribute the variance to a cause, and assemble a dispute packet you can send to the provider.',
       )}
-      loading={invoicesQuery.isLoading}
-      error={invoicesQuery.error as Error | null}
+      query={[invoicesQuery, reportQuery]}
     >
       <AlertBanner
         variant="info"
@@ -463,6 +462,9 @@ export default function ChargingReconciliationPage() {
       <FadeIn>
         <OwnershipPanel
           title={t('ownership.reconcile.invoices.title', 'Provider statements')}
+          source={invoicesQuery}
+          sourceEnabled={vehicleId != null}
+          editing={importOpen}
           description={t(
             'ownership.reconcile.invoices.subtitle',
             'Import a statement, then pick one to audit line by line.',
@@ -693,6 +695,8 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.reconcile.audit.title', 'Reconciliation result')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           description={t(
             'ownership.reconcile.audit.subtitle',
             'Net variance is what the provider owes you (positive) or what you under-paid (negative).',
@@ -765,6 +769,8 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.reconcile.lines.title', 'Line-by-line audit')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           empty={lines.length === 0}
           emptyMessage={t(
             'ownership.reconcile.lines.empty',
@@ -803,6 +809,8 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.reconcile.buckets.title', 'Variance attribution')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           description={t(
             'ownership.reconcile.buckets.subtitle',
             'Every currency unit of disagreement is assigned a cause, so a dispute never rests on "the number looks wrong".',
@@ -837,6 +845,8 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.reconcile.uninvoiced.title', 'Sessions the provider never billed')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           description={t(
             'ownership.reconcile.uninvoiced.subtitle',
             'Measured sessions inside the billing period with no matching line. Usually free or home charging — occasionally a statement that is genuinely incomplete.',
@@ -870,6 +880,9 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.25}>
         <OwnershipPanel
           title={t('ownership.reconcile.dispute.title', 'Dispute desk')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
+          editing={disputeOpen}
           description={t(
             'ownership.reconcile.dispute.subtitle',
             'The packet digest fixes exactly which lines and measurements your claim rests on.',
@@ -981,6 +994,8 @@ export default function ChargingReconciliationPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -996,6 +1011,6 @@ export default function ChargingReconciliationPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

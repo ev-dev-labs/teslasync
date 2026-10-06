@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { exportDownloadUrl, useExports } from '@/api/hooks/useExports';
 import { useExportJobs } from '@/api/hooks/useAdmin';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
+import { WidgetBigNumber, WidgetEventFeed } from './shared';
 import type { WidgetProps } from './types';
 import type { ExportJob as ExportJobExport } from '@/types/export';
 import type { ExportJob as ExportJobAdmin } from '@/types/admin';
@@ -16,6 +16,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 // ── Normalised job shape used within this widget ─────────────────────
 
@@ -160,71 +161,6 @@ function CompactView({
   );
 }
 
-// ── Job row ──────────────────────────────────────────────────────────
-
-function JobRow({
-  job,
-  status,
-  showDownload,
-  t,
-}: {
-  job: NormalisedJob;
-  status: JobStatus;
-  showDownload: boolean;
-  t: (key: string, fallback: string) => string;
-}) {
-  useNumberFormatting();
-  const cfg = STATUS_BADGE[status];
-  const format = (job.format ?? '').toUpperCase() || '—';
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 min-h-[44px] py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
-      {/* Filename */}
-      <span className="flex-1 min-w-0 truncate text-xs text-[var(--text-primary)]">
-        {truncateFilename(job.filePath, 28)}
-      </span>
-
-      {/* Format badge */}
-      <Badge variant="neutral" size="sm" className="shrink-0">
-        {format}
-      </Badge>
-
-      {/* File size */}
-      <span className="shrink-0 text-xs tabular-nums text-[var(--text-secondary)] w-16 text-right">
-        {fmtBytes(job.fileSize)}
-      </span>
-
-      {/* Status badge */}
-      <Badge variant={cfg.variant} size="sm" className="shrink-0 min-w-[52px] justify-center">
-        {t(cfg.labelKey, cfg.label)}
-      </Badge>
-
-      {/* Relative time */}
-      <span className="shrink-0 w-14 text-right">
-        <TimeStamp value={job.createdAt} className="text-2xs text-[var(--text-muted)]" />
-      </span>
-
-      {/* Download link — wide only */}
-      {showDownload && (
-        job.filePath && status === 'ready' ? (
-          <a
-            href={exportDownloadUrl(job.id)}
-            aria-label={t('widget.exportDownload', 'Download')}
-            className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-cyan-300 hover:text-[var(--text-primary)] transition-colors"
-            title={t('widget.exportDownload', 'Download')}
-          >
-            <Download className="h-3.5 w-3.5" />
-          </a>
-        ) : (
-          <span className="shrink-0 w-[44px]" />
-        )
-      )}
-    </div>
-  );
-}
-
-// ── Standard list with optional progress bars ────────────────────────
-
 function StandardView({
   jobs,
   showDownload,
@@ -236,9 +172,10 @@ function StandardView({
   maxItems: number;
   t: (key: string, fallback: string) => string;
 }) {
-  const visible = jobs.slice(0, maxItems);
+  useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
 
-  if (visible.length === 0) {
+  if (jobs.length === 0) {
     return (
       <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={<Download className="h-5 w-5" />}
@@ -250,11 +187,45 @@ function StandardView({
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      {visible.map(({ job, status }) => (
-        <div key={job.id}>
-          <JobRow job={job} status={status} showDownload={showDownload} t={t} />
-        </div>
-      ))}
+      <WidgetEventFeed
+        order="source"
+        maxItems={maxItems}
+        items={jobs.map(({ job, status }) => {
+          const cfg = STATUS_BADGE[status];
+          return {
+            id: job.id,
+            icon: <Download className="h-3.5 w-3.5" aria-hidden="true" />,
+            title: job.filePath ? job.filePath.split('/').pop() || job.filePath : '—',
+            timestamp: job.createdAt,
+            // Keep the preferred TimeStamp and its alternate tooltip in metadata.
+            timeLabel: formatDateTime(job.createdAt),
+            color: '',
+            wrap: true,
+            badges: (
+              <span className="inline-flex max-w-full flex-wrap gap-2">
+                <Badge variant="neutral" size="sm">{(job.format ?? '').toUpperCase() || '—'}</Badge>
+                <Badge variant={cfg.variant} size="sm">{t(cfg.labelKey, cfg.label)}</Badge>
+              </span>
+            ),
+            metadata: (
+              <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+                <Caption className="tabular-nums">{fmtBytes(job.fileSize)}</Caption>
+                <TimeStamp value={job.createdAt} />
+              </span>
+            ),
+            actions: showDownload && job.filePath && status === 'ready' ? (
+              <a
+                href={exportDownloadUrl(job.id)}
+                aria-label={t('widget.exportDownload', 'Download')}
+                title={t('widget.exportDownload', 'Download')}
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-cyan-300 transition-colors hover:text-[var(--text-primary)]"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+            ) : undefined,
+          };
+        })}
+      />
     </div>
   );
 }

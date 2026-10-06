@@ -8,13 +8,12 @@ import type {
   ScienceOCVPoint,
 } from '@/api/types';
 import { AreaChartWrapper } from '@/components/charts';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { LayoutCard, SourceContent } from '@/components/layout';
 import {
   Badge,
   Caption,
   DataTable,
-  GlassPanel,
-  PanelTitle,
   SectionTitle,
   Text,
   type Column
@@ -72,16 +71,20 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
   ];
 
   return (
-    <GlassPanel padding="auto" className="space-y-4" data-testid="science-electrochem">
-      <PanelTitle>{t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}</PanelTitle>
+    <section data-testid="science-electrochem" className="min-w-0">
+      <LayoutCard title={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}>
       <StaleRefreshWarning state={state} />
-      {state.status === 'initial' ? (
-        <Skeleton className="h-48" />
-      ) : state.fatalError ? (
-        <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} />
-      ) : !data ? (
-        <EmptyState title={t('science.electrochem.title', 'Battery electrochemistry')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />
-      ) : (
+      <SourceContent
+        state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
+        label={t('science.electrochem.title', 'Battery electrochemistry (pack-equivalent)')}
+        emptyMessage={t('science.empty', 'No fit inputs in this window.')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={state.fatalError}
+        errorRecovery={{ onRetry: () => { void query.refetch(); } }}
+        loadingContent={<Skeleton className="h-48" />}
+        emptyContent={<EmptyState title={t('science.electrochem.title', 'Battery electrochemistry')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
+      >
+      {data && (
         <>
           <Text as="p" size="sm" color="secondary">{data.honesty}</Text>
           <div className="flex flex-wrap gap-2">
@@ -209,6 +212,8 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
           <MissingBadges missing={data.missing_signals} />
         </>
       )}
-    </GlassPanel>
+      </SourceContent>
+      </LayoutCard>
+    </section>
   );
 }

@@ -2,16 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, ClipboardList, ListOrdered, PackageCheck } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, QueryError } from '@/components/feedback';
+import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
@@ -72,6 +73,12 @@ export default function ServiceEvidencePackPage() {
   const { vehicleId, vehicle } = useSelectedVehicle();
   const workspace = useRootCauseWorkspace(vehicleId);
   const updatesQuery = useSoftwareUpdates(vehicleId != null ? String(vehicleId) : '');
+  const signalsState = useDataState(workspace.signalsQuery, { provenance: 'historical' });
+  const updatesState = useDataState(updatesQuery, { provenance: 'historical' });
+  const evidenceState = useDataState({
+    ...workspace.evidenceBundle,
+    data: workspace.evidenceBundle.data.length > 0 ? workspace.evidenceBundle.data : undefined,
+  }, { provenance: 'historical', partial: workspace.evidenceBundle.isError });
 
   const [pack, setPack] = useState<ServiceEvidencePackDocument | null>(null);
   const [packError, setPackError] = useState<string | null>(null);
@@ -133,9 +140,12 @@ export default function ServiceEvidencePackPage() {
     return <NoVehicleSelected pageTitle={t('serviceEvidencePack.title', 'Service evidence pack')} />;
   }
 
-  const isLoading = workspace.signalsQuery.isLoading || (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading);
-  const isError = workspace.signalsQuery.isError || workspace.evidenceBundle.isError;
-  const error = workspace.signalsQuery.error ?? workspace.evidenceBundle.error;
+  const isLoading = !evidenceState.hasData && (
+    (workspace.signalsQuery.isLoading && !signalsState.hasData) ||
+    (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading)
+  );
+  const error = evidenceState.fatalError ?? (!workspace.hasChosenSignal ? signalsState.fatalError : null);
+  const isError = !!error;
   const onRetry = () => {
     workspace.signalsQuery.refetch();
     workspace.evidenceBundle.refetch();
@@ -163,7 +173,7 @@ export default function ServiceEvidencePackPage() {
       : t('serviceEvidencePack.kpis.statusNotReadyHint', 'Needs stronger evidence first');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('serviceEvidencePack.title', 'Service evidence pack')}
       subtitle={t(
         'serviceEvidencePack.subtitle',
@@ -173,10 +183,11 @@ export default function ServiceEvidencePackPage() {
     >
       {/* 1 — Focal signal + analysis window (shared with the Root-Cause page) */}
       <FadeIn>
+        <StaleRefreshWarning state={signalsState} label={t('rootCauseIntelligence.picker.title', 'Choose a signal to investigate')} />
         <SignalWindowPicker
           catalog={workspace.catalog}
-          signalsLoading={workspace.signalsQuery.isLoading}
-          signalsError={workspace.signalsQuery.error}
+          signalsLoading={workspace.signalsQuery.isLoading && !signalsState.hasData}
+          signalsError={signalsState.fatalError}
           onRetrySignals={() => workspace.signalsQuery.refetch()}
           focalSignal={workspace.focalSignal}
           onFocalSignalChange={workspace.setFocalSignal}
@@ -184,6 +195,13 @@ export default function ServiceEvidencePackPage() {
           onWindowHoursChange={workspace.setWindowHours}
         />
       </FadeIn>
+      <StaleRefreshWarning state={evidenceState} label={t('serviceEvidencePack.kpis.signals', 'Signals in pack')} />
+      <StaleRefreshWarning state={updatesState} label={t('serviceEvidencePack.softwareUpdates', 'Software update history')} />
+      {updatesState.fatalError && (
+        <GlassPanel className="p-4 sm:p-5">
+          <QueryError error={updatesState.fatalError} onRetry={() => { void updatesQuery.refetch(); }} />
+        </GlassPanel>
+      )}
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
@@ -266,6 +284,6 @@ export default function ServiceEvidencePackPage() {
       <FadeIn delay={0.5}>
         <ServiceEvidencePackPreview pack={pack} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

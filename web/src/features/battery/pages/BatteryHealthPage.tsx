@@ -4,8 +4,7 @@ import {
   Heart, Gauge, Lightbulb, Info, Activity,
 } from 'lucide-react';
 
-import { Grid, Stack } from '@/components/layout';
-import { PageLayout } from '@/components/layout/layout-reference';
+import { Grid, Stack, PageLayout } from '@/components/layout';
 import {
   BatteryPanelGrid, HealthSummary, HealthStatCell as StatCell,
   HealthThermalPanel, HealthQuickLinksPanel, HealthUnavailableOutline,

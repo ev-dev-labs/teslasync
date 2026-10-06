@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Grid } from '@/components/layout';
+import { Grid } from '../Grid';
 import { cn } from '@/lib/cn';
 import { CardPlacementContext } from './CardPlacementContext';
 import { containerPolicy, packCardRows, type CardSize } from './layoutPolicy';

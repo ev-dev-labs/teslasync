@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
@@ -15,6 +14,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -68,7 +68,9 @@ export function ShareCardWeekdayProfile({
       data-testid="share-card-weekday-profile"
       aria-label={t('shareCard.weekday.sectionAria', 'Vehicle-timezone weekday activity profile')}
     >
-      <ChartContainer
+      <ChartCard
+        size="standard"
+        toolbar
         title={t('shareCard.weekday.title', 'Weekday activity profile')}
         subtitle={t(
           'shareCard.weekday.subtitle',
@@ -168,7 +170,7 @@ export function ShareCardWeekdayProfile({
             )}
           </ShareCardSectionBody>
         )}
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

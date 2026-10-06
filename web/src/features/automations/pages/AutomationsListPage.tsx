@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Button, Input, Select, Badge, SectionTitle, Text, Caption,
 } from '@/components/ui';
@@ -20,10 +20,12 @@ import {
   OperationalWriteNotice,
   QueryError,
   Skeleton,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useAutomationEvents } from '@/hooks/useAutomationEvents';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
@@ -118,13 +120,15 @@ export default function AutomationsListPage() {
   usePageTitle(t('automations.title', 'Automations'));
 
   // Data hooks — each section below owns its own loading / empty / error state.
+  const automationsQuery = useAutomations();
   const {
     data: automations,
-    isLoading,
-    isError,
-    error,
     refetch,
-  } = useAutomations();
+  } = automationsQuery;
+  const automationsState = useDataState(automationsQuery);
+  const isLoading = !automationsState.hasData && automationsQuery.isLoading;
+  const error = automationsState.fatalError;
+  const isError = error != null;
   const { data: vehicles } = useVehicles();
   const { firingNow } = useAutomationEvents({ maxEvents: 50 });
 
@@ -264,7 +268,7 @@ export default function AutomationsListPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('automations.title', 'Automations')}
       subtitle={t('automations.subtitle', 'Automate vehicle actions with typed triggers, conditions, and action chains')}
       secondaryActions={
@@ -318,6 +322,7 @@ export default function AutomationsListPage() {
           'Automation controls are read-only',
         )}
       />
+      <StaleRefreshWarning state={automationsState} label={t('automations.title', 'Automations')} />
 
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
@@ -327,25 +332,25 @@ export default function AutomationsListPage() {
         >
           <MetricCard
             label={t('automations.stats.total', 'Total')}
-            value={stats.total}
+            value={automationsState.hasData ? stats.total : '—'}
             icon={<ListFilter className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
             label={t('automations.stats.active', 'Active')}
-            value={stats.active}
+            value={automationsState.hasData ? stats.active : '—'}
             icon={<Power className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
             label={t('automations.stats.disabled', 'Disabled')}
-            value={stats.disabled}
+            value={automationsState.hasData ? stats.disabled : '—'}
             icon={<Pause className="h-5 w-5" />}
             color="blue"
           />
           <MetricCard
             label={t('automations.stats.autoDisabled', 'Auto-disabled')}
-            value={stats.autoDisabled}
+            value={automationsState.hasData ? stats.autoDisabled : '—'}
             icon={<ShieldOff className="h-5 w-5" />}
             color="red"
             className={stats.autoDisabled > 0 ? 'border-neon-red/30' : undefined}
@@ -520,6 +525,6 @@ export default function AutomationsListPage() {
 
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

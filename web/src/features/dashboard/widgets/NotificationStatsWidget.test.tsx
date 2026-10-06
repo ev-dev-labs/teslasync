@@ -249,6 +249,31 @@ describe('NotificationStatsWidget — compact layout', () => {
 // ── Standard layout (2×2): the KPI stat grid ────────────────────────────────
 
 describe('NotificationStatsWidget — standard layout', () => {
+  it('retains complete notification text and all details in a narrow allocated table', () => {
+    const title = 'A-long-notification-title-without-spaces-that-must-not-be-truncated';
+    const message = 'The complete notification message remains available alongside status and the original formatted instant.';
+    const createdAt = '2024-06-01T12:00:00Z';
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 320, 200));
+    try {
+      mockUseStats.mockReturnValue(qr({ data: STATS }));
+      mockUseLogs.mockReturnValue(qr({ data: [makeLog({
+        title, message, status: 'pending', created_at: createdAt,
+      })] }));
+      const { container } = renderWidget(WIDE);
+      expect(container.querySelector('[data-mobile-table]')).toBeInTheDocument();
+      expect(screen.queryByRole('table')).toBeNull();
+      expect(screen.getByText(title)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText(message)).toBeInTheDocument();
+      expect(within(details).getByText('pending')).toBeInTheDocument();
+      expect(within(details).getByText(`ABS:${createdAt}`)).toBeInTheDocument();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it('renders the title, four KPIs, and the threshold-driven trend copy', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     renderWidget(STANDARD);

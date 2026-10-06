@@ -60,6 +60,7 @@ export function AlertsPanel({
       ) : isError ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : (metrics.alertTotal ?? 0) === 0 ? (
+        // no-action: a successful zero-alert week is a healthy result, not missing data; the existing week navigation covers other periods.
         <EmptyState
           icon={<AlertTriangle className="h-8 w-8" aria-hidden="true" />}
           message={t('analytics.weeklyDigest.noAlerts', 'No alerts this week — everything looks great!')}

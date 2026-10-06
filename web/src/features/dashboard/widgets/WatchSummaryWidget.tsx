@@ -105,6 +105,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
           <div className="h-full flex flex-col items-center justify-center gap-1.5 py-1">
             <div className="w-full">
               {batteryLevel == null ? <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} /> : <LinearGauge
+                preserveReadingAndScale
                 value={batteryLevel}
                 max={100}
                 label=""
@@ -196,7 +197,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
           ]} />
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <span className={dashboardTokens.metricLabel}>{t('widget.lastSeen', 'Last seen')}</span>
-              <span className="truncate max-w-full">
+              <span className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">
                 <TimeStamp value={lastUpdated} className={dashboardTokens.metricLabel} />
               </span>
             </div>

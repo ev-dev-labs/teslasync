@@ -219,6 +219,19 @@ describe('AutomationActivityFeed — loading / error / empty', () => {
 });
 
 describe('AutomationActivityFeed — history rows', () => {
+  it('keeps complete names, errors, duration and action metadata in wrapping shared rows', () => {
+    const name = 'A long automation name that must remain readable in the narrow activity rail';
+    const error = 'First diagnostic line\nSecond diagnostic line with the complete remediation evidence';
+    renderFeed({ history: [makeHistory({
+      automation_name: name, error, actions_total: 4, actions_succeeded: 2, duration_ms: 1500,
+    })] });
+    expect(screen.getByText(name)).toHaveClass('break-words');
+    expect(screen.getByText(/Second diagnostic line/)).not.toHaveClass('truncate');
+    expect(screen.getByText('2/4')).toBeInTheDocument();
+    expect(screen.getByText('1.50s')).toBeInTheDocument();
+    expect(screen.getByText('Just now')).toBeInTheDocument();
+  });
+
   it('renders the automation name, relative time and duration', () => {
     renderFeed({
       history: [makeHistory({ automation_name: 'Nightly Charge', duration_ms: 1500 })],

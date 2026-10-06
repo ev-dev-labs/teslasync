@@ -71,13 +71,23 @@ export function HealthUnavailableOutline({ loading, summary, thermal, links }: H
       </BatteryPanelGrid>
       <BatteryPanelGrid label={t('battery.section.trends', 'Capacity and range trends')}
         ids={['battery-health-capacity-trend', 'battery-range-trend']}>
+        {/* chart-a11y:no-table No capacity model exists in this branch; this frame contains recovery text, not plotted measurements. */}
         <ChartContainer title={t('battery.chart.capacityTrend', 'Capacity Trend & Prediction')}
-          ariaLabel={t('battery.chart.capacityTrend', 'Capacity Trend & Prediction')}>
-          {loading ? <Skeleton className="h-60 rounded-xl" /> : <EmptyState message={t('battery.chart.noTrend', 'Not enough snapshots for trend analysis')} />}
+          ariaLabel={t('battery.chart.capacityTrend', 'Capacity Trend & Prediction')}
+          ariaDescription={unavailable}>
+          {loading ? <Skeleton className="h-60 rounded-xl" /> : <EmptyState
+            // no-action: capacity trends require recorded snapshots; the parent handles failed-source retry.
+            message={t('battery.chart.noTrend', 'Not enough snapshots for trend analysis')}
+          />}
         </ChartContainer>
+        {/* chart-a11y:no-table No measured range series exists in this outline; the frame announces its missing-evidence state. */}
         <ChartContainer title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}
-          ariaLabel={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}>
-          {loading ? <Skeleton className="h-60 rounded-xl" /> : <EmptyState message={t('battery.chart.noRange', 'No range data yet')} />}
+          ariaLabel={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}
+          ariaDescription={unavailable}>
+          {loading ? <Skeleton className="h-60 rounded-xl" /> : <EmptyState
+            // no-action: range history requires vehicle measurements, not a chart-local reset or backfill.
+            message={t('battery.chart.noRange', 'No range data yet')}
+          />}
         </ChartContainer>
       </BatteryPanelGrid>
       <BatteryPanelGrid label={t('battery.section.thermalCompare', 'Thermal monitoring and capacity comparison')}
@@ -100,13 +110,23 @@ export function HealthUnavailableOutline({ loading, summary, thermal, links }: H
       </GlassPanel>
       <BatteryPanelGrid label={t('battery.section.chargingAnalysis', 'Charging energy analysis')}
         ids={['battery-charge-level-distribution', 'battery-energy-breakdown', 'battery-charging-statistics']}>
+        {/* chart-a11y:no-table This no-model outline contains no charge-distribution plot or rows; measured charts remain in BatteryHealthPage. */}
         <ChartContainer title={t('battery.chart.chargeDist', 'Charge Level Distribution')}
-          ariaLabel={t('battery.chart.chargeDist', 'Charge Level Distribution')}>
-          {loading ? recovery : <EmptyState message={t('battery.chart.noSessions', 'No charging session data yet')} />}
+          ariaLabel={t('battery.chart.chargeDist', 'Charge Level Distribution')}
+          ariaDescription={unavailable}>
+          {loading ? recovery : <EmptyState
+            // no-action: charge-level distribution requires recorded charging sessions; this outline cannot create them.
+            message={t('battery.chart.noSessions', 'No charging session data yet')}
+          />}
         </ChartContainer>
+        {/* chart-a11y:no-table This placeholder has no measured AC/DC breakdown; a table would fabricate evidence. */}
         <ChartContainer title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')}
-          ariaLabel={t('battery.chart.acdc', 'AC / DC Energy Breakdown')}>
-          {loading ? recovery : <EmptyState message={t('battery.chart.noBreakdown', 'No charging data for breakdown')} />}
+          ariaLabel={t('battery.chart.acdc', 'AC / DC Energy Breakdown')}
+          ariaDescription={unavailable}>
+          {loading ? recovery : <EmptyState
+            // no-action: AC/DC breakdown requires measured session energy; related-page links remain available below.
+            message={t('battery.chart.noBreakdown', 'No charging data for breakdown')}
+          />}
         </ChartContainer>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle>{t('battery.stats.title', 'Charging Statistics')}</PanelTitle>

@@ -195,6 +195,23 @@ beforeEach(() => {
 });
 
 describe('DayLogPage', () => {
+  it('keeps historical events, search and business-date controls after a retained refresh failure', () => {
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents),
+      error: new Error('refresh failed'),
+      isError: true,
+      status: 'error',
+      refetch,
+    }));
+    renderPage();
+    expect(screen.getByTestId('daylog-date')).toHaveValue('2026-09-14');
+    expect(screen.getByTestId('daylog-search')).toBeInTheDocument();
+    expect(screen.getByText('Day log may be out of date')).toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
   it('keeps day selection, freshness, and copy link in the page header', () => {
     useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse() }));
     renderPage();

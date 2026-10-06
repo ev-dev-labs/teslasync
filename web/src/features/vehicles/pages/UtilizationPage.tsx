@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
+import { StaleRefreshWarning } from '@/components/feedback';
 
 import {
   ActiveDayConsistency,
@@ -52,6 +54,7 @@ export default function UtilizationPage() {
     () => drivesQuery.data ?? [],
     [drivesQuery.data],
   );
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () =>
       summarizeUtilization(drives, costPerKwh, {
@@ -68,12 +71,11 @@ export default function UtilizationPage() {
   const sectionState = useMemo<UtilizationSectionState>(
     () => ({
       isLoading: drivesQuery.isLoading,
-      error: drivesQuery.isError ? drivesQuery.error : null,
+      error: drivesState.fatalError,
       onRetry: retry,
     }),
     [
-      drivesQuery.error,
-      drivesQuery.isError,
+      drivesState.fatalError,
       drivesQuery.isLoading,
       retry,
     ],
@@ -88,7 +90,7 @@ export default function UtilizationPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('utilization.title', 'Utilization')}
       subtitle={t(
         'utilization.subtitle',
@@ -96,6 +98,7 @@ export default function UtilizationPage() {
       )}
       query={drivesQuery}
     >
+      <StaleRefreshWarning state={drivesState} label={t('utilization.title', 'Utilization')} />
       <FadeIn>
         <UtilizationKpis summary={summary} {...sectionState} />
       </FadeIn>
@@ -148,6 +151,6 @@ export default function UtilizationPage() {
           state={sectionState}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

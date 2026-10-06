@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
-import { GlassPanel } from '@/components/ui';
+import { StatStrip, type StatMetric } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
@@ -75,20 +75,19 @@ export function CabinThermalEvidenceStats({
       data-testid="cabin-thermal-kpis"
       aria-label={t('cabinThermal.kpis.aria', 'Cabin thermal evidence accounting summary')}
     >
-      <GlassPanel className="min-w-0 p-4 sm:p-5">
+      <LayoutCard title={t('cabinThermal.kpis.title', 'Thermal evidence ledger')}>
         <StatStrip
           id="cabin-thermal-evidence"
-          title={t('cabinThermal.kpis.title', 'Thermal evidence ledger')}
           metrics={metrics}
           variant="embedded"
           period={{
             kind: 'unknown',
             label: t('cabinThermal.kpis.returnedHint', 'raw endpoint rows'),
           }}
-          retained={Boolean(state.refreshError)}
+          retained={Boolean(state.refreshError) || (resolved && Boolean(state.isPaused))}
         />
         <CabinThermalQueryStatus summary={summary} state={state} />
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

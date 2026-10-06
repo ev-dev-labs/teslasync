@@ -210,6 +210,7 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   isFetching: boolean;
+  fetchStatus: 'idle' | 'fetching' | 'paused';
   isStale: boolean;
   dataUpdatedAt: number;
   refetch: () => void;
@@ -222,6 +223,7 @@ function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
     isError: false,
     error: null,
     isFetching: false,
+    fetchStatus: 'idle',
     isStale: false,
     dataUpdatedAt: Date.now(),
     refetch: refetchMock,
@@ -392,6 +394,21 @@ describe('SharingTripsPage — empty', () => {
     expect(within(kpis).getByText('Shareable trips')).toBeInTheDocument();
     expect(within(kpis).getByText('0m')).toBeInTheDocument();
     expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+  });
+
+  describe('SharingTripsPage — unresolved initial source', () => {
+    it.each([
+      { fetchStatus: 'paused' as const, message: 'The recent-trip query is paused; no empty result is inferred.' },
+      { fetchStatus: 'idle' as const, message: 'Recent-trip availability has not resolved yet.' },
+    ])('keeps independent share and AI sections without inferring empty totals for $fetchStatus', ({ fetchStatus, message }) => {
+      h.tripsQuery = makeQuery({ fetchStatus });
+      renderPage();
+      expect(screen.getAllByText(message)).toHaveLength(2);
+      expect(screen.queryByText('No recent trips. Drive your vehicle to populate this list.')).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Static share cards' })).toBeInTheDocument();
+      expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+      expect(screen.queryByText('Shareable trips')).not.toBeInTheDocument();
+    });
   });
 });
 

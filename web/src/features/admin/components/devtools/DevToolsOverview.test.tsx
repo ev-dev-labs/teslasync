@@ -194,4 +194,20 @@ describe('DevToolsOverview', () => {
     expect(icon).not.toBeNull()
     expect(icon).toHaveAttribute('aria-hidden', 'true')
   })
+
+  it('keeps the fleet count when only telemetry is unresolved without implying a healthy zero', () => {
+    render(<DevToolsOverview errorVinCount={0} vehicleCount={9} telemetryUnknown vehiclesUnknown={false} />)
+    expect(within(getCard('Telemetry errors')).getByText('—')).toBeInTheDocument()
+    expect(within(getCard('Telemetry errors')).queryByText('0')).toBeNull()
+    expect(getCard('Telemetry errors').querySelector('[data-role="metric-icon"]')).toHaveAttribute('data-color', 'cyan')
+    expect(within(getCard('Vehicles')).getByText('9')).toBeInTheDocument()
+    expect(within(getCard('Reference docs')).getByText(String(REFERENCE_LINKS.length))).toBeInTheDocument()
+  })
+
+  it('keeps the telemetry count when only the vehicle source is unresolved', () => {
+    render(<DevToolsOverview errorVinCount={7} vehicleCount={0} telemetryUnknown={false} vehiclesUnknown />)
+    expect(within(getCard('Telemetry errors')).getByText('7')).toBeInTheDocument()
+    expect(within(getCard('Vehicles')).getByText('—')).toBeInTheDocument()
+    expect(within(getCard('Vehicles')).queryByText('0')).toBeNull()
+  })
 })

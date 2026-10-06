@@ -42,8 +42,12 @@ export function AggregateRecoveryEvidence({
       <div className="mt-4 min-h-56">
         {state.isLoading ? <Skeleton height={220} />
           : state.error != null ? <QueryError error={state.error} onRetry={state.onRetry} />
-          : aggregate == null ? <EmptyState className="py-8"
+          : aggregate == null ? (
+            // no-action: Unresolved query availability is passive; only a resolved missing response can be retried.
+            <EmptyState className="py-8"
+              action={state.isResolved ? { label: t('common.retry', 'Retry'), onClick: state.onRetry } : undefined}
               message={t('regen.overview.aggregateEmpty', 'No aggregate recovery response is available for this window.')} />
+            )
           : (
             <div className="space-y-4">
               {totalsUnavailable ? (
@@ -62,6 +66,7 @@ export function AggregateRecoveryEvidence({
                     color={CHART_COLORS[1]}
                     size={168}
                   /> : <EmptyState
+                    action={{ label: t('common.retry', 'Retry'), onClick: state.onRetry }}
                     message={t('regen.modernization.ratioUnavailable', 'Recovery share is unavailable; no zero value is inferred.')}
                   />}
                   <Text as="p" variant="caption" className="text-center">
@@ -75,7 +80,7 @@ export function AggregateRecoveryEvidence({
                 isKnownNumber(aggregate.totalDriveWh)
                   ? t('regen.overview.aggregateNoEnergy', 'The complete aggregate contains no drive-energy denominator for this window.')
                   : t('regen.modernization.denominatorUnavailable', 'The aggregate drive-energy denominator is unavailable.')
-              } />}
+              } action={{ label: t('common.retry', 'Retry'), onClick: state.onRetry }} />}
               <StatGroup
                 period={{ kind: 'unknown', label: t('regen.overview.aggregateTitle', 'Complete aggregate') }}
                 metrics={[

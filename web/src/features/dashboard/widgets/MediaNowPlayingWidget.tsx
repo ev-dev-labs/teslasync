@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Music, Radio, Volume2 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { MetricBar } from '@/components/data-display';
 import { useVehicles, useMediaLatest } from '@/api/hooks/useVehicles';
 import { formatDurationClock } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
@@ -27,25 +28,6 @@ export function progressPercent(elapsed: number, duration: number): number {
 /** Audio volume as a 0–100 %. Returns 0 when the scale max is unusable (≤ 0). */
 export function volumePercent(volume: number, max: number): number {
   return max > 0 ? clampPct((volume / max) * 100) : 0;
-}
-
-function ProgressBar({ elapsed, duration, label }: { elapsed: number; duration: number; label: string }) {
-  const pct = progressPercent(elapsed, duration);
-  return (
-    <div
-      role="progressbar"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(pct)}
-      className="w-full h-1 rounded-full bg-[var(--surface-2)] overflow-hidden"
-    >
-      <div
-        className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
-        style={{ width: `${pct}%` }}
-      />
-    </div>
-  );
 }
 
 export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) {
@@ -107,7 +89,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
                 <Music className="h-5 w-5 text-neon-cyan" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className={dashboardTokens.secondaryMetric} title={title}>{title}</p>
+                <p className={`${dashboardTokens.secondaryMetric} break-words [overflow-wrap:anywhere]`} title={title}>{title}</p>
                 <p className={dashboardTokens.metricLabel} title={artist}>{artist}</p>
                 {isTall && album && (
                   <p className={dashboardTokens.metricLabel} title={album}>{album}</p>
@@ -122,7 +104,15 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
 
             {duration != null && duration > 0 && elapsed != null && (
               <div className="space-y-1">
-                <ProgressBar elapsed={elapsed} duration={duration} label={t('widget.playbackProgress', 'Playback progress')} />
+                <MetricBar
+                  value={progressPercent(elapsed, duration)}
+                  max={100}
+                  color="var(--theme-primary)"
+                  ariaLabel={t('widget.playbackProgress', 'Playback progress')}
+                  showHeader={false}
+                  size="slim"
+                  fill="solid"
+                />
                 <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
                   <span>{formatDurationClock(elapsed)}</span>
                   <span>{formatDurationClock(duration)}</span>
@@ -135,25 +125,25 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
                 {source && (
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
                     <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{source}</span>
+                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">{source}</span>
                   </div>
                 )}
                 {volume != null && (
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
                     <Volume2 className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    {volumeMax != null && volumeMax > 0 && <div
-                      role="progressbar"
-                      aria-label={t('widget.volume', 'Volume')}
-                      aria-valuemin={0}
-                      aria-valuemax={volumeMax}
-                      aria-valuenow={Math.min(volumeMax, Math.max(0, volume))}
-                      className="flex-1 h-1 rounded-full bg-[var(--surface-2)] overflow-hidden"
-                    >
-                      <div
-                        className="h-full rounded-full bg-[var(--text-secondary)]"
-                        style={{ width: `${volumePercent(volume, volumeMax)}%` }}
-                      />
-                    </div>}
+                    {volumeMax != null && volumeMax > 0 && (
+                      <div className="min-w-0 flex-1">
+                        <MetricBar
+                          value={volume}
+                          max={volumeMax}
+                          color="var(--text-secondary)"
+                          ariaLabel={t('widget.volume', 'Volume')}
+                          showHeader={false}
+                          size="slim"
+                          fill="solid"
+                        />
+                      </div>
+                    )}
                     <span className={dashboardTokens.metricLabel}>{fmtNumber(volume)}</span>
                   </div>
                 )}
@@ -163,7 +153,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
             {!isTall && source && (
               <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mt-auto">
                 <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
-                <span className="truncate">{source}</span>
+                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{source}</span>
               </div>
             )}
           </div>

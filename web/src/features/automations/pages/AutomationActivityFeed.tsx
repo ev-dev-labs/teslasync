@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import { formatRelativeTime } from '@/lib/dateFormat';
 
 import { GlassPanel, Badge, SectionTitle, Text, Caption } from '@/components/ui';
+import { TimelineItem } from '@/components/data-display';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -50,15 +51,14 @@ function HistoryRow({ item }: { item: AutomationHistory }) {
   const Icon = cfg.icon;
 
   return (
-    <div className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-white/[0.02]">
-      <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', cfg.color)} aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <Text as="p" variant="body" className="truncate font-medium">
-          {item.automation_name}
-        </Text>
+    <TimelineItem
+      icon={<Icon className={cn('h-4 w-4', cfg.color)} aria-hidden="true" />}
+      title={item.automation_name}
+      time={formatRelativeTime(item.triggered_at)}
+      wrap
+      isLast
+      metadata={<>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <Caption>{formatRelativeTime(item.triggered_at)}</Caption>
-          <Caption aria-hidden="true">·</Caption>
           <Caption>{formatDurationMs(item.duration_ms)}</Caption>
           {item.actions_total > 0 && (
             <>
@@ -68,12 +68,12 @@ function HistoryRow({ item }: { item: AutomationHistory }) {
           )}
         </div>
         {item.error && (
-          <Text as="p" variant="bodySm" className="mt-0.5 truncate text-rose-300">
+          <Text as="p" variant="bodySm" className="mt-0.5 break-words text-rose-300">
             {item.error}
           </Text>
         )}
-      </div>
-    </div>
+      </>}
+    />
   );
 }
 
@@ -91,25 +91,26 @@ function LiveEventRow({ event }: { event: AutomationActivityEvent }) {
   const reason = 'reason' in event.data ? (event.data as { reason?: string }).reason : undefined;
 
   return (
-    <div className="flex items-start gap-2.5 rounded-lg bg-cyan-500/[0.05] px-2.5 py-2">
-      <Icon className={cn('mt-0.5 h-4 w-4 shrink-0 animate-pulse', cfg.color)} aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <Text as="span" variant="body" className="truncate font-medium">
-            {name}
-          </Text>
+    <TimelineItem
+      icon={<Icon className={cn('h-4 w-4 animate-pulse motion-reduce:animate-none', cfg.color)} aria-hidden="true" />}
+      title={name}
+      time={formatRelativeTime(event.receivedAt.toISOString())}
+      wrap
+      isLast
+      badges={
           <Badge variant="neutral" size="sm" className="shrink-0">
             {t(`automations.event.${suffix}`, suffix)}
           </Badge>
-        </div>
+      }
+      metadata={<>
         {errMsg && (
-          <Text as="p" variant="bodySm" className="mt-0.5 truncate text-rose-300">
+          <Text as="p" variant="bodySm" className="mt-0.5 break-words text-rose-300">
             {errMsg}
           </Text>
         )}
-        {reason && <Caption className="mt-0.5 block truncate">{reason}</Caption>}
-      </div>
-    </div>
+        {reason && <Caption className="mt-0.5 block break-words">{reason}</Caption>}
+      </>}
+    />
   );
 }
 

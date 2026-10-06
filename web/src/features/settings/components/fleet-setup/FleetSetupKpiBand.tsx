@@ -8,6 +8,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KeyRound, Radio, ShieldCheck, ShieldAlert, Wifi, WifiOff } from 'lucide-react'
 import { MetricCard } from '@/components/data-display'
+import { SourceContent } from '@/components/layout'
 import { StatSkeleton } from '@/components/feedback'
 import type { NeonColor } from '@/lib/tokens'
 import type { FleetApiInfo, PublicKeyStatus } from '@/api/hooks/useFleetSetup'
@@ -19,10 +20,11 @@ interface FleetSetupKpiBandProps {
   publicKey: PublicKeyStatus | undefined
   onboarding: OnboardingStatus | undefined
   isLoading: boolean
+  sourceLoading?: Partial<Record<KpiCell['key'], boolean>>
 }
 
 interface KpiCell {
-  key: string
+  key: 'account' | 'token' | 'domain' | 'stream'
   label: string
   value: string
   subtitle?: string
@@ -36,10 +38,11 @@ export function FleetSetupKpiBand({
   publicKey,
   onboarding,
   isLoading,
+  sourceLoading,
 }: FleetSetupKpiBandProps) {
   const { t } = useTranslation('settings')
 
-  if (isLoading) {
+  if (isLoading && !sourceLoading) {
     return (
       <section aria-label={t('fleetSetup.kpi.aria', 'Fleet setup status summary')}>
         <StatSkeleton count={4} />
@@ -49,6 +52,7 @@ export function FleetSetupKpiBand({
 
   const dash = t('common.dash', '—')
   const connected = authenticated === true || apiInfo?.has_valid_token === true
+  const connectionKnown = connected || (authenticated === false && apiInfo?.has_valid_token === false)
   const tokenValid = apiInfo?.has_valid_token === true
   const keyConfigured = publicKey?.configured === true
   const health = onboarding?.telemetry_health
@@ -64,8 +68,8 @@ export function FleetSetupKpiBand({
     : {
         key: 'account',
         label: t('fleetSetup.kpi.account', 'Tesla account'),
-        value: t('fleetSetup.kpi.notConnected', 'Not connected'),
-        color: 'amber',
+        value: connectionKnown ? t('fleetSetup.kpi.notConnected', 'Not connected') : dash,
+        color: connectionKnown ? 'amber' : 'cyan',
         icon: <ShieldAlert className="h-5 w-5" aria-hidden="true" />,
       }
 
@@ -81,9 +85,11 @@ export function FleetSetupKpiBand({
     : {
         key: 'token',
         label: t('fleetSetup.kpi.token', 'Access token'),
-        value: t('fleetSetup.kpi.tokenMissing', 'Missing'),
-        subtitle: t('fleetSetup.kpi.tokenMissingHint', 'Connect Tesla to store a refreshable Fleet token.'),
-        color: 'amber',
+        value: apiInfo?.has_valid_token === false ? t('fleetSetup.kpi.tokenMissing', 'Missing') : dash,
+        subtitle: apiInfo?.has_valid_token === false
+          ? t('fleetSetup.kpi.tokenMissingHint', 'Connect Tesla to store a refreshable Fleet token.')
+          : undefined,
+        color: apiInfo?.has_valid_token === false ? 'amber' : 'cyan',
         icon: <KeyRound className="h-5 w-5" aria-hidden="true" />,
       }
 
@@ -99,12 +105,12 @@ export function FleetSetupKpiBand({
     : {
         key: 'domain',
         label: t('fleetSetup.kpi.domainKey', 'Partner public key'),
-        value: t('fleetSetup.kpi.keyMissing', 'Not published'),
-        subtitle: t(
+        value: publicKey?.configured === false ? t('fleetSetup.kpi.keyMissing', 'Not published') : dash,
+        subtitle: publicKey?.configured === false ? t(
           'fleetSetup.kpi.keyMissingHint',
           'Tesla fetches this PEM from your domain during partner registration.',
-        ),
-        color: 'amber',
+        ) : undefined,
+        color: publicKey?.configured === false ? 'amber' : 'cyan',
         icon: <Radio className="h-5 w-5" aria-hidden="true" />,
       }
 
@@ -113,7 +119,7 @@ export function FleetSetupKpiBand({
       ? t('fleetSetup.kpi.streamHealthy', 'Streaming')
       : health === 'stale'
         ? t('fleetSetup.kpi.streamStale', 'Stale')
-        : t('fleetSetup.kpi.streamUnknown', 'Waiting')
+        : health != null ? t('fleetSetup.kpi.streamUnknown', 'Waiting') : dash
 
   const streamCell: KpiCell = {
     key: 'stream',
@@ -124,7 +130,7 @@ export function FleetSetupKpiBand({
         ? t('fleetSetup.kpi.streamHealthyHint', 'Packets arrived in the last 24 hours.')
         : health === 'stale'
           ? t('fleetSetup.kpi.streamStaleHint', 'Wake the vehicle or take a short drive.')
-          : t('fleetSetup.kpi.streamUnknownHint', 'Subscribe a VIN, then wait for the car to wake.'),
+          : health != null ? t('fleetSetup.kpi.streamUnknownHint', 'Subscribe a VIN, then wait for the car to wake.') : undefined,
     color: health === 'healthy' ? 'green' : health === 'stale' ? 'amber' : 'cyan',
     icon:
       health === 'healthy' ? (
@@ -141,7 +147,18 @@ export function FleetSetupKpiBand({
       aria-label={t('fleetSetup.kpi.aria', 'Fleet setup status summary')}
       className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
     >
-      {cells.map((cell) => (
+      {cells.map((cell) => sourceLoading?.[cell.key] ? (
+        <SourceContent
+          key={cell.key}
+          state="loading"
+          label={cell.label}
+          emptyMessage=""
+          errorMessage=""
+          loadingContent={<StatSkeleton count={1} />}
+        >
+          {null}
+        </SourceContent>
+      ) : (
         <MetricCard
           key={cell.key}
           label={cell.label}

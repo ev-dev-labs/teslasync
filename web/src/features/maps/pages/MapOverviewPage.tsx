@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   MapPin, Compass, Gauge, Clock, Home, Briefcase,
-  Link2, Navigation, Route, Fence, LocateFixed, ExternalLink,
+  Link2, Navigation, Route, Fence, LocateFixed,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 
 import {
-  GlassPanel, Badge, Button, DataTable, PanelTitle, Text, type Column,
+  GlassPanel, Badge, Button, DataTable, Text, type Column,
 } from '@/components/ui';
 import { MetricCard, TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
@@ -114,8 +115,9 @@ export default function MapOverviewPage() {
   const {
     data: vehicles,
     isLoading: vehiclesLoading,
-    error: vehiclesError,
   } = vehiclesQuery;
+  const vehiclesState = deriveDataState(vehiclesQuery);
+  const vehiclesError = vehiclesState.fatalError;
 
   const selectedId = vehicleId != null ? String(vehicleId) : '';
 
@@ -128,7 +130,10 @@ export default function MapOverviewPage() {
     enabled: selectedId !== '',
     refetchInterval: 15_000,
   });
-  const { data: latest, isLoading: latestLoading, error: latestError } = latestQuery;
+  const { data: latest } = latestQuery;
+  const latestState = deriveDataState({ ...latestQuery, data: latest ?? undefined }, { provenance: 'live' });
+  const latestLoading = latestQuery.isLoading && !latestState.hasData;
+  const latestError = latestState.fatalError;
 
   const historyQuery = useQuery<PositionRecord[]>({
     queryKey: ['position-history', selectedId],
@@ -138,7 +143,10 @@ export default function MapOverviewPage() {
       ),
     enabled: selectedId !== '',
   });
-  const { data: history, isLoading: historyLoading, error: historyError } = historyQuery;
+  const { data: history } = historyQuery;
+  const historyState = deriveDataState(historyQuery, { provenance: 'historical' });
+  const historyLoading = historyQuery.isLoading && !historyState.hasData;
+  const historyError = historyState.fatalError;
 
   const locationQuery = useQuery<LocationSnapshot>({
     queryKey: ['location-latest', selectedId],
@@ -148,7 +156,10 @@ export default function MapOverviewPage() {
       ),
     enabled: selectedId !== '',
   });
-  const { data: locationDetails, isLoading: locationLoading, error: locationError } = locationQuery;
+  const { data: locationDetails } = locationQuery;
+  const locationState = deriveDataState({ ...locationQuery, data: locationDetails ?? undefined }, { provenance: 'live' });
+  const locationLoading = locationQuery.isLoading && !locationState.hasData;
+  const locationError = locationState.fatalError;
 
   /* ---- derived ---- */
   const historyRows = history ?? [];
@@ -260,15 +271,21 @@ export default function MapOverviewPage() {
 
   /* ---- render ---- */
   return (
-    <PageContainer
+    <PageLayout
       title={t('mapOverview.title', 'Map overview')}
       subtitle={t(
         'mapOverview.subtitle',
         'Live vehicle location and recent history',
       )}
-      loading={vehiclesLoading}
-      error={vehiclesError as Error | null}
+      loading={vehiclesLoading && !latestState.hasData && !historyState.hasData && !locationState.hasData}
+      error={!latestState.hasData && !historyState.hasData && !locationState.hasData ? vehiclesState.fatalError : null}
       query={latestQuery}
+      dataSources={[
+        { id: 'vehicles', label: t('mapOverview.vehicle', 'Vehicle'), query: vehiclesQuery },
+        { id: 'latest-position', label: t('mapOverview.mapRegion', 'Live location map'), query: latestQuery, enabled: selectedId !== '' },
+        { id: 'position-history', label: t('mapOverview.recentHistory', 'Recent location history'), query: historyQuery, enabled: selectedId !== '' },
+        { id: 'location-details', label: t('mapOverview.locationDetails', 'Location details'), query: locationQuery, enabled: selectedId !== '' },
+      ]}
     >
       <LiveStaleDataBanner />
 
@@ -369,11 +386,7 @@ export default function MapOverviewPage() {
 
           {/* Side context: location status + quick links (fills the map height on xl). */}
           <div className="flex flex-col gap-4">
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('mapOverview.locationDetails', 'Location details')}
-              </PanelTitle>
+            <LayoutCard title={t('mapOverview.locationDetails', 'Location details')}>
               {locationLoading ? (
                 <Skeleton lines={4} height={20} />
               ) : locationError ? (
@@ -425,16 +438,13 @@ export default function MapOverviewPage() {
                   message={t('mapOverview.noLocation', 'No location data available yet')}
                 />
               )}
-            </GlassPanel>
+            </LayoutCard>
 
-            <GlassPanel className="p-4 sm:p-5 xl:flex-1">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <ExternalLink className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('mapOverview.quickLinks', 'Quick links')}
-              </PanelTitle>
+            <LayoutCard title={t('mapOverview.quickLinks', 'Quick links')}>
               <div className="flex flex-col gap-2">
                 <Button
                   variant="outline"
+                  wrapLabel
                   icon={<Route className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => { window.location.hash = '#/maps/navigation-route'; }}
                   className="min-h-11 w-full justify-start"
@@ -443,6 +453,7 @@ export default function MapOverviewPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  wrapLabel
                   icon={<Fence className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => { window.location.hash = '#/maps/geofences'; }}
                   className="min-h-11 w-full justify-start"
@@ -451,6 +462,7 @@ export default function MapOverviewPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  wrapLabel
                   icon={<LocateFixed className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => { window.location.hash = '#/maps/locations'; }}
                   className="min-h-11 w-full justify-start"
@@ -458,18 +470,14 @@ export default function MapOverviewPage() {
                   {t('mapOverview.locations', 'Locations')}
                 </Button>
               </div>
-            </GlassPanel>
+            </LayoutCard>
           </div>
         </section>
       </FadeIn>
 
       {/* 3 — Recent route playback: full-width band with an animated replay. */}
       <FadeIn delay={0.1}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('mapOverview.recentPlayback', 'Recent route playback')}
-          </PanelTitle>
+        <LayoutCard title={t('mapOverview.recentPlayback', 'Recent route playback')}>
           {historyLoading ? (
             <Skeleton height={360} />
           ) : historyError ? (
@@ -486,16 +494,12 @@ export default function MapOverviewPage() {
               message={t('mapOverview.noPlayback', 'Not enough GPS points to replay a route yet.')}
             />
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
 
       {/* 4 — Detail band: full-width recent location history table. */}
       <FadeIn delay={0.15}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('mapOverview.recentHistory', 'Recent location history')}
-          </PanelTitle>
+        <LayoutCard title={t('mapOverview.recentHistory', 'Recent location history')}>
           {historyLoading ? (
             <Skeleton lines={6} height={16} className="mt-2" />
           ) : historyError ? (
@@ -522,8 +526,8 @@ export default function MapOverviewPage() {
               )}
             />
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

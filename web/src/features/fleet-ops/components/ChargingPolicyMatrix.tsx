@@ -2,7 +2,8 @@ import { BatteryCharging, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Button, DataTable, GlassPanel, PanelTitle, StatusPill, type Column } from '@/components/ui';
+import { Button, DataTable, Text, StatusPill, type Column } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import type { FleetChargingPolicy } from '@/api/hooks/useFleetOps';
 
@@ -56,10 +57,10 @@ export function ChargingPolicyMatrix({
       filterValueLabel: (_value, item) => item.name,
       render: (item) => (
         <div>
-          <p className="font-medium">{item.name}</p>
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" weight="medium">{item.name}</Text>
+          <Text as="p" variant="caption">
             {t('fleetOps.policies.priority', 'Priority')} {item.priority}
-          </p>
+          </Text>
         </div>
       ),
       visibleOnMobile: true,
@@ -116,13 +117,11 @@ export function ChargingPolicyMatrix({
   ], [actionsDisabled, actionsDisabledReason, formatPower, onDelete, onEdit, t]);
 
   return (
-    <GlassPanel className="p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PanelTitle>{t('fleetOps.policies.title', 'Charging policy matrix')}</PanelTitle>
+    <LayoutCard title={t('fleetOps.policies.title', 'Charging policy matrix')} actions={
         <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd} disabled={actionsDisabled} title={actionsDisabledReason}>
           {t('fleetOps.policies.add', 'Add policy')}
         </Button>
-      </div>
+      }>
       {loading ? <Skeleton lines={6} /> : error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.policies.resource', 'Charging policies')} />
       ) : items.length === 0 ? (
@@ -146,6 +145,6 @@ export function ChargingPolicyMatrix({
           />
         </div>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

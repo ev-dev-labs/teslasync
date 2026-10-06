@@ -7,7 +7,7 @@ import {
   useCarbonSummary,
 } from '@/api/hooks/useCarbon';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -91,7 +91,7 @@ export default function CarbonIntelligencePage() {
   const sectionProps = { analysis, states, display };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('carbon.title', 'Carbon intelligence')}
       subtitle={t(
         'carbon.subtitle',
@@ -150,6 +150,6 @@ export default function CarbonIntelligencePage() {
       <FadeIn delay={0.14}>
         <CarbonMethodology {...sectionProps} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

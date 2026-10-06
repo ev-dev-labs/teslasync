@@ -4,7 +4,7 @@ import { Download } from 'lucide-react';
 import { useOutageAutobiography, useSessionCertificate } from '@/api/hooks/useTeslaPhysics';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { PageContainer } from '@/components/layout';
+import { PageLayout, SourceContent } from '@/components/layout';
 
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -23,10 +23,11 @@ export default function OutageAutobiographyPage() {
   const outageQuery = useOutageAutobiography(vehicleIdStr);
   const certificateQuery = useSessionCertificate(vehicleIdStr);
   const state = useDataState(outageQuery, { provenance: 'live' });
+  const certificateState = useDataState(certificateQuery, { provenance: 'historical' });
   const outage = state.data;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('system.outage.title', 'Outage autobiography')}
       subtitle={outage?.honesty ?? t('system.outage.subtitle', 'What queued, what replayed with original event time, what stayed unknown.')}
       secondaryActions={(
@@ -39,18 +40,24 @@ export default function OutageAutobiographyPage() {
             downloadJSON(defaultExportFilename('session-certificate'), certificateQuery.data);
           }}
         >
-          <Download className="mr-1 h-4 w-4" aria-hidden="true" />
+          <Download className="me-1 h-4 w-4" aria-hidden="true" />
           {t('system.outage.certificate', 'Session certificate')}
         </Button>
       )}
       query={outageQuery}
     >
-      <StaleRefreshWarning state={state} />
-      {state.fatalError ? (
-        <QueryError error={state.fatalError} onRetry={() => { void outageQuery.refetch(); }} />
-      ) : outage ? (
+      <StaleRefreshWarning state={state} label={t('system.outage.title', 'Outage autobiography')} />
         <GlassPanel className="space-y-3 p-4 sm:p-5">
           <PanelTitle>{t('system.outage.catchUp', 'Catch-up after MQTT or carbon loss')}</PanelTitle>
+          <SourceContent
+            state={state.fatalError ? 'error' : outageQuery.isLoading && !outage ? 'loading' : !outage ? 'empty' : 'ready'}
+            label={t('system.outage.title', 'Outage autobiography')}
+            emptyMessage={t('system.outage.empty', 'No outage evidence has been recorded for this vehicle yet.')}
+            errorMessage={t('system.outage.loadError', 'Unable to load outage evidence.')}
+            error={state.fatalError}
+            errorRecovery={{ onRetry: () => { void outageQuery.refetch(); } }}
+          >
+          {outage ? <>
           <div className="flex flex-wrap gap-2">
             <Badge
               variant={outage.mqtt_connected == null ? 'neutral' : outage.mqtt_connected ? 'success' : 'warning'}
@@ -83,13 +90,32 @@ export default function OutageAutobiographyPage() {
               })}
             </Text>
           )}
-          <ul className="list-disc space-y-1 pl-5">
-            {outage.notes.map((note) => (
+          <ul className="list-disc space-y-1 ps-5">
+            {(outage.notes ?? []).map((note) => (
               <li key={note}><Text as="span" variant="caption">{note}</Text></li>
             ))}
           </ul>
+          </> : null}
+          </SourceContent>
         </GlassPanel>
-      ) : null}
-    </PageContainer>
+      <GlassPanel className="space-y-3 p-4 sm:p-5">
+        <PanelTitle>{t('system.outage.certificate', 'Session certificate')}</PanelTitle>
+        <StaleRefreshWarning state={certificateState} label={t('system.outage.certificate', 'Session certificate')} />
+        {certificateState.fatalError ? (
+          <QueryError error={certificateState.fatalError} onRetry={() => { void certificateQuery.refetch(); }} />
+        ) : (
+          <SourceContent
+            state={certificateQuery.isLoading && !certificateState.hasData ? 'loading' : certificateState.hasData ? 'ready' : 'empty'}
+            label={t('system.outage.certificate', 'Session certificate')}
+            emptyMessage={t('system.outage.certificateEmpty', 'A session certificate is not available for this vehicle yet.')}
+            errorMessage={t('system.outage.certificateError', 'Unable to load the session certificate.')}
+          >
+            <Text as="p" variant="bodySm">
+              {t('system.outage.certificateReady', 'The session certificate is available for download with its original evidence intact.')}
+            </Text>
+          </SourceContent>
+        )}
+      </GlassPanel>
+    </PageLayout>
   );
 }

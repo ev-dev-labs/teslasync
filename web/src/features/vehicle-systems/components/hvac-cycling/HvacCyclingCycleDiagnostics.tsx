@@ -1,14 +1,9 @@
-import { RotateCw, ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
+import { LayoutCard, Grid } from '@/components/layout';
 import { AlertBanner } from '@/components/feedback';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { MetricLabel, Text } from '@/components/ui';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
@@ -42,11 +37,7 @@ export function HvacCyclingCycleDiagnostics({
 
   return (
     <section data-testid="hvac-cycling-cycle-diagnostics">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <RotateCw className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.cycles.title', 'Complete-cycle and short-cycle diagnostics')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.cycles.title', 'Complete-cycle and short-cycle diagnostics')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.cycles.subtitle',
@@ -109,7 +100,7 @@ export function HvacCyclingCycleDiagnostics({
             </Text>
           )}
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

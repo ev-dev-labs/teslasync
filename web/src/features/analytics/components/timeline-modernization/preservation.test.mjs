@@ -37,6 +37,61 @@ const normalizeKnownFromState = text => text
   .replaceAll("row.from_state ?? '—'", 'row.from_state')
   .replaceAll("previewTransition.from_state ?? '—'", 'previewTransition.from_state');
 
+test('canonical composition preserves original widths and cutoff without hiding tiny-state evidence', () => {
+  let segmentsExpression;
+  const visit = node => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === 'CompositionRail') {
+      const attribute = node.attributes.properties.find(prop =>
+        ts.isJsxAttribute(prop) && prop.name.getText(ast) === 'segments');
+      segmentsExpression = attribute.initializer.expression;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  assert.ok(segmentsExpression, 'the real canonical rail is mounted');
+  const formatter = current.get('formatDurationFromSeconds').getText(ast);
+  const hours = current.get('formatHoursFromSeconds').getText(ast);
+  const js = ts.transpileModule(`${hours}\n${formatter}\nconst segments = ${segmentsExpression.getText(ast)};`,
+    { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const context = vm.createContext({
+    summaryRows: [
+      { state: 'driving', total_seconds: 9980, percentage: 99.1 },
+      { state: 'offline', total_seconds: 20, percentage: 0.9 },
+    ],
+    totalSeconds: 10000,
+    STATE_COLORS: { driving: '#10b981', offline: '#64748b' },
+    fmtPercent: value => `${value}%`,
+  });
+  vm.runInContext(js, context);
+  const segments = JSON.parse(vm.runInContext('JSON.stringify(segments)', context));
+  assert.deepEqual(segments.map(segment => segment.widthPercent), [99.8, 0.2]);
+  assert.deepEqual(segments.map(segment => segment.hideFromTrack), [false, true]);
+  assert.deepEqual(segments.map(segment => segment.label), ['driving', 'offline']);
+  assert.equal(segments[1].detail, '20s (0.9%)');
+  assert.equal(segments[0].color, '#10b981');
+});
+
+test('malformed dwell widths cannot throw from the rail or become measured zero durations', () => {
+  let condition;
+  const visit = node => {
+    if (ts.isConditionalExpression(node) && node.condition.getText(ast).startsWith('summaryRows.some')) {
+      condition = node.condition.getText(ast);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  assert.ok(condition, 'invalid geometry gets an evidence-preserving fallback before the rail');
+  const context = vm.createContext({ summaryRows: [], totalSeconds: 100 });
+  for (const seconds of [-1, 101, NaN, Infinity]) {
+    context.summaryRows = [{ state: 'unknown', total_seconds: seconds }];
+    assert.equal(vm.runInContext(condition, context), true);
+  }
+  context.summaryRows = [{ state: 'driving', total_seconds: 99.9 }, { state: 'offline', total_seconds: 0.1 }];
+  assert.equal(vm.runInContext(condition, context), false);
+  assert.match(page, /timeline\.invalidComposition/);
+  assert.match(page, /Number\.isFinite\(row\.total_seconds\) && row\.total_seconds >= 0/);
+});
+
 test('all original business transforms and rounding functions remain AST-equivalent', { skip: !original }, () => {
   const baseline = parse(original);
   const before = declarations(baseline);
@@ -125,9 +180,41 @@ test('SI dwell math, raw source percentages and positive-time ordering remain un
 test('all six columns retain baseline contracts outside documented presentation guards', { skip: !original }, () => {
   const baseline = parse(original);
   const before = declarations(baseline);
+  // Fresh acquisitions can already contain the coordinated nullable guard.
+  // Exact identity is stronger than normalizing that guard for an older source.
+  if (print(current.get('columns'), ast) === print(before.get('columns'), baseline)) {
+    assert.equal(print(current.get('columns'), ast), print(before.get('columns'), baseline));
+    return;
+  }
   // Minimum touch target and nullable display guards are the only deltas.
-  const normalize = value => normalizeKnownFromState(value).replace(/\s+className="min-h-11"/g, '');
-  assert.equal(normalize(print(current.get('columns'), ast)), print(before.get('columns'), baseline));
+  const normalize = value => normalizeKnownFromState(value)
+    .replace(/\s+className="min-h-11"/g, '')
+    // JSX indentation changes when its expression moves into a block return.
+    .replace(/\n[ \t]+(?=\{row\.from_state\}|<\/Badge>)/g, '\n');
+  // For known states, inline only the local binding and final return of the
+  // explicitly guarded renderer. Null behavior is executed separately below.
+  const transformed = ts.transform(current.get('columns'), [context => {
+    const visit = node => {
+      if (ts.isArrowFunction(node) && ts.isBlock(node.body)
+        && node.body.statements[0]?.getText(ast) === 'const fromState = row.from_state;') {
+        assert.equal(node.body.statements.length, 3);
+        assert.ok(ts.isIfStatement(node.body.statements[1]));
+        assert.equal(node.body.statements[1].expression.getText(ast), 'fromState == null');
+        const knownReturn = node.body.statements[2];
+        assert.ok(ts.isReturnStatement(knownReturn));
+        const substitute = child => ts.isIdentifier(child) && child.text === 'fromState'
+          ? ts.factory.createPropertyAccessExpression(ts.factory.createIdentifier('row'), 'from_state')
+          : ts.visitEachChild(child, substitute, context);
+        return ts.factory.updateArrowFunction(node, node.modifiers, node.typeParameters,
+          node.parameters, node.type, node.equalsGreaterThanToken,
+          ts.visitNode(knownReturn.expression, substitute));
+      }
+      return ts.visitEachChild(node, visit, context);
+    };
+    return node => ts.visitNode(node, visit);
+  }]);
+  assert.equal(normalize(print(transformed.transformed[0], ast)), normalize(print(before.get('columns'), baseline)));
+  transformed.dispose();
 });
 
 test('nullable from-state is display-only unknown, not a replacement raw state', () => {
@@ -144,6 +231,7 @@ test('nullable from-state is display-only unknown, not a replacement raw state',
     setPreviewTransition: row => { inspected = row; },
   });
   vm.runInContext(js, context);
+  vm.runInContext('Object.defineProperty(STATE_BADGE, "null", { get() { throw new Error("Null badge lookup"); } })', context);
   const row = { from_state: null, to_state: 'online' };
   context.row = row;
   const badge = vm.runInContext('columns.find(c => c.key === "from_state").render(row)', context);
@@ -188,7 +276,10 @@ test('exact supplied query contracts are consumed without private observers', ()
   }
   assert.ok(hooks.includes('vehicle_id=${activeId}&start=${encodeURIComponent(startInstant)}&end=${encodeURIComponent(endInstantExclusive)}'));
   assert.equal((hooks.match(/enabled: activeId !== ''/g) ?? []).length, 2);
-  for (const forbidden of ['select:', 'staleTime:', 'retry:', 'refetchInterval:', '{ signal }', '/api/v1/']) {
+  // MDC-002 requires forwarded cancellation, without a new observer policy.
+  assert.equal((hooks.match(/queryFn: \(\{ signal \}\)/g) ?? []).length, 2);
+  assert.equal((hooks.match(/\{ signal \},/g) ?? []).length, 2);
+  for (const forbidden of ['select:', 'staleTime:', 'retry:', 'refetchInterval:', '/api/v1/']) {
     assert.ok(!hooks.includes(forbidden), forbidden);
   }
 });
@@ -205,7 +296,9 @@ test('drawer and navigation retain baseline structure outside nullable display g
     assert.ok(drawer);
     return print(drawer, tree);
   };
-  assert.equal(normalizeKnownFromState(extractDrawer(page)), extractDrawer(original));
+  const currentDrawer = extractDrawer(page);
+  const originalDrawer = extractDrawer(original);
+  assert.equal(currentDrawer === originalDrawer ? currentDrawer : normalizeKnownFromState(currentDrawer), originalDrawer);
 });
 
 test('all record, chart and preference identities stay source-backed', () => {

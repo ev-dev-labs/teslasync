@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Accordion, GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
+import { Accordion, GlassPanel, IconBox, ThemePicker, Toggle, Button, RadioCard, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
 import { PrefetchLink } from '@/components/layout'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
@@ -9,7 +9,7 @@ import {
   setAchievementCelebrationPrefs,
 } from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw, Tv } from 'lucide-react'
+import { Palette, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw, Tv } from 'lucide-react'
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 import { startTour } from '@/lib/tourLauncher'
 import { resetAllTours } from '@/lib/tourRegistry'
@@ -145,54 +145,45 @@ export function AppearanceSettings() {
             {densityChoices.map(choice => {
               const active = density === choice.id
               return (
-                <Button
+                <RadioCard
                   key={choice.id}
-                  variant="ghost"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setDensity(choice.id)}
+                  name="settings-appearance-density"
+                  value={choice.id}
+                  checked={active}
+                  onChange={() => setDensity(choice.id)}
                   disabled={!settings || saveSettings.isPending}
-                  className={cn(
-                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start text-left',
-                    active
-                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
-                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
-                  )}
-                >
-                  <div
+                  className="min-w-0 [overflow-wrap:anywhere]"
+                  label={choice.label}
+                  description={choice.help}
+                  icon={
+                  <span
                     className="flex h-8 w-8 shrink-0 flex-col items-center justify-center gap-[2px] rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]"
                     aria-hidden="true"
                   >
                     {choice.id === 'compact' && (
                       <>
-                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
-                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
-                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
-                        <div className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[2px] w-4 rounded bg-[var(--text-muted)]" />
                       </>
                     )}
                     {choice.id === 'comfortable' && (
                       <>
-                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
-                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
-                        <div className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[3px] w-4 rounded bg-[var(--text-muted)]" />
                       </>
                     )}
                     {choice.id === 'spacious' && (
                       <>
-                        <div className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
-                        <div className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
+                        <span className="h-[5px] w-4 rounded bg-[var(--text-muted)]" />
                       </>
                     )}
-                  </div>
-                  <div className="min-w-0">
-                    <Text as="p" variant="body" className="font-medium">{choice.label}</Text>
-                    <HelperText>{choice.help}</HelperText>
-                  </div>
-                  {active && (
-                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
-                  )}
-                </Button>
+                  </span>
+                  }
+                />
               )
             })}
           </div>
@@ -250,28 +241,17 @@ export function AppearanceSettings() {
             {timeFormatChoices.map(choice => {
               const active = timeFormat === choice.id
               return (
-                <Button
+                <RadioCard
                   key={choice.id}
-                  variant="ghost"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setTimeFormat(choice.id)}
+                  name="settings-appearance-time-format"
+                  value={choice.id}
+                  checked={active}
+                  onChange={() => setTimeFormat(choice.id)}
                   disabled={!settings || saveSettings.isPending}
-                  className={cn(
-                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start text-left',
-                    active
-                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
-                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
-                  )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <Text as="p" variant="body" className="font-medium">{choice.label}</Text>
-                    <HelperText>{choice.help}</HelperText>
-                  </div>
-                  {active && (
-                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
-                  )}
-                </Button>
+                  className="min-w-0 [overflow-wrap:anywhere]"
+                  label={choice.label}
+                  description={choice.help}
+                />
               )
             })}
           </div>
@@ -302,24 +282,19 @@ export function AppearanceSettings() {
             {chartPaletteChoices.map(choice => {
               const active = chartPalette === choice.id
               return (
-                <Button
+                <RadioCard
                   key={choice.id}
-                  variant="ghost"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setChartPalette(choice.id)}
+                  name="settings-appearance-chart-palette"
+                  value={choice.id}
+                  checked={active}
+                  onChange={() => setChartPalette(choice.id)}
                   disabled={!settings || saveSettings.isPending}
-                  className={cn(
-                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start text-left',
-                    active
-                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
-                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
-                  )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <Text as="p" variant="body" className="font-medium">{choice.label}</Text>
-                    <HelperText>{choice.help}</HelperText>
-                    <div
+                  className="min-w-0 [overflow-wrap:anywhere]"
+                  label={choice.label}
+                  description={
+                  <>
+                    {choice.help}
+                    <span
                       className="mt-2 flex items-center gap-1"
                       aria-hidden="true"
                     >
@@ -330,12 +305,10 @@ export function AppearanceSettings() {
                           style={{ background: hex }}
                         />
                       ))}
-                    </div>
-                  </div>
-                  {active && (
-                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
-                  )}
-                </Button>
+                    </span>
+                  </>
+                  }
+                />
               )
             })}
           </div>
@@ -513,6 +486,7 @@ export function AppearanceSettings() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
+                wrapLabel
                 onClick={() => startTour('main')}
                 data-testid="replay-tour-main"
               >
@@ -521,6 +495,7 @@ export function AppearanceSettings() {
               </Button>
               <Button
                 variant="ghost"
+                wrapLabel
                 onClick={() => startTour('debugger')}
                 data-testid="replay-tour-debugger"
               >
@@ -528,6 +503,7 @@ export function AppearanceSettings() {
               </Button>
               <Button
                 variant="ghost"
+                wrapLabel
                 onClick={() => startTour('automations')}
                 data-testid="replay-tour-automations"
               >
@@ -535,6 +511,7 @@ export function AppearanceSettings() {
               </Button>
               <Button
                 variant="danger"
+                wrapLabel
                 onClick={() => {
                   resetAllTours()
                   toast.success(
@@ -572,7 +549,7 @@ export function AppearanceSettings() {
             </div>
             <PrefetchLink
               to="/?kiosk=settings"
-              className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-10 px-4 text-sm')}
+              className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-auto min-h-11 max-w-full whitespace-normal break-words px-4 py-2')}
               data-testid="kiosk-settings-link"
             >
               <Tv className="h-4 w-4" aria-hidden="true" />

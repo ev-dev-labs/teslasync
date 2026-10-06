@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { RotateCcw, RefreshCw, Bookmark } from 'lucide-react';
-import { GlassPanel, PanelTitle, Slider, Toggle, Select, Button, Caption } from '@/components/ui';
+import { Slider, Toggle, Select, Button, Caption } from '@/components/ui';
+import { FormSection } from '@/components/forms';
 import { Grid } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -42,17 +43,16 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
     'custom';
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PanelTitle>{t('homeEnergy.scenario.title', 'Scenario & assumptions')}</PanelTitle>
+    <FormSection title={t('homeEnergy.scenario.title', 'Scenario & assumptions')}>
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={onRefreshNow}>
+          <Button wrapLabel size="sm" variant="secondary" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={onRefreshNow}>
             {t('homeEnergy.scenario.refreshNow', 'Recompute from now')}
           </Button>
-          <Button size="sm" variant="secondary" icon={<Bookmark className="h-3.5 w-3.5" />} onClick={onCommitBaseline}>
+          <Button wrapLabel size="sm" variant="secondary" icon={<Bookmark className="h-3.5 w-3.5" />} onClick={onCommitBaseline}>
             {t('homeEnergy.scenario.commitBaseline', 'Save as stability baseline')}
           </Button>
-          <Button size="sm" variant="outline" icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => resetScenario()}>
+          <Button wrapLabel size="sm" variant="outline" icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => resetScenario()}>
             {t('homeEnergy.scenario.reset', 'Reset to defaults')}
           </Button>
         </div>
@@ -204,6 +204,6 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
           )}
         </div>
       </Grid>
-    </GlassPanel>
+    </FormSection>
   );
 }

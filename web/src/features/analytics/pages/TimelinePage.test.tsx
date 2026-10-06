@@ -16,10 +16,10 @@
  *      render "1h" (never "60m").
  *   3. Empty payloads → every section shows its explicit EmptyState copy and
  *      the KPI band still renders zeroed values (never a hidden section).
- *   4. Both state queries pending → the page shows its spinner shell, never the
- *      KPI band.
- *   5. A timeline fetch failure → an <AlertBanner> with the error message,
- *      while the page shell still renders.
+ *   4. Both state queries pending → independent loading shells remain,
+ *      without fabricated KPI measurements.
+ *   5. A timeline fetch failure → section-specific error text and recovery,
+ *      while the independent summary remains measured.
  *   6. The icon-only refresh control exposes an accessible name and refetches.
  *   7. Changing the header-selected vehicle re-scopes both state queries.
  *
@@ -34,12 +34,8 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-
-vi.mock('@/components/charts', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/components/charts')>()
-  const { chartTestDoubles } = await import('@/test/chartTestDoubles')
-  return { ...actual, ...chartTestDoubles }
-})
+import { Button } from '@/components/ui'
+import { containerPolicy } from '@/components/layout/layout-reference'
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -83,7 +79,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import TimelinePage from './TimelinePage'
 import type { Vehicle } from '@/types/vehicle'
 
-const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
+const mockedRequest = vi.mocked(request)
 
 /* ── Fixtures ─────────────────────────────────────────── */
 
@@ -207,7 +203,7 @@ function renderPage(path = '/timeline') {
 
 function HeaderVehicleSwitch() {
   const { setVehicleId } = useSelectedVehicle()
-  return <button onClick={() => setVehicleId(2)}>Select Model Y in header</button>
+  return <Button onClick={() => setVehicleId(2)}>Select Model Y in header</Button>
 }
 
 beforeEach(() => {
@@ -221,7 +217,7 @@ describe('TimelinePage', () => {
     renderPage()
     await screen.findByText('10', {}, { timeout: 8000 })
     const filterButton = screen.getByRole('button', { name: 'To state filter' })
-    const table = screen.getByRole('table')
+    const table = screen.getByRole('table', { name: 'State transitions' })
     const firstRow = (await within(table).findByText('asleep')).closest('tr')!
     expect(within(firstRow).getByText('1h')).toBeInTheDocument()
 
@@ -260,27 +256,33 @@ describe('TimelinePage', () => {
     expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
 
     // All four section panels render their titles (never hidden).
-    expect(screen.getByText('State distribution')).toBeInTheDocument()
-    expect(screen.getByText('Daily breakdown')).toBeInTheDocument()
-    expect(screen.getByText('Time by state')).toBeInTheDocument()
-    expect(screen.getByText('State transitions')).toBeInTheDocument()
+    for (const name of ['State distribution', 'Daily breakdown', 'Time by state', 'State transitions']) {
+      expect(screen.getAllByRole('heading', { name }).length).toBeGreaterThan(0)
+    }
 
-    // Regression: EmbeddedChart used to default to fluid sizing, silently
-    // ignoring these explicit heights. ResponsiveContainer then measured an
-    // auto-sized grid track and expanded the chart down the entire page.
-    const dailyChart = screen.getByRole('img', {
+    // The real shared card applies its container-band height policy. Keep
+    // bounded desktop/mobile CSS heights, rather than testing mock-only
+    // attributes or the old page-owned dimensions.
+    const dailyChart = screen.getByRole('group', {
       name: 'Daily transition counts by vehicle state',
     })
-    expect(dailyChart).toHaveAttribute('data-chart-height', '256')
-    expect(dailyChart).toHaveAttribute('data-chart-mobile-height', '224')
-    expect(dailyChart).toHaveAttribute('data-chart-fluid', 'false')
+    const figure = dailyChart.closest('figure')!
+    const grid = figure.closest('[data-card-grid]')!
+    expect(grid).toHaveAttribute('data-container-band', 'phone')
+    expect(dailyChart).toHaveStyle({
+      '--chart-height-desktop': `${containerPolicy(0).chartHeight}px`,
+      '--chart-height-mobile': `${containerPolicy(0).chartHeight}px`,
+    })
+    expect(figure).not.toHaveAttribute('data-chart-fluid')
+    expect(within(figure).getByRole('table')).toHaveTextContent('2025-03-01')
+    expect(within(figure).getByRole('table')).toHaveTextContent('2025-03-02')
 
     // With data present, sections are NOT showing their empty copy.
     expect(screen.queryByText('No daily transition activity yet')).toBeNull()
     expect(screen.queryByText('No state transitions recorded')).toBeNull()
 
     // Transitions table: one row per event, with trigger fields + state badges.
-    const table = screen.getByRole('table')
+    const table = screen.getByRole('table', { name: 'State transitions' })
     expect(within(table).getByText('shift_state')).toBeInTheDocument()
     expect(within(table).getByText('charge_state')).toBeInTheDocument()
     // 'driving' surfaces as row1 to_state AND row2 from_state.
@@ -328,22 +330,27 @@ describe('TimelinePage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Timeline' }),
     ).toBeInTheDocument()
 
-    // Once the vehicle is auto-selected and the queries start fetching, the
-    // page swaps to its spinner shell — the KPI band is gone.
+    // Modernization keeps each independent source shell, with no measured
+    // values while pending. The summary label is not itself a measurement.
     await waitFor(() =>
-      expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument(),
+      expect(screen.getByRole('status', { name: 'Loading State transitions' })).toBeInTheDocument(),
     )
-    expect(screen.queryByText('Total transitions')).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Summary metrics' })).toBeNull()
+    expect(screen.getByRole('status', { name: 'Loading State distribution' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading Time by state' })).toBeInTheDocument()
+    const summary = screen.getByRole('region', { name: 'Summary metrics' })
+    expect(summary.querySelector('[data-stat-strip]')).toHaveAttribute('aria-busy', 'true')
+    expect(within(summary).queryByText('10')).toBeNull()
+    expect(within(summary).queryByText('2h')).toBeNull()
+    expect(screen.getAllByRole('heading', { name: 'Daily breakdown' }).length).toBeGreaterThan(0)
   })
 
   it('surfaces an AlertBanner when the timeline query fails', async () => {
     install({ timelineError: true })
     renderPage()
 
-    // AlertBanner interpolates the fallback title + the normalised error text.
+    // Failure is scoped to timeline-fed panels, not the healthy summary.
     expect(
-      await screen.findByText('Failed to load data: timeline boom'),
+      await screen.findByText('Unable to load State transitions: timeline boom'),
     ).toBeInTheDocument()
 
     // The banner does not replace the page — the shell + KPI band still render.
@@ -353,6 +360,12 @@ describe('TimelinePage', () => {
     expect(
       screen.getByRole('region', { name: 'Summary metrics' }),
     ).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Summary metrics' })).getByText('10')).toBeInTheDocument()
+    const before = mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/timeline')).length
+    install()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh timeline' }))
+    await waitFor(() => expect(mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/timeline')).length).toBeGreaterThan(before))
+    expect(await screen.findByRole('table', { name: 'State transitions' })).toHaveTextContent('shift_state')
   })
 
   it('refetches through the accessible icon-only refresh control', async () => {

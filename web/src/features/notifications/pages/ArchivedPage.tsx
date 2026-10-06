@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -39,7 +39,7 @@ export default function ArchivedPage() {
   const summaryQuery = useNotificationLogs(archivedFilters);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.archived.title', 'Archived notifications')}
       subtitle={t(
         'notifications.archived.subtitle',
@@ -68,6 +68,6 @@ export default function ArchivedPage() {
       <FadeIn delay={0.05}>
         <InboxBody archived={true} vehicles={vehicles} rules={rules} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

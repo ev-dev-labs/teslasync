@@ -2,7 +2,7 @@ import { BarChart3, BetweenHorizontalStart, Sigma } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { MetricBar, MetricCard } from '@/components/data-display';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 import type {
   BatteryPassportAnalysis,
@@ -60,23 +60,13 @@ export function BatteryPassportTrendDistribution({
 
   return (
     <section data-testid="battery-passport-trend-distribution">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BarChart3
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.distribution.title',
             'Trend distribution and range bands',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.distribution.subtitle',
             'Counts and shares of included certificate points in fixed SoH bands; no normal distribution is assumed.',
-          )}
-        </Text>
+          )} actions={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3">
@@ -182,7 +172,7 @@ export function BatteryPassportTrendDistribution({
             </div>
           </div>
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

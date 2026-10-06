@@ -52,8 +52,8 @@ describe('period statistics read hook', () => {
       expect(result.current.b.isSuccess).toBe(true);
     });
     expect(requestMock.mock.calls).toEqual([
-      ['/analytics/period-stats?vehicle_id=42&days=30'],
-      ['/analytics/period-stats?vehicle_id=42&days=90'],
+      ['/analytics/period-stats?vehicle_id=42&days=30', { signal: expect.any(AbortSignal) }],
+      ['/analytics/period-stats?vehicle_id=42&days=90', { signal: expect.any(AbortSignal) }],
     ]);
     expect(result.current.a.data).toEqual(rawStats);
     expect(result.current.b.data).toEqual(rawStats);
@@ -82,7 +82,7 @@ describe('period statistics read hook', () => {
     const { wrapper } = setup();
     const { result } = renderHook(() => usePeriodStats('42', 0), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(requestMock).toHaveBeenCalledWith('/analytics/period-stats?vehicle_id=42&days=0');
+    expect(requestMock).toHaveBeenCalledWith('/analytics/period-stats?vehicle_id=42&days=0', { signal: expect.any(AbortSignal) });
   });
 
   it('retains the original string truthiness gate for vehicle zero', async () => {
@@ -90,7 +90,7 @@ describe('period statistics read hook', () => {
     const { wrapper } = setup();
     const { result } = renderHook(() => usePeriodStats('0', 7), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(requestMock).toHaveBeenCalledWith('/analytics/period-stats?vehicle_id=0&days=7');
+    expect(requestMock).toHaveBeenCalledWith('/analytics/period-stats?vehicle_id=0&days=7', { signal: expect.any(AbortSignal) });
   });
 
   it('isolates caches when the vehicle or comparison period changes', async () => {
@@ -104,8 +104,8 @@ describe('period statistics read hook', () => {
     rerender({ vehicleId: '43', days: 7 });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(requestMock.mock.calls).toEqual([
-      ['/analytics/period-stats?vehicle_id=42&days=30'],
-      ['/analytics/period-stats?vehicle_id=43&days=7'],
+      ['/analytics/period-stats?vehicle_id=42&days=30', { signal: expect.any(AbortSignal) }],
+      ['/analytics/period-stats?vehicle_id=43&days=7', { signal: expect.any(AbortSignal) }],
     ]);
     expect(client.getQueryData(['period-stats', '42', 30])).toEqual(rawStats);
     expect(client.getQueryData(['period-stats', '43', 7])).toEqual(rawStats);
@@ -152,5 +152,22 @@ describe('period statistics read hook', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(emptyStats);
     expect(result.current.error).toBeNull();
+  });
+
+  it('cancels an in-flight period when its observer unmounts', async () => {
+    const signals: AbortSignal[] = [];
+    requestMock.mockImplementation((_path: string, { signal }: { signal: AbortSignal }) => {
+      signals.push(signal);
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
+      });
+    });
+    const { client, wrapper } = setup();
+    const { unmount } = renderHook(() => usePeriodStats('42', 30), { wrapper });
+    await waitFor(() => expect(signals).toHaveLength(1));
+    expect(signals[0].aborted).toBe(false);
+    unmount();
+    expect(signals[0].aborted).toBe(true);
+    expect(client.getQueryData(['period-stats', '42', 30])).toBeUndefined();
   });
 });

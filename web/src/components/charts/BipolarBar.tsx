@@ -4,8 +4,11 @@ import { Text } from '@/components/ui/Typography';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface BipolarBarProps {
-  /** Signed reading. Negative values fill leftwards from the zero rule. */
-  value: number;
+  /**
+   * Signed reading. Negative values fill leftwards from the zero rule.
+   * Missing or nonfinite readings show a placeholder without a meter or fill.
+   */
+  value?: number | null;
   /** Magnitude of the positive end of the scale. Must be > 0. */
   max: number;
   /**
@@ -31,8 +34,6 @@ export interface BipolarBarProps {
   kind?: 'measurement' | 'count';
   className?: string;
 }
-
-const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
 
 /**
  * Zero-centred horizontal bar for a **signed** measurement.
@@ -66,9 +67,6 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
     },
     ref,
   ) {
-    // Null-safety: callers forward optional API values that can be undefined /
-    // null / NaN at runtime despite the `number` type. Sanitising here keeps
-    // the bar geometry finite rather than emitting `width: NaN%`.
     const posSpan = Number.isFinite(max) && max > 0 ? max : 0;
     const negSpanRaw = min === undefined ? posSpan : min;
     const negSpan = Number.isFinite(negSpanRaw) && negSpanRaw > 0 ? negSpanRaw : 0;
@@ -79,31 +77,33 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
     // expression, and the signed lower bound reads better with a name.
     const lowerBound = -negSpan;
 
-    const raw = toFinite(value);
-    const clamped = Math.max(lowerBound, Math.min(raw, posSpan));
+    const clamped = typeof value === 'number' && Number.isFinite(value)
+      ? Math.max(lowerBound, Math.min(value, posSpan))
+      : undefined;
 
     // Fraction of the full track occupied by the negative half, i.e. where the
     // zero rule sits. A zero-width scale collapses the rule to the left edge
     // rather than dividing by zero.
     const zeroPct = span > 0 ? (negSpan / span) * 100 : 0;
-    const magnitudePct = span > 0 ? (Math.abs(clamped) / span) * 100 : 0;
+    const magnitudePct = clamped !== undefined && span > 0
+      ? (Math.abs(clamped) / span) * 100 : 0;
 
-    const isNegative = clamped < 0;
+    const isNegative = clamped !== undefined && clamped < 0;
     const color = isNegative ? negativeColor : positiveColor;
     const { fmtNumber, fmtInt } = useNumberFormatting();
     const isCount = kind === 'count' || (kind == null && !unit && Number.isInteger(clamped));
-    const display = !Number.isFinite(value) ? '—' : decimals == null && isCount
+    const display = clamped === undefined ? '—' : decimals == null && isCount
       ? fmtInt(clamped) : fmtNumber(clamped, decimals);
 
     return (
       <div
         ref={ref}
-        role="meter"
+        role={clamped === undefined ? 'group' : 'meter'}
         aria-label={label || undefined}
         aria-valuenow={clamped}
-        aria-valuemin={lowerBound}
-        aria-valuemax={posSpan}
-        aria-valuetext={unit ? `${display}${unit}` : display}
+        aria-valuemin={clamped === undefined ? undefined : lowerBound}
+        aria-valuemax={clamped === undefined ? undefined : posSpan}
+        aria-valuetext={clamped === undefined ? undefined : unit ? `${display}${unit}` : display}
         className={cn('flex w-full flex-col gap-1.5', className)}
       >
         <div className="flex items-baseline justify-between gap-2">
@@ -112,7 +112,7 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
           </Text>
           <Text as="span" size="lg" weight="bold" color="primary">
             {display}
-            {unit && (
+            {clamped !== undefined && unit && (
               <Text as="span" size="xs" weight="regular" color="muted">
                 {unit}
               </Text>
@@ -120,9 +120,10 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
           </Text>
         </div>
 
-        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-          <div
-            className="absolute inset-y-0 rounded-full transition-all duration-slow"
+        <div data-bipolar-track className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)] forced-colors:[outline-style:solid] forced-colors:outline-1 forced-colors:outline-[CanvasText] forced-colors:!bg-[Canvas] forced-colors:[forced-color-adjust:none]">
+          {clamped !== undefined && <div
+            data-bipolar-fill
+            className="absolute inset-y-0 rounded-full transition-all duration-slow forced-colors:!bg-[Highlight] forced-colors:!bg-none forced-colors:[forced-color-adjust:none]"
             style={{
               // Anchor the fill at the zero rule and grow it outwards. A
               // negative reading starts `magnitudePct` to the LEFT of zero;
@@ -131,10 +132,10 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
               width: `${magnitudePct}%`,
               background: `linear-gradient(90deg, ${color}99, ${color})`,
             }}
-          />
+          />}
           <div
             aria-hidden="true"
-            className="absolute inset-y-0 w-px bg-[var(--border-strong)]"
+            className="absolute inset-y-0 w-px bg-[var(--border-strong)] forced-colors:!bg-[CanvasText] forced-colors:[forced-color-adjust:none]"
             style={{ left: `${zeroPct}%` }}
           />
         </div>

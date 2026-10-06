@@ -89,7 +89,7 @@ const MB = 1024 * 1024;
 const GB = 1024 * 1024 * 1024;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -406,9 +406,20 @@ describe('DBHealthPage — empty states', () => {
 });
 
 describe('DBHealthPage — hardening', () => {
-  it('keeps the pool-usage bar NaN-safe when inUse is missing', () => {
-    // Regression guard for the `(pool.inUse ?? 0)` fix: a payload with a
-    // maxOpen but no inUse must yield 0%, never "NaN%".
+  it('keeps incomplete row totals and missing migration health unknown', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [{ ...TABLES[0], rowCount: null as unknown as number }] }),
+    }));
+    mockUseMigrations.mockReturnValue(makeQuery({
+      data: migration({ dirty: undefined }),
+    }));
+    renderPage();
+    expect(metricValue('Total rows')).toBe('—');
+    expect(screen.queryByText('Clean')).toBeNull();
+    expect(within(tablesGrid()).getAllByText('—').length).toBeGreaterThan(0);
+  });
+
+  it('keeps missing pool readings unknown, without a fabricated zero fill', () => {
     mockUseConnectionPool.mockReturnValue(
       makeQuery({
         data: { ...pool(), inUse: undefined } as unknown as ConnectionPool,
@@ -418,10 +429,10 @@ describe('DBHealthPage — hardening', () => {
     renderPage();
 
     const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
-    expect(bar).toHaveAttribute('aria-valuenow', '0');
-    const fill = bar.querySelector('div');
-    expect(fill).toHaveStyle({ width: '0.00%' });
-    expect(metricValue('Pool usage')).toBe('0.00%');
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(bar.querySelector('[data-metric-fill]')).toBeNull();
+    expect(metricValue('Pool usage')).toBe('—');
   });
 
   it('flips the usage bar to the danger color once the pool is ≥80% busy', () => {
@@ -433,8 +444,35 @@ describe('DBHealthPage — hardening', () => {
 
     const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '88');
-    expect(bar.querySelector('div')?.className).toContain('bg-rose-400');
+    expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--neon-red)' });
     expect(metricValue('Pool usage')).toBe('88.00%');
+  });
+
+  describe('DBHealthPage — retained independent sources', () => {
+    it('retains table details, migration evidence and pool metrics after refresh errors', () => {
+      mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats(), isError: true, error: new Error('stats refresh') }));
+      mockUseMigrations.mockReturnValue(makeQuery({ data: migration(), isError: true, error: new Error('migration refresh') }));
+      mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool(), isError: true, error: new Error('pool refresh') }));
+
+      renderPage();
+
+      expect(within(tablesGrid()).getByText('zebra_events')).toBeInTheDocument();
+      expect(screen.getByText(/v185 si_canonical/)).toBeInTheDocument();
+      const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
+      expect(bar).toHaveAttribute('aria-valuenow', '20');
+      expect(bar.querySelector('[data-metric-track]')).toHaveClass('h-1');
+      expect(screen.queryByText("Can't reach server")).toBeNull();
+      expect(metricValue('Total rows')).toBe('905,100');
+    });
+
+    it('distinguishes a real zero pool reading from an unknown one', () => {
+      mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool({ inUse: 0 }) }));
+      renderPage();
+      const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
+      expect(bar).toHaveAttribute('aria-valuenow', '0');
+      expect(bar.querySelector('[data-metric-fill]')).not.toBeNull();
+      expect(metricValue('Pool usage')).toBe('0.00%');
+    });
   });
 
   it('honors the backend numeric `version` field over currentVersion, plus dirty + pending', () => {

@@ -19,6 +19,7 @@ import LiveMotorStatus from './LiveMotorStatus';
 import SpeedGearPanel from './SpeedGearPanel';
 import DynamicsTripToolbar from './DynamicsTripToolbar';
 import { LiveSourceWarnings } from './LiveSourceWarnings';
+import { SignedMotorReading } from './SignedMotorReading';
 
 const fixture = vi.hoisted(() => ({
   length: 'km', temperature: 'C', precision: undefined as number | undefined, locale: 'en-US',
@@ -127,6 +128,39 @@ beforeEach(() => {
   fixture.historyCalls.mockClear(); fixture.retry.mockClear();
   setGlobalLocale('en-US'); setGlobalPrecision(2);
   client.clear();
+});
+
+describe('resolved-empty telemetry recovery', () => {
+  it.each([
+    ['guidance', (enabled: boolean) => <DrivingTips vehicleId={7} historyQuery={{ ...window, enabled }} />],
+    ['powertrain', (enabled: boolean) => <PowertrainSummary vehicleId={7} historyQuery={{ ...window, enabled }} />],
+    ['motor charts', (enabled: boolean) => <MotorHistoryCharts vehicleId={7} historyQuery={{ ...window, enabled }} />],
+  ] as const)('retries %s in the same drive window, but not disabled history', (_label, content) => {
+    fixture.history = { data: [], isSuccess: true };
+    const view = mount(content(true));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]!);
+    expect(fixture.retry).toHaveBeenCalledTimes(1);
+    expect(fixture.historyCalls).toHaveBeenCalledWith(7, {
+      limit: 200, ...window,
+    });
+    view.rerender(content(false));
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(fixture.retry).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['G-force', (id: number | null) => <GForcePanel vehicleId={id} />],
+    ['pedals', (id: number | null) => <PedalUsage vehicleId={id} />],
+    ['live motor', (id: number | null) => <LiveMotorStatus vehicleId={id} toTemperatureDisplay={v => v} tempUnit="°C" />],
+  ] as const)('retries empty %s without allowing an unselected-vehicle request', (_label, content) => {
+    fixture.dynamics = { data: {}, isSuccess: true };
+    fixture.motor = { data: {} as MotorSnapshot, isSuccess: true };
+    const view = mount(content(7));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(fixture.retry).toHaveBeenCalledTimes(1);
+    view.rerender(content(null));
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
 });
 
 describe('ride totals and display-only preferences', () => {
@@ -238,6 +272,20 @@ describe('sample statistics, selected bounds and retained trust', () => {
 });
 
 describe('signed live physics and independent errors', () => {
+  it.each([null, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'uses the shared nullable track without a counterfeit zero for %s', value => {
+      const view = mount(<SignedMotorReading value={value} label="Signed fixture" min={400} max={1000}
+        unit=" Nm" negativeLabel="Regen" positiveLabel="Drive" />);
+      const group = screen.getByRole('group', { name: 'Signed fixture' });
+      expect(group).not.toHaveAttribute('aria-valuenow');
+      expect(group.querySelector('[data-bipolar-track]')).toBeInTheDocument();
+      expect(group.querySelector('[data-bipolar-fill]')).not.toBeInTheDocument();
+      expect(group).toHaveTextContent('Regen');
+      expect(group).toHaveTextContent('Drive');
+      view.rerender(<SignedMotorReading value={0} label="Signed fixture" min={400} max={1000} unit=" Nm" />);
+      expect(screen.getByRole('meter', { name: 'Signed fixture' })).toHaveAttribute('aria-valuenow', '0');
+    },
+  );
   it('retains signed axes and the both-axis magnitude across refresh failure', () => {
     const view = mount(<GForcePanel vehicleId={7} />);
     expect(metric('Lateral')).toHaveTextContent('-0.30');
@@ -318,6 +366,8 @@ describe('shared chart policy and independent drive control', () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(3);
+    expect(view.container.querySelectorAll('[data-card]')).toHaveLength(3);
+    expect(view.container.querySelectorAll('[data-chart-toolbar]')).toHaveLength(3);
     // The captured callers omit fullscreen; preserve that default policy.
     expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
     fixture.history.error = new Error('chart refresh failed'); fixture.history.isError = true;
@@ -329,10 +379,10 @@ describe('shared chart policy and independent drive control', () => {
     expect(screen.queryByText('Awaiting motor telemetry data...')).not.toBeInTheDocument();
   });
   it('wraps real ChartCard and ErrorDisplay on both mount and error rerender', () => {
-    const view = mount(<ChartCard title="Test chart" empty><span /></ChartCard>);
-    view.rerender(<ChartCard title="Test chart" error={new Error('shared chart failed')}><span /></ChartCard>);
+    const view = mount(<ChartCard title="Test chart" ariaLabel="Test chart figure" empty><span /></ChartCard>);
+    view.rerender(<ChartCard title="Test chart" ariaLabel="Test chart figure" error={new Error('shared chart failed')}><span /></ChartCard>);
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    // ChartCard has no export/fullscreen API; production must retain ChartContainer.
+    // This read-only caller deliberately does not opt into fullscreen.
     expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
   });
   it('preserves drive field identity/callback and uses unknown distance, not zero', () => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 const { useDrivesMock,
@@ -78,7 +78,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -195,8 +195,8 @@ describe('ColdStartPage', () => {
   });
 
   it.each([
-    ['loading', query({ isLoading: true })],
-    ['error', query({ isError: true, error: new Error('unavailable') })],
+    ['loading', query({ data: undefined, isLoading: true })],
+    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
   ])('threads the %s state to every mounted section', (expected, result) => {
     useDrivesMock.mockReturnValue(result);
     render(<ColdStartPage />);
@@ -204,6 +204,21 @@ describe('ColdStartPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent(expected);
     }
+  });
+
+  it('keeps every returned-window section during refresh failure and offers source-owned recovery', () => {
+    const retained = query();
+    const view = render(<ColdStartPage />);
+    useDrivesMock.mockReturnValue({ ...retained, isError: true, error: new Error('refresh failed') });
+    view.rerender(<ColdStartPage />);
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retained.refetch).toHaveBeenCalledTimes(1);
+    useDrivesMock.mockReturnValue({ ...retained, data: undefined, isError: true, error: new Error('initial failed') });
+    view.rerender(<ColdStartPage />);
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('error');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
 
   it('preserves the no-vehicle selection state', () => {

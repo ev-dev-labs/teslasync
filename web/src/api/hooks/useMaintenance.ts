@@ -46,8 +46,9 @@ export interface ServiceRecord {
 export function useMaintenance(vehicleId: number | null) {
   return useQuery({
     queryKey: ['maintenance', vehicleId],
-    queryFn: () => request<MaintenanceItem[]>(
+    queryFn: ({ signal }) => request<MaintenanceItem[]>(
       `/maintenance${vehicleId === null ? '' : `?vehicle_id=${vehicleId}`}`,
+      { signal },
     ),
     enabled: vehicleId !== null,
   });
@@ -57,8 +58,9 @@ export function useMaintenance(vehicleId: number | null) {
 export function useServiceRecords(vehicleId: number | null) {
   return useQuery({
     queryKey: ['maintenance-records', vehicleId],
-    queryFn: () => request<ServiceRecord[]>(
+    queryFn: ({ signal }) => request<ServiceRecord[]>(
       `/maintenance/records${vehicleId === null ? '' : `?vehicle_id=${vehicleId}`}`,
+      { signal },
     ),
     enabled: vehicleId !== null,
   });

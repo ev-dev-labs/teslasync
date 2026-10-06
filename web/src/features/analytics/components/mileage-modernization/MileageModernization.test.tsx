@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -93,7 +93,7 @@ beforeEach(() => {
 });
 
 describe('live mileage modernization preservation', () => {
-  it('uses one shared card canvas with all six content shells and unchanged hook scopes', () => {
+  it('uses one shared card canvas with all six content shells and unchanged hook scopes', async () => {
     const { container } = mount();
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-card]')).toHaveLength(6);
@@ -102,7 +102,31 @@ describe('live mileage modernization preservation', () => {
     expect(useMonthlyMileage).toHaveBeenCalledWith('7');
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
     expect(screen.getByText(/do not accept workspace date bounds/)).toBeInTheDocument();
-    expect(screen.getByText(/server’s default 24-month window/)).toBeInTheDocument();
+    // The shared card repeats its description in a collapsed help tooltip.
+    const monthlyProvenance = panel('Monthly distance').getByText(/server’s default 24-month window/, {
+      selector: '[data-card-desc="true"]',
+    });
+    expect(monthlyProvenance).toBeInTheDocument();
+    const descriptionDisclosures: HTMLDetailsElement[] = [];
+    for (let disclosure = monthlyProvenance.closest('details'); disclosure;
+      disclosure = disclosure.parentElement?.closest('details') ?? null) {
+      descriptionDisclosures.push(disclosure);
+    }
+    for (const disclosure of descriptionDisclosures.reverse()) {
+      if (disclosure.open) continue;
+      const trigger = disclosure.querySelector(':scope > summary');
+      if (!trigger) throw new Error('Monthly provenance disclosure is missing its own summary control');
+      fireEvent.click(trigger);
+      expect(disclosure.open).toBe(true);
+    }
+    fireEvent.click(panel('Monthly distance').getByRole('button', {
+      name: 'Read full description for Monthly distance',
+    }));
+    await waitFor(() => {
+      expect(panel('Monthly distance').getByText(/server’s default 24-month window/, {
+        selector: '[data-card-desc="true"]',
+      })).toBeVisible();
+    });
   });
 
   it('keeps six KPI meanings, exact operands, units and occurrence-specific precision', () => {
@@ -157,10 +181,14 @@ describe('live mileage modernization preservation', () => {
   });
 
   it('does not manufacture zero KPIs from a missing summary, but preserves measured zeros', () => {
-    vi.mocked(useMileageStats).mockReturnValue(query(undefined) as ReturnType<typeof useMileageStats>);
+    const retry = vi.fn();
+    vi.mocked(useMileageStats).mockReturnValue(query(undefined, { refetch: retry }) as ReturnType<typeof useMileageStats>);
     const view = mount();
     expect(screen.getAllByText('Mileage summary has not been supplied.')).toHaveLength(2);
     expect(screen.queryByText('Total distance')).toBeNull();
+    expect(panel('Mileage summary metrics').getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
+    fireEvent.click(panel('Distance by window').getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
     view.unmount();
     vi.mocked(useMileageStats).mockReturnValue(query({ ...stats, lifetime_km: 0, last_30d_km: 0 }) as ReturnType<typeof useMileageStats>);
     mount();

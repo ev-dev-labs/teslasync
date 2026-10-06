@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
-import { Caption, Text } from '@/components/ui'
+import { CompositionRail } from '@/components/data-display'
 
 import type { FeedbackStatus } from '@/api/types'
 
@@ -32,42 +32,25 @@ export function StatusDistribution({ counts, total }: { counts: FeedbackCounts; 
   })
 
   return (
-    <div className="space-y-4">
-      <div
-        role="img"
-        aria-label={t(
+    <CompositionRail
+      size="lg"
+      summary={t(
           'feedback.queue.distAria',
           'Status distribution: {{new}} new, {{triaged}} triaged, {{closed}} closed',
           { new: counts.new ?? 0, triaged: counts.triaged ?? 0, closed: counts.closed ?? 0 },
-        )}
-        className="flex h-8 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
-      >
-        {segments.map((seg) =>
-          seg.pct < 0.3 ? null : (
-            <div
-              key={seg.key}
-              className="h-full transition-all"
-              style={{ width: `${seg.pct}%`, backgroundColor: seg.color }}
-              title={`${seg.label}: ${fmtInt(seg.count)} (${fmtPercent(seg.pct)})`}
-            />
-          ),
-        )}
-      </div>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {segments.map((seg) => (
-          <li key={seg.key} className="flex items-center gap-2">
-            <span
-              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: seg.color }}
-              aria-hidden="true"
-            />
-            <span className="min-w-0 flex-1">
-              <Text as="span" variant="bodySm" className="block truncate">{seg.label}</Text>
-              <Caption>{fmtInt(seg.count)} · {fmtPercent(seg.pct)}</Caption>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+      )}
+      segments={segments.map((seg) => ({
+        id: seg.key,
+        label: seg.label,
+        widthPercent: seg.pct,
+        color: seg.color,
+        hideFromTrack: seg.pct < 0.3,
+        detail: (
+          <span title={`${seg.label}: ${fmtInt(seg.count)} (${fmtPercent(seg.pct)})`}>
+            {fmtInt(seg.count)} · {fmtPercent(seg.pct)}
+          </span>
+        ),
+      }))}
+    />
   )
 }

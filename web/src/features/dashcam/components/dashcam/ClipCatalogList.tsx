@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Trash2, Video } from 'lucide-react';
-import { Badge, Button, SelectableCard } from '@/components/ui';
+import { Badge, Button, SelectableCard, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import type { ClipRecord } from '../../lib/types';
@@ -55,11 +55,11 @@ export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect, o
               role="option"
               selected={selected}
               onClick={() => onSelect(clip.id)}
-              className="flex-1"
+              className="min-w-0 flex-1"
             >
               <span className="flex min-w-0 flex-col items-start gap-1">
-                <span className="truncate text-sm font-medium text-[var(--text-primary)]">{clip.fileName}</span>
-                <span className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                <Text as="span" variant="label" className="max-w-full break-all">{clip.fileName}</Text>
+                <Text as="span" variant="caption" className="flex flex-wrap items-center gap-1.5">
                   <Badge size="sm">{CAMERA_LABELS[clip.cameraPosition]}</Badge>
                   <Badge size="sm" variant="info">{SOURCE_LABELS[clip.source]}</Badge>
                   <span>{formatCapturedAtRaw(clip.capturedAtRaw)}</span>
@@ -68,7 +68,7 @@ export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect, o
                   {clip.eventCandidates.length > 0 && (
                     <span>· {t('dashcam.catalog.eventCount', '{{count}} event candidate(s)', { count: clip.eventCandidates.length })}</span>
                   )}
-                </span>
+                </Text>
               </span>
             </SelectableCard>
             <Button

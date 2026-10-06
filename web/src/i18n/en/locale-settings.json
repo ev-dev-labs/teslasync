@@ -578,6 +578,7 @@
   },
   "achievements": {
     "celebrationSettings": "Celebration",
+    "dismiss": "Dismiss achievement notification",
     "playSound": "Play sound on unlock",
     "playSoundHelp": "Play a short chime alongside the celebration toast. Off by default.",
     "pushOnUnlock": "Send push notifications for achievements",
@@ -585,7 +586,9 @@
     "showOnDashboard": "Show recently unlocked on dashboard",
     "showOnDashboardHelp": "Surface your latest unlocks in the dashboard's recently-unlocked widget.",
     "showToasts": "Show celebration toasts",
-    "showToastsHelp": "Pop a celebratory toast with confetti when you unlock an achievement."
+    "showToastsHelp": "Pop a celebratory toast with confetti when you unlock an achievement.",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
   },
   "activity": {
     "action": {
@@ -824,6 +827,14 @@
       "reset": "Consent reset — banner will reappear"
     }
   },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
+  },
   "date": {
     "preset": {
       "all": "All time",
@@ -858,12 +869,152 @@
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"
   },
-  "draft": {
-    "noun": {
-      "settings": "Settings"
+  "developerReference": {
+    "stats": {
+      "metric": {
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "loading": "Loading measurements",
+        "retained": "Showing retained measurements"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
     }
   },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "noun": {
+      "settings": "Settings"
+    },
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
   "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    },
     "resource": {
       "settings": "Your settings"
     }
@@ -872,8 +1023,44 @@
     "title": "Related context"
   },
   "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
     "subtitle": "Export drives, charging, analytics, or full backup as CSV/JSON",
-    "title": "Export dashboard"
+    "title": "Export dashboard",
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
   },
   "featureConfig": {
     "details": "Details",
@@ -887,6 +1074,11 @@
     "status": "Status",
     "subtitle": "Tesla account feature configuration",
     "title": "Feature flags"
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
   },
   "forms": {
     "unsavedSettings": "You have unsaved settings."
@@ -943,10 +1135,18 @@
       "started": "Impersonation started"
     }
   },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "unlocked": "✓ Unlocked"
+  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
     "unknown": "Unknown"
   },
   "notifications": {
@@ -962,6 +1162,12 @@
         "vehiclesUnknownBadge": "Unknown",
         "vehiclesUnknownLabel": "Vehicle #{{id}}"
       }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
     }
   },
   "operations": {
@@ -1083,6 +1289,9 @@
     "regionCode": "Region code",
     "subtitle": "Tesla account region and Fleet API endpoint",
     "title": "Region & API"
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
   },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
@@ -1382,12 +1591,48 @@
       "title": "Product tours"
     },
     "typographyAgent": {
+      "baseSize": "Base text size ({{size}}px)",
+      "density": "Density",
+      "densityHint": "Density tunes type leading only; workspace spacing stays in display settings.",
+      "density_comfortable": "Comfortable",
+      "density_compact": "Compact",
+      "density_relaxed": "Relaxed",
+      "findings": "Loop findings ({{count}})",
+      "healing": "Self-healing engaged",
+      "hudLabel": "Typography agent controller",
       "loopPending": "Loop calibrating…",
       "loopStatus": "Loop verified · score {{score}}/100",
       "openHud": "Open ambient HUD",
+      "ratio": "Harmonic ratio",
+      "ratio_goldenRatio": "Golden ratio",
+      "ratio_majorSecond": "Major second",
+      "ratio_majorThird": "Major third",
+      "ratio_minorSecond": "Minor second",
+      "ratio_minorThird": "Minor third",
+      "ratio_perfectFourth": "Perfect fourth",
+      "reset": "Reset to defaults",
+      "score": "Score: {{score}}/100",
       "sectionSubtitle": "A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+shift+T).",
-      "sectionTitle": "Harmonic scale"
+      "sectionTitle": "Harmonic scale",
+      "specimen": "Live specimen",
+      "specimenBody": "Body copy follows the modular ratio across viewports.",
+      "specimenHeading": "Harmonized headings scale fluidly",
+      "subtitle": "Connected harmonic runtime",
+      "title": "Typography agent",
+      "verified": "Harmony verified"
     }
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
   },
   "sourceLayer": {
     "age": "age",
@@ -1524,6 +1769,17 @@
       },
       "test": {
         "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
       }
     },
     "channels": {
@@ -1704,8 +1960,13 @@
     }
   },
   "tour": {
+    "close": "Close tour",
     "description": "Re-run the guided walkthrough of TeslaSync features",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
     "restart": "Restart tour",
+    "skip": "Skip tour",
     "title": "Onboarding tour"
   },
   "workspaceContext": {

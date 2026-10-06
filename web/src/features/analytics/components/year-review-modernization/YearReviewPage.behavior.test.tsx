@@ -56,7 +56,7 @@ vi.mock('@/components/ui', () => ({
   Button: ({ children, ...props }: { children: ReactNode }) => <button {...props}>{children}</button>,
   Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
-vi.mock('@/components/layout/layout-reference', () => ({
+vi.mock('@/components/layout', () => ({
   PageLayout: ({ children, contextActions, secondaryActions, metadataActions }: {
     children: ReactNode; contextActions: ReactNode; secondaryActions: ReactNode; metadataActions: ReactNode;
   }) => <main>{contextActions}{secondaryActions}{metadataActions}{children}</main>,
@@ -64,7 +64,7 @@ vi.mock('@/components/layout/layout-reference', () => ({
   LayoutCard: ({ title, children }: { title: string; children: ReactNode }) => <article aria-label={title}>{children}</article>,
   CardGrid: ({ items }: { items: { id: string; content: ReactNode }[] }) => <div>{items.map(item => <div key={item.id}>{item.content}</div>)}</div>,
 }));
-vi.mock('@/components/data-display/stat-reference', () => ({
+vi.mock('@/components/data-display', () => ({
   StatStrip: (props: Record<string, unknown>) => {
     state.metrics[String(props.id)] = props;
     return <div data-testid={String(props.id)}>{props.footer as ReactNode}</div>;

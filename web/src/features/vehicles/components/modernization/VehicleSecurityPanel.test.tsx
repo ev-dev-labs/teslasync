@@ -40,4 +40,15 @@ describe('independent security without invented live state', () => {
     expect(normalizeDoorState('', 'Translated open')).toBeNull();
     expect(normalizeDoorState(null, 'Translated open')).toBeNull();
   });
+
+  it('does not invent security commands or closed/unlocked values for a successful null telemetry source', () => {
+    render(<VehicleSecurityPanel securityData={null} state={undefined} />);
+    expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No security data available');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    for (const value of ['Closed', 'No', 'Off']) {
+      expect(screen.queryByText(value)).not.toBeInTheDocument();
+    }
+  });
 });

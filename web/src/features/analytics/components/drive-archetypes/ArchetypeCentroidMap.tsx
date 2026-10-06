@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -16,6 +15,7 @@ import {
   ZAxis,
   axisTick,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
@@ -62,7 +62,8 @@ export function ArchetypeCentroidMap({
 
   return (
     <section data-testid="drive-archetypes-centroid-map">
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t('archetypes.map.title', 'Archetype centroid map')}
         subtitle={t(
           'archetypes.map.subtitle',
@@ -131,7 +132,7 @@ export function ArchetypeCentroidMap({
             </ScatterChart>
           </ResponsiveContainer>
         </ArchetypeSectionBody>
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

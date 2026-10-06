@@ -5,16 +5,17 @@ import {
   ArrowDown, ArrowUp,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, PanelTitle, Caption } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { Badge, Button, Caption } from '@/components/ui';
 
-import { StatCard, KVList, Energy } from '@/components/data-display';
+import { StatStrip, KVList, Energy, type StatMetric } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
@@ -61,7 +62,7 @@ function FlowArrow({ from, to, power, active }: FlowArrowProps) {
       )}
     >
       <span>{from}</span>
-      {inbound ? (
+      {power == null ? null : inbound ? (
         <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
       ) : (
         <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
@@ -70,7 +71,7 @@ function FlowArrow({ from, to, power, active }: FlowArrowProps) {
       {/* The arrow already encodes flow direction (sign), so show the magnitude
           only — a signed "-2.0 kW" next to a direction arrow double-encodes the
           sign and reads as a nonsensical negative flow. */}
-      <span className="ml-auto tabular-nums">{fmtWatts(power == null ? null : Math.abs(power))}</span>
+      <span className="ms-auto tabular-nums">{fmtWatts(power == null ? null : Math.abs(power))}</span>
     </div>
   );
 }
@@ -110,21 +111,22 @@ export default function PowerFlowDashboardPage() {
   const liveQuery = useTeslaEnergyLiveStatus(siteId);
   const historyQuery = useTeslaEnergyLiveStatusHistory(siteId, since, until, 1000);
   const refreshMutation = useRefreshTeslaEnergyLiveStatus();
+  const liveState = useDataState(liveQuery, { provenance: 'live' });
+  const historyState = useDataState(historyQuery, { provenance: 'historical' });
 
   const {
     data: liveStatus,
-    isLoading: liveLoading,
-    isError: liveIsError,
-    error: liveError,
     refetch: refetchLive,
   } = liveQuery;
   const {
     data: history,
-    isLoading: historyLoading,
-    isError: historyIsError,
-    error: historyError,
     refetch: refetchHistory,
   } = historyQuery;
+  const liveLoading = !liveState.hasData && liveQuery.isLoading;
+  const historyLoading = !historyState.hasData && historyQuery.isLoading;
+  const liveIsError = liveState.fatalError != null;
+  const liveError = liveState.fatalError;
+  const historyError = historyState.fatalError;
   const dataSources = useMemo(
     () => [
       {
@@ -151,11 +153,11 @@ export default function PowerFlowDashboardPage() {
       (history ?? []).map((s) => ({
         time: new Date(s.timestamp).getTime(),
         label: formatDateTime(s.timestamp),
-        solar: s.solar_power ?? 0,
-        battery: s.battery_power ?? 0,
-        grid: s.grid_power ?? 0,
-        load: s.load_power ?? 0,
-        soc: s.percentage_charged ?? 0,
+        solar: s.solar_power ?? null,
+        battery: s.battery_power ?? null,
+        grid: s.grid_power ?? null,
+        load: s.load_power ?? null,
+        soc: s.percentage_charged ?? null,
       })),
     [history],
   );
@@ -185,10 +187,25 @@ export default function PowerFlowDashboardPage() {
 
   const onRetryLive = () => { void refetchLive(); };
   const onRetryHistory = () => { void refetchHistory(); };
+  const powerMetrics: StatMetric[] = [
+    { metricId: 'text', occurrenceId: 'power-flow-solar',
+      label: t('powerFlow.solarPower', 'Solar Production'), rawValue: kpi(solarW),
+      context: <Sun className="h-5 w-5 text-amber-300" aria-hidden="true" /> },
+    { metricId: 'text', occurrenceId: 'power-flow-battery',
+      label: t('powerFlow.batteryPower', 'Battery'), rawValue: kpi(batteryW),
+      context: <><Battery className="h-5 w-5 text-emerald-300" aria-hidden="true" />{batteryDir}</> },
+    { metricId: 'text', occurrenceId: 'power-flow-load',
+      label: t('powerFlow.homeConsumption', 'Home Consumption'), rawValue: kpi(loadW),
+      context: <Home className="h-5 w-5 text-indigo-300" aria-hidden="true" /> },
+    { metricId: 'text', occurrenceId: 'power-flow-grid',
+      label: t('powerFlow.gridPower', 'Grid'), rawValue: kpi(gridW),
+      context: <><Zap className="h-5 w-5 text-purple-300" aria-hidden="true" />{gridDir}</> },
+  ];
 
   const actions = (
     <>
       <Button
+        wrapLabel
         variant="secondary"
         onClick={() => refreshMutation.mutate(siteId)}
         loading={refreshMutation.isPending}
@@ -200,13 +217,15 @@ export default function PowerFlowDashboardPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('powerFlow.title', 'Power Flow')}
       subtitle={t('powerFlow.subtitle', 'Real-time power flow from your Tesla Energy system')}
       secondaryActions={actions}
       query={[liveQuery, historyQuery]}
       dataSources={dataSources}
     >
+      <StaleRefreshWarning state={liveState} label={t('dataSources.labels.liveEnergyStatus', 'Live energy status')} />
+      <StaleRefreshWarning state={historyState} label={t('dataSources.labels.energyStatusHistory', 'Energy status history')} />
       {/* 1 — Live status strip */}
       <FadeIn>
         <section
@@ -253,36 +272,12 @@ export default function PowerFlowDashboardPage() {
 
       {/* 2 — Instantaneous power KPI band */}
       <FadeIn delay={0.05}>
-        <section
-          aria-label={t('powerFlow.currentPower', 'Current power')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <StatCard
-            label={t('powerFlow.solarPower', 'Solar Production')}
-            value={kpi(solarW)}
-            icon={<Sun className="h-5 w-5 text-amber-300" aria-hidden="true" />}
-            loading={liveLoading}
-          />
-          <StatCard
-            label={t('powerFlow.batteryPower', 'Battery')}
-            value={kpi(batteryW)}
-            unit={batteryDir}
-            icon={<Battery className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
-            loading={liveLoading}
-          />
-          <StatCard
-            label={t('powerFlow.homeConsumption', 'Home Consumption')}
-            value={kpi(loadW)}
-            icon={<Home className="h-5 w-5 text-indigo-300" aria-hidden="true" />}
-            loading={liveLoading}
-          />
-          <StatCard
-            label={t('powerFlow.gridPower', 'Grid')}
-            value={kpi(gridW)}
-            unit={gridDir}
-            icon={<Zap className="h-5 w-5 text-purple-300" aria-hidden="true" />}
-            loading={liveLoading}
-          />
+        <section aria-label={t('powerFlow.currentPower', 'Current power')}>
+        <StatStrip title={t('powerFlow.currentPower', 'Current power')} metrics={powerMetrics}
+          loading={liveLoading} retained={liveState.status === 'stale'}
+          period={{ kind: 'snapshot', label: live ? formatDateTime(live.timestamp) : t('powerFlow.statusUnavailable', 'Live status unavailable — refresh to fetch'),
+            observedAt: live?.timestamp ?? null,
+            provenance: t('dataSources.labels.liveEnergyStatus', 'Live energy status') }} />
         </section>
       </FadeIn>
 
@@ -293,8 +288,7 @@ export default function PowerFlowDashboardPage() {
           className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
         >
           {/* Battery state */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3">{t('powerFlow.batteryState', 'Battery State')}</PanelTitle>
+          <LayoutCard title={t('powerFlow.batteryState', 'Battery State')}>
             {liveLoading ? (
               <Skeleton height={200} />
             ) : liveIsError ? (
@@ -308,7 +302,7 @@ export default function PowerFlowDashboardPage() {
             ) : (
               <div className="flex flex-col items-center gap-5">
                 <LinearGauge
-                  value={soc ?? 0}
+                  value={soc}
                   max={100}
                   label={t('powerFlow.stateOfCharge', 'State of Charge')}
                   unit="%"
@@ -325,11 +319,10 @@ export default function PowerFlowDashboardPage() {
                 />
               </div>
             )}
-          </GlassPanel>
+          </LayoutCard>
 
           {/* Power flow diagram */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3">{t('powerFlow.flowDiagram', 'Power Flow')}</PanelTitle>
+          <LayoutCard title={t('powerFlow.flowDiagram', 'Power Flow')}>
             {liveLoading ? (
               <Skeleton height={180} />
             ) : liveIsError ? (
@@ -350,11 +343,10 @@ export default function PowerFlowDashboardPage() {
                 )}
               </div>
             )}
-          </GlassPanel>
+          </LayoutCard>
 
           {/* Site details */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3">{t('powerFlow.siteDetails', 'Site Details')}</PanelTitle>
+          <LayoutCard title={t('powerFlow.siteDetails', 'Site Details')}>
             {liveLoading ? (
               <Skeleton height={180} />
             ) : liveIsError ? (
@@ -396,7 +388,7 @@ export default function PowerFlowDashboardPage() {
                 ]}
               />
             )}
-          </GlassPanel>
+          </LayoutCard>
         </section>
       </FadeIn>
 
@@ -410,18 +402,18 @@ export default function PowerFlowDashboardPage() {
             className="2xl:col-span-2"
             data={chartData}
             loading={historyLoading}
-            error={historyIsError ? historyError : null}
+            error={historyError}
             onRetry={onRetryHistory}
           />
           <BatterySocChart
             className="2xl:col-span-1"
             data={chartData}
             loading={historyLoading}
-            error={historyIsError ? historyError : null}
+            error={historyError}
             onRetry={onRetryHistory}
           />
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -1,24 +1,18 @@
-import { BarChart3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
@@ -63,14 +57,7 @@ export function ComfortConsistencyDeviationDistribution({
 
   return (
     <section data-testid="comfort-consistency-deviation-distribution">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BarChart3
-            className="h-4 w-4 text-[var(--text-muted)]"
-            aria-hidden="true"
-          />
-          {t('comfortConsistency.deviation.title', 'Absolute deviation distribution')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.deviation.title', 'Absolute deviation distribution')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.deviation.subtitle',
@@ -83,7 +70,7 @@ export function ComfortConsistencyDeviationDistribution({
           requirement="samples"
           skeletonHeight={320}
         >
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             title={t('comfortConsistency.deviation.plotTitle', 'Active samples by deviation band')}
             ariaLabel={t(
               'comfortConsistency.deviation.aria',
@@ -116,7 +103,7 @@ export function ComfortConsistencyDeviationDistribution({
                 />
               </BarChart>
             </ResponsiveContainer>
-          </ChartContainer>
+          </EmbeddedChart>
           <Grid cols={{ default: 2, xl: 4 }} gap={3} className="mt-4">
             <Quantile
               label={t('comfortConsistency.deviation.mean', 'Sample mean')}
@@ -136,7 +123,7 @@ export function ComfortConsistencyDeviationDistribution({
             />
           </Grid>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

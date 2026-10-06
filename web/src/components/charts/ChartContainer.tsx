@@ -15,8 +15,11 @@ import { ChartSkeleton } from '@/components/feedback/ChartSkeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { QueryError } from '@/components/feedback/QueryError';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
-import { Button, FullscreenButton, Heading, Table, Text } from '@/components/ui';
-import { VisuallyHidden } from '@/components/a11y';
+import { Button } from '../ui/Button';
+import { FullscreenButton } from '../ui/FullscreenButton';
+import { Heading, Text } from '../ui/Typography';
+import { Table } from '../ui/Table';
+import { VisuallyHidden } from '../a11y/VisuallyHidden';
 import { useChartExport } from '@/hooks/useChartExport';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
@@ -78,9 +81,17 @@ export interface ChartContainerProps {
   /**
    * `embedded` removes panel chrome and the visible title bar while retaining
    * loading/error/empty states, chart semantics, and the fallback data table.
+   * Explicit capability props or `toolbar` mount the same canonical controls
+   * without introducing another visible heading or surface.
    * Use through `<EmbeddedChart>` inside an existing widget or panel shell.
    */
   variant?: 'panel' | 'embedded';
+  /** Opt into an embedded control strip, or explicitly suppress the toolbar.
+   * Embedded capability props also opt in; panel defaults remain unchanged. */
+  toolbar?: boolean;
+  /** Shared host adapters with their own heading use a hidden text label.
+   * Standalone embedded frames retain their original hidden heading. */
+  embeddedTitleHeading?: boolean;
   /** Optional decorative title icon. */
   icon?: React.ReactNode;
   subtitle?: string;
@@ -130,7 +141,8 @@ export interface ChartContainerProps {
   exportable?: boolean;
   exportFilename?: string;
   /** When set, exposes "Download data as CSV" in the
-   *  chart's overflow menu. The data is serialized via `objectsToCSV`. */
+   * chart's overflow menu. Serialized unchanged via `objectsToCSV`; callers
+   * supply the complete export scope independently of plotted/fallback `data`. */
   exportData?: ReadonlyArray<Record<string, CsvCellValue>>;
   /** When set, the container takes ownership of the
    *  full annotation flow (fetch, add, delete, hide). Children should be a
@@ -277,6 +289,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     {
       title,
       variant = 'panel',
+      toolbar,
+      embeddedTitleHeading = true,
       icon,
       subtitle,
       metadata,
@@ -412,6 +426,12 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // DOM, but the image actions only make sense once the chart is
     // actually rendered with data.
     const showExportMenu = exportableResolved && !loading && !error && !empty;
+    const controlsUnavailable = !!(loading || error || empty);
+    const showToolbar = toolbar !== false && (
+      variant === 'panel' || toolbar === true || !!(
+        icon || action || annotationsEnabled || exportable === true || fullscreen
+      )
+    );
 
     // `childrenContent` is a function of the
     // resolved `hiddenSeries` state because the function-children
@@ -440,6 +460,23 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // wrapper is intentionally NOT used because the data must remain visible.
     const showMarkerRow =
       annotationsEnabled && !hidden && visibleAnnotations.length > 0;
+    const metadataContent = (
+      metadata?.rangeLabel || metadata?.sourceLabel || metadata?.freshnessLabel || metadata?.unitLabel
+    ) ? (
+      <Text
+        as="p"
+        variant="caption"
+        className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5"
+        data-chart-metadata
+      >
+        {metadata.rangeLabel && <span data-chart-range>{metadata.rangeLabel}</span>}
+        {metadata.sourceLabel && <span data-chart-source>{metadata.sourceLabel}</span>}
+        {metadata.freshnessLabel && (
+          <span data-chart-freshness-label>{metadata.freshnessLabel}</span>
+        )}
+        {metadata.unitLabel && <span data-chart-unit>{metadata.unitLabel}</span>}
+      </Text>
+    ) : null;
 
     return (
       <figure
@@ -488,7 +525,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       >
         {variant === 'embedded' ? (
           <>
-            <VisuallyHidden as="h3" id={titleId}>
+            <VisuallyHidden as={embeddedTitleHeading ? 'h3' : 'span'} id={titleId}>
               {title}
             </VisuallyHidden>
             {subtitle && (
@@ -497,8 +534,15 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               </VisuallyHidden>
             )}
           </>
-        ) : (
-          <div className="mb-5 flex flex-col gap-3 border-b border-[var(--border-subtle)] pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        ) : null}
+        {(variant === 'panel' || showToolbar) && (
+          <div className={cn(
+            'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4',
+            variant === 'panel'
+              ? 'mb-5 border-b border-[var(--border-subtle)] pb-4'
+              : 'mb-3',
+          )}>
+          {variant === 'panel' ? (
           <div className="flex min-w-0 items-start gap-2.5">
             {icon && (
               <span
@@ -515,25 +559,23 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               {subtitle && (
                 <Text as="p" variant="caption" className="mt-1 leading-relaxed">{subtitle}</Text>
               )}
-              {(metadata?.rangeLabel || metadata?.sourceLabel || metadata?.freshnessLabel || metadata?.unitLabel) && (
-                <Text
-                  as="p"
-                  variant="caption"
-                  className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5"
-                  data-chart-metadata
-                >
-                  {metadata.rangeLabel && <span data-chart-range>{metadata.rangeLabel}</span>}
-                  {metadata.sourceLabel && <span data-chart-source>{metadata.sourceLabel}</span>}
-                  {metadata.freshnessLabel && (
-                    <span data-chart-freshness-label>{metadata.freshnessLabel}</span>
-                  )}
-                  {metadata.unitLabel && <span data-chart-unit>{metadata.unitLabel}</span>}
-                </Text>
-              )}
+              {metadataContent}
             </div>
           </div>
+          ) : (icon || metadataContent) ? (
+            <div className="flex min-w-0 items-start gap-2.5">
+              {icon && (
+                <span className="inline-flex shrink-0 text-[var(--theme-primary)]" aria-hidden="true">
+                  {icon}
+                </span>
+              )}
+              {metadataContent}
+            </div>
+          ) : null}
+          {showToolbar && (
           <div
             className="flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto"
+            data-chart-toolbar
             // Exclude the title-bar action toolbar
             // (annotation buttons, export menu, page-supplied actions)
             // from the chart capture so the exported PNG/clipboard image
@@ -551,6 +593,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                   icon={<Plus className="h-3.5 w-3.5" />}
                   onClick={() => setPopoverOpen(true)}
+                  disabled={controlsUnavailable}
                   aria-label={t('annotations.add', 'Add annotation')}
                   title={t('annotations.add', 'Add annotation')}
                 />
@@ -565,6 +608,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   )}
                   icon={hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   onClick={toggleHidden}
+                  disabled={controlsUnavailable}
                   aria-pressed={hidden}
                   aria-label={
                     hidden
@@ -590,8 +634,9 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               />
             )}
 
-            {fullscreen && <FullscreenButton targetRef={figureRef} />}
+            {fullscreen && !controlsUnavailable && <FullscreenButton targetRef={figureRef} />}
           </div>
+          )}
           </div>
         )}
 

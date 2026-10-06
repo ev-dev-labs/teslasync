@@ -71,7 +71,7 @@ vi.mock('@/components/ui', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     contextActions,

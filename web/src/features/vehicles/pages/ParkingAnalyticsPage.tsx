@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
+import { StaleRefreshWarning } from '@/components/feedback';
 
 import {
   DurationDistributionChart,
@@ -47,6 +49,7 @@ export default function ParkingAnalyticsPage() {
     limit: PARKING_DRIVE_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () =>
       summarizeParking(drives, {
@@ -64,12 +67,11 @@ export default function ParkingAnalyticsPage() {
   const sectionState = useMemo<ParkingSectionState>(
     () => ({
       isLoading: drivesQuery.isLoading,
-      error: drivesQuery.isError ? drivesQuery.error : null,
+      error: drivesState.fatalError,
       onRetry,
     }),
     [
-      drivesQuery.error,
-      drivesQuery.isError,
+      drivesState.fatalError,
       drivesQuery.isLoading,
       onRetry,
     ],
@@ -82,7 +84,7 @@ export default function ParkingAnalyticsPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('parking.title', 'Parking analytics')}
       subtitle={t(
         'parking.subtitle',
@@ -90,6 +92,7 @@ export default function ParkingAnalyticsPage() {
       )}
       query={drivesQuery}
     >
+      <StaleRefreshWarning state={drivesState} label={t('parking.title', 'Parking analytics')} />
       <FadeIn>
         <ParkingKpiBand summary={summary} {...sectionState} />
       </FadeIn>
@@ -127,6 +130,6 @@ export default function ParkingAnalyticsPage() {
           rangeEnd={end}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

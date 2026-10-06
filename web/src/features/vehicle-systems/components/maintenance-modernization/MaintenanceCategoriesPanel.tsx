@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
 import { MetricBar } from '@/components/data-display';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { CategoryBreakdown, MaintenanceItem } from './maintenanceModel';
@@ -19,7 +19,9 @@ export function MaintenanceCategoriesPanel({
 }) {
   const { t } = useTranslation();
   const { fmtInt } = useNumberFormatting();
-  const empty = <EmptyState message={t('maintenance.noCategory', 'No maintenance items to categorize yet.')} />;
+  const empty = <EmptyState message={t('maintenance.noCategory', 'No maintenance items to categorize yet.')}
+    action={enabled && source.retry ? { label: t('common.refresh', 'Refresh'), onClick: source.retry } : undefined}
+    actionTo={!enabled ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />;
   return (
     <LayoutCard title={t('maintenance.categoryTitle', 'Maintenance by category')}>
       <MaintenanceSource

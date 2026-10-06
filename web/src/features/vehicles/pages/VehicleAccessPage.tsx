@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, UserPlus, UserMinus, XCircle, Users, Mail } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel,
   Button,
@@ -16,10 +16,11 @@ import {
   type BadgeProps,
   type Column,
 } from '@/components/ui';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 
 import {
   useVehicleDrivers,
@@ -71,19 +72,17 @@ export default function VehicleAccessPage() {
 
   const driversQuery = useVehicleDrivers(vehicleId);
   const invitationsQuery = useVehicleInvitations(vehicleId);
+  const driversState = useDataState(driversQuery);
+  const invitationsState = useDataState(invitationsQuery);
 
   const {
     data: drivers,
     isLoading: driversLoading,
-    isError: driversIsError,
-    error: driversError,
     refetch: refetchDrivers,
   } = driversQuery;
   const {
     data: invitations,
     isLoading: invitationsLoading,
-    isError: invitationsIsError,
-    error: invitationsError,
     refetch: refetchInvitations,
   } = invitationsQuery;
   const dataSources = useMemo(
@@ -288,7 +287,7 @@ export default function VehicleAccessPage() {
   ], [t]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('vehicleAccess.title', 'Vehicle access')}
       subtitle={t('vehicleAccess.subtitle', 'Manage drivers and share invitations')}
       query={[driversQuery, invitationsQuery]}
@@ -297,13 +296,16 @@ export default function VehicleAccessPage() {
         '/vehicles/:id': vehicle?.display_name ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id: vehicleId }),
       }}
     >
+      <StaleRefreshWarning state={driversState} label={t('vehicleAccess.drivers.title', 'Drivers')} />
+      <StaleRefreshWarning state={invitationsState} label={t('vehicleAccess.invitations.title', 'Share invitations')} />
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <AccessKpiBand
-          drivers={driversList.length}
-          invitations={invitationsList.length}
-          pending={pendingCount}
-          expiringSoon={expiringSoonCount}
+          drivers={drivers == null ? null : driversList.length}
+          invitations={invitations == null ? null : invitationsList.length}
+          pending={invitations == null ? null : pendingCount}
+          expiringSoon={invitations == null ? null : expiringSoonCount}
+          retained={driversState.status === 'stale' || invitationsState.status === 'stale'}
         />
       </FadeIn>
 
@@ -332,9 +334,9 @@ export default function VehicleAccessPage() {
 
             {driversLoading ? (
               <Skeleton height={220} />
-            ) : driversIsError ? (
+            ) : driversState.fatalError ? (
               <QueryError
-                error={driversError}
+                error={driversState.fatalError}
                 onRetry={() => { refetchDrivers(); }}
                 resourceName={t('vehicleAccess.drivers.resource', 'Drivers')}
               />
@@ -364,8 +366,8 @@ export default function VehicleAccessPage() {
             totalInvitations={invitationsList.length}
             totalDrivers={driversList.length}
             isLoading={driversLoading || invitationsLoading}
-            isError={driversIsError || invitationsIsError}
-            error={driversError ?? invitationsError}
+            isError={driversState.fatalError != null || invitationsState.fatalError != null}
+            error={driversState.fatalError ?? invitationsState.fatalError}
             onRetry={() => { refetchDrivers(); refetchInvitations(); }}
           />
         </section>
@@ -405,9 +407,9 @@ export default function VehicleAccessPage() {
 
           {invitationsLoading ? (
             <Skeleton height={220} />
-          ) : invitationsIsError ? (
+          ) : invitationsState.fatalError ? (
             <QueryError
-              error={invitationsError}
+              error={invitationsState.fatalError}
               onRetry={() => { refetchInvitations(); }}
               resourceName={t('vehicleAccess.invitations.resource', 'Invitations')}
             />
@@ -451,6 +453,6 @@ export default function VehicleAccessPage() {
         onConfirm={handleRevokeInvitation}
         onCancel={() => setRevokeTarget(null)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -16,6 +15,7 @@ import {
   axisTick,
   type ChartDataColumn,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
@@ -72,7 +72,8 @@ export function ArchetypeMonthlyComposition({
 
   return (
     <section data-testid="drive-archetypes-monthly">
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t('archetypes.monthly.title', 'Monthly archetype composition')}
         subtitle={t(
           'archetypes.monthly.subtitle',
@@ -117,7 +118,7 @@ export function ArchetypeMonthlyComposition({
             </ResponsiveContainer>
           </ArchetypeSectionBody>
         )}
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

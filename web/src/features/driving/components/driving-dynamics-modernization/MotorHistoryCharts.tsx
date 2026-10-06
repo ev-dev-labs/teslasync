@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
+  ChartLegend, ChartTooltip, ChartGradient,
   AreaChart, Area, LineChart, Line, XAxis, YAxis, chartGrid,
   axisTick, Tooltip, ResponsiveContainer, AREA_DEFAULTS,
 } from '@/components/charts';
 import { CardGrid } from '@/components/layout/layout-reference';
+import { ChartCard } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
@@ -19,9 +20,7 @@ interface MotorHistoryChartsProps {
   historyQuery?: MotorHistoryQuery;
 }
 
-/** ChartContainer is intentional: ChartCard/EmbeddedChart currently strip
- * export/fullscreen. All three identities, series and controls stay owned by
- * the existing chart pipeline, while CardGrid owns container placement. */
+/** Preserve all three chart identities and series in the shared chart frame. */
 export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHistoryChartsProps) {
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
@@ -48,7 +47,10 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
   const noData = query.isLoading && !state.hasData ? <Skeleton className="h-48" /> : state.fatalError ? (
     <QueryError error={state.fatalError} onRetry={() => void query.refetch()} />
   ) : (
-    <EmptyState message={t('dynamics.awaitingData', 'Awaiting motor telemetry data...')} />
+    // no-action: Disabled history awaits a valid trip selection in the trip toolbar.
+    <EmptyState message={t('dynamics.awaitingData', 'Awaiting motor telemetry data...')}
+      action={vehicleId && historyQuery?.enabled !== false
+        ? { label: t('common.retry', 'Retry'), onClick: () => void query.refetch() } : undefined} />
   );
   return (
     <div className="min-w-0 space-y-3">
@@ -60,11 +62,13 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
             <DynamicsPlacement>
               <FadeIn delay={0.1} className="min-w-0">
                 {/* chart-a11y:no-table dense per-sample telemetry trace; original image export contract retained */}
-                <ChartContainer
+                <ChartCard
                   title={t('dynamics.powerOverTime', 'Motor Power Over Time')}
                   subtitle={t('dynamics.powerOverTimeDesc', 'Drive and regen power from motor telemetry')}
                   ariaLabel={t('dynamics.powerOverTime.aria', 'Motor power and regen over time area chart')}
                   height={280}
+                  size="standard"
+                  toolbar
                   loading={query.isLoading && !state.hasData}
                   error={state.fatalError}
                   onRetry={() => void query.refetch()}
@@ -89,7 +93,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : noData}
-                </ChartContainer>
+                </ChartCard>
               </FadeIn>
             </DynamicsPlacement>
           ),
@@ -100,11 +104,13 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
             <DynamicsPlacement>
               <FadeIn delay={0.25}>
                 {/* chart-a11y:no-table dense per-sample telemetry trace; original image export contract retained */}
-                <ChartContainer
+                <ChartCard
                   title={t('dynamics.torqueHistory', 'Motor Torque History')}
                   subtitle={t('dynamics.torqueHistoryDesc', 'Front and rear motor torque over time')}
                   ariaLabel={t('dynamics.torqueHistory.aria', 'Front and rear motor torque over time line chart')}
                   height={280}
+                  size="standard"
+                  toolbar
                   loading={query.isLoading && !state.hasData}
                   error={state.fatalError}
                   onRetry={() => void query.refetch()}
@@ -125,7 +131,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
                       </LineChart>
                     </ResponsiveContainer>
                   ) : noData}
-                </ChartContainer>
+                </ChartCard>
               </FadeIn>
             </DynamicsPlacement>
           ),
@@ -136,11 +142,13 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
             <DynamicsPlacement>
               <FadeIn delay={0.3}>
                 {/* chart-a11y:no-table dense per-sample telemetry trace; original image export contract retained */}
-                <ChartContainer
+                <ChartCard
                   title={t('dynamics.rpmHistory', 'Motor RPM History')}
                   subtitle={t('dynamics.rpmHistoryDesc', 'Front and rear motor RPM over time')}
                   ariaLabel={t('dynamics.rpmHistory.aria', 'Front and rear motor RPM over time line chart')}
                   height={280}
+                  size="standard"
+                  toolbar
                   loading={query.isLoading && !state.hasData}
                   error={state.fatalError}
                   onRetry={() => void query.refetch()}
@@ -161,7 +169,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
                       </LineChart>
                     </ResponsiveContainer>
                   ) : noData}
-                </ChartContainer>
+                </ChartCard>
               </FadeIn>
             </DynamicsPlacement>
           ),

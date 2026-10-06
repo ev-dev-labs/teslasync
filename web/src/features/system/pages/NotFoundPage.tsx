@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Compass, Home, Search } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { Button, GlassPanel, SectionTitle } from '@/components/ui'
+import { PageLayout } from '@/components/layout'
+import { Button, GlassPanel, SectionTitle, Text, Caption } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
 import { closestRoutes } from '@/lib/closestRoute'
@@ -56,7 +56,7 @@ export default function NotFoundPage() {
   }, [])
 
   return (
-    <PageContainer title={t('notFound.title', 'Page not found')}>
+    <PageLayout title={t('notFound.title', 'Page not found')}>
       <GlassPanel className="mx-auto max-w-2xl p-4 text-center sm:p-6">
         <Compass
           className="mx-auto mb-4 h-12 w-12 text-[var(--text-muted)]"
@@ -65,21 +65,21 @@ export default function NotFoundPage() {
         <SectionTitle>
           {t('notFound.heading', "We couldn't find that page")}
         </SectionTitle>
-        <p className="mt-2 break-all text-[var(--text-secondary)]">
+        <Text as="p" variant="body" className="mt-2 break-all">
           {t('notFound.body', {
             defaultValue: "{{path}} doesn't match any route.",
             path: location.pathname,
           })}
-        </p>
+        </Text>
 
         {suggestions.length > 0 && (
           <nav
             className="mt-6"
             aria-label={t('notFound.suggestionsLabel', 'Suggested pages')}
           >
-            <p className="mb-2 text-sm text-[var(--text-muted)]">
+            <Caption as="p" className="mb-2">
               {t('notFound.didYouMean', 'Did you mean:')}
-            </p>
+            </Caption>
             <ul className="flex flex-col items-center gap-2">
               {suggestions.map((s) => (
                 <li key={s.path}>
@@ -88,9 +88,9 @@ export default function NotFoundPage() {
                     className="rounded px-1 text-cyan-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                   >
                     {t(s.i18nKey, s.label)}
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">
+                    <Caption as="span" className="ms-2">
                       {s.path}
-                    </span>
+                    </Caption>
                   </Link>
                 </li>
               ))}
@@ -122,6 +122,6 @@ export default function NotFoundPage() {
           </Button>
         </div>
       </GlassPanel>
-    </PageContainer>
+    </PageLayout>
   )
 }

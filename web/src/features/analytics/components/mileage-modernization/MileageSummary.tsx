@@ -84,7 +84,10 @@ export function MileageSummary({ stats, loading, retained }: MileageSummaryProps
           }}
         />
       ) : (
-        <EmptyState message={missingReason} />
+        <EmptyState
+          message={missingReason}
+          actionTo={{ label: t('statistics.viewDrives', 'View drives'), to: '/drives' }}
+        />
       )}
     </div>
   );

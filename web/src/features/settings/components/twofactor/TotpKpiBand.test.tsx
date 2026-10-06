@@ -20,7 +20,7 @@
  *   • a session that exists but is not activated renders "Not enrolled" and
  *     dashes out the two per-user cells;
  *   • null-safety: a malformed session missing `backup_codes_remaining`
- *     degrades to `0` (proving the `?? 0` guard) rather than a blank cell,
+ *     degrades to an unknown dash rather than inventing zero,
  *     and a genuine zero backup-code balance renders "0" — distinct from the
  *     "—" a non-activated credential shows, so an exhausted balance is never
  *     silently hidden;
@@ -202,10 +202,7 @@ describe('TotpKpiBand', () => {
     }
   })
 
-  it('is null-safe: a session missing backup_codes_remaining degrades to 0, not a blank cell', () => {
-    // A stale/partial cached shape: activated, but the numeric aggregate and
-    // last-used timestamp are absent. The `?? 0` guard must keep the cell
-    // populated and the missing timestamp must resolve to "Never".
+  it('keeps a missing backup balance unknown instead of inventing an exhausted balance', () => {
     render(
       <TotpKpiBand
         data={{ mode: 'session', activated: true } as TOTPStatus}
@@ -214,9 +211,9 @@ describe('TotpKpiBand', () => {
     )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.queryByText('0')).toBeNull()
     expect(screen.getByText('Never')).toBeInTheDocument()
-    expect(screen.queryByText('—')).not.toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(formatDateTime).not.toHaveBeenCalled()
   })
 

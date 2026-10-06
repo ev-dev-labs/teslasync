@@ -18,7 +18,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Select, Slider, PanelTitle, Text, Caption } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
@@ -198,7 +198,7 @@ export default function TripPlannerPage() {
   ], [route, distanceUnit, formatEnergy, formatCurrency, t, displayPrecision, displayLocale, fmtNumber]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('tripPlanner.title', 'Trip Planner')}
       subtitle={t('tripPlanner.subtitle', 'Plan your route with range estimation and charging stops')}
     >
@@ -448,7 +448,7 @@ export default function TripPlannerPage() {
       <FadeIn delay={0.25}>
         <TripLegList legs={legs} chargeStops={chargeStops} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }
 

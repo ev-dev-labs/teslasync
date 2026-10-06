@@ -27,7 +27,8 @@ import {
   HardDrive, Package, Clock, RefreshCw, Boxes,
 } from 'lucide-react'
 
-import { PageContainer, Masonry } from '@/components/layout'
+import { PageLayout, SourceContent, Masonry } from '@/components/layout'
+import { Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { GlassPanel, Button, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import {
@@ -36,6 +37,7 @@ import {
   ActionItemsPanel, ActionItem,
 } from '@/components/status'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDataState } from '@/hooks/useDataState'
 import { useSystemHealth, useBackupRuns, useBackupConfigs, useMaintenanceState } from '@/api/hooks/useAdmin'
 import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useVehicles } from '@/api/hooks/useVehicles'
@@ -86,6 +88,7 @@ export default function SystemStatusPage() {
   }, [location.hash])
 
   // ── data sources ────────────────────────────────────────────────
+  const healthQuery = useSystemHealth()
   const {
     data: health,
     isLoading,
@@ -93,49 +96,83 @@ export default function SystemStatusPage() {
     error,
     refetch: refetchHealth,
     dataUpdatedAt,
-  } = useSystemHealth()
+  } = healthQuery
+  const healthState = useDataState(healthQuery, { provenance: 'live', maxAgeMs: 2 * 60_000 })
 
   // SSE drops polling cost when connected; useQuery polling remains the
   // offline fallback.
   const { state: liveState, lastUpdateAt: liveLastUpdate, reconnect: liveReconnect } = useStatusLiveSSE()
 
-  const { data: extHealth } = useQuery({
+  const extendedQuery = useQuery({
     queryKey: ['system-status', 'extended-health'],
     queryFn: getExtendedHealth,
     refetchInterval: STATUS_REFRESH_MS,
   })
 
-  const { data: version } = useQuery({
+  const versionQuery = useQuery({
     queryKey: ['system-status', 'version'],
     queryFn: getVersionInfo,
     refetchInterval: 60_000,
   })
 
-  const { data: updateCheck } = useQuery({
+  const updateQuery = useQuery({
     queryKey: ['system-status', 'update-check'],
     queryFn: checkForUpdates,
     refetchInterval: UPDATE_CHECK_MS,
     staleTime: UPDATE_CHECK_MS,
   })
 
-  const { data: backupStats } = useQuery({
+  const backupStatsQuery = useQuery({
     queryKey: ['system-status', 'backup-stats'],
     queryFn: getBackupStats,
     refetchInterval: STATUS_REFRESH_MS,
   })
 
-  const { data: workers } = useQuery({
+  const workersQuery = useQuery({
     queryKey: ['system-status', 'workers'],
     queryFn: getWorkersHealth,
     refetchInterval: STATUS_REFRESH_MS,
   })
 
 
-  const { data: auth } = useAuthStatus()
-  const { data: backupRuns } = useBackupRuns()
-  const { data: backupConfigs } = useBackupConfigs()
-  const { data: maintenance } = useMaintenanceState()
-  const { data: vehicles } = useVehicles()
+  const authQuery = useAuthStatus()
+  const backupRunsQuery = useBackupRuns()
+  const backupConfigsQuery = useBackupConfigs()
+  const maintenanceQuery = useMaintenanceState()
+  const vehiclesQuery = useVehicles()
+  const extHealth = extendedQuery.data
+  const version = versionQuery.data
+  const updateCheck = updateQuery.data
+  const backupStats = backupStatsQuery.data
+  const workers = workersQuery.data
+  const auth = authQuery.data
+  const backupRuns = backupRunsQuery.data
+  const backupConfigs = backupConfigsQuery.data
+  const maintenance = maintenanceQuery.data
+  const vehicles = vehiclesQuery.data
+  const extendedState = useDataState(extendedQuery, { provenance: 'live' })
+  const versionState = useDataState(versionQuery)
+  const updateState = useDataState(updateQuery)
+  const backupStatsState = useDataState(backupStatsQuery, { provenance: 'historical' })
+  const workersState = useDataState(workersQuery, { provenance: 'live' })
+  const authState = useDataState(authQuery)
+  const backupRunsState = useDataState(backupRunsQuery, { provenance: 'historical' })
+  const backupConfigsState = useDataState(backupConfigsQuery)
+  const maintenanceState = useDataState(maintenanceQuery)
+  const vehiclesState = useDataState(vehiclesQuery)
+  const sourceStates = [
+    { id: 'health', label: t('systemStatus.health', 'Health'), state: healthState, loading: healthQuery.isLoading },
+    { id: 'extended', label: t('systemStatus.dbConnections', 'Database & connections'), state: extendedState, loading: extendedQuery.isLoading },
+    { id: 'version', label: t('systemStatus.systemInfo', 'System info'), state: versionState, loading: versionQuery.isLoading },
+    { id: 'update', label: t('systemStatus.updateCheck', 'Update check'), state: updateState, loading: updateQuery.isLoading },
+    { id: 'backup-stats', label: t('systemStatus.backupStatistics', 'Backup statistics'), state: backupStatsState, loading: backupStatsQuery.isLoading },
+    { id: 'workers', label: t('systemStatus.bgWorkers', 'Background workers'), state: workersState, loading: workersQuery.isLoading },
+    { id: 'auth', label: t('systemStatus.teslaAuth', 'Tesla auth'), state: authState, loading: authQuery.isLoading },
+    { id: 'backup-runs', label: t('systemStatus.backupHistory', 'Backup history'), state: backupRunsState, loading: backupRunsQuery.isLoading },
+    { id: 'backup-configs', label: t('systemStatus.backupConfiguration', 'Backup configuration'), state: backupConfigsState, loading: backupConfigsQuery.isLoading },
+    { id: 'maintenance', label: t('systemStatus.scheduledMaintenance', 'Scheduled maintenance'), state: maintenanceState, loading: maintenanceQuery.isLoading },
+    { id: 'vehicles', label: t('systemStatus.vehicles', 'Vehicles'), state: vehiclesState, loading: vehiclesQuery.isLoading },
+  ]
 
   // ── derived overall status ──────────────────────────────────────
   const overallStatus: HeroStatus = useMemo(() => {
@@ -270,12 +307,12 @@ export default function SystemStatusPage() {
     : 'Not connected'
 
   const totalRows = useMemo(() => {
-    if (!backupStats?.row_counts) return 0
+    if (!backupStats?.row_counts) return null
     return Object.values(backupStats.row_counts).reduce((a, b) => a + (b ?? 0), 0)
   }, [backupStats])
 
-  const positionCount = backupStats?.row_counts?.positions ?? 0
-  const drivesCount = backupStats?.row_counts?.drives ?? 0
+  const positionCount = backupStats?.row_counts?.positions
+  const drivesCount = backupStats?.row_counts?.drives
   const vehicleCount = vehicles?.length ?? 0
 
   const workersStatus: HeroStatus = workers
@@ -293,15 +330,17 @@ export default function SystemStatusPage() {
     const rows: ResourceRow[] = []
 
     if (extendedPool) {
-      const acquired = extendedPool.acquired_conns ?? 0
-      const idle = extendedPool.idle_conns ?? 0
-      const total = extendedPool.total_conns ?? 0
-      const max = total > 0 ? total : acquired + idle
+      const acquired = extendedPool.acquired_conns
+      const idle = extendedPool.idle_conns
+      const total = extendedPool.total_conns
+      const max = total != null && total > 0
+        ? total
+        : acquired != null && idle != null ? acquired + idle : null
       rows.push({
         label: 'DB connections',
-        valueText: `${acquired}`,
-        metaText: max > 0 ? `of ${max} in use` : undefined,
-        percent: max > 0 ? (acquired / max) * 100 : undefined,
+        valueText: acquired != null ? `${acquired}` : '—',
+        metaText: max != null && max > 0 ? `of ${max} in use` : undefined,
+        percent: acquired != null && max != null && max > 0 ? (acquired / max) * 100 : undefined,
         icon: <Database className="h-4 w-4" />,
       })
     }
@@ -315,11 +354,11 @@ export default function SystemStatusPage() {
       })
     }
 
-    if (totalRows > 0) {
+    if (totalRows != null) {
       rows.push({
         label: 'Total rows',
         valueText: fmtInt(totalRows),
-        metaText: positionCount > 0 ? `${fmtInt(positionCount)} positions` : undefined,
+        metaText: positionCount != null && positionCount > 0 ? `${fmtInt(positionCount)} positions` : undefined,
         icon: <Boxes className="h-4 w-4" />,
       })
     }
@@ -397,7 +436,7 @@ export default function SystemStatusPage() {
       : backupStats?.database_size ?? 'connected'
   const telemetrySummary =
     vehicleCount > 0
-      ? `${vehicleCount} vehicle${vehicleCount === 1 ? '' : 's'} · ${fmtInt(positionCount)} positions`
+      ? `${vehicleCount} vehicle${vehicleCount === 1 ? '' : 's'} · ${positionCount != null ? fmtInt(positionCount) : '—'} positions`
       : t('systemStatus.telemetryUnknown', 'No vehicle telemetry to assess')
   const workersSummary =
     workers
@@ -405,7 +444,7 @@ export default function SystemStatusPage() {
       : 'unknown'
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('systemStatus.title', 'System status')}
       subtitle={t('systemStatus.subtitle', 'At-a-glance health for your TeslaSync instance')}
       loading={false}
@@ -429,6 +468,24 @@ export default function SystemStatusPage() {
         </div>
       }
     >
+      {sourceStates.filter(({ state }) => state.status !== 'ok').map(({ id, label, state, loading }) => (
+        <div key={id}>
+          <StaleRefreshWarning state={state} label={label} />
+          {(state.fatalError || !state.hasData) && (
+            <SourceContent
+              state={state.fatalError ? 'error' : loading ? 'loading' : 'empty'}
+              label={label}
+              emptyMessage={t('systemStatus.sourceUnavailable', '{{label}} is unavailable.', { label })}
+              errorMessage={t('systemStatus.sourceLoadError', 'Unable to load {{label}}.', { label })}
+              error={state.fatalError}
+              errorRecovery={state.retry ? { onRetry: state.retry } : undefined}
+              loadingContent={<Skeleton height={16} className="max-w-sm" />}
+            >
+              {null}
+            </SourceContent>
+          )}
+        </div>
+      ))}
       {/* Print stylesheet — clean printable status snapshot.
           Hides interactive scaffolding, expands accordions, drops the
           frosted-glass background for paper. */}
@@ -445,7 +502,7 @@ export default function SystemStatusPage() {
         }
       `}</style>
 
-      {isLoading ? (
+      {isLoading && !healthState.hasData ? (
         <StatusPageSkeleton />
       ) : (
         <>
@@ -686,7 +743,7 @@ export default function SystemStatusPage() {
                 { label: t('systemStatus.poolIdle', 'Pool idle'), value: extendedPool ? String(extendedPool.idle_conns) : '—' },
                 { label: t('systemStatus.storageUsed', 'Storage used'), value: backupStats?.database_size ?? '—' },
                 { label: t('systemStatus.tables', 'Tables'), value: backupStats?.table_count != null ? String(backupStats.table_count) : '—' },
-                { label: t('systemStatus.totalRows', 'Total rows'), value: totalRows > 0 ? fmtInt(totalRows) : '—' },
+                { label: t('systemStatus.totalRows', 'Total rows'), value: totalRows != null ? fmtInt(totalRows) : '—' },
               ]}
             />
             <DetailLink to="/db-health" label={t('systemStatus.openDbHealth', 'Open DB health')} />
@@ -790,7 +847,7 @@ export default function SystemStatusPage() {
           </div>
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   )
 }
 

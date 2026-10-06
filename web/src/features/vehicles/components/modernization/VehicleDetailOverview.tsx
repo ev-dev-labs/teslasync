@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { Section } from '@/components/layout/layout-reference';
+import { Section } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { CarFront } from 'lucide-react';
-import { Table, GlassPanel, PanelTitle, Caption, Text } from '@/components/ui';
+import { Table, Caption, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import type {
   ServiceIntelligenceSummary,
   ServiceIntelligenceVehicleContext,
@@ -35,11 +36,8 @@ export function VehicleMatchPanel({
     : '';
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <CarFront className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('serviceIntelligence.vehicle.title', 'Vehicle match context')}
-      </PanelTitle>
+    <LayoutCard title={t('serviceIntelligence.vehicle.title', 'Vehicle match context')}
+      actions={<CarFront className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -98,6 +96,6 @@ export function VehicleMatchPanel({
           </tbody></Table>
         </div>
       </PanelState>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

@@ -11,9 +11,9 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, AlertTriangle } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { DataTable, GlassPanel, PanelTitle, type Column } from '@/components/ui';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   SearchInput,
@@ -23,6 +23,7 @@ import {
 } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { useAuditLogs } from '@/api/hooks/useAdmin';
 import type { AuditLogEntry } from '@/types/admin';
@@ -30,7 +31,11 @@ import type { AuditLogEntry } from '@/types/admin';
 export default function AuditLogPage() {
   const { t } = useTranslation();
   usePageTitle(t('audit.title', 'Audit log'));
-  const { data: auditLogs, isLoading, error } = useAuditLogs();
+  const auditQuery = useAuditLogs();
+  const auditState = useDataState(auditQuery);
+  const { data: auditLogs } = auditQuery;
+  const isLoading = !auditState.hasData && auditQuery.isLoading;
+  const error = auditState.fatalError;
 
   const [search, setSearch] = useState('');
   const searchFields = useMemo(
@@ -79,10 +84,11 @@ export default function AuditLogPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('audit.title', 'Audit log')}
       subtitle={t('audit.subtitle', 'Recent system-level changes recorded by the audit subsystem')}
     >
+      <StaleRefreshWarning state={auditState} label={t('audit.title', 'Audit log')} />
       <FadeIn>
         <GlassPanel className="p-6">
           <PanelTitle className="mb-4 flex items-center gap-2">
@@ -158,6 +164,6 @@ export default function AuditLogPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -107,6 +107,8 @@ vi.mock('react-i18next', async () => {
 import PeriodComparePage from './PeriodComparePage';
 import { ApiError } from '@/lib/resilience';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { VehiclePicker } from '@/components/layout';
+import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 
 const BANNER_KEY = 'phase40.compareBanner.dismissed.period';
 
@@ -172,6 +174,7 @@ function installRequest({ vehicles = TWO_VEHICLES, statsMode = 'resolve', statsE
       return Promise.resolve(STATS_BY_DAYS[days] ?? STATS_30);
     }
     if (u.includes('/vehicles')) return Promise.resolve(vehicles);
+    if (u.startsWith('/pinned?')) return Promise.resolve([]);
     return Promise.resolve({});
   });
 }
@@ -188,8 +191,15 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <PeriodComparePage />
+      <MemoryRouter initialEntries={['/period-compare']}>
+        <SelectedVehicleProvider>
+          <header aria-label="Workspace vehicle selection">
+            <VehiclePicker />
+          </header>
+          <main aria-label="Period comparison page">
+            <PeriodComparePage />
+          </main>
+        </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -329,6 +339,7 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
       if (path.includes('period-stats')) {
         return Promise.resolve(path.includes('days=90') ? zeroBaseline : STATS_30);
       }
+      if (path.startsWith('/pinned?')) return Promise.resolve([]);
       return Promise.resolve({});
     });
     renderPage();
@@ -348,6 +359,7 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
       if (path.includes('period-stats')) {
         return Promise.resolve(path.includes('days=90') ? { ...STATS_90, total_distance: 0 } : STATS_30);
       }
+      if (path.startsWith('/pinned?')) return Promise.resolve([]);
       return Promise.resolve({});
     });
     renderPage();
@@ -466,9 +478,12 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
 
     await screen.findByText(/Distance traveled was -50\.00% less/);
 
-    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
+    expect(within(screen.getByRole('banner', { name: 'Workspace vehicle selection' }))
+      .getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Period A' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Period B' })).toBeInTheDocument();
+    expect(within(screen.getByRole('main', { name: 'Period comparison page' }))
+      .queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
 
     // The toolbar refresh (rendered after PageContainer's freshness chip, which
     // also exposes a "Refresh" control) triggers a refetch of both feeds.
@@ -503,12 +518,14 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
 
     await screen.findByText(/Distance traveled was -50\.00% less/);
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), {
-      target: { value: '20' },
-    });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Select vehicle' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Model Y' }));
 
     await waitFor(() =>
       expect(periodStatsCalls().some((u) => /vehicle_id=20\b/.test(u))).toBe(true),
     );
+    expect(periodStatsCalls().some((u) => /vehicle_id=20\b/.test(u) && /days=30(?:&|$)/.test(u))).toBe(true);
+    expect(periodStatsCalls().some((u) => /vehicle_id=20\b/.test(u) && /days=90(?:&|$)/.test(u))).toBe(true);
+    expect(aiCapture.props?.vehicleId).toBe('20');
   });
 });

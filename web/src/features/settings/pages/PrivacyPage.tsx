@@ -23,9 +23,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
+import { deriveDataState } from '@/api/dataState'
 import { ConfirmDialog } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
+import { DataStateNotice } from '@/components/feedback'
 import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useVersionInfo } from '@/api/hooks/useSettings'
@@ -63,6 +65,7 @@ export default function PrivacyPage() {
   const [consent, setConsentLocal] = useState<ConsentState>(() => getConsent())
 
   const versionQuery = useVersionInfo()
+  const policyState = deriveDataState(versionQuery)
   const { refetch: refetchVersion } = versionQuery
   const requireConsent = Boolean(versionQuery.data?.require_cookie_consent)
 
@@ -111,7 +114,7 @@ export default function PrivacyPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('account.privacy.title', 'Privacy')}
       subtitle={t(
         'account.privacy.subtitle',
@@ -120,15 +123,16 @@ export default function PrivacyPage() {
       query={versionQuery}
       copyLink
     >
+      {policyState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       <div className="space-y-6" data-testid="privacy-section">
         <FadeIn>
           <PrivacyKpiCards
             recentCount={count}
             consent={consent}
             requireConsent={requireConsent}
-            isLoading={versionQuery.isLoading}
-            isError={versionQuery.isError}
-            error={versionQuery.error}
+            isLoading={policyState.status === 'initial'}
+            isError={policyState.fatalError != null}
+            error={policyState.fatalError}
             onRetry={handleRetry}
           />
         </FadeIn>
@@ -142,8 +146,8 @@ export default function PrivacyPage() {
             <ConsentControlPanel
               consent={consent}
               requireConsent={requireConsent}
-              isLoading={versionQuery.isLoading}
-              isError={versionQuery.isError}
+              isLoading={policyState.status === 'initial'}
+              isError={policyState.fatalError != null}
               onRetry={handleRetry}
               onAccept={handleAcceptConsent}
               onDecline={handleDeclineConsent}
@@ -171,6 +175,6 @@ export default function PrivacyPage() {
         onConfirm={handleClearConfirm}
         onCancel={() => setConfirmOpen(false)}
       />
-    </PageContainer>
+    </PageLayout>
   )
 }

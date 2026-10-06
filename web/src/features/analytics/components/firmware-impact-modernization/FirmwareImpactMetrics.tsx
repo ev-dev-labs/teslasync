@@ -70,7 +70,10 @@ export function FirmwareImpactMetrics({
       ) : state.loading ? (
         <Skeleton height={96} className="rounded-xl" />
       ) : !state.hasInputs ? (
-        <EmptyState message={t('firmwareImpact.modernization.waiting', 'Waiting for both drive history and software updates.')} />
+        <EmptyState
+          message={t('firmwareImpact.modernization.waiting', 'Waiting for both drive history and software updates.')}
+          action={{ label: t('common.refresh', 'Refresh'), onClick: onRetry }}
+        />
       ) : (
         <>
           <StatStrip

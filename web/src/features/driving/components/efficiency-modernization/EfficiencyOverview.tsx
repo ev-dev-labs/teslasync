@@ -27,7 +27,8 @@ export function EfficiencyOverview({ stats, source, units, model }: StatsPresent
             max={Math.round(toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM))}
             size={148} label={t('efficiency.avg', 'Avg')} unit={` ${efficiencyUnit}`}
             color={efficiencyColor(stats.avgEfficiencyWhKm)} className="max-w-xs" />
-            : <EmptyState message={t('efficiency.noSummary', 'No efficiency summary available yet')} />}
+            : <EmptyState message={t('efficiency.noSummary', 'No efficiency summary available yet')}
+                action={source.state.retry ? { label: t('common.retry', 'Retry'), onClick: source.state.retry } : undefined} />}
         </div>
         <div className="space-y-4">
           {consumptionKnown && finite(stats?.avgEfficiencyWhKm)

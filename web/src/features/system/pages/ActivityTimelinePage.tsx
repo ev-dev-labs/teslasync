@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { Button, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
@@ -99,7 +101,10 @@ export default function ActivityTimelinePage() {
     offset,
     enabled: vehicles.length > 0,
   });
-  const { data, isLoading, isError, error, refetch } = query;
+  const { data, isLoading, refetch } = query;
+  const state = useDataState(query, { provenance: 'historical' });
+  const error = state.fatalError;
+  const isError = !!error;
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
@@ -116,7 +121,7 @@ export default function ActivityTimelinePage() {
   const exportName = `activity-${start}-${end}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('activity.timeline.title', 'Activity timeline')}
       subtitle={t(
         'activity.timeline.subtitle',
@@ -146,6 +151,7 @@ export default function ActivityTimelinePage() {
         />
       }
     >
+      <StaleRefreshWarning state={state} />
       <FadeIn>
         <ActivityOverview
           items={items}
@@ -218,6 +224,6 @@ export default function ActivityTimelinePage() {
           'Dated service records will join this timeline when a verified service-history source is available.',
         )}
       </Text>
-    </PageContainer>
+    </PageLayout>
   );
 }

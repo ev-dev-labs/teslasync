@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -73,7 +73,7 @@ export default function DepartureForecastPage() {
   const modelTimeZone = forecast.timeZone;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('departure.title', 'Departure Forecast')}
       subtitle={t(
         'departure.subtitle',
@@ -155,6 +155,6 @@ export default function DepartureForecastPage() {
           timeZone={modelTimeZone}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

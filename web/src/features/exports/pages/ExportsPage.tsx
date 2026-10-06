@@ -1,13 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout';
+import { LayoutCard, PageLayout } from '@/components/layout';
 import {
-  GlassPanel,
   Badge,
   Button,
   DataTable,
-  PanelTitle,
   Text,
   ConfirmDialog,
   type Column,
@@ -18,6 +16,8 @@ import { AIPiiRedactionSharedExports } from '@/components/ai/AIPiiRedactionShare
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useDataState } from '@/hooks/useDataState';
+import { StaleRefreshWarning } from '@/components/feedback';
 
 import {
   useExportJobs,
@@ -49,7 +49,15 @@ export default function ExportsPage() {
   usePageTitle(t('exportsList.title', 'Exports'));
 
   const jobsQuery = useExportJobs();
-  const { data: jobsRaw, isLoading, error, refetch } = jobsQuery;
+  const jobsState = useDataState(jobsQuery);
+  const { data: jobsRaw, refetch } = jobsQuery;
+  const isLoading = !jobsState.hasData && jobsQuery.isLoading;
+  const error = jobsState.fatalError;
+  const unresolvedMessage = !jobsState.hasData && !isLoading && !error
+    ? jobsQuery.fetchStatus === 'paused'
+      ? t('exportsList.source.paused', 'The export-job query is paused; no empty result is inferred.')
+      : t('exportsList.source.unresolved', 'Export-job availability has not resolved yet.')
+    : undefined;
   const jobs: ExportJobSummary[] = useMemo(() => jobsRaw ?? [], [jobsRaw]);
   const stats = useMemo(() => deriveExportStats(jobs), [jobs]);
 
@@ -186,7 +194,7 @@ export default function ExportsPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('exportsList.title', 'Exports')}
       subtitle={t(
         'exportsList.subtitle',
@@ -196,9 +204,10 @@ export default function ExportsPage() {
       query={jobsQuery}
     >
       <div className="space-y-6">
+        <StaleRefreshWarning state={jobsState} />
         {/* 1 — KPI band: full-width, reflows up to 5 columns on wide screens. */}
         <FadeIn>
-          <ExportKpiBand stats={stats} isLoading={isLoading} />
+          <ExportKpiBand stats={stats} isLoading={isLoading} hasData={jobsState.hasData} retained={jobsState.status === 'stale'} />
         </FadeIn>
 
         {/* 2 — Opt-in Helix PII-redaction advisor. Renders null when AI is off,
@@ -208,11 +217,7 @@ export default function ExportsPage() {
         {/* 3 — Detail bento: jobs table (hero, spans 2 cols) + status breakdown. */}
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <FadeIn delay={0.1} className="min-w-0 xl:col-span-2">
-            <GlassPanel className="flex h-full min-w-0 flex-col overflow-hidden p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <Icons.package className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('exportsList.jobs.title', 'Export jobs')}
-              </PanelTitle>
+            <LayoutCard title={t('exportsList.jobs.title', 'Export jobs')}>
 
               {isLoading ? (
                 <div className="space-y-2">
@@ -226,6 +231,8 @@ export default function ExportsPage() {
                   onRetry={onRetry}
                   resourceName={t('exportsList.resource', 'Exports')}
                 />
+              ) : unresolvedMessage ? (
+                <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
               ) : jobs.length === 0 ? (
                 <EmptyState /* no-action: stale-list view — exports appear automatically once generated; nothing for the user to do here */
                   icon={<Icons.package className="h-8 w-8" aria-hidden="true" />}
@@ -271,7 +278,7 @@ export default function ExportsPage() {
                   )}
                 />
               )}
-            </GlassPanel>
+            </LayoutCard>
           </FadeIn>
 
           <FadeIn delay={0.15}>
@@ -280,12 +287,13 @@ export default function ExportsPage() {
               isLoading={isLoading}
               error={error}
               onRetry={onRetry}
+              unresolvedMessage={unresolvedMessage ?? undefined}
             />
           </FadeIn>
         </section>
       </div>
 
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

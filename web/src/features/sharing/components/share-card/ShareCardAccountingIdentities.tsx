@@ -1,7 +1,7 @@
-import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, Table, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -35,11 +35,7 @@ export function ShareCardAccountingIdentities({
       data-testid="share-card-accounting-identities"
       aria-label={t('shareCard.accounting.aria', 'Exact share card accounting identities')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-2 flex items-center gap-2">
-          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.accounting.title', 'Exact accounting identities')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.accounting.title', 'Exact accounting identities')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'shareCard.accounting.subtitle',
@@ -88,7 +84,7 @@ export function ShareCardAccountingIdentities({
             ))}
           </ul>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

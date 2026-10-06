@@ -1,7 +1,11 @@
-import { CheckCircle2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { InlineCallout } from '@/components/feedback';
-import { Button, Checkbox, GlassPanel } from '@/components/ui';
+import { Button, Checkbox, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import type { DataState } from '@/api/dataState';
+import type { BenchmarkPrivacyStatus } from '@/api/hooks/useBenchmarks';
+import { BenchmarkStatusContent } from './BenchmarkStatusContent';
 
 interface ConsentGateProps {
   optedIn: boolean;
@@ -10,6 +14,7 @@ interface ConsentGateProps {
   error: Error | null;
   onAcknowledgedChange: (value: boolean) => void;
   onConsent: () => void;
+  source?: DataState<BenchmarkPrivacyStatus>;
 }
 
 export function ConsentGate({
@@ -19,24 +24,23 @@ export function ConsentGate({
   error,
   onAcknowledgedChange,
   onConsent,
+  source,
 }: ConsentGateProps) {
   const { t } = useTranslation();
   return (
-    <GlassPanel className="p-5 md:p-6">
-      <div className="flex items-start gap-3">
-        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden />
+    <LayoutCard title={t('benchmarks.consent.title', 'Private participation')}>
+      <BenchmarkStatusContent source={source} label={t('benchmarks.consent.title', 'Private participation')}>
+      <div className="flex min-w-0 items-start gap-3">
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-              {t('benchmarks.consent.title', 'Private participation')}
-            </h2>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
+            <Text as="p" variant="bodySm">
               {t(
                 'benchmarks.consent.description',
                 'TeslaSync derives bounded summaries locally. Raw trips, locations and VINs are never submitted to this endpoint.',
               )}
-            </p>
+            </Text>
           </div>
+          </BenchmarkStatusContent>
           {optedIn ? (
             <InlineCallout variant="success" icon={<CheckCircle2 />}>
               {t(
@@ -73,6 +77,6 @@ export function ConsentGate({
           ) : null}
         </div>
       </div>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

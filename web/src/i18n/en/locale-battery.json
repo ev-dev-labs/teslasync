@@ -1,6 +1,9 @@
 {
   "batteryCare": {
     "title": "Battery care",
+    "sources": {
+      "paused": "This source is paused while offline. No observations have been received yet."
+    },
     "subtitle": "How gently your charging habits treat the pack",
     "kpis": "Battery care summary metrics",
     "score": "Care score",
@@ -469,7 +472,9 @@
       "title": "Verification diagnostics",
       "unavailable": "Not checked",
       "valid": "Current digest match"
-    }
+    },
+    "capacityEvidence": "Distribution and capacity context",
+    "profileEvidence": "Usage and thermal profiles"
   },
   "chargeAdvisor": {
     "title": "Charge advisor",
@@ -705,9 +710,22 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
-    }
+    },
+    "weekdayEvidence": "Weekday and frequency evidence",
+    "burnEvidence": "Daily trend and consumption distribution",
+    "chargingEvidence": "Charging profile and timing",
+    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot."
   },
   "cycleStress": {
+    "modernization": {
+      "period": "Returned vehicle histories · bounded evidence",
+      "provenance": "Reconstructed from up to 1,000 drives and 1,000 charging sessions. Source spans may differ; this is not a selected-date-window or full-history total.",
+      "retrySource": "Retry {{source}}",
+      "pausedSource": "{{source}} is paused while offline. Previously loaded evidence, if available, is retained.",
+      "ranges": "Cycle depth and calendar trend",
+      "sensitivity": "Sensitivity lenses",
+      "profiles": "Operating profiles"
+    },
     "title": "Cycle stress",
     "subtitle": "Continuity-bounded SoC cycle reconstruction, sensitivity, source coverage, and accounting",
     "accounting": {
@@ -1077,7 +1095,9 @@
       "chargerBreakdownAria": "Charger type share pie chart",
       "noChargerBreakdownData": "No charger-type energy is available for the selected analysis window.",
       "noChargerBreakdownDataDescription": "Home, AC, and DC shares appear after completed sessions include charger classification.",
-      "distance": "Distance ({{unit}})"
+      "distance": "Distance ({{unit}})",
+      "costedEnergy": "Energy with recorded cost",
+      "pricedSessions": "Sessions with recorded cost"
     },
     "tip": {
       "offPeak": "Off-peak charging saves money",
@@ -1127,6 +1147,15 @@
       "lastFetched": "Site info fetched"
     },
     "products": {
+      "modernization": {
+        "unavailable": "Energy site discovery is unavailable. Retry above or refresh from Tesla.",
+        "noSnapshot": "No energy-site snapshot has loaded. Refresh from Tesla to discover your installations.",
+        "siteSnapshot": "Site snapshot",
+        "siteSource": "Cached Tesla products discovery",
+        "configurationSource": "Cached Tesla site configuration",
+        "snapshot": "Discovered energy sites snapshot",
+        "snapshotSource": "Cached Tesla products; site timestamps are shown on each card."
+      },
       "unnamed": "Unnamed site",
       "charge": "Charge",
       "capacity": "Capacity",
@@ -1148,6 +1177,20 @@
     }
   },
   "energyFlow": {
+    "state": {
+      "initialPaused": "This source is paused. No measurements have been received yet.",
+      "pausedTitle": "Source paused",
+      "missing": "No measurement supplied"
+    },
+    "summary": {
+      "noData": "No energy summary available.",
+      "trailingWindow": "Trailing {{days}} days",
+      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source."
+    },
+    "metrics": {
+      "estimated": "Estimated",
+      "co2Estimate": "Estimated avoided CO₂, not a vehicle emissions measurement."
+    },
     "dailyEfficiency": {
       "aria": "Daily driving efficiency over time"
     },
@@ -1158,9 +1201,23 @@
       "aria": "Daily energy usage over time"
     }
   },
+  "energyLedger": {
+    "summaryScope": "Months reconstructed from returned charging and drive history; exact complete-history bounds are not supplied.",
+    "sourceError": "Energy ledger evidence is unavailable."
+  },
   "packCapacity": {
     "title": "Pack capacity",
     "subtitle": "Charging-derived capacity evidence, uncertainty, sensitivity, diagnostics, and exact row accounting",
+    "modernization": {
+      "pausedInitial": "Charging history is paused while the device is offline. No charging evidence has loaded yet.",
+      "noEstimate": "No qualified charging-derived estimate is available.",
+      "period": "Returned charging-history window",
+      "provenance": "Up to {{limit}} returned sessions; not a lifetime record or a battery-health measurement.",
+      "profiles": "Monthly and SoC-window evidence",
+      "sensitivity": "Model sensitivity",
+      "influence": "Innovation and observation influence",
+      "coverage": "Coverage and evidence support"
+    },
     "states": {
       "noVehicle": "Select a vehicle to analyze its returned charging history.",
       "noVehiclePassive": "Select a vehicle to make its returned charging evidence available.",
@@ -1447,6 +1504,11 @@
   },
   "range": {
     "title": "Projected range",
+    "modernization": {
+      "missingCalculatorInputs": "Measured battery level and usable capacity are required to calculate a range.",
+      "snapshot": "Range projection snapshot",
+      "snapshotSource": "Current battery state and the existing driving-history model; not scoped to a selected date window."
+    },
     "aiPredict": {
       "title": "Learn per-vehicle range model",
       "description": "Compute per-bucket (temperature × speed) learned Wh/km from this vehicle's recent drives and walk through how each bucket compares to the static heuristic curve the projection uses today.",
@@ -1501,7 +1563,18 @@
       "hot": "Hot"
     }
   },
+  "rangeSim": {
+    "summaryScope": "Simulation calibrated from returned drive history; no complete-history interval is supplied."
+  },
   "sleep": {
+    "modernization": {
+      "states": {
+        "initialPaused": "Sleep evidence has not loaded because the request is paused. No drain or sleep-health conclusion is available."
+      },
+      "layout": {
+        "evidence": "Sleep evidence sections"
+      }
+    },
     "availability": {
       "empty": "No availability rules",
       "reason": {
@@ -1843,6 +1916,28 @@
     }
   },
   "vampireDrain": {
+    "modernization": {
+      "sampleWindow": "{{count}}-day sample window",
+      "sampleUnknown": "Sample window unavailable",
+      "sampleScope": "Statistics use the server sample window. Charts and sessions use up to 200 loaded parked windows; exact interval bounds are not supplied.",
+      "sessionsUnknown": "Session count unavailable",
+      "eventsUnavailable": "Parked-drain events are unavailable. Retry the source above.",
+      "statsUnavailable": "Drain statistics are unavailable. Retry the source in Drain summary.",
+      "ended": "Ended",
+      "sourceFailure": "{{source}} could not be loaded. Please try again.",
+      "retrySource": "Retry {{source}}",
+      "culpritPeriod": "Park evidence and parked windows",
+      "culpritBounds": "Current Park evidence and historical drain windows have independent source coverage.",
+      "evidenceMissing": "No confirmed measurement supplied by this source.",
+      "historicalEvidence": "Historical parked-window measurement",
+      "parkEvidence": "Confirmed Park evidence",
+      "parkSource": "Confirmed Park evidence",
+      "splitSource": "Plugged and unplugged drain",
+      "splitPeriod": "Returned parked windows",
+      "splitBounds": "Exact interval bounds are not supplied by this source.",
+      "parkConfirmed": "Park confirmed",
+      "splitMissing": "No plugged or unplugged drain measurements are available."
+    },
     "aiNarrative": {
       "title": "Explain the recent vampire drain",
       "badge": "Helix",
@@ -1937,6 +2032,11 @@
       }
     }
   },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
   "activity": {
     "action": {
       "alert": "Alert change",
@@ -1987,26 +2087,6 @@
       "empty": "No recent activity in this window."
     }
   },
-  "annotation": {
-    "add": "Add annotation",
-    "addTitle": "Add annotation",
-    "cat": {
-      "custom": "Custom",
-      "issue": "Issue",
-      "maintenance": "Maintenance",
-      "milestone": "Milestone",
-      "trip": "Trip",
-      "upgrade": "Upgrade"
-    },
-    "category": "Category",
-    "date": "Date",
-    "descPlaceholder": "Optional description...",
-    "description": "Description",
-    "label": "Label",
-    "labelPlaceholder": "e.g., battery replaced",
-    "listTitle": "Annotations",
-    "removeNamed": "Remove annotation: {{label}}"
-  },
   "battery": {
     "aiNarrative": {
       "badge": "Helix",
@@ -2045,6 +2125,13 @@
         "watchSpreadDesc": "Cell balance is slightly off. Periodic full charges can help the BMS equalize cells.",
         "watchTemp": "Module temperature variation",
         "watchTempDesc": "Some temperature variation is normal. Monitor during fast charging sessions."
+      },
+      "modernization": {
+        "noCellSnapshot": "Cell voltage data is unavailable. Any pack and temperature values reported by the backend remain visible.",
+        "signalAvailability": "Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.",
+        "snapshot": "Latest available snapshot",
+        "snapshotSource": "Vehicle-scoped backend snapshot; cells are synthesized from brick extrema. Request time is not measurement time.",
+        "unknown": "Measurement unavailable"
       },
       "noInsights": "Not enough data for recommendations",
       "recommendations": "Health recommendations",
@@ -2093,6 +2180,7 @@
     },
     "degradation": {
       "actualHealth": "Actual health %",
+      "analysis": "Range and risk analysis",
       "avgDoD": "Avg depth of discharge",
       "avgDoDLabel": "Avg DoD",
       "batteryAge": "Battery age",
@@ -2105,11 +2193,14 @@
       "cycleDepth": "Cycle depth",
       "date": "Date",
       "deepDischarges": "deep discharges",
+      "estimateEvidence": "Health, capacity, range and forecasts are estimates derived from available telemetry snapshots, not direct pack-capacity measurements.",
       "estimatedCapacity": "Estimated capacity",
       "fastCharge": "Fast charge",
       "fastCharges": "fast charges",
       "fullCharge": "Full charge",
+      "guidance": "Recommendations and health factors",
       "inApprox": "in approximately",
+      "initialPaused": "Battery analytics loading is paused. Reconnect to load this vehicle’s history.",
       "lowerBetter": "Lower is better for longevity",
       "monthsCount": "{{count}} months",
       "needMore": "Need more data points to generate prediction (minimum 3 snapshots required)",
@@ -2119,9 +2210,11 @@
       "noRecommendations": "Recommendations will appear based on your usage patterns.",
       "noRecords": "No degradation records found.",
       "noRiskData": "Risk data will appear once charging history is available.",
+      "noSoh": "Battery health is not available yet.",
       "odometer": "Odometer",
       "originalRange": "Original range",
       "prediction": "Prediction",
+      "predictionAndHabits": "Prediction and charging habits",
       "predictionDesc": "At current rate, battery reaches",
       "projected": "Projected %",
       "range": "Range",
@@ -2129,12 +2222,18 @@
       "rate": "Degradation rate",
       "recommendations": "Recommendations",
       "riskFactors": "Risk factors",
+      "sampleWindow": "Available battery history",
       "sohPct": "SOH %",
       "stress": "Stress level",
       "stressHigh": "High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.",
       "stressLabel": "stress",
       "stressLow": "Your charging habits are optimal for battery longevity.",
       "stressMedium": "Consider reducing fast charging frequency and avoiding full charges when possible.",
+      "stressValue": {
+        "High": "High",
+        "Low": "Low",
+        "Medium": "Medium"
+      },
       "tempExposure": "Temperature exposure",
       "title": "Battery degradation",
       "totalCycles": "Total cycles",
@@ -2194,6 +2293,9 @@
       "fullChargeComplete": "Full charge complete",
       "originalCap": "Original capacity",
       "soh": "State of health"
+    },
+    "modernization": {
+      "pausedInitial": "This request is paused while the device is offline. No measurements have loaded yet."
     },
     "months": "months",
     "newVsNow": {
@@ -2276,30 +2378,18 @@
     "version": "Calculation version"
   },
   "chart": {
-    "a11y": {
-      "fallbackTableLabel": "{{title}} — data table",
-      "summary": "Chart: {{title}}"
-    },
     "col": {
       "date": "Date",
       "value": "Value"
+    }
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
     },
-    "export": {
-      "copy": "Copy image to clipboard",
-      "copyFailed": "Failed to copy chart image",
-      "copyFallback": "Clipboard not available — image downloaded instead",
-      "copySuccess": "Chart image copied to clipboard",
-      "csv": "Download data as CSV",
-      "disabledTooltip": "Chart not ready to export",
-      "failed": "Could not prepare the {{format}} export.",
-      "menuLabel": "Export chart",
-      "png": "Save as PNG",
-      "preparing": "Preparing chart export…",
-      "svg": "Save as SVG"
-    },
-    "loading": "Loading chart…",
-    "noData": "No data available",
-    "noDataDescription": "No chartable observations are available for the current selection yet."
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
   },
   "date": {
     "preset": {
@@ -2322,21 +2412,6 @@
     "title": "{{current}} vs {{previous}}"
   },
   "developerReference": {
-    "layout": {
-      "about": {
-        "title": "About this analysis"
-      },
-      "card": {
-        "descriptionHelp": "Read full description for {{title}}"
-      },
-      "locked": {
-        "unknownProgress": "Unlock progress is unknown; no threshold has been inferred."
-      },
-      "source": {
-        "loading": "Loading {{label}}",
-        "retained": "The synthetic refresh failed. Retained content remains available."
-      }
-    },
     "stats": {
       "metric": {
         "charge": {
@@ -2464,8 +2539,67 @@
       }
     }
   },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
   "entityContext": {
     "title": "Related context"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
   },
   "freshness": {
     "noData": "No recent data",
@@ -2516,11 +2650,25 @@
       "started": "Impersonation started"
     }
   },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "unlocked": "✓ Unlocked"
+  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
     "unknown": "Unknown"
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
   },
   "operations": {
     "attention": "Attention",
@@ -2682,6 +2830,9 @@
       "title": "Elevation profile"
     }
   },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
     "announceCleared": "Saved view cleared",
@@ -2705,6 +2856,18 @@
     "title": "Saved views",
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
   },
   "sourceLayer": {
     "age": "age",
@@ -2932,5 +3095,12 @@
         }
       }
     }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

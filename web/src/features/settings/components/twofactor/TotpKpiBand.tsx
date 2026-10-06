@@ -14,6 +14,7 @@ import { StatSkeleton } from '@/components/feedback'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import type { NeonColor } from '@/lib/tokens'
 import type { TOTPStatus } from '@/api/types'
+import { knownNumber } from '@/api/dataState'
 
 interface TotpKpiBandProps {
   data: TOTPStatus | undefined
@@ -44,7 +45,7 @@ export function TotpKpiBand({ data, isLoading }: TotpKpiBandProps) {
   const session = data && data.mode === 'session' ? data : null
   const isOpen = !data || data.mode === 'open'
   const activated = session?.activated === true
-  const backupRemaining = session?.backup_codes_remaining ?? 0
+  const backupRemaining = knownNumber(session?.backup_codes_remaining)
   const lastUsedAt = session?.last_used_at
   const dash = t('common.dash', '—')
 
@@ -90,7 +91,7 @@ export function TotpKpiBand({ data, isLoading }: TotpKpiBandProps) {
     {
       key: 'backup',
       label: t('totp.backupCodesRemaining.label', 'Backup codes remaining'),
-      value: activated ? backupRemaining : dash,
+      value: activated ? backupRemaining ?? dash : dash,
       color: 'purple',
       icon: <KeyRound className="h-5 w-5" aria-hidden="true" />,
     },

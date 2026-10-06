@@ -5,7 +5,7 @@ import {
   Activity, Layers, Gauge, Server, Clock,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
@@ -13,11 +13,12 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AIMqttSseInspectorExplanations } from '@/components/ai/AIMqttSseInspectorExplanations';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -137,7 +138,11 @@ export default function MQTTInspectorPage() {
   const { formatTime, formatRelative } = useDateFormat();
   usePageTitle(t('mqtt.title', 'MQTT inspector'));
 
-  const { data: status, isLoading, error } = useMQTTStatus();
+  const statusQuery = useMQTTStatus();
+  const { data: status, isLoading } = statusQuery;
+  const statusState = useDataState(statusQuery, { provenance: 'live' });
+  const error = statusState.fatalError;
+  const metricsUnavailable = (isLoading && !statusState.hasData) || error != null;
 
   /* ---- derived totals ---- */
   const vehicles: VehicleTelemetry[] = Array.isArray(status?.vehicles) ? status.vehicles : [];
@@ -181,7 +186,7 @@ export default function MQTTInspectorPage() {
   const connected = status?.connected ?? false;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('mqtt.title', 'MQTT inspector')}
       subtitle={t('mqtt.subtitle', 'MQTT connection status and streaming telemetry')}
       metadataActions={
@@ -205,6 +210,7 @@ export default function MQTTInspectorPage() {
           </AlertBanner>
         </FadeIn>
       )}
+      <StaleRefreshWarning state={statusState} label={t('mqtt.connectionInfo', 'Connection')} />
 
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
@@ -214,25 +220,25 @@ export default function MQTTInspectorPage() {
         >
           <MetricCard
             label={t('mqtt.streamingVehicles', 'Streaming vehicles')}
-            value={isLoading ? '—' : vehicles.length}
+            value={metricsUnavailable ? '—' : vehicles.length}
             icon={<Radio className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
             label={t('mqtt.totalSignals', 'Total signals')}
-            value={isLoading ? '—' : fmtInt(totalSignals)}
+            value={metricsUnavailable ? '—' : fmtInt(totalSignals)}
             icon={<Activity className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
             label={t('mqtt.totalBatches', 'Total batches')}
-            value={isLoading ? '—' : fmtInt(totalBatches)}
+            value={metricsUnavailable ? '—' : fmtInt(totalBatches)}
             icon={<Layers className="h-5 w-5" />}
             color="purple"
           />
           <MetricCard
             label={t('mqtt.signalsPerSec', 'Signals / sec')}
-            value={isLoading ? '—' : fmtNumber(totalRate)}
+            value={metricsUnavailable ? '—' : fmtNumber(totalRate)}
             icon={<Gauge className="h-5 w-5" />}
             color="amber"
           />
@@ -305,14 +311,14 @@ export default function MQTTInspectorPage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="min-w-0">
                     <Caption className="mb-1 block">{t('mqtt.broker', 'Broker')}</Caption>
-                    <Text as="p" mono variant="body" className="truncate">{status.broker ?? '—'}</Text>
+                    <Text as="p" mono variant="body" className="break-words">{status.broker ?? '—'}</Text>
                   </div>
                   <div className="min-w-0">
                     <Caption className="mb-1 flex items-center gap-1">
                       <Clock className="h-3 w-3" aria-hidden="true" />
                       {t('mqtt.uptime', 'Uptime')}
                     </Caption>
-                    <Text as="p" mono variant="body" className="truncate">
+                    <Text as="p" mono variant="body" className="break-words">
                       {status.uptimeSeconds != null ? formatUptime(status.uptimeSeconds) : '—'}
                     </Text>
                   </div>
@@ -394,6 +400,6 @@ export default function MQTTInspectorPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

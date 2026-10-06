@@ -126,6 +126,8 @@ describe('FleetOperationsBrief — taxonomy', () => {
     // The panel is NEVER hidden on no data.
     expect(screen.getByTestId('fleet-operations-brief')).toBeInTheDocument()
     expect(screen.getByTestId('fleet-posture-taxonomy')).toBeInTheDocument()
+    expect(Array.from(screen.getByTestId('fleet-posture-taxonomy').querySelectorAll('dt'))
+      .every(node => !node.classList.contains('truncate'))).toBe(true)
     expect(screen.getByText('Checking live state')).toBeInTheDocument()
     expect(document.querySelector('[data-provenance="unknown"]')).toHaveAttribute(
       'data-data-status',

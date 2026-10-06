@@ -5,7 +5,7 @@ import {
   Layers, RefreshCw,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Button, Badge,
   PanelTitle, Caption, Text,
@@ -242,7 +242,7 @@ export default function ApiLogsPage() {
   }, [exportFilename, logs]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('apiLogs.title', 'API logs')}
       subtitle={t('apiLogs.subtitle', 'Record of all API calls with request/response details')}
       query={logsQuery}
@@ -469,6 +469,6 @@ export default function ApiLogsPage() {
           <ApiLogsFrontendErrors />
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

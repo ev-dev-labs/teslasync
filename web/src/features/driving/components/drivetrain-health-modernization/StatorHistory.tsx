@@ -10,7 +10,7 @@ import type { MotorHistoryChartProps } from './chartTypes';
 
 export function StatorHistory({ rows, state, loading }: MotorHistoryChartProps) {
   const { t } = useTranslation();
-  const { formatTemperature } = useUnits();
+  const { formatTemperature, unitPrefs } = useUnits();
   const hidden = useHiddenSeries('stator-temp-chart');
   const table = rows.map(row => ({
     time: row.time,
@@ -23,7 +23,7 @@ export function StatorHistory({ rows, state, loading }: MotorHistoryChartProps) 
       state={state}
       title={t('drivetrain.statorTempHistory', 'Stator Temperature History')}
       subtitle={t('drivetrain.statorTempSub', 'Motor stator temperature over recent snapshots')}
-      ariaLabel={t('drivetrain.statorTempHistory.aria', 'Front, rear-left and rear-right motor stator temperature history line chart')}
+      ariaLabel={t('drivetrain.modernization.statorHistorySummary', 'Front motor, rear motor and inverter temperature over returned motor snapshots, displayed under the existing stator series aliases.')}
       ariaDescription={t('drivetrain.modernization.statorAliases', 'Existing Stator, Rear-Left and Rear-Right series map to front motor, rear motor and inverter temperature respectively. These aliases do not identify additional motors.')}
       chartKey="stator-temp-chart"
       height={280}
@@ -33,9 +33,9 @@ export function StatorHistory({ rows, state, loading }: MotorHistoryChartProps) 
       exportData={table}
       dataColumns={[
         { key: 'time', label: t('drivetrain.col.time', 'Time') },
-        { key: 'stator', label: t('drivetrain.col.stator', 'Stator') },
-        { key: 'statorRel', label: t('drivetrain.col.statorRel', 'Rear-Left') },
-        { key: 'statorRer', label: t('drivetrain.col.statorRer', 'Rear-Right') },
+        { key: 'stator', label: `${t('drivetrain.col.stator', 'Stator')} — ${t('drivetrain.frontMotor', 'Front Motor')} (${unitPrefs.temperature})` },
+        { key: 'statorRel', label: `${t('drivetrain.col.statorRel', 'Rear-Left')} — ${t('drivetrain.rearMotor', 'Rear Motor')} (${unitPrefs.temperature})` },
+        { key: 'statorRer', label: `${t('drivetrain.col.statorRer', 'Rear-Right')} — ${t('drivetrain.inverter', 'Inverter')} (${unitPrefs.temperature})` },
       ]}
     >
       <ResponsiveContainer width="100%" height="100%">

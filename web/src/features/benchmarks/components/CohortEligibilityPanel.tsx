@@ -1,7 +1,8 @@
 import { UsersRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, InlineCallout, Skeleton } from '@/components/feedback';
-import { Table, Badge, Button, GlassPanel } from '@/components/ui';
+import { Table, Badge, Button } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import type { BenchmarkRelease } from '@/api/hooks/useBenchmarks';
 
 interface CohortEligibilityPanelProps {
@@ -31,15 +32,10 @@ export function CohortEligibilityPanel({
       )
     : '';
   return (
-    <GlassPanel className="p-5 md:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <UsersRound className="h-5 w-5 text-emerald-300" aria-hidden />
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            {t('benchmarks.cohort.title', 'Cohort eligibility')}
-          </h2>
-        </div>
-        {loading ? (
+    <LayoutCard
+      title={t('benchmarks.cohort.title', 'Cohort eligibility')}
+      actions={
+        loading ? (
           <Skeleton className="h-6 w-24 rounded-full" />
         ) : (
           <Badge variant={release && !release.suppressed ? 'success' : 'warning'} dot>
@@ -47,8 +43,9 @@ export function CohortEligibilityPanel({
               ? t('benchmarks.cohort.eligible', 'Eligible')
               : t('benchmarks.cohort.pending', 'Not released')}
           </Badge>
-        )}
-      </div>
+        )
+      }
+    >
       {loading ? (
         <div
           role="status"
@@ -117,7 +114,7 @@ export function CohortEligibilityPanel({
               )}
             </InlineCallout>
           ) : null}
-          <Button type="button" variant="secondary" onClick={onCreate} loading={pending}>
+          <Button type="button" variant="secondary" onClick={onCreate} loading={pending} wrapLabel>
             {t('benchmarks.cohort.refresh', 'Check current source version')}
           </Button>
         </div>
@@ -141,6 +138,6 @@ export function CohortEligibilityPanel({
           })}
         </InlineCallout>
       ) : null}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

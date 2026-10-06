@@ -1,7 +1,7 @@
-import { ListTree } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
@@ -34,11 +34,7 @@ export function CabinThermalCandidateDirectory({
 
   return (
     <section data-testid="cabin-thermal-candidate-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.directory.title', 'Candidate-window directory')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.directory.title', 'Candidate-window directory')}>
         <Text as="p" variant="caption" className="mb-1">
           {t(
             'cabinThermal.directory.subtitle',
@@ -71,7 +67,7 @@ export function CabinThermalCandidateDirectory({
             ))}
           </ol>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

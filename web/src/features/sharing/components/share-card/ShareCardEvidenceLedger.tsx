@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { Grid } from '@/components/layout';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { Grid, LayoutCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -21,11 +20,7 @@ export function ShareCardEvidenceLedger({
       data-testid="share-card-evidence-ledger"
       aria-label={t('shareCard.evidence.aria', 'Share card KPI and evidence ledger')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.evidence.title', 'KPI and evidence ledger')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.evidence.title', 'KPI and evidence ledger')}>
         <ShareCardSectionBody state={state} showCachedStatus>
           <Grid cols={{ default: 1, sm: 2, xl: 6 }} gap={3}>
             <MetricCard
@@ -101,7 +96,7 @@ export function ShareCardEvidenceLedger({
             </AlertBanner>
           ) : null}
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

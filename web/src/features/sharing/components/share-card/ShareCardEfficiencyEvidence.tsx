@@ -2,8 +2,8 @@ import { BatteryCharging, Gauge, ShieldCheck, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Grid, LayoutCard } from '@/components/layout';
+import { Table, Text } from '@/components/ui';
 import type { ShareCardCoverage } from '../../lib/shareCard';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
@@ -30,11 +30,7 @@ export function ShareCardEfficiencyEvidence({
       data-testid="share-card-efficiency-evidence"
       aria-label={t('shareCard.efficiency.aria', 'Efficiency regen and field coverage evidence')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Gauge className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.efficiency.title', 'Efficiency, regen, and field coverage')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.efficiency.title', 'Efficiency, regen, and field coverage')}>
         <ShareCardSectionBody state={state}>
           <Grid cols={{ default: 1, sm: 2, xl: 4 }} gap={3}>
             <MetricCard
@@ -95,7 +91,7 @@ export function ShareCardEfficiencyEvidence({
             </tbody>
           </Table>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

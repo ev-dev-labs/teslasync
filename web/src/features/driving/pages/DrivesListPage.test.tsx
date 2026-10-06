@@ -615,32 +615,39 @@ describe('DrivesListPage — unit boundary (miles)', () => {
 });
 
 describe('DrivesListPage — collections', () => {
-  it('presents one filter list with one active selection', async () => {
+  it('presents collection filters as pressed buttons, not document tabs', async () => {
     renderPage();
     const list = filtersBar();
-    expect(screen.getAllByRole('tablist')).toHaveLength(1);
-    expect(within(list).getByRole('tab', { name: /All/ })).toHaveAttribute('aria-selected', 'true');
-    expect(within(list).queryByRole('tab', { name: /All FSD data/ })).toBeNull();
-    fireEvent.click(within(list).getByRole('tab', { name: /Notable/ }));
+    expect(list).toHaveAttribute('role', 'group');
+    expect(within(list).queryByRole('tablist')).toBeNull();
+    const all = within(list).getByRole('button', { name: /All/ });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    expect(all).not.toHaveAttribute('aria-selected');
+    expect(within(list).queryByRole('button', { name: /All FSD data/ })).toBeNull();
+    fireEvent.keyDown(all, { key: 'ArrowRight' });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    const notable = within(list).getByRole('button', { name: /Notable/ });
+    expect(notable).toHaveAttribute('tabindex', '0');
+    fireEvent.click(notable);
     expect(screen.getByTestId('location')).toHaveTextContent('coll=notable');
-    await waitFor(() => expect(within(filtersBar()).getByRole('tab', { name: /Notable/ })).toHaveAttribute('aria-selected', 'true'));
-    expect(within(filtersBar()).getAllByRole('tab', { selected: true })).toHaveLength(1);
+    await waitFor(() => expect(within(filtersBar()).getByRole('button', { name: /Notable/ })).toHaveAttribute('aria-pressed', 'true'));
+    expect(within(filtersBar()).getAllByRole('button', { pressed: true })).toHaveLength(1);
   });
 
   it('counts each collection and filters the list when one is chosen', async () => {
     renderPage();
     const bar = filtersBar();
 
-    expect(within(bar).getByRole('tab', { name: /All/ })).toHaveTextContent('(4)');
-    expect(within(bar).getByRole('tab', { name: /Anomalies/ })).toHaveTextContent('(1)');
-    expect(within(bar).getByRole('tab', { name: /Commutes/ })).toHaveTextContent('(3)');
+    expect(within(bar).getByRole('button', { name: /All/ })).toHaveTextContent('(4)');
+    expect(within(bar).getByRole('button', { name: /Anomalies/ })).toHaveTextContent('(1)');
+    expect(within(bar).getByRole('button', { name: /Commutes/ })).toHaveTextContent('(3)');
     expect(bar.querySelector('svg')).toBeNull();
-    expect(within(bar).getByRole('tab', { name: /All/ })).toHaveClass('bg-[var(--theme-primary)]');
-    expect(within(bar).getByRole('tab', { name: /Anomalies/ })).toHaveClass('border-[var(--control-border)]');
+    expect(within(bar).getByRole('button', { name: /All/ })).toHaveClass('bg-[var(--theme-primary)]');
+    expect(within(bar).getByRole('button', { name: /Anomalies/ })).toHaveClass('border-[var(--control-border)]');
     // Tagged is not implemented yet → disabled.
-    expect(within(bar).getByRole('tab', { name: /Tagged/ })).toBeDisabled();
+    expect(within(bar).getByRole('button', { name: /Tagged/ })).toBeDisabled();
 
-    fireEvent.click(within(bar).getByRole('tab', { name: /Commutes/ }));
+    fireEvent.click(within(bar).getByRole('button', { name: /Commutes/ }));
 
     await waitFor(() => {
       expect(within(listRegion()).queryByText(/Beach/)).toBeNull();
@@ -887,10 +894,10 @@ describe('DrivesListPage — FSD evidence', () => {
     expect(within(listRegion()).queryByText('FSD data unknown')).toBeNull();
 
     const bar = filtersBar();
-    expect(within(bar).getByRole('tab', { name: /^All/ })).toHaveClass('bg-[var(--theme-primary)]');
-    expect(within(bar).getByRole('tab', { name: /High confidence/ })).toHaveTextContent('(1)');
-    expect(within(bar).getByRole('tab', { name: /Unknown/ })).toHaveTextContent('(1)');
-    fireEvent.click(within(bar).getByRole('tab', { name: /High confidence/ }));
+    expect(within(bar).getByRole('button', { name: /^All/ })).toHaveClass('bg-[var(--theme-primary)]');
+    expect(within(bar).getByRole('button', { name: /High confidence/ })).toHaveTextContent('(1)');
+    expect(within(bar).getByRole('button', { name: /Unknown/ })).toHaveTextContent('(1)');
+    fireEvent.click(within(bar).getByRole('button', { name: /High confidence/ }));
 
     await waitFor(() => {
       expect(listRegion().querySelector('a[href="/drives/1"]')).not.toBeNull();
@@ -898,10 +905,10 @@ describe('DrivesListPage — FSD evidence', () => {
       expect(listRegion().querySelector('a[href="/drives/3"]')).toBeNull();
       expect(listRegion().querySelector('a[href="/drives/4"]')).toBeNull();
     });
-    expect(within(filtersBar()).getAllByRole('tab', { selected: true })).toHaveLength(1);
-    fireEvent.click(within(filtersBar()).getByRole('tab', { name: /Anomalies/ }));
-    await waitFor(() => expect(within(filtersBar()).getByRole('tab', { name: /Anomalies/ })).toHaveAttribute('aria-selected', 'true'));
-    expect(within(filtersBar()).getByRole('tab', { name: /High confidence/ })).toHaveAttribute('aria-selected', 'false');
+    expect(within(filtersBar()).getAllByRole('button', { pressed: true })).toHaveLength(1);
+    fireEvent.click(within(filtersBar()).getByRole('button', { name: /Anomalies/ }));
+    await waitFor(() => expect(within(filtersBar()).getByRole('button', { name: /Anomalies/ })).toHaveAttribute('aria-pressed', 'true'));
+    expect(within(filtersBar()).getByRole('button', { name: /High confidence/ })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('keeps drive rows visible and does not classify missing query data as unknown', () => {
@@ -921,7 +928,7 @@ describe('DrivesListPage — FSD evidence', () => {
         .map((link) => link.getAttribute('href')),
     );
     expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
-    const unknown = within(filtersBar()).getByRole('tab', { name: /Unknown/ });
+    const unknown = within(filtersBar()).getByRole('button', { name: /Unknown/ });
     expect(unknown).toHaveTextContent('(0)');
     expect(unknown).toBeDisabled();
 
@@ -944,7 +951,7 @@ describe('DrivesListPage — FSD evidence', () => {
         .map((link) => link.getAttribute('href')),
     );
     expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
-    expect(within(filtersBar()).getByRole('tab', { name: /Unknown/ })).toBeDisabled();
+    expect(within(filtersBar()).getByRole('button', { name: /Unknown/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
   });
 
@@ -982,7 +989,7 @@ describe('DrivesListPage — FSD evidence', () => {
       'UTC',
     );
     expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
-    expect(within(filtersBar()).getByRole('tab', { name: /High confidence/ })).toBeDisabled();
+    expect(within(filtersBar()).getByRole('button', { name: /High confidence/ })).toBeDisabled();
   });
 });
 
@@ -1148,6 +1155,7 @@ describe('DrivesListPage — bulk delete', () => {
 
     // The bulk toolbar appears with the selection count.
     expect(await screen.findByText('1 selected')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Bulk actions for selected items' })).toHaveAttribute('data-selection-scope', 'filtered');
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 

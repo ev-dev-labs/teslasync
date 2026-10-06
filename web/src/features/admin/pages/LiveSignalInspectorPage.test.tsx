@@ -279,6 +279,9 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     selectVehicle('1');
 
     expect(document.querySelector('.animate-pulse')).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading Source layers' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Signal kinds' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Live snapshot' })).toBeInTheDocument();
     // The filter input only mounts with the table, so its absence proves we
     // are not yet in the ready state.
     expect(screen.queryByLabelText('Filter signals')).toBeNull();
@@ -330,7 +333,32 @@ describe('LiveSignalInspectorPage — error handling', () => {
     expect(screen.getByText('hello')).toBeInTheDocument();
     // No section collapsed to the error affordance.
     expect(screen.queryByText("Can't reach server")).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    const breakdowns = within(screen.getByRole('region', { name: 'Signal breakdowns' }));
+    expect(breakdowns.getAllByTestId('source-layer-badge')).toHaveLength(4);
+    const retryButtons = screen.getAllByRole('button', { name: 'Retry' });
+    expect(retryButtons).toHaveLength(3);
+    refetch.mockClear();
+    fireEvent.click(retryButtons[0]);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('a1')).toBeInTheDocument();
+    expect(screen.getByText('hello')).toBeInTheDocument();
+  });
+
+  it('keeps all three retained-empty source explanations during a failed poll', () => {
+    setLive({
+      data: { vehicle_id: 1, count: 0, signals: {} },
+      isError: true,
+      error: new Error('transient blip'),
+      dataUpdatedAt: Date.now(),
+    });
+    renderPage();
+    expect(screen.getByText('Redis has no live snapshot for this vehicle yet. Confirm the vehicle is online and publishing.')).toBeInTheDocument();
+    expect(screen.getByText('No live signals to classify yet.')).toBeInTheDocument();
+    expect(screen.getByText('No live signals to categorise yet.')).toBeInTheDocument();
+    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(3);
+    expect(screen.queryByLabelText('Filter signals')).toBeNull();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
   });
 });
 

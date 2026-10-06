@@ -25,6 +25,15 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('does not scope account-wide energy installations to a vehicle or date range', () => {
+    for (const path of ['/energy-products', '/energy-products/', '/energy-products?site_id=42']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    for (const path of ['/projected-range', '/analytics/range']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: true });
+    }
+  });
+
   it('does not imply live workspace scope for synthetic developer references', () => {
     for (const path of ['/dev/grid-states', '/dev/layout', '/dev/stats']) {
       expect(getWorkspaceRouteScope(path)).toEqual({ range: false, vehicle: false });
@@ -88,6 +97,19 @@ describe('getWorkspaceRouteScope', () => {
     });
     expect(getWorkspaceRouteScope('/power-flow')).toEqual({
       range: true,
+      vehicle: false,
+    });
+  });
+
+  it('owns the period comparison vehicle without overriding independent periods', () => {
+    for (const path of ['/period-compare', '/period-compare/', '/period-compare?period_a=7&period_b=0']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({
+        range: false,
+        vehicle: true,
+      });
+    }
+    expect(getWorkspaceRouteScope('/vehicle-comparison')).toEqual({
+      range: false,
       vehicle: false,
     });
   });

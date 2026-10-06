@@ -1,8 +1,9 @@
 import { type ReactNode } from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { describe, it, expect, vi } from 'vitest'
+import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import { TimelineItem } from './TimelineItem'
+import { Button } from '@/components/ui/Button'
 
 const renderRouted = (ui: ReactNode) => render(<MemoryRouter>{ui}</MemoryRouter>)
 
@@ -120,6 +121,97 @@ describe('TimelineItem — navigation (href)', () => {
     const { container } = render(<TimelineItem title="a" time="now" color="#22c55e" />)
     expect(container.querySelector('a')).toBeNull()
     expect((container.firstChild as HTMLElement).className).toContain('flex gap-3')
+  })
+
+  describe('TimelineItem — rich composition', () => {
+    it('keeps default title, subtitle, badges and time inside the whole-row link', () => {
+      renderRouted(
+        <TimelineItem
+          title="Legacy row"
+          subtitle="Existing detail"
+          time="5m ago"
+          href="/alerts/7"
+          badges={<span>warning</span>}
+        />,
+      )
+      const link = screen.getByRole('link')
+      expect(link).toContainElement(screen.getByText('Legacy row'))
+      expect(link).toContainElement(screen.getByText('Existing detail'))
+      expect(link).toContainElement(screen.getByText('warning'))
+      expect(link).toContainElement(screen.getByText('5m ago'))
+      expect(screen.getByText('Legacy row')).toHaveClass('truncate')
+    })
+
+    it('keeps action buttons and metadata links outside navigation and clicks actions without navigating', () => {
+      const onDownload = vi.fn()
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route path="/" element={
+              <TimelineItem
+                title="Export ready"
+                time="now"
+                href="/exports/7"
+                metadata={<Link to="/exports/source">Source details</Link>}
+                actions={<Button onClick={onDownload}>Download export</Button>}
+                badges={<span>ready</span>}
+              />
+            } />
+            <Route path="/exports/7" element={<div>Export detail page</div>} />
+            <Route path="/exports/source" element={<div>Export source page</div>} />
+          </Routes>
+        </MemoryRouter>,
+      )
+      const navigation = screen.getByRole('link', { name: 'Export ready' })
+      const action = screen.getByRole('button', { name: 'Download export' })
+      expect(action.closest('a')).toBeNull()
+      expect(screen.getByRole('link', { name: 'Source details' }).parentElement?.closest('a')).toBeNull()
+      expect(navigation).not.toContainElement(screen.getByText('ready'))
+      fireEvent.click(action)
+      expect(onDownload).toHaveBeenCalledTimes(1)
+      expect(screen.queryByText('Export detail page')).not.toBeInTheDocument()
+      expect(screen.queryByText('Export source page')).not.toBeInTheDocument()
+      expect(navigation).toBeInTheDocument()
+      fireEvent.click(navigation)
+      expect(screen.getByText('Export detail page')).toBeInTheDocument()
+    })
+
+    it('renders metadata and actions without requiring a navigation target', () => {
+      render(
+        <TimelineItem
+          title="Automation failed"
+          time="now"
+          metadata={<span>Duration: 12 seconds</span>}
+          actions={<Button>Retry automation</Button>}
+        />,
+      )
+      expect(screen.getByText('Duration: 12 seconds')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Retry automation' })).toBeInTheDocument()
+      expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    })
+
+    it('keeps long titles, multiline details and action labels reachable with narrow wrapping', () => {
+      const title = 'A very long automation name that must remain available in a narrow feed'
+      const subtitle = 'First detail line\nSecond detail line'
+      const detail = 'source-error-with-an-unbroken-identifier-'.repeat(12)
+      render(
+        <TimelineItem
+          title={title}
+          subtitle={subtitle}
+          time="now"
+          wrap
+          metadata={<span>{detail}</span>}
+          actions={<Button>Download the complete diagnostic export</Button>}
+        />,
+      )
+      expect(screen.getByText(title)).not.toHaveClass('truncate')
+      expect(screen.getByText(title)).toHaveClass('break-words', '[overflow-wrap:anywhere]')
+      expect(screen.getByText(/First detail line/).textContent).toBe(subtitle)
+      expect(screen.getByText(/First detail line/)).toHaveClass('whitespace-pre-wrap')
+      expect(screen.getByText(detail).parentElement).toHaveClass('break-words', '[overflow-wrap:anywhere]')
+      expect(screen.getByRole('button')).toHaveAccessibleName('Download the complete diagnostic export')
+      expect(screen.getByRole('button').parentElement).toHaveClass('flex-wrap')
+    })
   })
 
   it('wraps the row in a focusable Link with the correct href when href is set', () => {

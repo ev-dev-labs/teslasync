@@ -155,6 +155,23 @@ describe('WidgetPicker', () => {
     expect(screen.queryByText('Layout Presets')).toBeNull();
   });
 
+  it('keeps category filters as independent pressed buttons, not document tabs', () => {
+    renderPicker();
+    const group = screen.getByRole('group', { name: 'Filter by category' });
+    const all = within(group).getByRole('button', { name: 'All' });
+    const battery = within(group).getByRole('button', { name: 'Battery & range' });
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(all).toHaveAttribute('tabindex', '0');
+    expect(battery).toHaveAttribute('tabindex', '0');
+    fireEvent.keyDown(battery, { key: 'ArrowRight' });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(battery);
+    expect(battery).toHaveAttribute('aria-pressed', 'true');
+    expect(all).toHaveAttribute('aria-pressed', 'false');
+    expect(widgetCard(BATTERY_GAUGE_DESC)).toBeInTheDocument();
+    expect(screen.queryByRole('tabpanel')).toBeNull();
+  });
+
   it('searching filters to matches, shows a result-count header, and hides non-matches', () => {
     renderPicker();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'range' } });

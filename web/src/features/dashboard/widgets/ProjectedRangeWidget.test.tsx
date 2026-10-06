@@ -156,7 +156,7 @@ function renderWidget(
 
 /** The inner fill <div> inside the comparison bar's progressbar track. */
 function barFill(container: HTMLElement): HTMLElement {
-  const el = container.querySelector('[role="progressbar"] > div');
+  const el = container.querySelector('[data-metric-fill]');
   if (!el) throw new Error('progressbar fill not found');
   return el as HTMLElement;
 }
@@ -255,7 +255,7 @@ describe('ProjectedRangeWidget — comparison bar colour bands', () => {
     expect(bar).toHaveAttribute('aria-valuenow', '100');
     const fill = barFill(container);
     expect(fill.style.width).toBe('100%');
-    expect(fill.style.backgroundColor).toMatch(GREEN);
+    expect(fill.style.background).toMatch(GREEN);
   });
 
   it('paints the fill amber in the 60–79 band', () => {
@@ -265,7 +265,7 @@ describe('ProjectedRangeWidget — comparison bar colour bands', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(barFill(container).style.backgroundColor).toMatch(AMBER);
+    expect(barFill(container).style.background).toMatch(AMBER);
   });
 
   it('paints the fill red below 60', () => {
@@ -277,7 +277,7 @@ describe('ProjectedRangeWidget — comparison bar colour bands', () => {
 
     const bar = screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuenow', '40');
-    expect(barFill(container).style.backgroundColor).toMatch(RED);
+    expect(barFill(container).style.background).toMatch(RED);
   });
 
   it('renders an indeterminate progressbar (no aria-valuenow, no caption) when EPA is zero', () => {

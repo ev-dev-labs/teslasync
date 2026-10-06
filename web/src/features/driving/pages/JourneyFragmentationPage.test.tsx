@@ -82,7 +82,7 @@ vi.mock('@/components/forms', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     children,
     contextActions,
     query,

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionTitle } from '@/components/ui';
 import { SavedViewMenu } from '@/components/data-display';
-import { PageLayout, CardGrid } from '@/components/layout/layout-reference';
+import { PageLayout, CardGrid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';

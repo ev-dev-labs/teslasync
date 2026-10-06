@@ -37,6 +37,7 @@ import type {
   MonthlyMileageBucket,
 } from '@/types/analytics';
 import type { Vehicle } from '@/types/vehicle';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -122,8 +123,7 @@ const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
 const PALETTE = ['#0a', '#0b', '#0c', '#0d', '#0e', '#0f', '#1a', '#1b'];
 
- 
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -185,13 +185,23 @@ function renderPage() {
 }
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Mileage summary metrics' });
-const windowsRegion = () => screen.getByRole('region', { name: 'Odometer and distance windows' });
-const chartsRegion = () => screen.getByRole('region', { name: 'Daily and monthly distance' });
+function panel(title: string): HTMLElement {
+  const card = screen.getByRole('heading', { name: title, level: 3 }).closest('[data-card]');
+  if (!(card instanceof HTMLElement)) throw new Error(`Missing mileage card: ${title}`);
+  return card;
+}
+const windowsRegion = () => panel('Distance by window');
+const odometerRegion = () => panel('Odometer over time');
+const dailyRegion = () => panel('Daily distance');
+const chartsRegion = () => panel('Monthly distance');
 
-/** Value <p> that immediately follows a MetricCard's label span. */
+/** Read the real shared stat tile's displayed value and unit. */
 function cardValue(region: HTMLElement, label: string): string {
-  const span = within(region).getByText(label);
-  return span.closest('p')?.nextElementSibling?.textContent ?? '';
+  const tile = within(region).getByText(label).closest('[data-stat]');
+  if (!(tile instanceof HTMLElement)) throw new Error(`Missing mileage metric: ${label}`);
+  const value = tile.querySelector('[data-stat-value]')?.textContent ?? '';
+  const unit = tile.querySelector('[data-stat-unit]')?.textContent;
+  return unit ? `${value} ${unit}` : value;
 }
 
 /** Sibling that immediately follows a label span (MetricBar sublabel / KVList dd). */
@@ -200,6 +210,8 @@ function siblingText(region: HTMLElement, label: string): string {
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockStats.mockReset();
   mockDaily.mockReset();
   mockMonthly.mockReset();
@@ -284,8 +296,8 @@ describe('MileagePage — populated (km)', () => {
   it('mounts the three chart surfaces and the monthly summary table', () => {
     renderPage();
 
-    expect(within(windowsRegion()).getByRole('img', { name: 'Odometer readings over time' })).toBeInTheDocument();
-    expect(within(chartsRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
+    expect(within(odometerRegion()).getByRole('img', { name: 'Odometer readings over time' })).toBeInTheDocument();
+    expect(within(dailyRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
     expect(within(chartsRegion()).getByRole('img', { name: 'Monthly distance traveled over time' })).toBeInTheDocument();
 
     // Monthly summary table: unit-suffixed headers + a data row.
@@ -339,7 +351,7 @@ describe('MileagePage — empty states', () => {
     // Odometer filter removed every point → empty state.
     expect(screen.getByText('No odometer readings yet')).toBeInTheDocument();
     // But total_km is unaffected → the daily-distance chart still renders.
-    expect(within(chartsRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
+    expect(within(dailyRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
     expect(screen.queryByText('No daily distance yet')).toBeNull();
   });
 });
@@ -353,7 +365,7 @@ describe('MileagePage — per-query error + retry', () => {
     const kpi = kpiRegion();
     expect(within(kpi).getByText('Server error')).toBeInTheDocument();
     // Healthy panels are unaffected — the daily chart still renders.
-    expect(within(chartsRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
+    expect(within(dailyRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
 
     fireEvent.click(within(kpi).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(q.refetch).toHaveBeenCalled());
@@ -364,7 +376,7 @@ describe('MileagePage — per-query error + retry', () => {
     mockDaily.mockReturnValue(q);
     renderPage();
 
-    const w = windowsRegion();
+    const w = odometerRegion();
     expect(within(w).getByText('Service unavailable')).toBeInTheDocument();
     // Stats-driven KPIs remain intact.
     expect(cardValue(kpiRegion(), 'Total distance')).toBe('12,000 km');
@@ -381,7 +393,7 @@ describe('MileagePage — per-query error + retry', () => {
     const charts = chartsRegion();
     // Only the monthly chart errors; the daily chart still renders alongside it.
     expect(within(charts).getByText('Server error')).toBeInTheDocument();
-    expect(within(charts).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
+    expect(within(dailyRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
 
     fireEvent.click(within(charts).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(q.refetch).toHaveBeenCalled());
@@ -406,8 +418,11 @@ describe('MileagePage — null safety + a11y', () => {
     renderPage();
 
     expect(screen.getByRole('region', { name: 'Mileage summary metrics' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Odometer and distance windows' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Daily and monthly distance' })).toBeInTheDocument();
+    expect(windowsRegion()).toHaveAccessibleName('Distance by window');
+    expect(chartsRegion()).toHaveAccessibleName('Monthly distance');
+    expect(odometerRegion()).toHaveAccessibleName('Odometer over time');
+    expect(dailyRegion()).toHaveAccessibleName('Daily distance');
+    expect(panel('Monthly summary')).toHaveAccessibleName('Monthly summary');
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
   });

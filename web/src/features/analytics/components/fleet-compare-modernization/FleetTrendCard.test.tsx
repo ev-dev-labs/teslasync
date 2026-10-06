@@ -51,6 +51,20 @@ describe('FleetTrendCard source preservation', () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
+  it('refreshes both existing comparison sources from the empty chart', () => {
+    const retry = vi.fn();
+    render(
+      <FleetTrendCard {...base} onRetry={retry} hasData={false} loading={false} error={null}>
+        <div data-testid="retained-series" />
+      </FleetTrendCard>,
+      { wrapper: TestRouter },
+    );
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getByText(base.emptyMessage)).toBeInTheDocument();
+    expect(screen.queryByTestId('retained-series')).not.toBeInTheDocument();
+  });
+
   it('keeps a usable chart while its independent peer is initially loading', () => {
     render(
       <>

@@ -13,10 +13,11 @@ export function EfficiencyTrend({ model, source, units, selectedVehicleId }: Dri
   return <EfficiencyChart source={source}
     title={t('efficiency.dailyTrend', { unit: efficiencyUnit, defaultValue: 'Daily Efficiency ({{unit}})' })}
     ariaLabel={t('efficiency.dailyTrend.aria', 'Daily efficiency trend area chart')}
-    data={dailyTrend.map(d => ({ date: d.date, efficiency: d.efficiency }))}
+    data={dailyTrend}
     dataColumns={[
       { key: 'date', label: t('efficiency.col.date', 'Date') },
-      { key: 'efficiency', label: efficiencyUnit },
+      { key: 'efficiency', label: t('efficiency.chartColumns.driveEfficiency', 'Drive energy consumption ({{unit}})', { unit: efficiencyUnit }), kind: 'measurement' },
+      { key: 'distance', label: t('efficiency.chartColumns.driveDistance', 'Drive distance ({{unit}})', { unit: units.unitPrefs.distance }), kind: 'measurement' },
     ]}
     empty={dailyTrend.length < 3}
     annotations={{ vehicleId: selectedVehicleId, scope: 'efficiency', chartId: 'efficiency-daily-trend' }}>

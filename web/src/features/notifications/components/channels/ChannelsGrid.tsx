@@ -21,7 +21,7 @@ interface ChannelsGridProps {
   onAdd: () => void;
 }
 
-const AUTO_FIT = '[grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]';
+const AUTO_FIT = '[grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]';
 const SKELETON_KEYS = [0, 1, 2] as const;
 
 export function ChannelsGrid({

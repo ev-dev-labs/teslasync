@@ -32,7 +32,9 @@ export function EfficiencySource({
       title={state.status === 'partial' ? t('efficiency.state.partialTitle', 'Incomplete measurements') : undefined}
       message={state.status === 'partial' ? t('efficiency.state.partial', 'Some measurements are missing or invalid. Available measurements remain visible.') : undefined} />
     {!state.hasData && !loading
-      ? <EmptyState message={t('efficiency.state.unknown', 'The source has not supplied measurements for this vehicle.')} />
-      : available ? children : emptyContent ?? <EmptyState message={emptyMessage} />}
+      ? <EmptyState message={t('efficiency.state.unknown', 'The source has not supplied measurements for this vehicle.')}
+          action={state.retry ? { label: t('common.retry', 'Retry'), onClick: state.retry } : undefined} />
+      : available ? children : emptyContent ?? <EmptyState message={emptyMessage}
+          action={state.retry ? { label: t('common.retry', 'Retry'), onClick: state.retry } : undefined} />}
   </>;
 }

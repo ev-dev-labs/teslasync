@@ -198,6 +198,9 @@ interface CapturedPlayback {
   getPreviewAt: (n: number) => unknown;
   onSeek: (p: number) => void;
   onPlay: () => void;
+  onRestart: () => void;
+  onStop: () => void;
+  framed: boolean;
 }
 
 /* ── Unit-preference bags ─────────────────────────────────────────── */
@@ -525,6 +528,34 @@ describe('TripReplayPage populated', () => {
     expect(Array.isArray(pb.markers)).toBe(true);
     expect(typeof pb.getPreviewAt).toBe('function');
     expect(typeof pb.onSeek).toBe('function');
+    expect(pb.framed).toBe(false);
+  });
+
+  it('rewinds without pausing on restart, while stop rewinds and pauses', () => {
+    renderPage();
+    act(() => {
+      (captured.playback as CapturedPlayback).onPlay();
+      (captured.playback as CapturedPlayback).onSeek(0.5);
+    });
+    expect((captured.playback as CapturedPlayback).isPlaying).toBe(true);
+    act(() => (captured.playback as CapturedPlayback).onRestart());
+    expect((captured.playback as CapturedPlayback).progress).toBe(0);
+    expect((captured.playback as CapturedPlayback).isPlaying).toBe(true);
+    act(() => {
+      (captured.playback as CapturedPlayback).onSeek(0.5);
+      (captured.playback as CapturedPlayback).onStop();
+    });
+    expect((captured.playback as CapturedPlayback).progress).toBe(0);
+    expect((captured.playback as CapturedPlayback).isPlaying).toBe(false);
+  });
+
+  it('keeps summary, map, transport and charts during a retained-data refresh failure', () => {
+    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive(), error: new Error('refresh failed') }));
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Drive Summary' })).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+    expect(screen.getByTestId('playback-controls')).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
   });
 
   it('re-derives every figure when the unit preference flips to mph / mi', () => {

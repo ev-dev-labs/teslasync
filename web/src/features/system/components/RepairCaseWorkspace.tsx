@@ -8,6 +8,7 @@ import {
 } from '@/api/hooks/useDataRepair';
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats';
 import { Tabs } from '@/components/ui';
+import { useDataState } from '@/hooks/useDataState';
 import { RepairBulkDismissDialog } from './RepairBulkDismissDialog';
 import { RepairCaseDrawer } from './RepairCaseDrawer';
 import { RepairCaseQueue } from './RepairCaseQueue';
@@ -44,6 +45,8 @@ export function RepairCaseWorkspace({
   const [dismissReason, setDismissReason] = useState('');
   const casesQuery = useRepairCases(filters);
   const statsQuery = useRepairCaseStats(vehicleId);
+  const casesState = useDataState(casesQuery);
+  const statisticsState = useDataState(statsQuery);
   const scan = useRunRepairScan();
   const bulk = useBulkTransitionRepairCases();
   const cases = casesQuery.data?.cases ?? [];
@@ -122,9 +125,9 @@ export function RepairCaseWorkspace({
     <section className="space-y-4" aria-labelledby="repair-case-workspace-title">
       <RepairCaseWorkspaceHeader
         statistics={statsQuery.data}
-        statisticsLoading={statsQuery.isLoading}
+        statisticsLoading={statsQuery.isLoading && !statisticsState.hasData}
         statisticsBusy={statsQuery.isFetching && !statsQuery.isLoading}
-        statisticsError={statsQuery.error}
+        statisticsError={statisticsState.fatalError ?? statisticsState.refreshError}
         scanPending={scan.isPending}
         canWrite={canWrite}
         writeBlockReason={writeBlockReason}
@@ -156,10 +159,10 @@ export function RepairCaseWorkspace({
             cases={cases}
             filters={filters}
             selectedCaseIds={selectedCaseIds}
-            loading={casesQuery.isLoading}
-            hasData={casesQuery.data !== undefined}
+            loading={casesQuery.isLoading && !casesState.hasData}
+            hasData={casesState.hasData}
             busy={casesQuery.isFetching && !casesQuery.isLoading}
-            error={casesQuery.error}
+            error={casesState.fatalError ?? casesState.refreshError}
             hasMore={casesQuery.data?.has_more ?? false}
             hasPrevious={history.length > 0}
             onFiltersChange={updateFilters}

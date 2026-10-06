@@ -227,12 +227,35 @@ describe('TriggerConfigurator — schedule (simple mode)', () => {
       cron_expr: '0 8 * * 0,1,2,3,4,5',
       timezone: 'UTC',
     });
+
     // Selecting the final missing day (Sat) makes all 7 → collapses to '*'.
     fireEvent.click(screen.getByRole('button', { name: 'Sat' }));
     expect(onChange).toHaveBeenCalledWith({
       kind: 'trigger_schedule',
       cron_expr: '0 8 * * *',
       timezone: 'UTC',
+    });
+  });
+
+  it('retains caller cron empty-as-all policy when the last explicit day is removed', () => {
+    const { onChange } = renderConfig({
+      kind: 'trigger_schedule', cron_expr: '45 23 * * 3', timezone: 'Europe/London',
+    });
+    const group = screen.getByRole('group', { name: 'Days' });
+    expect(within(group).getAllByRole('button')).toHaveLength(7);
+    fireEvent.click(within(group).getByRole('button', { name: 'Wed' }));
+    expect(onChange).toHaveBeenCalledWith({
+      kind: 'trigger_schedule', cron_expr: '45 23 * * *', timezone: 'Europe/London',
+    });
+  });
+
+  it('preserves an existing cron day order when removing a day', () => {
+    const { onChange } = renderConfig({
+      kind: 'trigger_schedule', cron_expr: '5 7 * * 5,1,3', timezone: 'UTC',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Mon' }));
+    expect(onChange).toHaveBeenCalledWith({
+      kind: 'trigger_schedule', cron_expr: '5 7 * * 5,3', timezone: 'UTC',
     });
   });
 

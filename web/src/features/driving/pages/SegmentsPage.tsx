@@ -4,7 +4,7 @@ import {
   Flag, Trophy, Zap, Gauge, Timer, Swords, MapPin, Route as RouteIcon,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   Button,
   DataTable,
@@ -246,7 +246,7 @@ export default function SegmentsPage() {
   const bothChosen = racerA != null && racerB != null && racerA !== racerB;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('segments.title', 'Ghost Racing')}
       subtitle={t('segments.subtitle', 'Race your most-repeated routes against your own personal best')}
       query={segmentsQuery}
@@ -550,7 +550,7 @@ export default function SegmentsPage() {
           </GlassPanel>
         </FadeIn>
       ) : null}
-    </PageContainer>
+    </PageLayout>
   );
 }
 

@@ -24,7 +24,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -147,7 +147,7 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const result = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -156,6 +156,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...result, client };
 }
 
 /** The MetricCard root text ("<label><value>") for a given KPI label. */
@@ -352,5 +353,28 @@ describe('APIKeysPage', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     );
+  });
+
+  it('keeps retained key identity, permission usage and naming confirmation when a background refresh fails', async () => {
+    installRequest(threeKeys());
+    const { client } = renderPage();
+    await screen.findByText('Nova');
+    mockedRequest.mockRejectedValue(new Error('refresh unavailable'));
+    await act(async () => { await client.refetchQueries(); });
+    expect(screen.getByText('Falcon')).toBeInTheDocument();
+    expect(screen.getByText('Nova')).toBeInTheDocument();
+    expect(screen.getByText('Roadster')).toBeInTheDocument();
+    expect(screen.getByText('3 total')).toBeInTheDocument();
+    expect(kpiCardText('Total keys')).toContain('3');
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete key Nova' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Nova/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mockedRequest.mock.calls.some(([, options]) =>
+      options != null && typeof options === 'object' && 'method' in options && options.method === 'DELETE',
+    )).toBe(false);
   });
 });

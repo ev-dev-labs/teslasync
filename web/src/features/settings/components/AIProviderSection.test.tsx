@@ -226,6 +226,9 @@ describe('AIProviderSection — local mode structure', () => {
       'aria-label',
       'Provider configuration',
     )
+    const group = screen.getByRole('group', { name: 'Provider configuration' })
+    expect(group).toContainElement(screen.getByTestId('ai-provider-base-url'))
+    expect(screen.getByRole('heading', { name: 'Provider configuration', level: 3 })).toBeInTheDocument()
   })
 })
 

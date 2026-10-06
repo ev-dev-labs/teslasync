@@ -1,13 +1,10 @@
-import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
+import { LayoutCard, Grid } from '@/components/layout';
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
   MetricValue,
-  PanelTitle,
   Text,
 } from '@/components/ui';
 
@@ -79,11 +76,7 @@ export function CabinThermalAccountingMatrix({
 
   return (
     <section data-testid="cabin-thermal-accounting">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.accounting.title', 'Data and accounting matrix')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.accounting.title', 'Data and accounting matrix')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.accounting.subtitle',
@@ -139,7 +132,7 @@ export function CabinThermalAccountingMatrix({
             </div>
           </Grid>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

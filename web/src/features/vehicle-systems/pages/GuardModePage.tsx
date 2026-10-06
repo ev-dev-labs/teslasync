@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
-import { PageLayout, CardGrid, type CardGridItem } from '@/components/layout/layout-reference';
+import { PageLayout, CardGrid, type CardGridItem } from '@/components/layout';
 import { Text, ConfirmDialog } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';

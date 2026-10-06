@@ -5,6 +5,7 @@ import { Table, Badge, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 
 import type { DataQuality, Evidence } from '@/types/ownership';
+import type { DataStateSource } from '@/api/dataState';
 import { OwnershipPanel } from './OwnershipPanel';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -13,6 +14,8 @@ interface EvidencePanelProps {
   evidence?: Evidence[] | null;
   limitations?: string[] | null;
   unsupported?: string[] | null;
+  source?: DataStateSource<unknown>;
+  sourceEnabled?: boolean;
 }
 
 function qualityVariant(status: DataQuality['status'] | undefined) {
@@ -32,6 +35,8 @@ export function EvidencePanel({
   evidence,
   limitations,
   unsupported,
+  source,
+  sourceEnabled,
 }: EvidencePanelProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
@@ -42,6 +47,8 @@ export function EvidencePanel({
 
   return (
     <OwnershipPanel
+      source={source}
+      sourceEnabled={sourceEnabled}
       title={t('ownership.evidence.title', 'Evidence, quality, and limitations')}
       description={t(
         'ownership.evidence.subtitle',

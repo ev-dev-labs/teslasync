@@ -171,6 +171,21 @@ function getEditor(): HTMLTextAreaElement {
 }
 
 describe('SqlPlaygroundPage', () => {
+  it('preserves exact untrimmed SQL for manual recovery after denial and retries without execution', async () => {
+    writeText.mockRejectedValueOnce(new Error('denied'));
+    renderPage();
+    const sql = '  SELECT distance_m FROM drives;\n  ';
+    fireEvent.change(getEditor(), { target: { value: sql } });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy query' }));
+    expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
+    getEditor().select();
+    expect(getEditor().selectionEnd).toBe(sql.length);
+    expect(getEditor().value).toBe(sql);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(sql);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy query' }));
+    await waitFor(() => expect(screen.queryByText(/Select the text manually/)).toBeNull());
+    expect(writeText.mock.calls).toEqual([[sql], [sql]]);
+  });
   it('renders the deterministic baseline: header, editor, actions, reference panel, and every curated catalog table', async () => {
     renderPage();
 

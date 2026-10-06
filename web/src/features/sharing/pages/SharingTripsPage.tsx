@@ -31,8 +31,8 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Route as RouteIcon, Share2, Zap, Car, RefreshCw } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, PanelTitle, Text } from '@/components/ui'
+import { LayoutCard, PageLayout } from '@/components/layout'
+import { GlassPanel, Button, Text } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 
@@ -41,6 +41,7 @@ import { useTrips } from '@/api/hooks/useTrips'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { useUnits } from '@/hooks/useUnits'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDataState } from '@/hooks/useDataState'
 
 import { AITripPostcardShareCardImageGeneration } from '@/components/ai/AITripPostcardShareCardImageGeneration'
 import {
@@ -59,7 +60,9 @@ export default function SharingTripsPage() {
   const { formatDistance, formatEnergy } = useUnits()
 
   const tripsQuery = useTrips({ vehicle_id: vehicleId ?? undefined, limit: 20 })
-  const { data: trips, isLoading, error, refetch } = tripsQuery
+  const { data: trips, refetch } = tripsQuery
+  const sourceState = useDataState(tripsQuery)
+  const error = sourceState.fatalError
   const allTrips = useMemo(() => trips ?? [], [trips])
 
   // Selected-trip id. The recent-trips list is the only selector on this page;
@@ -72,13 +75,18 @@ export default function SharingTripsPage() {
   )
 
   const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips, displayPrecision, displayLocale])
-  const coldLoading = isLoading && allTrips.length === 0
+  const coldLoading = tripsQuery.isLoading && !sourceState.hasData
   // Surface the destructive error banner only when there is nothing cached to
   // show. On a background-refetch failure TanStack Query keeps the last good
   // data, so we keep rendering it (the header freshness badge already signals
   // the staleness) instead of blowing the list + totals away with a full-panel
   // error.
-  const showError = !!error && allTrips.length === 0
+  const showError = !!sourceState.fatalError
+  const unresolvedMessage = !sourceState.hasData && !coldLoading && !showError
+    ? tripsQuery.fetchStatus === 'paused'
+      ? t('sharing.trips.source.paused', 'The recent-trip query is paused; no empty result is inferred.')
+      : t('sharing.trips.source.unresolved', 'Recent-trip availability has not resolved yet.')
+    : null
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -93,7 +101,7 @@ export default function SharingTripsPage() {
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('sharing.trips.title', 'Share a trip')}
       subtitle={t(
         'sharing.trips.subtitle',
@@ -121,6 +129,8 @@ export default function SharingTripsPage() {
           >
             {coldLoading ? (
               [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[74px] rounded-xl" />)
+            ) : unresolvedMessage ? (
+              <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
             ) : (
               <>
                 <MetricCard
@@ -156,11 +166,8 @@ export default function SharingTripsPage() {
       {/* 2 — Main bento: recent-trips list (hero) + share preview / static hint */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <RouteIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('sharing.trips.recent.heading', 'Recent trips')}
-            </PanelTitle>
+          <div className="min-w-0 xl:col-span-2">
+          <LayoutCard title={t('sharing.trips.recent.heading', 'Recent trips')}>
             {coldLoading ? (
               <div className="space-y-2">
                 {[0, 1, 2, 3].map((i) => (
@@ -173,6 +180,8 @@ export default function SharingTripsPage() {
                 onRetry={() => refetch()}
                 resourceName={t('sharing.trips.resource', 'Trips')}
               />
+            ) : unresolvedMessage ? (
+              <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
             ) : allTrips.length === 0 ? (
               // no-action: trips are created automatically by driving — no manual action available.
               <EmptyState
@@ -201,7 +210,8 @@ export default function SharingTripsPage() {
                 ))}
               </ul>
             )}
-          </GlassPanel>
+          </LayoutCard>
+          </div>
 
           <div className="space-y-4 xl:col-span-1">
             <SelectedTripPreview
@@ -213,17 +223,14 @@ export default function SharingTripsPage() {
             {/* Static share-card hint — the canonical baseline publishing
                 workflow (per-drive Share button) so a user who lands here
                 without AI on still sees how to share. */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-2">
-                {t('sharing.trips.staticHint.heading', 'Static share cards')}
-              </PanelTitle>
+            <LayoutCard title={t('sharing.trips.staticHint.heading', 'Static share cards')}>
               <Text as="p" size="sm" color="secondary" className="max-w-prose">
                 {t(
                   'sharing.trips.staticHint.body',
                   'Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click "share", and copy the public link \u2014 anyone with the link can view the static card, no AI required.',
                 )}
               </Text>
-            </GlassPanel>
+            </LayoutCard>
           </div>
         </section>
       </FadeIn>
@@ -238,6 +245,6 @@ export default function SharingTripsPage() {
       <FadeIn delay={0.2}>
         <AITripPostcardShareCardImageGeneration tripId={selectedTrip?.id} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

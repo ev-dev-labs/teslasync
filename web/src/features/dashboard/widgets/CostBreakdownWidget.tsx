@@ -91,7 +91,7 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
     labels: axisLabels, fontSize: 10, minWidth: 45, padding: 20, enabled: !isCompact && !canUseDonut,
   });
 
-  const rankedItems = useMemo((): RankedItem[] => {
+  const rankedItems = useMemo((): (RankedItem & { value: number })[] => {
     return monthlyEntries.flatMap((entry, i) => {
       const value = knownNumber(entry.ev_cost);
       return value == null ? [] : [{
@@ -100,7 +100,7 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
         value,
         formattedValue: formatAmount(value),
       }];
-    });
+    }).sort((a, b) => b.value - a.value);
   }, [monthlyEntries, formatAmount]);
 
   const unknownMonths = monthlyEntries
@@ -256,6 +256,8 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
           <div className="min-h-0 min-w-0 overflow-auto">
           <WidgetRankedList
             items={rankedItems}
+            order="source"
+            wrapContent
             compact={false}
             maxItems={5}
             showBars={rankedItems.every((entry) => entry.value >= 0)}

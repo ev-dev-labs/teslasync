@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -48,6 +50,7 @@ export default function ExplorerPage() {
       }),
     [historyQuery.data],
   );
+  const sourceState = useDataState(historyQuery, { provenance: 'historical' });
 
   if (vehicleId == null) {
     return (
@@ -58,15 +61,15 @@ export default function ExplorerPage() {
   }
 
   const sectionState: ExplorerSectionState = {
-    isLoading: historyQuery.isLoading,
-    error: historyQuery.isError ? historyQuery.error : null,
+    isLoading: sourceState.status === 'initial',
+    error: sourceState.fatalError,
     onRetry: () => {
       void historyQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('explorer.title', 'Explorer')}
       subtitle={t(
         'explorer.subtitle',
@@ -74,6 +77,7 @@ export default function ExplorerPage() {
       )}
       query={historyQuery}
     >
+      <StaleRefreshWarning state={sourceState} label={t('explorer.title', 'Explorer')} />
       <FadeIn>
         <ExplorerKpis
           summary={summary}
@@ -130,6 +134,6 @@ export default function ExplorerPage() {
           state={sectionState}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

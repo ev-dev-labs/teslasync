@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ChartContainer, ChartLegend, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ChartTooltip, ResponsiveContainer, ReferenceLine, ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX, chartGrid, axisTick, CHART_COLORS, AREA_DEFAULTS, areaGradient } from '@/components/charts';
+import { ChartLegend, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ChartTooltip, ResponsiveContainer, ReferenceLine, ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX, chartGrid, axisTick, CHART_COLORS, AREA_DEFAULTS, areaGradient } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -102,11 +103,13 @@ function TimelineChart({
 
   // chart-a11y:no-table dense per-sample replay timeline; per-segment summary appears in the trip overview panel
   return (
-    <ChartContainer
+    <ChartCard
       title={t('replay.timeline.title', 'Speed & Power Timeline')}
       subtitle={t('replay.timeline.subtitle', 'Click to seek replay position')}
       ariaLabel={t('replay.timeline.aria', 'Trip replay speed and power timeline area chart')}
       chartKey="trip-replay-speed-power"
+      size="standard"
+      exportable
       height={height}
     >
       {({ hiddenSeries }) => (
@@ -203,7 +206,7 @@ function TimelineChart({
           />
         )
       )}
-    </ChartContainer>
+    </ChartCard>
   );
 }
 

@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
 import { useCardPlacement } from '@/components/layout/layout-reference';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import {
   MapContainer, Marker, Circle, Popup, Polyline, vehicleIcon,
@@ -17,12 +18,8 @@ export function GuardLiveMap({ model: m }: { model: GuardPageModel }) {
   const { t } = useTranslation();
   const placement = useCardPlacement();
   return (
-    <GlassPanel data-guard-section="map"
-      className={cn('flex min-w-0 flex-col overflow-hidden p-4 sm:p-5', placement?.className)}>
-      <PanelTitle className="flex items-center gap-2">
-        <MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-        {t('guard.liveMap', 'Live vehicle location')}
-      </PanelTitle>
+    <div data-guard-section="map" className={cn('min-w-0', placement?.className)}>
+      <LayoutCard title={t('guard.liveMap', 'Live vehicle location')}>
       <StaleRefreshWarning state={m.vehicleState} label={t('guard.liveMap', 'Live vehicle location')} />
       <div className="mt-3 h-80 min-w-0 sm:h-96">
         {m.vehicleState.fatalError ? (
@@ -38,11 +35,16 @@ export function GuardLiveMap({ model: m }: { model: GuardPageModel }) {
         ) : (
           <div className="flex h-full items-center justify-center">
             <EmptyState icon={<MapPin className="h-8 w-8" aria-hidden="true" />}
-              message={t('guard.noCurrentLocation', 'Current vehicle location unavailable')} />
+              message={t('guard.noCurrentLocation', 'Current vehicle location unavailable')}
+              action={!m.noVehicle && m.vehicleState.retry
+                ? { label: t('common.refresh', 'Refresh'), onClick: m.vehicleState.retry }
+                : undefined}
+              actionTo={m.noVehicle ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />
           </div>
         )}
       </div>
-    </GlassPanel>
+      </LayoutCard>
+    </div>
   );
 }
 

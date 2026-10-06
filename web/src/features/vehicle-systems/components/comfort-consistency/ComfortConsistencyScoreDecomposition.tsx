@@ -1,13 +1,7 @@
-import { ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
@@ -57,11 +51,7 @@ export function ComfortConsistencyScoreDecomposition({
 
   return (
     <section data-testid="comfort-consistency-score-decomposition">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.score.title', 'Score decomposition and confidence')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.score.title', 'Score decomposition and confidence')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.score.subtitle',
@@ -144,7 +134,7 @@ export function ComfortConsistencyScoreDecomposition({
             )}
           </Text>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

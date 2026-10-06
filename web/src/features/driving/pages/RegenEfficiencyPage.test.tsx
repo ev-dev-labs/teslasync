@@ -392,7 +392,7 @@ describe('RegenEfficiencyPage', () => {
     renderPage();
 
     expect(screen.getByText('50000 energy')).toBeInTheDocument();
-    expect(screen.getByText('Complete aggregate')).toBeInTheDocument();
+    expect(within(screen.getByTestId('regen-overview')).getByRole('heading', { name: 'Complete aggregate' })).toBeInTheDocument();
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '25');
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
     expect(
@@ -504,7 +504,11 @@ describe('RegenEfficiencyPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('1,000-row cap reached')).toBeInTheDocument();
+    const returnedRows = screen.getByText('Detailed rows returned').closest('[data-stat]');
+    expect(returnedRows).not.toBeNull();
+    expect(within(returnedRows as HTMLElement).getByText('1,000-row cap reached', { selector: '[data-stat-context]' })).toBeInTheDocument();
+    expect(within(returnedRows as HTMLElement).getByText('1,000', { selector: '[data-stat-value]' })).toBeInTheDocument();
+    expect(returnedRows).toHaveAttribute('data-state', 'value');
     expect(
       screen.getAllByText('Detailed history cap reached').length,
     ).toBeGreaterThanOrEqual(6);
@@ -632,7 +636,7 @@ describe('RegenEfficiencyPage', () => {
 
     const shareCard = screen
       .getByText('Aggregate recovery share')
-      .closest('[data-role="metric-card"]');
+      .closest('[data-stat]');
     expect(shareCard).not.toBeNull();
     expect(within(shareCard as HTMLElement).getByText('—')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();

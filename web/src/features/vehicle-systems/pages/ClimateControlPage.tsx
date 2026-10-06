@@ -21,8 +21,8 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
-import { PageLayout } from '@/components/layout/layout-reference';
-import { StatGroup, type StatPeriod } from '@/components/data-display/stat-reference';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { StatGroup, type StatPeriod } from '@/components/data-display';
 import { deriveDataState } from '@/api/dataState';
 import {
   ClimateRenderGrid,
@@ -38,7 +38,6 @@ import {
   Button,
   DataTable,
   useSortToggle,
-  Heading,
   Text,
   Caption,
   Label,
@@ -242,24 +241,6 @@ function climateAccessor(row: ClimateState, key: string): number | string {
 }
 
 /* ─── Presentational sub-components (co-located, page-scoped) ─── */
-
-/** Band heading — h2 with a leading decorative icon; matches the reference rhythm. */
-function BandHeading({
-  icon,
-  children,
-  className,
-}: {
-  icon: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <Heading level="panel" as="h2" className={cn('flex items-center gap-2', className)}>
-      {icon}
-      <span>{children}</span>
-    </Heading>
-  );
-}
 
 /** Placeholder cards keep the grid shape while `latest`/`history` loads. */
 function CardSkeletons({ count, className }: { count: number; className: string }) {
@@ -690,9 +671,7 @@ export default function ClimateControlPage() {
 
       {/* ─── Band A — HVAC status banner (full-width strip) ─── */}
       <ClimateRenderGroup id="climate-status">
-        <GlassPanel
-          className="p-4 sm:p-5"
-        >
+        <LayoutCard title={t('climate.page.hvacSystem', 'HVAC system')}>
           <ClimateSourceBoundary state={latestState} label={latestLabel}>
           {latestLoading ? <Skeleton height={44} /> : (
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -746,20 +725,14 @@ export default function ClimateControlPage() {
               {t('climate.page.insufficientPowerToHeat', 'Insufficient power to heat')}: —
             </Caption> : null}
           </ClimateSourceBoundary>
-        </GlassPanel>
+        </LayoutCard>
       </ClimateRenderGroup>
 
       {/* ─── Band B — Hero: temperature gauges + thermal comfort ─── */}
       <ClimateRenderGroup id="climate-temperature" size="half" delay={0.05}
         label={t('climate.page.overview', 'Climate overview')}>
           {/* Temperature gauges (hero, spans 2 cols on wide screens) */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.temperature', 'Temperature')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.temperature', 'Temperature')}>
             <ClimateSourceBoundary state={latestState} label={latestLabel}>
             <div className="grid grid-cols-1 gap-4 @lg:grid-cols-3">
               <GaugeCell
@@ -797,17 +770,11 @@ export default function ClimateControlPage() {
               />
             </div>
             </ClimateSourceBoundary>
-          </GlassPanel>
+          </LayoutCard>
       </ClimateRenderGroup>
       <ClimateRenderGroup id="climate-comfort" size="half" delay={0.05}>
           {/* Thermal comfort (context column) */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.thermalComfort', 'Thermal comfort')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.thermalComfort', 'Thermal comfort')}>
             <ClimateSourceBoundary state={latestState} label={latestLabel}>
             {latestLoading ? (
               <div className="grid grid-cols-3 gap-3">
@@ -886,18 +853,12 @@ export default function ClimateControlPage() {
               </div>
             )}
             </ClimateSourceBoundary>
-          </GlassPanel>
+          </LayoutCard>
       </ClimateRenderGroup>
 
       {/* ─── Band C — Climate systems metric grid ─── */}
       <ClimateRenderGroup id="climate-systems" delay={0.1}>
-        <GlassPanel className="p-4 sm:p-5">
-          <BandHeading
-            icon={<Settings className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-            className="mb-4"
-          >
-            {t('climate.page.climateSystems', 'Climate systems')}
-          </BandHeading>
+        <LayoutCard title={t('climate.page.climateSystems', 'Climate systems')}>
           <ClimateSourceBoundary state={latestState} label={latestLabel}>
           {latestLoading ? (
             <CardSkeletons count={13} className={SYSTEMS_GRID} />
@@ -1163,18 +1124,12 @@ export default function ClimateControlPage() {
             </ClimateMetricGroup>
           )}
           </ClimateSourceBoundary>
-        </GlassPanel>
+        </LayoutCard>
       </ClimateRenderGroup>
 
       {/* ─── Band D — Protection & safety ─── */}
       <ClimateRenderGroup id="climate-protection" delay={0.15}>
-        <GlassPanel className="p-4 sm:p-5">
-          <BandHeading
-            icon={<ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-            className="mb-4"
-          >
-            {t('climate.page.protectionSafety', 'Protection & safety')}
-          </BandHeading>
+        <LayoutCard title={t('climate.page.protectionSafety', 'Protection & safety')}>
           <ClimateSourceBoundary state={latestState} label={latestLabel}>
           {latestLoading ? (
             <CardSkeletons count={4} className={PROTECTION_GRID} />
@@ -1218,20 +1173,14 @@ export default function ClimateControlPage() {
             </ClimateMetricGroup>
           )}
           </ClimateSourceBoundary>
-        </GlassPanel>
+        </LayoutCard>
       </ClimateRenderGroup>
 
       {/* ─── Band E — Seat heaters (span 2) + climate efficiency ─── */}
       <ClimateRenderGroup id="climate-seats" size="half" delay={0.2}
         label={t('climate.page.comfortEfficiency', 'Comfort & efficiency')}>
           {/* Seat heaters + cooling */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Flame className="h-4 w-4 text-amber-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.seatHeaters', 'Seat heaters')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.seatHeaters', 'Seat heaters')}>
 
             <ClimateSourceBoundary state={latestState} label={latestLabel}>
             {latestLoading ? (
@@ -1321,17 +1270,11 @@ export default function ClimateControlPage() {
               </div>
             )}
             </ClimateSourceBoundary>
-          </GlassPanel>
+          </LayoutCard>
       </ClimateRenderGroup>
       <ClimateRenderGroup id="climate-efficiency" size="half" delay={0.2}>
           {/* Climate efficiency */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.climateEfficiency', 'Climate efficiency')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.climateEfficiency', 'Climate efficiency')}>
             <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <CardSkeletons count={4} className="grid grid-cols-2 gap-3 sm:gap-4" />
@@ -1375,20 +1318,14 @@ export default function ClimateControlPage() {
                 />
               </ClimateMetricGroup>}
             </ClimateSourceBoundary>
-          </GlassPanel>
+          </LayoutCard>
       </ClimateRenderGroup>
 
       {/* ─── Band F — History charts (side-by-side on wide screens) ─── */}
       <ClimateRenderGroup id="climate-temperature-history" size="half" delay={0.25}
         label={t('widget.climateHistory.title', 'Climate history')}>
           {/* Temperature history */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.history.title', 'Temperature history')}
-            </BandHeading>
+          <LayoutCard title={t('climate.history.title', 'Temperature history')}>
             <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
@@ -1462,17 +1399,11 @@ export default function ClimateControlPage() {
               </div>
             )}
             </ClimateSourceBoundary>
-          </GlassPanel>
+          </LayoutCard>
       </ClimateRenderGroup>
       <ClimateRenderGroup id="climate-hvac-history" size="half" delay={0.25}>
           {/* AC state & fan speed history */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Wind className="h-4 w-4 text-purple-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.acStateFanSpeed', 'AC state & fan speed')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.acStateFanSpeed', 'AC state & fan speed')}>
             <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
@@ -1550,18 +1481,12 @@ export default function ClimateControlPage() {
               </div>
             )}
             </ClimateSourceBoundary>
-          </GlassPanel>
+          </LayoutCard>
       </ClimateRenderGroup>
 
       {/* ─── Band G — Climate history table (full-width detail band) ─── */}
       <ClimateRenderGroup id="climate-history-table" delay={0.3}>
-        <GlassPanel className="p-4 sm:p-5">
-          <BandHeading
-            icon={<CircleGauge className="h-4 w-4 text-purple-300" aria-hidden="true" />}
-            className="mb-4"
-          >
-            {t('widget.climateHistory.title', 'Climate history')}
-          </BandHeading>
+        <LayoutCard title={t('widget.climateHistory.title', 'Climate history')}>
           <ClimateSourceBoundary state={historyState} label={historyLabel}>
           {historyLoading ? (
             <Skeleton lines={8} />
@@ -1592,7 +1517,7 @@ export default function ClimateControlPage() {
             />
           )}
           </ClimateSourceBoundary>
-        </GlassPanel>
+        </LayoutCard>
       </ClimateRenderGroup>
       </ClimateRenderGrid>
     </PageLayout>

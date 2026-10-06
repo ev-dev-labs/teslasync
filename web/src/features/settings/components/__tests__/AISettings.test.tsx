@@ -26,8 +26,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 vi.mock('@/api/client', () => ({
@@ -84,7 +85,7 @@ const baseSettings: Partial<AppSettings> = {
   ai_features_archived: undefined,
 }
 
-function renderPanel(initial: Partial<AppSettings> = baseSettings) {
+function renderPanel(initial: Partial<AppSettings> | null = baseSettings) {
   const qc = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
@@ -93,7 +94,7 @@ function renderPanel(initial: Partial<AppSettings> = baseSettings) {
   })
   // Seed the cache so the AISettings component sees data on first
   // render — avoids a flaky "wait for query to resolve" loop.
-  qc.setQueryData(['settings'], initial)
+  if (initial) qc.setQueryData(['settings'], initial)
   // Usage hooks are covered by their own tests; these settings tests
   // should not return undefined from unrelated usage queries.
   qc.setQueryData(aiUsageKeys.today(), {
@@ -102,13 +103,16 @@ function renderPanel(initial: Partial<AppSettings> = baseSettings) {
   })
   qc.setQueryData(aiUsageKeys.byFeature(), { since: '2026-09-18T00:00:00Z', rows: [] })
   qc.setQueryData(aiUsageKeys.recent(50), { limit: 50, rows: [] })
-  return render(
+  const rendered = render(
+    <MemoryRouter>
     <QueryClientProvider client={qc}>
       <ToastProvider>
         <AISettings />
       </ToastProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
+    </MemoryRouter>,
   )
+  return { ...rendered, client: qc }
 }
 
 beforeEach(() => {
@@ -116,6 +120,39 @@ beforeEach(() => {
 })
 
 describe('AISettings — §I1 default-off rendering', () => {
+  it('keeps the opt-in surface mounted on a failed first read without exposing credentials or making writes', async () => {
+    mockedRequest.mockRejectedValue(new ApiError('Read unavailable', 500))
+    renderPanel(null)
+    expect(await screen.findByText('Server error')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-mode-off')).toBeChecked()
+    expect(screen.queryByTestId('ai-provider-api-key')).toBeNull()
+    expect(screen.queryByTestId('ai-feature-toggle-list')).toBeNull()
+    expect(mockedRequest.mock.calls.some(call => ['POST', 'PUT', 'DELETE'].includes(
+      (call[1] as RequestInit | undefined)?.method ?? 'GET',
+    ))).toBe(false)
+  })
+
+  it('retains a configured provider form after a settings refresh failure without auto-saving', async () => {
+    const { client } = renderPanel({
+      ...baseSettings,
+      ai_mode: 'cloud',
+      ai_provider_config: {
+        default: 'openai',
+        openai: { base_url: 'https://api.example.test', model: 'fixture-model', api_key: 'fixture-key' },
+      },
+    })
+    await waitFor(() => expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('fixture-key'))
+    mockedRequest.mockRejectedValue(new ApiError('Refresh unavailable', 500))
+    await act(async () => { await client.refetchQueries({ queryKey: ['settings'], exact: true }) })
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-mode-cloud')).toBeChecked()
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveAttribute('type', 'password')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('fixture-key')
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+    expect(mockedRequest.mock.calls.some(call => ['POST', 'PUT', 'DELETE'].includes(
+      (call[1] as RequestInit | undefined)?.method ?? 'GET',
+    ))).toBe(false)
+  })
   it('does not query usage or mount the cap bar before an off-mode user saves the opt-in', async () => {
     renderPanel({ ...baseSettings, ai_cost_cap_cents: 1000 })
     fireEvent.click(screen.getByTestId('ai-mode-cloud'))

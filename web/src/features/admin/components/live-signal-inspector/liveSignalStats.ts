@@ -60,7 +60,7 @@ export interface LiveSignalStats {
 }
 
 /** Discriminates the render state of each self-sufficient page section. */
-export type SectionStatus = 'no-vehicle' | 'loading' | 'error' | 'empty' | 'ready';
+export type SectionStatus = 'no-vehicle' | 'loading' | 'error' | 'empty' | 'ready' | 'retained' | 'retained-empty';
 
 const NUMERIC_KINDS = new Set([
   'ValueKindFloat',

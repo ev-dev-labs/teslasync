@@ -25,7 +25,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -394,14 +394,13 @@ export default function SubscriptionROIPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.subscription.title', 'Subscription & feature ROI')}
       subtitle={t(
         'ownership.subscription.subtitle',
         'Price every recurring charge against the usage it actually delivered, express the break-even in units you can act on, and see exactly how much cancelling the weak ones would return.',
       )}
-      loading={roiQuery.isLoading}
-      error={roiQuery.error as Error | null}
+      query={[roiQuery, subsQuery]}
       contextActions={
         <div className="flex items-center gap-2">
           <Select
@@ -427,7 +426,8 @@ export default function SubscriptionROIPage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.subscription.summary.title', 'Portfolio economics')}>
+        <OwnershipPanel title={t('ownership.subscription.summary.title', 'Portfolio economics')}
+          source={roiQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <StatGrid
             stats={[
               {
@@ -470,6 +470,8 @@ export default function SubscriptionROIPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.subscription.chart.title', 'Return by subscription')}
+          source={roiQuery}
+          sourceEnabled={vehicleId != null}
           empty={roiChartData.length === 0}
           emptyMessage={t(
             'ownership.subscription.chart.empty',
@@ -518,6 +520,8 @@ export default function SubscriptionROIPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.subscription.roi.title', 'Per-subscription verdict')}
+          source={roiQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.subscription.roi.subtitle',
             'Confidence falls when the active period is short or the usage metric has sparse data — a low-confidence "cancel" is a prompt to look, not to act.',
@@ -541,6 +545,9 @@ export default function SubscriptionROIPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.subscription.list.title', 'Subscription register')}
+          source={subsQuery}
+          sourceEnabled={vehicleId != null}
+          editing={formOpen}
           empty={subscriptions.length === 0 && !formOpen}
           emptyMessage={t(
             'ownership.subscription.list.empty',
@@ -703,6 +710,8 @@ export default function SubscriptionROIPage() {
 
       <FadeIn delay={0.2}>
         <EvidencePanel
+          source={roiQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -718,6 +727,6 @@ export default function SubscriptionROIPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

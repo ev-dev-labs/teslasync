@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -42,6 +44,7 @@ export default function SpeedSweetSpotPage() {
     limit: DRIVE_WINDOW_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
+  const sourceState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => computeSweetSpot(drives, { windowLimit: DRIVE_WINDOW_LIMIT }),
     [drives],
@@ -56,15 +59,15 @@ export default function SpeedSweetSpotPage() {
   }
 
   const sectionState: SpeedSweetSpotSectionState = {
-    isLoading: drivesQuery.isLoading,
-    error: drivesQuery.isError ? drivesQuery.error : null,
+    isLoading: sourceState.status === 'initial',
+    error: sourceState.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('sweetSpot.title', 'Speed Sweet Spot')}
       subtitle={t(
         'sweetSpot.subtitle',
@@ -72,6 +75,7 @@ export default function SpeedSweetSpotPage() {
       )}
       query={drivesQuery}
     >
+      <StaleRefreshWarning state={sourceState} label={t('sweetSpot.title', 'Speed Sweet Spot')} />
       <FadeIn>
         <SpeedSweetSpotKpis summary={summary} {...sectionState} />
       </FadeIn>
@@ -116,6 +120,6 @@ export default function SpeedSweetSpotPage() {
           state={sectionState}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

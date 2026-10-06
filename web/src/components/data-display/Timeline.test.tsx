@@ -6,20 +6,24 @@
  * list of `{ icon?, title, subtitle?, time, color? }` entries, drawing a
  * connector line between adjacent rows and a coloured dot (or the caller's icon)
  * per row. These tests pin every rendering branch other suites rely on
- * (`.pl-6` rows, the `.font-medium` title span, the `<p>` subtitle) plus the
+ * (ordered list rows, the `.font-medium` title span, the `<p>` subtitle) plus the
  * hardening added during elevation: nullish-`items` safety, the empty-state
  * placeholder, and the aria-hidden treatment of the decorative dot/connector.
  *
  * react-i18next is mocked so the default empty message resolves to its English
  * fallback deterministically, independent of the translation catalogue.
  */
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { Button } from '@/components/ui/Button';
 import { Timeline, type TimelineItemData } from './Timeline';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (_key: string, fallback?: string, values?: Record<string, unknown>) =>
+      (fallback ?? _key).replace(/\{\{(\w+)\}\}/g, (token, key: string) =>
+        values?.[key] == null ? token : String(values[key]),
+      ),
   }),
 }));
 
@@ -29,9 +33,9 @@ const item = (overrides: Partial<TimelineItemData> = {}): TimelineItemData => ({
   ...overrides,
 });
 
-// The connector line is the only element carrying `w-px`; rows carry `pl-6`;
+// The connector line is the only element carrying `w-px`;
 // the default dot carries `h-2`; the outer dot carries `border-2`.
-const rows = (c: HTMLElement) => c.querySelectorAll('.pl-6');
+const rows = (c: HTMLElement) => c.querySelectorAll('ol > li');
 const connectors = (c: HTMLElement) => c.querySelectorAll('.w-px');
 const outerDots = (c: HTMLElement) => c.querySelectorAll('.border-2');
 const defaultDots = (c: HTMLElement) => c.querySelectorAll('.h-2');
@@ -205,4 +209,148 @@ describe('Timeline — accessibility of content', () => {
     expect(within(row).getByText('at Home').closest('[aria-hidden="true"]')).toBeNull();
     expect(within(row).getByText('21:30').closest('[aria-hidden="true"]')).toBeNull();
   });
+});
+
+describe('Timeline — accessible summary bounds', () => {
+  it.each([undefined, 'newest-first'] as const)(
+    'keeps newest-first summary semantics with chronology %s',
+    (chronology) => {
+      render(
+        <Timeline
+          label="Incident updates"
+          chronology={chronology}
+          items={[
+            item({ title: 'Resolved', time: 'Later' }),
+            item({ title: 'Opened', time: 'Earlier' }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Incident updates: 2 entries. From Earlier to Later'))
+        .toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Incident updates' })).toBeInTheDocument();
+      expect(screen.getAllByRole('listitem').map((row) => row.textContent))
+        .toEqual(['ResolvedLater', 'OpenedEarlier']);
+    },
+  );
+
+  it('uses oldest-first endpoint labels verbatim without parsing localized timestamps', () => {
+    const items = [
+      item({ title: 'Session started', time: 'hier, après le déjeuner' }),
+      item({ title: 'No in-session evidence', time: '—' }),
+      item({ title: 'Contradiction', time: 'aujourd’hui, avant le dîner' }),
+    ];
+    render(<Timeline label="Evidence" chronology="oldest-first" items={items} />);
+    expect(screen.getByText(
+      'Evidence: 3 entries. From hier, après le déjeuner to aujourd’hui, avant le dîner',
+    )).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map((row) => row.textContent))
+      .toEqual(items.map((entry) => `${entry.title}${entry.time}`));
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it.each(['oldest-first', 'newest-first'] as const)(
+    'gives explicit bounds precedence over %s without sorting causal entries or losing actions',
+    (chronology) => {
+      const onInspect = vi.fn();
+      const items = [
+        item({ title: <a href="/session/7">Session started</a>, time: '09:00' }),
+        item({ title: 'Evidence missing', time: '—' }),
+        item({ title: 'Contradiction', time: '11:00' }),
+        item({
+          title: 'Proposed end',
+          time: '10:30',
+          subtitle: <Button onClick={onInspect}>Inspect evidence</Button>,
+          icon: <svg data-testid="evidence-icon" aria-hidden="true" />,
+        }),
+      ];
+      render(
+        <Timeline
+          label="Repair evidence"
+          chronology={chronology}
+          summaryBounds={{ start: 'début de la session', end: 'dernière preuve' }}
+          items={items}
+        />,
+      );
+      expect(screen.getByText(
+        'Repair evidence: 4 entries. From début de la session to dernière preuve',
+      )).toBeInTheDocument();
+      expect(screen.getAllByRole('listitem').map((row) =>
+        row.querySelector('.font-medium')?.textContent,
+      )).toEqual(['Session started', 'Evidence missing', 'Contradiction', 'Proposed end']);
+      expect(screen.getByRole('link', { name: 'Session started' }))
+        .toHaveAttribute('href', '/session/7');
+      expect(screen.getByTestId('evidence-icon')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Inspect evidence' }));
+      expect(onInspect).toHaveBeenCalledOnce();
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(items.map((entry) => entry.time)).toEqual(['09:00', '—', '11:00', '10:30']);
+    },
+  );
+
+  it.each([
+    {},
+    { start: 'Earlier' },
+    { end: 'Later' },
+    { start: null, end: 'Later' },
+    { start: 'Earlier', end: null },
+    { start: '', end: 'Later' },
+    { start: 'Earlier', end: '' },
+  ])('does not infer or fabricate a range for incomplete explicit bounds %j', (summaryBounds) => {
+    render(
+      <Timeline
+        summaryBounds={summaryBounds}
+        items={[item({ time: '12:00' }), item({ time: '09:00' })]}
+      />,
+    );
+    expect(screen.getByText('Timeline: 2 entries')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.queryByText(/From /)).not.toBeInTheDocument();
+  });
+
+  it.each(['oldest-first', 'newest-first'] as const)(
+    'omits the range when a %s endpoint has no time without skipping that row',
+    (chronology) => {
+      render(
+        <Timeline
+          chronology={chronology}
+          items={[
+            item({ title: 'Missing timestamp', time: '' }),
+            item({ title: 'Known middle', time: '10:00' }),
+            item({ title: 'Known endpoint', time: '11:00' }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Timeline: 3 entries')).toBeInTheDocument();
+      expect(screen.getAllByRole('listitem')).toHaveLength(3);
+      expect(screen.getByText('Missing timestamp')).toBeInTheDocument();
+      expect(screen.queryByText(/From /)).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(['oldest-first', 'newest-first'] as const)(
+    'preserves the single-entry range with %s',
+    (chronology) => {
+      render(<Timeline chronology={chronology} items={[item({ time: 'just now' })]} />);
+      expect(screen.getByText('Timeline: 1 entries. From just now to just now'))
+        .toBeInTheDocument();
+    },
+  );
+
+  it.each([[], undefined, null])(
+    'preserves empty semantics for %j even with explicit bounds and chronology',
+    (items) => {
+      render(
+        <Timeline
+          items={items as unknown as TimelineItemData[]}
+          chronology="oldest-first"
+          summaryBounds={{ start: 'Earlier', end: 'Later' }}
+          label="Evidence"
+          emptyMessage="No evidence recorded"
+        />,
+      );
+      expect(screen.getByRole('status')).toHaveTextContent('No evidence recorded');
+      expect(screen.queryByRole('list')).not.toBeInTheDocument();
+      expect(screen.queryByText(/From /)).not.toBeInTheDocument();
+    },
+  );
 });

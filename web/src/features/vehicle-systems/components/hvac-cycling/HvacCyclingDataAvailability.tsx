@@ -1,14 +1,7 @@
-import { ListChecks } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { Badge, MetricLabel, Text } from '@/components/ui';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
@@ -90,11 +83,7 @@ export function HvacCyclingDataAvailability({
 
   return (
     <section data-testid="hvac-cycling-availability">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.availability.title', 'Data-availability matrix')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.availability.title', 'Data-availability matrix')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.availability.subtitle',
@@ -123,7 +112,7 @@ export function HvacCyclingDataAvailability({
             ))}
           </Grid>
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

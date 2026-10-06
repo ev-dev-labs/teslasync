@@ -11,7 +11,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -460,14 +460,13 @@ export default function ConsumablesLifecyclePage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.consumables.title', 'Consumables & wear-parts lifecycle')}
       subtitle={t(
         'ownership.consumables.subtitle',
         'Rated life assumes an average car. Yours is not average — this projects each part against your measured speed profile, regen share, power draw and climate, then tells you which limit will actually retire it.',
       )}
-      loading={reportQuery.isLoading}
-      error={reportQuery.error as Error | null}
+      query={[reportQuery, itemsQuery]}
     >
       <AlertBanner
         variant="info"
@@ -480,7 +479,8 @@ export default function ConsumablesLifecyclePage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.consumables.summary.title', 'Fleet wear posture')}>
+        <OwnershipPanel title={t('ownership.consumables.summary.title', 'Fleet wear posture')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <StatGrid
             stats={[
               {
@@ -533,6 +533,8 @@ export default function ConsumablesLifecyclePage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.consumables.lifecycles.title', 'Part-by-part projection')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           empty={lifecycles.length === 0}
           emptyMessage={t(
             'ownership.consumables.lifecycles.empty',
@@ -547,6 +549,8 @@ export default function ConsumablesLifecyclePage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.consumables.stress.title', 'Why your wear rate differs')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.consumables.stress.subtitle',
             'Each factor compares a measured trait of your driving against a reference profile. Multipliers compound, then clamp.',
@@ -570,6 +574,9 @@ export default function ConsumablesLifecyclePage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.consumables.items.title', 'Part register')}
+          source={itemsQuery}
+          sourceEnabled={vehicleId != null}
+          editing={formOpen || eventFor != null}
           empty={items.length === 0 && !formOpen}
           emptyMessage={t('ownership.consumables.items.empty', 'No parts recorded yet.')}
           actions={
@@ -779,7 +786,8 @@ export default function ConsumablesLifecyclePage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <OwnershipPanel title={t('ownership.consumables.economics.title', 'Wear economics')}>
+        <OwnershipPanel title={t('ownership.consumables.economics.title', 'Wear economics')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <StatGrid
             columns={3}
             stats={[
@@ -813,6 +821,8 @@ export default function ConsumablesLifecyclePage() {
 
       <FadeIn delay={0.25}>
         <EvidencePanel
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -828,6 +838,6 @@ export default function ConsumablesLifecyclePage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

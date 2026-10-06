@@ -31,7 +31,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -199,10 +199,9 @@ function anomaliesPaths(): string[] {
     .filter((p) => typeof p === 'string' && p.startsWith('/analytics/anomalies'));
 }
 
-function renderPage() {
-  const client = new QueryClient({
+function renderPage(client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  })) {
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
@@ -221,6 +220,19 @@ beforeEach(() => {
 });
 
 describe('AnomalyDashboardPage', () => {
+  it('preserves frequency, health and diagnostic cards after a failed refresh', async () => {
+    mockedRequest.mockResolvedValueOnce(makeData()).mockRejectedValue(new Error('refresh failed'));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    await screen.findByTestId('freq-bar-chart');
+    await act(async () => { await client.invalidateQueries({ queryKey: ['anomalies', '7', 7] }); });
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('freq-bar-chart')).toHaveAttribute('data-rows', '2');
+    expect(screen.getAllByTestId('health-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(within(screen.getByRole('region', { name: 'Summary metrics' })).getByText('42')).toBeInTheDocument();
+  });
+
   it('renders the shell — heading, subtitle, three labelled regions, and the page title — and issues no request when no vehicle is scoped', () => {
     selectVehicle(null, []);
 

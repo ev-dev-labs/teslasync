@@ -101,6 +101,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
           timestamp: ev.started_at,
           color: drainColor(drainDay ?? NaN),
           severity: drainDay != null && drainDay >= 3 ? 'critical' as const : drainDay != null && drainDay >= 1 ? 'warning' as const : 'info' as const,
+          wrap: true,
         };
       }),
     [events, t, fmtNumber, displayPrecision, displayLocale],

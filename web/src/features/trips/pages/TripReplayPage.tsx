@@ -6,7 +6,8 @@ import {
   Navigation, MapPin, Clock, Route, TrendingUp,
   ArrowUpRight, ArrowDownRight, RefreshCw,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { GlassPanel, Button, PanelTitle, Text } from '@/components/ui';
 import {
   PlaybackControls,
@@ -112,7 +113,8 @@ export default function TripReplayPage() {
   usePageTitle(t('replay.title', 'Trip Replay'));
 
   const driveQuery = useDrive(id ?? '');
-  const { data: drive, isLoading, error } = driveQuery;
+  const { data: drive } = driveQuery;
+  const driveState = deriveDataState(driveQuery, { provenance: 'historical' });
   const { reduce } = useMotionPreference();
 
   // Display preferences for position-derived SI fields.
@@ -415,7 +417,7 @@ export default function TripReplayPage() {
   }, [positions]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('replay.title', 'Trip Replay')}
       metadataActions={drive
         ? (
@@ -424,8 +426,8 @@ export default function TripReplayPage() {
           </Text>
         )
         : undefined}
-      loading={isLoading}
-      error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+      loading={driveState.status === 'initial'}
+      error={driveState.fatalError}
       query={driveQuery}
       breadcrumbLabels={{
         '/drives/:id': drive
@@ -629,7 +631,8 @@ export default function TripReplayPage() {
           {/* ============================================================ */}
             <div className="border-t border-[var(--border-subtle)]" data-tour="drive-replay-scrubber">
               <PlaybackControls
-                className="rounded-none border-0 bg-transparent p-3 backdrop-blur-none sm:p-4 [&>div:last-child]:flex-wrap [&>div:last-child>div.mx-2]:order-last [&>div:last-child>div.mx-2]:basis-full [&>div:last-child>div.mx-2]:mx-0 sm:[&>div:last-child>div.mx-2]:order-none sm:[&>div:last-child>div.mx-2]:basis-auto sm:[&>div:last-child>div.mx-2]:mx-2"
+                framed={false}
+                className="p-3 sm:p-4"
                 isPlaying={replay.isPlaying}
                 speed={replay.speed}
                 progress={replay.progress}
@@ -637,6 +640,7 @@ export default function TripReplayPage() {
                 total={fmtDuration(replay.totalTime)}
                 onPlay={controls.play}
                 onPause={controls.pause}
+                onRestart={() => controls.seekToProgress(0)}
                 onStop={controls.stop}
                 onSpeedChange={controls.setSpeed}
                 onSeek={controls.seekToProgress}
@@ -685,6 +689,6 @@ export default function TripReplayPage() {
           </FadeIn>
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

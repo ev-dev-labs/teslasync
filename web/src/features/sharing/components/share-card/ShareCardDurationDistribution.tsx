@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
-  ChartContainer,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
@@ -14,6 +13,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -70,7 +70,9 @@ export function ShareCardDurationDistribution({
       data-testid="share-card-duration-distribution"
       aria-label={t('shareCard.durationDistribution.sectionAria', 'Measured duration distribution')}
     >
-      <ChartContainer
+      <ChartCard
+        size="standard"
+        toolbar
         title={t('shareCard.durationDistribution.title', 'Duration distribution')}
         subtitle={t(
           'shareCard.durationDistribution.subtitle',
@@ -142,7 +144,7 @@ export function ShareCardDurationDistribution({
             />
           )}
         </ShareCardSectionBody>
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

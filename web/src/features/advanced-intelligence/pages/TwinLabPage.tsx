@@ -2,13 +2,13 @@ import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRunTwinLab } from '@/api/hooks/useAdvancedIntelligence';
 import {
-  Bar, BarChart, CartesianGrid, ChartContainer, CHART_COLORS,
+  Bar, BarChart, CartesianGrid, CHART_COLORS,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { ChartCard, Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -65,7 +65,7 @@ export default function TwinLabPage() {
   })), [result, units.unitPrefs.distance]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.twin.title', 'Twin lab')}
       subtitle={t(
         'advancedIntelligence.twin.subtitle',
@@ -145,7 +145,10 @@ export default function TwinLabPage() {
 
       <FadeIn delay={0.1}>
         {/* chart-legend-audit:skip uncertainty bounds and estimate form one modeled interval and must remain visible together */}
-        <ChartContainer
+        <ChartCard
+          size="standard"
+          toolbar
+          exportable
           title={t('advancedIntelligence.twin.uncertainty.title', 'Range-effect uncertainty comparison')}
           subtitle={t(
             'advancedIntelligence.twin.uncertainty.subtitle',
@@ -177,7 +180,7 @@ export default function TwinLabPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : <EmptyState /* no-action: the scenario add/remove controls above this chart are the trigger surface; uncertainty bars appear once at least two scenarios have supported results. */ message={t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')} />}
-        </ChartContainer>
+        </ChartCard>
       </FadeIn>
 
       <FadeIn delay={0.15}>
@@ -216,6 +219,6 @@ export default function TwinLabPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

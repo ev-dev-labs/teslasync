@@ -14,8 +14,6 @@ import { WidgetRankedList, type RankedItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-const LIST_LAYOUT_CLASS = 'min-w-0 [&_li>div.relative]:flex-wrap [&_li>div.relative>span.flex-1]:basis-full @sm:[&_li>div.relative>span.flex-1]:basis-auto [&_li>div.relative>span.flex-1]:whitespace-normal [&_li>div.relative>span.flex-1]:break-words [&_li>div.relative>span.shrink-0]:max-w-full';
-
 function efficiencyBadge(
   rawWhPerKm: number,
   t: (key: string, fallback: string) => string,
@@ -79,11 +77,15 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
         id: i,
         label,
         // Invert: lower Wh/unit (better) → higher value → ranks first
-        value: eff == null ? 0 : 10000 / (Math.max(0, eff) + 1),
+        value: eff == null ? null : 10000 / (Math.max(0, eff) + 1),
         formattedValue: `${eff == null ? '—' : `${fmtNumber(eff)} ${efficiencyUnit}`} · ${trips == null ? '—' : fmtInt(trips)}×`,
         badge: rawEff == null ? undefined : efficiencyBadge(rawEff, t),
         barColor: isBest ? 'bg-emerald-400' : 'bg-blue-400',
       };
+    }).sort((a, b) => {
+      if (a.value == null) return b.value == null ? 0 : 1;
+      if (b.value == null) return -1;
+      return b.value - a.value;
     });
   }, [routes, toEfficiencyDisplay, efficiencyUnit, isWide, t, fmtNumber, fmtInt]);
 
@@ -104,10 +106,12 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   if (isCompact) {
     return (
       <WidgetShell title={t('widget.routeEfficiency.title', 'Route efficiency')} {...shellProps}>
-        <div className={LIST_LAYOUT_CLASS}>
+        <div className="min-w-0">
           {routes.length > 0 ? (
             <WidgetRankedList
               items={items}
+              order="source"
+              wrapContent
               compact
               emptyMessage={t('widget.routeEfficiency.noData', 'No route data')}
               emptyIcon={<Route className="h-5 w-5" />}
@@ -131,9 +135,11 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       {...shellProps}
     >
       {routes.length > 0 ? (
-        <div className={LIST_LAYOUT_CLASS}>
+        <div className="min-w-0">
           <WidgetRankedList
             items={items}
+            order="source"
+            wrapContent
             emptyMessage={t('widget.routeEfficiency.noData', 'No route data')}
             emptyIcon={<Route className="h-5 w-5" />}
           />

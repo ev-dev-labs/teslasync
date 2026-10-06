@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { PageLayout, type CardGridItem } from '@/components/layout/layout-reference';
+import { PageLayout, type CardGridItem } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';

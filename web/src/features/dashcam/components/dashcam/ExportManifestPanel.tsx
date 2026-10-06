@@ -1,7 +1,8 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, ImageDown } from 'lucide-react';
-import { Button, GlassPanel } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
 import type { ClipRecord } from '../../lib/types';
 import type { ReconstructionResult } from '../../lib/timelineAlignment';
@@ -71,10 +72,7 @@ export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPane
   };
 
   return (
-    <GlassPanel padding="md" className="space-y-3">
-      <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-        {t('dashcam.export.title', 'Local export')}
-      </h3>
+    <LayoutCard title={t('dashcam.export.title', 'Local export')}>
       <InlineCallout variant="info">
         {t(
           'dashcam.export.disclaimer',
@@ -82,13 +80,13 @@ export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPane
         )}
       </InlineCallout>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" icon={<Download className="h-3.5 w-3.5" />} onClick={handleManifestDownload}>
+        <Button wrapLabel size="sm" variant="secondary" icon={<Download className="h-3.5 w-3.5" />} onClick={handleManifestDownload}>
           {t('dashcam.export.manifest', 'Download incident manifest (JSON)')}
         </Button>
-        <Button size="sm" variant="secondary" icon={<ImageDown className="h-3.5 w-3.5" />} onClick={handleStillExport}>
+        <Button wrapLabel size="sm" variant="secondary" icon={<ImageDown className="h-3.5 w-3.5" />} onClick={handleStillExport}>
           {t('dashcam.export.still', 'Export redacted still (PNG)')}
         </Button>
       </div>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

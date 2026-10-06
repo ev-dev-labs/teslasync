@@ -114,6 +114,7 @@ export function RepairFormActions({
           title={disabledReason}
           icon={<Save className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
+          wrapLabel
         >
           {t('common.save', 'Save')}
         </Button>
@@ -127,6 +128,7 @@ export function RepairFormActions({
             : disabledReason}
           icon={<Clock className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
+          wrapLabel
         >
           {isDrive
             ? t('dataRepair.action.closeDrive', 'Close drive')
@@ -140,6 +142,7 @@ export function RepairFormActions({
           title={disabledReason}
           icon={<Archive className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
+          wrapLabel
         >
           {t('dataRepair.action.quarantine', 'Move to quarantine')}
         </Button>
@@ -147,7 +150,7 @@ export function RepairFormActions({
           variant="ghost"
           onClick={onCancel}
           icon={<X className="h-4 w-4" aria-hidden="true" />}
-          className="ml-auto min-h-11"
+          className="ms-auto min-h-11"
         >
           {t('common.cancel', 'Cancel')}
         </Button>

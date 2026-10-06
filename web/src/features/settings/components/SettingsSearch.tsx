@@ -169,6 +169,7 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
                 <Button
                   type="button"
                   variant="ghost"
+                  wrapLabel
                   size="sm"
                   id={`${listboxId}-option-${entry.id}`}
                   role="option"
@@ -176,16 +177,16 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => commit(entry)}
                   className={cn(
-                    'h-auto w-full flex-col items-start gap-0.5 rounded-none px-4 py-2 text-left',
+                    'h-auto w-full flex-col items-start gap-0.5 rounded-none px-4 py-2 text-start',
                     'focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
                     active
                       ? 'bg-white/[0.06] text-[var(--text-primary)]'
                       : 'text-[var(--text-secondary)] hover:bg-white/[0.04]',
                   )}
                 >
-                  <Text variant="body" className="font-medium">{entry.title}</Text>
+                  <Text variant="body" className="font-medium break-words [overflow-wrap:anywhere]">{entry.title}</Text>
                   {entry.description && (
-                    <Text variant="caption">{entry.description}</Text>
+                    <Text variant="caption" className="break-words [overflow-wrap:anywhere]">{entry.description}</Text>
                   )}
                 </Button>
               </li>

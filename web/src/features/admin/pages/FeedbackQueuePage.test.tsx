@@ -550,4 +550,41 @@ describe('FeedbackQueuePage', () => {
     expect(refetches.other).toHaveBeenCalledTimes(1)
     expect(refetches.main).not.toHaveBeenCalled()
   })
+
+  it('keeps retained queue rows, whole-queue proportions and selected IDs during failed refreshes', async () => {
+    configure({
+      main: { isError: true, error: new Error('list refresh failed') },
+      counts: { new: { error: new Error('status refresh failed') }, bug: { error: new Error('category refresh failed') } },
+    })
+    renderPage()
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
+    expect(screen.getByText('Add dark map tiles')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Status distribution: 5 new, 3 triaged, 2 closed' })).toBeInTheDocument()
+    expect(screen.getByText('6 · 60.00%')).toBeInTheDocument()
+    expect(screen.queryByText("Can't reach server")).toBeNull()
+    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.').length).toBeGreaterThanOrEqual(3)
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+    await waitFor(() => expect(mockBulkMutateAsync).toHaveBeenCalledWith({
+      ids: [101], update: { status: 'closed' },
+    }))
+  })
+
+  it('retains known status counts without inventing an unknown total or denominator after a partial first load', () => {
+    configure({ counts: { new: { total: undefined, error: new Error('counts down') } } })
+    renderPage()
+    const totalTile = screen.getByText('Total feedback').closest('[data-role="metric-card"]')
+    if (!totalTile) throw new Error('Missing total feedback identity')
+    expect(within(totalTile).getByText('—')).toBeInTheDocument()
+    expect(within(totalTile).queryByText('5')).toBeNull()
+    expect(screen.queryByRole('img', { name: /Status distribution:/ })).toBeNull()
+    const triageCard = screen.getByRole('heading', { name: 'Triage progress' }).closest('[data-card]')
+    if (!triageCard) throw new Error('Missing triage panel')
+    expect(within(triageCard).getByText('New').closest('div')).toHaveTextContent('—')
+    expect(within(triageCard).getByText('Triaged').closest('div')).toHaveTextContent('3')
+    expect(within(triageCard).getByText('Closed').closest('div')).toHaveTextContent('2')
+    expect(within(triageCard).getByText('Partial data')).toBeInTheDocument()
+    expect(screen.getByText('6 · 60.00%')).toBeInTheDocument()
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
+  })
 })

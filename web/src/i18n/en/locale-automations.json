@@ -11,7 +11,8 @@
     "bulk": {
       "enable": "Enable",
       "disable": "Disable",
-      "delete": "Delete"
+      "delete": "Delete",
+      "selectionSummary": "{{count}} selected · {{filtered}} matching loaded rules · {{loaded}} loaded"
     },
     "empty": {
       "title": "No automations yet",
@@ -334,6 +335,11 @@
     "now": "Precondition now",
     "recent": "Recent runs"
   },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
   "activity": {
     "action": {
       "alert": "Alert change",
@@ -384,26 +390,6 @@
       "empty": "No recent activity in this window."
     }
   },
-  "annotation": {
-    "add": "Add annotation",
-    "addTitle": "Add annotation",
-    "cat": {
-      "custom": "Custom",
-      "issue": "Issue",
-      "maintenance": "Maintenance",
-      "milestone": "Milestone",
-      "trip": "Trip",
-      "upgrade": "Upgrade"
-    },
-    "category": "Category",
-    "date": "Date",
-    "descPlaceholder": "Optional description...",
-    "description": "Description",
-    "label": "Label",
-    "labelPlaceholder": "e.g., battery replaced",
-    "listTitle": "Annotations",
-    "removeNamed": "Remove annotation: {{label}}"
-  },
   "bulk": {
     "clear": "Clear selection",
     "itemDefault": "item",
@@ -428,35 +414,23 @@
     "version": "Calculation version"
   },
   "chart": {
-    "a11y": {
-      "fallbackTableLabel": "{{title}} — data table",
-      "summary": "Chart: {{title}}"
-    },
     "col": {
       "date": "Date",
       "value": "Value"
-    },
-    "export": {
-      "copy": "Copy image to clipboard",
-      "copyFailed": "Failed to copy chart image",
-      "copyFallback": "Clipboard not available — image downloaded instead",
-      "copySuccess": "Chart image copied to clipboard",
-      "csv": "Download data as CSV",
-      "disabledTooltip": "Chart not ready to export",
-      "failed": "Could not prepare the {{format}} export.",
-      "menuLabel": "Export chart",
-      "png": "Save as PNG",
-      "preparing": "Preparing chart export…",
-      "svg": "Save as SVG"
-    },
-    "loading": "Loading chart…",
-    "noData": "No data available",
-    "noDataDescription": "No chartable observations are available for the current selection yet."
+    }
   },
   "combobox": {
     "maxReached": "Maximum reached",
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
   },
   "date": {
     "preset": {
@@ -492,18 +466,201 @@
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"
   },
-  "draft": {
-    "noun": {
-      "automation": "Automation"
+  "developerReference": {
+    "stats": {
+      "metric": {
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "loading": "Loading measurements",
+        "retained": "Showing retained measurements"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
     }
   },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "noun": {
+      "automation": "Automation"
+    },
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
   "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    },
     "resource": {
       "automation": "This automation"
     }
   },
   "entityContext": {
     "title": "Related context"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
   },
   "forms": {
     "unsavedAutomation": "You have an unsaved automation."
@@ -564,10 +721,18 @@
       "started": "Impersonation started"
     }
   },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "unlocked": "✓ Unlocked"
+  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
     "unknown": "Unknown"
   },
   "notifications": {
@@ -583,6 +748,12 @@
         "vehiclesUnknownBadge": "Unknown",
         "vehiclesUnknownLabel": "Vehicle #{{id}}"
       }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
     }
   },
   "operations": {
@@ -652,6 +823,9 @@
       "title": "Elevation profile"
     }
   },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
     "announceCleared": "Saved view cleared",
@@ -675,6 +849,18 @@
     "title": "Saved views",
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
   },
   "sourceLayer": {
     "age": "age",
@@ -948,5 +1134,12 @@
         }
       }
     }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

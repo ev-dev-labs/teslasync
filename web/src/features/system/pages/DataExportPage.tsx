@@ -8,7 +8,7 @@ import { formatRelative } from '@/lib/dateFormat';
 import { neonColorMap, typography, type NeonColor } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel,
   Badge,
@@ -16,6 +16,7 @@ import {
   Input,
   Select,
   Checkbox,
+  RadioCard,
   DataTable,
   PanelTitle,
   Label,
@@ -31,11 +32,13 @@ import {
   AlertBanner,
   JobProgressDrawer,
   RequiresAuth,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useToast } from '@/components/feedback/Toast';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { request } from '@/api/client';
 import {
@@ -189,44 +192,19 @@ function ExportTypeSelector({
     >
       {EXPORT_TYPES.map((et) => {
         const Icon = et.icon;
-        const active = selected === et.value;
-        const c = neonColorMap[et.color];
         return (
-          <GlassPanel
+          <RadioCard
             key={et.value}
-            role="radio"
-            aria-checked={active}
+            name="export-type"
+            value={et.value}
+            checked={selected === et.value}
+            accent={et.color}
             aria-label={t(et.labelKey, et.label)}
-            tabIndex={0}
-            hover
-            onClick={() => onChange(et.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onChange(et.value);
-              }
-            }}
-            className={cn(
-              'min-h-11 cursor-pointer rounded-xl border-2 p-4 text-left transition-all duration-normal',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
-              active ? cn(c.border, c.glow) : 'border-transparent hover:border-[var(--border-subtle)]',
-            )}
-          >
-            <div className="mb-2 flex items-center gap-2.5">
-              <div className={cn('rounded-lg p-1.5', active ? c.bg : 'bg-[var(--surface-2)]')}>
-                <Icon
-                  className={cn('h-4 w-4', active ? c.text : 'text-[var(--text-muted)]')}
-                  aria-hidden="true"
-                />
-              </div>
-              <Text as="span" size="sm" weight="semibold" color={active ? 'primary' : 'secondary'}>
-                {t(et.labelKey, et.label)}
-              </Text>
-            </div>
-            <Text as="p" variant="caption" className="leading-relaxed">
-              {t(et.descKey, et.desc)}
-            </Text>
-          </GlassPanel>
+            onChange={() => onChange(et.value)}
+            label={t(et.labelKey, et.label)}
+            description={t(et.descKey, et.desc)}
+            icon={<Icon className="h-4 w-4" aria-hidden="true" />}
+          />
         );
       })}
     </div>
@@ -467,7 +445,7 @@ function StatsRow({
 }) {
   const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
-  const totalExports = jobs?.length ?? 0;
+  const totalExports = jobs?.length ?? '—';
 
   const totalSize = useMemo(
     () => (jobs ?? []).reduce((sum, j) => sum + (j.file_size ?? 0), 0),
@@ -512,7 +490,7 @@ function StatsRow({
       />
       <MetricCard
         label={t('dataExport.totalSize', 'Total size')}
-        value={formatBytes(totalSize, { zeroAsEmpty: true })}
+        value={jobs == null ? '—' : formatBytes(totalSize, { zeroAsEmpty: true })}
         icon={<Icons.hardDrive className="h-4 w-4" />}
         color="blue"
       />
@@ -1208,20 +1186,22 @@ export default function DataExportPage() {
 
   /* --- Queries --- */
 
-  const {
-    data: jobs,
-    isLoading: jobsLoading,
-    error: jobsError,
-  } = useQuery<ExportJobSummary[]>({
+  const jobsQuery = useQuery<ExportJobSummary[]>({
     queryKey: ['export-jobs'],
     queryFn: () => request<ExportJobSummary[]>('/export/jobs'),
     refetchInterval: 10_000,
   });
+  const jobsState = useDataState(jobsQuery, { provenance: 'historical' });
+  const jobs = jobsState.data;
+  const jobsLoading = jobsQuery.isLoading && !jobsState.hasData;
+  const jobsError = jobsState.fatalError;
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
+  const vehiclesQuery = useQuery<Vehicle[]>({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
+  const vehiclesState = useDataState(vehiclesQuery);
+  const vehicles = vehiclesState.data;
 
   /* --- Mutations --- */
 
@@ -1269,7 +1249,7 @@ export default function DataExportPage() {
   /* --- Render --- */
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('dataExport.title', 'Data export')}
       subtitle={t('dataExport.subtitle', 'Export vehicle data in CSV or JSON format')}
       secondaryActions={
@@ -1283,6 +1263,7 @@ export default function DataExportPage() {
         </Button>
       }
     >
+      <StaleRefreshWarning state={jobsState} label={t('dataExport.exportHistory', 'Export history')} />
       {/* Non-blocking load error — the History panel below also renders its
           own QueryError so each section stays self-sufficient. */}
       {jobsError && (
@@ -1305,6 +1286,10 @@ export default function DataExportPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
           <div className="xl:col-span-2">
+            <StaleRefreshWarning state={vehiclesState} label={t('dataExport.vehicle', 'Vehicle')} />
+            {vehiclesState.fatalError && (
+              <QueryError error={vehiclesState.fatalError} onRetry={() => { void vehiclesQuery.refetch(); }} />
+            )}
             <ExportWizard
               vehicles={vehicles}
               onSubmit={handleSubmit}
@@ -1356,6 +1341,6 @@ export default function DataExportPage() {
 
       {/* Floating job progress drawer — visible across the page */}
       <JobProgressDrawer />
-    </PageContainer>
+    </PageLayout>
   );
 }

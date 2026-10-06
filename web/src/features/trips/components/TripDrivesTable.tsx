@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ListOrdered } from 'lucide-react';
-import { GlassPanel, PanelTitle, DataTable, Text, useSortToggle, type Column } from '@/components/ui';
+import { DataTable, Text, useSortToggle, type Column } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { RouteDisplay, DateTime } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
@@ -119,11 +119,7 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
   );
 
   return (
-    <GlassPanel className="min-w-0 p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('trips.detail.drivesTitle', 'Drives in this trip')}
-      </PanelTitle>
+    <LayoutCard title={t('trips.detail.drivesTitle', 'Drives in this trip')}>
       {isError ? (
         <QueryError
           error={error}
@@ -148,6 +144,6 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
           pagination
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

@@ -34,6 +34,8 @@ import {
 } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
+import { MemoryRouter } from 'react-router-dom'
+import { deriveDataState } from '@/api/dataState'
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -157,6 +159,33 @@ describe('SafetyPage — page chrome & accessibility', () => {
 })
 
 describe('SafetyPage — safety-posture KPI band', () => {
+  it('keeps every safety explanation but shows unknown values when the settings source failed initially', () => {
+    mockUseSettings.mockReturnValue({
+      settings: baseSettings,
+      settingsState: deriveDataState({ error: new Error('Read failed'), isError: true }),
+    })
+    render(<MemoryRouter><SafetyPage /></MemoryRouter>)
+    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
+    expect(screen.queryByText('3 / 3')).toBeNull()
+    expect(screen.getByTestId('safety-settings-listing')).toBeInTheDocument()
+    expect(within(screen.getByTestId('safety-settings-rows')).getAllByRole('listitem')).toHaveLength(7)
+    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent(EM_DASH)
+    expect(valueBadge('safetySettings.rows.quietHoursEnabled.title')).toHaveTextContent(EM_DASH)
+    expect(screen.getAllByRole('alert').length).toBeGreaterThan(0)
+  })
+
+  it('retains the safety posture and all field values after a failed refresh', () => {
+    mockUseSettings.mockReturnValue({
+      settings: baseSettings,
+      settingsState: deriveDataState({ data: baseSettings, error: new Error('Refresh failed'), isError: true }),
+    })
+    render(<SafetyPage />)
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('3 / 3')).toBeInTheDocument()
+    expect(valueBadge('safetySettings.rows.quietHoursStart.title')).toHaveTextContent('22:00')
+    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
   it('counts all three safeguards as active when quiet hours, critical flash, and tab badge are on', () => {
     mountWith({
       quiet_hours_enabled: true,

@@ -33,6 +33,9 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { Button } from '@/components/ui';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -185,8 +188,8 @@ function makeUnits() {
       locale: 'en-US',
       precision: undefined,
     },
-    formatDistance: vi.fn((v: number | null | undefined) => `dist(${v ?? 0})`),
-    formatSpeed: vi.fn((v: number | null | undefined) => `spd(${v ?? 0})`),
+    formatDistance: vi.fn((v: number | null | undefined) => v == null ? 'dist(nil)' : `dist(${v})`),
+    formatSpeed: vi.fn((v: number | null | undefined) => v == null ? 'spd(nil)' : `spd(${v})`),
     formatTemperature: vi.fn((v: number | null | undefined) =>
       v == null ? 'temp(nil)' : `temp(${v})`,
     ),
@@ -203,11 +206,17 @@ let stateQuery: any;
  
 let sendCommand: any;
 
-function renderPage(path = '/glance') {
+function WorkspaceSelectionControl() {
+  const { setVehicleId } = useSelectedVehicle();
+  return <Button onClick={() => setVehicleId(2)}>Change workspace vehicle</Button>;
+}
+
+function renderPage(path = '/glance', withWorkspaceControl = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={client}>
+        {withWorkspaceControl && <WorkspaceSelectionControl />}
         <GlancePage />
       </QueryClientProvider>
     </MemoryRouter>,
@@ -227,7 +236,7 @@ function cardValue(region: HTMLElement, label: string): string {
 /** Trailing element (value <Text> or status <Badge>) of a Detail/Status row. */
 function rowValue(scope: HTMLElement, label: string): string {
   const el = within(scope).getByText(label);
-  return el.closest('div')?.lastElementChild?.textContent ?? '';
+  return el.closest('dt')?.nextElementSibling?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -316,6 +325,19 @@ describe('GlancePage — vehicle guard', () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('GlancePage — populated overview', () => {
+  it('retains independent live evidence and commands when registry, state and location refresh fail', () => {
+    mockVehicles.mockReturnValue(makeQuery({ data: VEHICLES, error: new Error('registry refresh'), isError: true }));
+    mockState.mockReturnValue(makeQuery({ data: { state: STATE, live: true }, error: new Error('state refresh'), isError: true }));
+    mockLocation.mockReturnValue(makeQuery({ data: LOCATION, error: new Error('location refresh'), isError: true }));
+    const { container } = renderPage();
+    expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
+    expect(screen.getByRole('heading', { name: 'Charging & climate' })).toBeInTheDocument();
+    expect(screen.getByText('Office')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Horn' })).toBeEnabled();
+    expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThanOrEqual(3);
+    expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
+    expect(container.querySelector('dl')).toHaveClass('@container/kv-list');
+  });
   it('renders honest KPI tiles from the vehicle state', () => {
     renderPage();
     const kpi = kpiRegion();
@@ -494,7 +516,8 @@ describe('GlancePage — vehicle selection (URL state)', () => {
     renderPage('/glance?vehicle_id=2');
 
     expect(within(liveRegion()).getByRole('heading', { name: 'Car B' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toHaveValue('2');
+    expect(getWorkspaceRouteScope('/glance').vehicle).toBe(true);
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
     expect(mockState).toHaveBeenCalledWith(2, { refetchInterval: 10_000 });
   });
 
@@ -502,19 +525,14 @@ describe('GlancePage — vehicle selection (URL state)', () => {
     renderPage('/glance?vehicle_id=999');
 
     expect(within(liveRegion()).getByRole('heading', { name: 'Car A' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toHaveValue('1');
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
 
-  it('switches the selected vehicle through the combobox', async () => {
-    renderPage();
-    const picker = screen.getByRole('combobox', { name: 'Select vehicle' });
-    expect(picker).toHaveValue('1');
-
-    fireEvent.change(picker, { target: { value: '2' } });
-
-    await waitFor(() =>
-      expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toHaveValue('2'),
-    );
+  it('follows the workspace-owned selection without mounting a competing local picker', async () => {
+    renderPage('/glance', true);
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Change workspace vehicle' }));
+    await waitFor(() => expect(mockState).toHaveBeenCalledWith(2, { refetchInterval: 10_000 }));
     expect(mockState).toHaveBeenCalledWith(2, { refetchInterval: 10_000 });
     expect(within(liveRegion()).getByRole('heading', { name: 'Car B' })).toBeInTheDocument();
   });
@@ -522,6 +540,48 @@ describe('GlancePage — vehicle selection (URL state)', () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('GlancePage — null safety + idle branches', () => {
+  it('preserves independent location evidence even when live security and telemetry are unavailable', () => {
+    mockState.mockReturnValue(makeQuery({ error: new Error('live state failed'), isError: true }));
+    mockLocation.mockReturnValue(makeQuery({ data: LOCATION }));
+    renderPage();
+    expect(rowValue('Place')).toHaveTextContent('Home');
+    expect(rowValue('Destination')).toHaveTextContent('Office');
+    expect(rowValue('ETA')).toHaveTextContent('15.00 min');
+    expect(screen.getByRole('heading', { name: 'Security & location' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lock' })).toBeDisabled();
+  });
+
+  it('does not synthesize zero battery, range, speed or charging measurements', () => {
+    mockState.mockReturnValue(makeQuery({ data: { state: {
+      ...STATE,
+      battery_level: null,
+      rated_range: null,
+      speed: null,
+      charger_power: null,
+      charge_rate: null,
+    } } }));
+    renderPage();
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(units.formatDistance).toHaveBeenCalledWith(null);
+    expect(units.formatSpeed).toHaveBeenCalledWith(null);
+    expect(rowValue('Charger power')).toHaveTextContent('—');
+    expect(rowValue('Charge rate')).toHaveTextContent('—');
+    expect(screen.queryByText('0.00 kW')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Charging & climate' })).toBeInTheDocument();
+  });
+
+  it('keeps nullable status fields unknown rather than asserting unlocked, idle or off', () => {
+    mockState.mockReturnValue(makeQuery({ data: { state: {
+      ...STATE, is_charging: null, is_climate_on: null, is_locked: null, sentry_mode: null,
+    } } }));
+    renderPage();
+    expect(rowValue('Doors')).toHaveTextContent('Unknown');
+    expect(rowValue('Sentry mode')).toHaveTextContent('Unknown');
+    expect(screen.queryByText('Unlocked')).toBeNull();
+    expect(screen.queryByText('Not currently charging')).toBeNull();
+    expect(screen.queryByText('Off')).toBeNull();
+  });
+
   it('collapses missing location details to the em-dash glyph', () => {
     mockLocation.mockReturnValue({
       data: { id: 3, vehicle_id: 1, created_at: '2024-06-01T00:00:00Z' } as LocationSnapshot,

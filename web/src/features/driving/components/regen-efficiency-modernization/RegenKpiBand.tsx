@@ -152,6 +152,10 @@ export function RegenKpiBand({
               </div>
             )}
             {noResolvedEvidence && <EmptyState
+              action={{ label: t('common.retry', 'Retry'), onClick: () => {
+                aggregateState.onRetry();
+                detailState.onRetry();
+              } }}
               message={t('regen.kpis.empty', 'No aggregate energy or detailed drives were returned for this selected window.')}
             />}
             {detailState.isResolved && <DetailScopeNotice

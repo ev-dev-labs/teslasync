@@ -11,14 +11,14 @@
  *     data / error / never-resolving so each query branch is deterministic and
  *     no real network is touched.
  *   - `useSelectedVehicle` is mocked at the boundary so vehicle scope is fixed.
- *   - The recharts cadence chart and the status-breakdown panel are replaced
- *     with prop-surfacing doubles: recharts doesn't lay out in jsdom, so we
- *     assert the page's binning / tally derivations through their props instead.
+ *   - Chart sizing/rendering and the status-breakdown panel use prop-surfacing
+ *     doubles. The real shared cadence card retains its loading/error/empty
+ *     states; its chart data exposes the page's binning derivation.
  *   - The AI summarizer is swapped for a prop double to assert the page forwards
  *     the resolved vehicleId (number → undefined at the null boundary) without
  *     pulling in the AI-off contract machinery (covered by its own suite).
- *   - `RangePicker` is replaced with a commit button so the page's URL-batch
- *     wiring can be driven without the real calendar popover.
+ *   - A header range commit button drives the shared range hook and URL state
+ *     without the real calendar popover.
  *
  * This suite also guards a real bug fixed alongside it: the range picker's
  * `onChange` used to call two separate URL setters (`setRange` + `setPage`) in
@@ -66,7 +66,7 @@ if (typeof window.matchMedia !== 'function') {
   })) as unknown as typeof window.matchMedia;
 }
 
-// Network seam. The page calls request() directly through useQuery; a hoisted
+// Network seam. The page's typed hook calls request(); a hoisted
 // state object flips the response so every query branch is deterministic.
 const api = vi.hoisted(() => ({
   mode: 'data' as 'data' | 'error' | 'pending',
@@ -92,10 +92,10 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
-// Chart + breakdown children surface their derived props (recharts won't lay
-// out in jsdom, so the page's binning/tally logic is asserted via props).
-vi.mock('../components/SoftwareUpdateCadenceChart', () => ({
-  SoftwareUpdateCadenceChart: ({
+vi.mock('@/components/charts', async (importActual) => ({
+  ...await importActual<typeof import('@/components/charts')>(),
+  ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  BarChart: ({
     data,
   }: {
     data: Array<{ month: string; label: string; count: number }>;
@@ -215,12 +215,19 @@ function renderPage(initialEntries: string[] = ['/software-updates']) {
   );
 }
 
-/** Scope a MetricCard by its (unique-within-the-KPI-band) label. */
+function kpiBand(): HTMLElement {
+  const band = screen.getByRole('heading', { name: 'Software update summary' })
+    .closest<HTMLElement>('[data-stat-strip]');
+  if (!band) throw new Error('Software update summary strip not found');
+  return band;
+}
+
+/** Scope a shared stat tile by its unique summary label. */
 function kpiCard(label: string): HTMLElement {
-  const band = screen.getByRole('region', { name: 'Software update summary' });
-  const el = within(band).getByText(label).closest('[data-role="metric-card"]');
-  if (!el) throw new Error(`MetricCard wrapper not found for "${label}"`);
-  return el as HTMLElement;
+  const band = kpiBand();
+  const el = within(band).getByText(label).closest<HTMLElement>('[data-stat]');
+  if (!el) throw new Error(`Stat tile not found for "${label}"`);
+  return el;
 }
 
 /**
@@ -367,12 +374,15 @@ describe('SoftwareUpdatesPage — resilience states', () => {
     api.mode = 'pending';
     const { container } = renderPage();
 
-    // cadence + breakdown + 4 timeline card skeletons.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelectorAll('[data-chart-state="loading"]')).toHaveLength(1);
+    // Breakdown plus four timeline card skeletons; chart and stats own loading.
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(5);
     // Data children are not shown while loading…
     expect(screen.queryByTestId('cadence-chart')).toBeNull();
-    // …but the KPI band always renders (never a blank page) with a placeholder.
-    expect(within(kpiCard('Current version')).getByText('—')).toBeInTheDocument();
+    const band = kpiBand();
+    expect(band.querySelectorAll('[data-stat][data-state="loading"]')).toHaveLength(6);
+    expect(kpiCard('Current version')).toHaveAttribute('data-state', 'loading');
+    expect(within(band).queryByText('2025.20.1')).not.toBeInTheDocument();
   });
 
   it('shows an error state with retry in every data section on request failure', async () => {
@@ -380,8 +390,8 @@ describe('SoftwareUpdatesPage — resilience states', () => {
     renderPage();
 
     const errors = await screen.findAllByText("Can't reach server");
-    expect(errors).toHaveLength(3);
-    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
+    expect(errors).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(4);
     expect(screen.queryByTestId('cadence-chart')).toBeNull();
   });
 

@@ -1,14 +1,7 @@
-import { Rows3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, MetricValue, Text } from '@/components/ui';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -41,14 +34,7 @@ export function PreconditioningClimateDisposition({
 
   return (
     <section data-testid="preconditioning-climate-disposition">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Rows3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.climateRows.title',
-            'Climate-row disposition',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.climateRows.title', 'Climate-row disposition')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.climateRows.subtitle',
@@ -83,7 +69,7 @@ export function PreconditioningClimateDisposition({
             )}
           </Text>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

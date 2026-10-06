@@ -52,7 +52,7 @@ export function ActionCenterSummary({ summary, loading }: ActionCenterSummaryPro
             {loading ? (
               <Skeleton className="mt-3 h-7 w-12" />
             ) : (
-              <MetricValue className="mt-2">{value ?? 0}</MetricValue>
+              <MetricValue className="mt-2">{value ?? '—'}</MetricValue>
             )}
           </GlassPanel>
         ))}

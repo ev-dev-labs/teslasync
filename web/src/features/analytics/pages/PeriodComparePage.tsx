@@ -6,7 +6,7 @@ import {
   ArrowLeftRight, RefreshCw,
 } from 'lucide-react';
 
-import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout/layout-reference';
+import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
 import {
   Badge, Button, Select, Text,
   DataTable, type SelectOption, type Column,

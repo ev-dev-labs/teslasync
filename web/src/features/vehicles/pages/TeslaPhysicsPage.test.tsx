@@ -15,6 +15,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => undefined }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: 7 }) }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({
+  unitPrefs: { distance: 'km', precision: 2, locale: 'en-US' },
   formatDistance: (meters: number) => `${(meters / 1000).toFixed(1)} km`,
   formatEnergy: (wh: number) => `${(wh / 1000).toFixed(1)} kWh`,
 }) }));

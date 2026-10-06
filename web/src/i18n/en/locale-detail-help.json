@@ -1,6 +1,16 @@
 {
   "help": {
     "title": "Help",
+    "chargerHealth": {
+      "iconLabel": "More info about site grouping",
+      "sites": "Each location is judged only against itself. Comparing a home wall box to a Supercharger would be meaningless, so instead every site establishes its own demonstrated ceiling from its cleanest past sessions, and recent sessions are measured against that. Sessions that sat mostly above the taper threshold are excluded, because a slow charge from 80 % is physics, not a fault.",
+      "detail": "Sites are grouped by place name where one is known, and otherwise by a rounded coordinate cell, so the same physical stall is recognised across visits even when the reported address wobbles slightly. AC and DC are labelled separately because their expected power differs by an order of magnitude."
+    },
+    "chargingThermalTax": {
+      "detail": "Delivered energy is preferably read from the charger's own cumulative counters; if those are missing or reset mid-session, it falls back to integrating instantaneous power instead — the source used is always disclosed below.",
+      "heaterShare": "Heater energy divided by delivered input energy. Not the charging-curve power-vs-SoC view — this only measures heater overhead, independent of how fast the pack itself charged.",
+      "iconLabel": "More info about data sources"
+    },
     "shortcuts": "Open keyboard shortcuts",
     "shortcutsLabel": "Keyboard shortcuts",
     "tour": "Open tour launcher",

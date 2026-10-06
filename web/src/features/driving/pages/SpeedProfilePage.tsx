@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Zap, TrendingUp, Car, Activity } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui';
 import {
   ChartTooltip,
@@ -12,7 +12,8 @@ import {
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 
 
 import { useRangeState } from '@/hooks/useRangeState';
@@ -71,13 +72,18 @@ export default function SpeedProfilePage() {
     defaultPresetId: 'all',
   });
 
-  const { data, isLoading, error, refetch } = useSpeedProfile(vehicleIdStr, start, end);
-  const {
-    data: allDrives,
-    isLoading: drivesLoading,
-    error: drivesError,
-    refetch: refetchDrives,
-  } = useDrives(vehicleIdStr);
+  const profileQuery = useSpeedProfile(vehicleIdStr, start, end);
+  const drivesQuery = useDrives(vehicleIdStr);
+  const profileState = useDataState(profileQuery, { provenance: 'historical' });
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const data = profileState.data;
+  const allDrives = drivesState.data;
+  const isLoading = profileQuery.isLoading && !profileState.hasData;
+  const drivesLoading = drivesQuery.isLoading && !drivesState.hasData;
+  const error = profileState.fatalError;
+  const drivesError = drivesState.fatalError;
+  const { refetch } = profileQuery;
+  const { refetch: refetchDrives } = drivesQuery;
 
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
@@ -188,15 +194,26 @@ export default function SpeedProfilePage() {
 
   const hasDistribution = distributionChartData.length > 0;
 
-  const kpiSpeed = (mps: number | null | undefined) =>
-    data ? fmtNumber(toSpeedDisplay(mps ?? 0)) : '—';
+  const displaySpeed = (mps: number | null | undefined) =>
+    mps != null && Number.isFinite(mps) ? toSpeedDisplay(mps) : null;
+  const gaugeSpeed = (mps: number | null | undefined) => {
+    const value = displaySpeed(mps);
+    return value != null ? Math.round(value) : null;
+  };
+  const kpiSpeed = (mps: number | null | undefined) => {
+    const value = displaySpeed(mps);
+    return value != null ? fmtNumber(value) : '—';
+  };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('speedProfile.title', 'Speed Profile')}
       subtitle={t('speedProfile.subtitle', 'Speed distribution and driving pattern analysis')}
-      loading={isLoading && !data}
+      query={[profileQuery, drivesQuery]}
+      busy={profileQuery.isFetching || drivesQuery.isFetching}
     >
+      <StaleRefreshWarning state={profileState} label={t('speedProfile.title', 'Speed Profile')} />
+      <StaleRefreshWarning state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section
@@ -295,7 +312,7 @@ export default function SpeedProfilePage() {
             ) : (
               <div className="grid grid-cols-3 items-start gap-1 sm:gap-2">
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.avgSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.avgSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
                   unit={speedUnit}
@@ -303,7 +320,7 @@ export default function SpeedProfilePage() {
                   size={96}
                 />
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.peakSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.peakSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(69.44)))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
                   unit={speedUnit}
@@ -311,7 +328,7 @@ export default function SpeedProfilePage() {
                   size={96}
                 />
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.optimalSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.optimalSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
                   unit={speedUnit}
@@ -499,7 +516,7 @@ export default function SpeedProfilePage() {
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }
 

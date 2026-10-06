@@ -1,15 +1,7 @@
-import { ListChecks } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
@@ -42,12 +34,8 @@ export function ComfortConsistencyRowDisposition({
 
   return (
     <section data-testid="comfort-consistency-row-disposition">
-      <GlassPanel className="p-4 sm:p-5">
+      <LayoutCard title={t('comfortConsistency.rows.title', 'Returned-row disposition')}>
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <PanelTitle className="flex items-center gap-2">
-            <ListChecks className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            {t('comfortConsistency.rows.title', 'Returned-row disposition')}
-          </PanelTitle>
           <Badge variant={summary.identities.rowsBalanced ? 'success' : 'danger'}>
             {summary.identities.rowsBalanced
               ? t('comfortConsistency.rows.balanced', 'Exact balance')
@@ -85,7 +73,7 @@ export function ComfortConsistencyRowDisposition({
             )}
           </Text>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

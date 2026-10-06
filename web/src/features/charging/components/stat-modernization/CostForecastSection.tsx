@@ -76,6 +76,9 @@ export function CostForecastSection({
           title={t('costAnalysis.forecast.title', 'Cost Forecast')}
           ariaLabel={t('costAnalysis.forecast.chartAria', 'Historical and projected monthly charging cost with confidence band')}
           data={chartData}
+          exportData={chartData}
+          exportable
+          fullscreen
           dataColumns={[
             { key: 'month', label: t('costAnalysis.forecast.month', 'Month') },
             { key: 'actual', label: t('costAnalysis.forecast.actual', 'Actual Cost') },
@@ -126,6 +129,9 @@ export function CostForecastSection({
           title={t('costAnalysis.forecast.costPerKwhTrend', 'Cost per kWh Trend')}
           ariaLabel={t('costAnalysis.forecast.trendAria', 'Monthly average cost per kilowatt-hour trend')}
           data={historicalData.map(({ month, cost_per_kwh }) => ({ month, cost_per_kwh }))}
+          exportData={historicalData.map(({ month, cost_per_kwh }) => ({ month, cost_per_kwh }))}
+          exportable
+          fullscreen
           dataColumns={[
             { key: 'month', label: t('costAnalysis.forecast.month', 'Month') },
             { key: 'cost_per_kwh', label: t('costAnalysis.forecast.costPerKwh', '$/kWh') },

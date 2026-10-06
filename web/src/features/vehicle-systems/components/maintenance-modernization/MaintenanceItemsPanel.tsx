@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowUpDown, Filter, Wrench } from 'lucide-react';
 import type { DataState } from '@/api/dataState';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { Select } from '@/components/ui';
 import { MaintenanceSource } from './MaintenanceSource';

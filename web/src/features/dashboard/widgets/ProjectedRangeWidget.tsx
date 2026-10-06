@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigation, Thermometer, Gauge, Mountain } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { MetricBar } from '@/components/data-display';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { gaugeTone } from '@/lib/tokens';
@@ -162,22 +163,14 @@ function ComparisonBar({
           {t('widget.projectedRange.epa', 'EPA')}: {epaRange != null ? `${fmtNumber(epaRange)} ${distanceUnit}` : '—'}
         </span>
       </div>
-      <div
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={rangePct ?? undefined}
-        aria-label={t('widget.projectedRange.rangeComparison', 'Projected range vs EPA rated')}
-        className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden"
-      >
-        <div
-          className="h-full rounded-full transition-all duration-slow motion-reduce:transition-none"
-          style={{
-            width: `${rangePct ?? 0}%`,
-            backgroundColor: rangePct == null ? gaugeTone.neutral : rangePct >= 80 ? gaugeTone.success : rangePct >= 60 ? gaugeTone.warning : gaugeTone.danger,
-          }}
-        />
-      </div>
+      <MetricBar
+        value={rangePct}
+        max={100}
+        color={rangePct == null ? gaugeTone.neutral : rangePct >= 80 ? gaugeTone.success : rangePct >= 60 ? gaugeTone.warning : gaugeTone.danger}
+        ariaLabel={t('widget.projectedRange.rangeComparison', 'Projected range vs EPA rated')}
+        showHeader={false}
+        fill="solid"
+      />
       {rangePct != null && (
         <p className={`${dashboardTokens.metricLabel} mt-1`}>
           {fmtNumber(rangePct)}% {t('widget.projectedRange.ofEpa', 'of EPA rated')}

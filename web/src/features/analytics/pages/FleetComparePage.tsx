@@ -6,7 +6,7 @@ import {
   Gauge, ArrowLeftRight, Info, Calendar,
 } from 'lucide-react';
 
-import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout/layout-reference';
+import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
 import {
   GlassPanel, Select, Button, DataTable,
   Text, Caption,
@@ -617,6 +617,7 @@ export default function FleetComparePage() {
                 }}
               />
             )}
+            {vehicleList.length >= 2 && (
             <div className="flex flex-col gap-3 @[640px]:flex-row @[640px]:items-end @[640px]:gap-4">
               <div className="min-w-0 flex-1">
                 <Select
@@ -647,6 +648,7 @@ export default function FleetComparePage() {
                 />
               </div>
             </div>
+            )}
           </GlassPanel>
         </Section>
       </FadeIn>
@@ -834,8 +836,13 @@ export default function FleetComparePage() {
                 {t('comparison.lifetimeNote', 'Statistics shown are lifetime totals across all tracked data.')}
               </Caption>
             </div>
-            {statsLoading && !drivingStatsA && !drivingStatsB && !costA && !costB ? (
+            {vehiclesLoading || (statsLoading && !drivingStatsA && !drivingStatsB && !costA && !costB) ? (
               <Skeleton lines={8} />
+            ) : !vehicleA || !vehicleB ? (
+              <EmptyState
+                /* no-action: choose the comparison vehicles in the existing controls above */
+                message={t('comparison.selectVehicle', 'Select a vehicle')}
+              />
             ) : (
               <DataTable
                 tableId="analytics:fleet-compare"

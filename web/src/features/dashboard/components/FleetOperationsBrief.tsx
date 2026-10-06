@@ -152,10 +152,10 @@ export function FleetOperationsBrief({
               totalsPending ? 'neutral' : isError || posture.attentionCount > 0 ? 'warning' : 'success'
             }
             size="lg"
-            className="inline-flex max-w-full items-center gap-1.5 self-start sm:self-auto"
+            className="inline-flex max-w-full items-center gap-1.5 self-start whitespace-normal sm:self-auto"
           >
             <BadgeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate">
+            <span className="min-w-0 break-words [overflow-wrap:anywhere]">
               {totalsPending
                 ? t('dashboard.fleetPosture.badge.resolving', 'Checking live state')
                 : isError

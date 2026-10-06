@@ -329,6 +329,33 @@ beforeEach(() => {
 });
 
 describe('AutomationListPage', () => {
+  it('states loaded and filtered selection scope without treating a filter as select-all', async () => {
+    renderPage();
+    selectRows([1, 2, 3]);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter automations by status' }), {
+      target: { value: 'active' },
+    });
+    const toolbar = screen.getByRole('region', { name: /bulk actions/i });
+    expect(toolbar).toHaveAttribute('data-selection-scope', 'filtered');
+    expect(toolbar).toHaveTextContent('1 selected · 1 matching loaded rules · 4 loaded');
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [1], op: 'enable' }));
+  });
+
+  it('retains the KPI, table, status and selected IDs during failed background recovery', () => {
+    useAutomationsMock.mockReturnValue(makeQuery({
+      data: AUTOMATIONS, isError: true, error: new Error('Refresh offline'),
+    }));
+    const { container } = renderPage();
+    selectRows([2]);
+    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
+    expect(within(kpiRegion()).getByText('Total runs')).toBeInTheDocument();
+    expect(captured.table.error).toBeNull();
+    expect(captured.status.error).toBeNull();
+    expect(captured.table.selectedKeys).toEqual([2]);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+
   it('renders the page shell, KPI band and both bento sections', () => {
     renderPage();
 

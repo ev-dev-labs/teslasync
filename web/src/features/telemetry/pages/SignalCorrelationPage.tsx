@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, GitCompareArrows, Timer, Waypoints } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, Toggle, HelpTooltip } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
@@ -18,6 +18,7 @@ import {
 import { useSignals, useSignalHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
 
@@ -42,6 +43,9 @@ export default function SignalCorrelationPage() {
   const signalsQuery = useSignals(id);
   const historyA = useSignalHistory(id, signalA, HOURS);
   const historyB = useSignalHistory(id, signalB, HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyAState = useDataState(historyA, { provenance: 'historical' });
+  const historyBState = useDataState(historyB, { provenance: 'historical' });
   const signalAChosen = signalA !== '';
   const signalBChosen = signalB !== '';
   const bothChosen = signalAChosen && signalBChosen;
@@ -130,13 +134,11 @@ export default function SignalCorrelationPage() {
     || (!historyBHasData && historyB.isLoading)
   );
   const isError = bothChosen && (
-    (historyA.isError && !historyAHasData)
-    || (historyB.isError && !historyBHasData)
+    historyAState.fatalError != null
+    || historyBState.fatalError != null
   );
   const error =
-    historyA.isError && !historyAHasData
-      ? historyA.error
-      : historyB.error;
+    historyAState.fatalError ?? historyBState.fatalError;
 
   const leadLabel =
     result == null
@@ -150,7 +152,7 @@ export default function SignalCorrelationPage() {
             : t('signalCorrelation.noLead', 'No relationship');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalCorrelation.title', 'Signal correlation')}
       subtitle={t(
         'signalCorrelation.subtitle',
@@ -172,8 +174,8 @@ export default function SignalCorrelationPage() {
               ariaLabel={t('help.signalCorrelation.iconLabel', 'More info about signal selection')}
             />
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={80} />
           ) : options.length === 0 ? (
@@ -321,6 +323,11 @@ export default function SignalCorrelationPage() {
               'Line chart of correlation coefficient against time lag between the two selected signals',
             )}
             loading={isLoading}
+            error={isError ? error : null}
+            onRetry={() => {
+              if (historyAState.fatalError) historyAState.retry?.();
+              if (historyBState.fatalError) historyBState.retry?.();
+            }}
             empty={correlogram.length === 0}
             height={340}
             data={correlogram}
@@ -386,6 +393,11 @@ export default function SignalCorrelationPage() {
           )}
           chartKey="signal-correlation-overlay"
           loading={isLoading}
+          error={isError ? error : null}
+          onRetry={() => {
+            if (historyAState.fatalError) historyAState.retry?.();
+            if (historyBState.fatalError) historyBState.retry?.();
+          }}
           empty={overlay.length === 0}
           height={300}
           data={overlay}
@@ -438,7 +450,14 @@ export default function SignalCorrelationPage() {
             <Timer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalCorrelation.reading', 'Reading the result')}
           </PanelTitle>
-          {result == null ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => {
+              if (historyAState.fatalError) historyAState.retry?.();
+              if (historyBState.fatalError) historyBState.retry?.();
+            }} />
+          ) : result == null ? (
             <EmptyState /* no-action: the interpretation follows from the correlogram above. */
               icon={<ArrowLeftRight className="h-8 w-8" />}
               message={t(
@@ -495,6 +514,6 @@ export default function SignalCorrelationPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

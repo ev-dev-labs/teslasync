@@ -33,7 +33,8 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -360,16 +361,34 @@ describe('QuickStatsPage', () => {
     expect(screen.queryByText('Distance driven')).not.toBeInTheDocument();
   });
 
-  it('is null-safe: a partial rollup renders zeros instead of throwing', () => {
-    // Backend contract says every field is present, but the page must not
-    // assume it — a `{}` payload must degrade to zeros with an empty compare.
+  it('keeps all partial-rollup metrics visible and unknown instead of inventing zero', () => {
     analyticsMock.mockReturnValue(makeQuery({ data: {} as AnalyticsSummary }));
     renderPage();
 
     expect(screen.getByText('Distance driven')).toBeInTheDocument();
-    expect(screen.getByText('0.00 km')).toBeInTheDocument();
-    expect(screen.getByText('0 kWh')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Fleet metrics' })).getAllByText('—')).toHaveLength(8);
+    expect(screen.queryByText('0.00 km')).toBeNull();
+    expect(screen.queryByText('0 kWh')).toBeNull();
     expect((captured.fleet.entries as unknown[]).length).toBe(0);
+  });
+
+  it('distinguishes actual zero from nullable and non-finite metrics without altering valid formulas', () => {
+    analyticsMock.mockReturnValue(makeQuery({ data: {
+      ...ANALYTICS,
+      totalDistanceKm: Number.NaN,
+      totalDrives: 0,
+      totalChargingSessions: null,
+      totalEnergyKwh: null,
+      totalCost: null,
+      avgEfficiencyWhKm: Number.POSITIVE_INFINITY,
+      co2SavedKg: 0,
+      totalVehicles: null,
+    } }));
+    renderPage();
+    const metrics = screen.getByRole('region', { name: 'Fleet metrics' });
+    expect(within(metrics).getAllByText('—')).toHaveLength(6);
+    expect(within(metrics).getByText('0')).toBeInTheDocument();
+    expect(within(metrics).getByText('0.00 kg')).toBeInTheDocument();
   });
 
   it('spotlights the selected vehicle, forwarding identity + live state', () => {
@@ -448,11 +467,25 @@ describe('QuickStatsPage', () => {
     expect(aq.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the vehicle picker only for multi-vehicle fleets', () => {
+  it('keeps all eight metrics, comparison and spotlight during failed background refresh', () => {
+    analyticsMock.mockReturnValue(makeQuery({ data: ANALYTICS, error: new Error('refresh failed'), isError: true }));
+    vehiclesMock.mockReturnValue(makeQuery({ data: [makeVehicle()], error: new Error('registry refresh failed'), isError: true }));
+    const { container } = renderPage();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.getByText('450 kWh')).toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-hero')).toBeInTheDocument();
+    expect(captured.fleet.entries).toBe(ANALYTICS.vehicleComparison);
+    expect(captured.fleet.error).toBeNull();
+    expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Fleet metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open dashboard' })).toBeInTheDocument();
+  });
+
+  it('does not duplicate the workspace vehicle picker for multi-vehicle or single-vehicle fleets', () => {
+    expect(getWorkspaceRouteScope('/quick-stats').vehicle).toBe(true);
     const multi = renderPage();
-    expect(
-      screen.getByRole('combobox', { name: 'Select vehicle' }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
     multi.unmount();
 
     selectedVehicleMock.mockReturnValue({
@@ -466,24 +499,28 @@ describe('QuickStatsPage', () => {
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
 
-  it('re-scopes the spotlight on a valid pick and ignores the empty option', () => {
-    const setVehicleId = vi.fn();
+  it('consumes workspace selection changes without re-scoping the fleet KPI rollup', () => {
     selectedVehicleMock.mockReturnValue({
       vehicleId: 1,
       vehicle: makeVehicle(),
       vehicles: [makeVehicle(), makeVehicle({ id: 2, vin: 'VIN-002', display_name: 'Model 3' })],
-      setVehicleId,
+      setVehicleId: vi.fn(),
+    });
+    const first = renderPage();
+    expect(captured.hero.vehicle).toMatchObject({ id: 1 });
+    first.unmount();
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: 2,
+      vehicle: makeVehicle({ id: 2, display_name: 'Model 3' }),
+      vehicles: [makeVehicle(), makeVehicle({ id: 2 })],
+      setVehicleId: vi.fn(),
     });
     renderPage();
-
-    const picker = screen.getByRole('combobox', { name: 'Select vehicle' });
-    fireEvent.change(picker, { target: { value: '2' } });
-    expect(setVehicleId).toHaveBeenCalledWith(2);
-
-    // The empty placeholder must be guarded out (Number('') → 0, not > 0).
-    setVehicleId.mockClear();
-    fireEvent.change(picker, { target: { value: '' } });
-    expect(setVehicleId).not.toHaveBeenCalled();
+    expect(captured.hero.vehicle).toMatchObject({ id: 2 });
+    expect(vehicleStateMock).toHaveBeenCalledWith(2);
+    expect(analyticsMock).toHaveBeenLastCalledWith(30);
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 
   it('refreshes analytics, vehicle state and the vehicle list together', () => {

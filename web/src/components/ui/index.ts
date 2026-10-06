@@ -26,6 +26,11 @@ export { TabNav, type TabNavProps, type TabNavItem } from './TabNav';
 export { Accordion } from './Accordion';
 export { Pagination, type PaginationProps } from './Pagination';
 export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Column, type PaginationConfig } from './DataTable';
+export type {
+  MobileDataTablePresentation,
+  MobileDataTableDetail,
+  MobileTableRowKey,
+} from './MobileDataTableAdapter.types';
 export { DataTableValueFilter, type TableFilterValue } from './DataTableValueFilter';
 export { Table, type TableProps } from './Table';
 export { DataTableColumnsMenu } from './DataTableColumnsMenu';
@@ -51,6 +56,7 @@ export { ThemePicker, type ThemePickerProps } from './ThemePicker';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
 export { CopyButton, type CopyButtonProps } from './CopyButton';
+export { CodeBlock, type CodeBlockProps } from './CodeBlock';
 export { MaskedValue, type MaskedValueProps, type MaskedValueVariant } from './MaskedValue';
 export {
   EditableText,

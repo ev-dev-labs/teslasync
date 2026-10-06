@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
 
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
@@ -13,6 +14,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useDataState } from '@/hooks/useDataState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { PAGINATION } from '@/lib/constants';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
@@ -70,12 +72,18 @@ export default function CostAnalysisPage() {
     start: startDate,
     end: endDate,
   });
-  const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = sessionsQuery;
+  const { data: sessions } = sessionsQuery;
+  const sessionsState = useDataState(sessionsQuery, { provenance: 'historical' });
+  const sessionsLoading = sessionsQuery.isLoading && !sessionsState.hasData;
+  const sessionsError = sessionsState.fatalError;
   const retrySessions = useCallback(() => { void sessionsQuery.refetch(); }, [sessionsQuery]);
 
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
   const forecastQuery = useCostForecast(vehicleIdStr);
-  const { data: forecastData, isLoading: forecastLoading, error: forecastError } = forecastQuery;
+  const { data: forecastData } = forecastQuery;
+  const forecastState = useDataState(forecastQuery, { provenance: 'historical' });
+  const forecastLoading = forecastQuery.isLoading && !forecastState.hasData;
+  const forecastError = forecastState.fatalError;
   const retryForecast = useCallback(() => { void forecastQuery.refetch(); }, [forecastQuery]);
 
   const {
@@ -97,12 +105,19 @@ export default function CostAnalysisPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('costAnalysis.title', 'Cost Analysis')}
       subtitle={t('costAnalysis.subtitle', 'Electricity cost trends, gas savings, and charging economics')}
       overflowActions={actions}
-      query={sessionsQuery}
+      query={[sessionsQuery, forecastQuery]}
+      busy={sessionsState.isRefreshing || forecastState.isRefreshing}
+      dataSources={[
+        { id: 'sessions', label: t('charging.curve.resource', 'Charging sessions'), query: sessionsQuery },
+        { id: 'forecast', label: t('costAnalysis.forecast.title', 'Cost Forecast'), query: forecastQuery },
+      ]}
     >
+      <StaleRefreshWarning state={sessionsState} label={t('charging.curve.resource', 'Charging sessions')} />
+      <StaleRefreshWarning state={forecastState} label={t('costAnalysis.forecast.title', 'Cost Forecast')} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section data-tour="cost-analysis" aria-label={t('costAnalysis.kpis', 'Cost summary metrics')}>
@@ -237,6 +252,6 @@ export default function CostAnalysisPage() {
           />
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

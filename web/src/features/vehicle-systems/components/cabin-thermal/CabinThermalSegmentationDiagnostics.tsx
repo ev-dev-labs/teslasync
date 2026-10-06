@@ -1,12 +1,9 @@
-import { Split } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
+import { LayoutCard, Grid } from '@/components/layout';
 import {
-  GlassPanel,
   MetricLabel,
   MetricValue,
-  PanelTitle,
   Text,
 } from '@/components/ui';
 
@@ -39,11 +36,7 @@ export function CabinThermalSegmentationDiagnostics({
 
   return (
     <section data-testid="cabin-thermal-segmentation">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Split className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.segmentation.title', 'Segmentation diagnostics')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.segmentation.title', 'Segmentation diagnostics')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.segmentation.subtitle',
@@ -94,7 +87,7 @@ export function CabinThermalSegmentationDiagnostics({
             />
           </Grid>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

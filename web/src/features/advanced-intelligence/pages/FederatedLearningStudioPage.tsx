@@ -8,7 +8,7 @@ import {
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Table, Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -64,14 +64,12 @@ export default function FederatedLearningStudioPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.federated.title', 'Federated learning studio')}
       subtitle={t(
         'advancedIntelligence.federated.subtitle',
         'Manage subject-scoped local aggregate model rounds within explicit privacy budgets.',
       )}
-      loading={vehicleId != null && query.isLoading}
-      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="success"
@@ -86,6 +84,7 @@ export default function FederatedLearningStudioPage() {
 
       <FadeIn>
         <InsightPanel
+          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.federated.budget.title', 'Subject privacy budget')}
           empty={!query.data}
           emptyMessage={vehicleId == null
@@ -115,6 +114,7 @@ export default function FederatedLearningStudioPage() {
       <FadeIn delay={0.05}>
         <InsightPanel
           title={t('advancedIntelligence.federated.cards.title', 'Subject-scoped model cards')}
+          query={vehicleId != null ? query : undefined}
           empty={cards.length === 0}
           emptyMessage={t(
             'advancedIntelligence.federated.cards.empty',
@@ -277,6 +277,6 @@ export default function FederatedLearningStudioPage() {
         onConfirm={confirmRound}
         onCancel={() => setConfirmOpen(false)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

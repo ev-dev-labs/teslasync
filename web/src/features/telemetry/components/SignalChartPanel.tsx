@@ -25,11 +25,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3, Radio } from 'lucide-react';
 
-import { GlassPanel, SectionTitle } from '@/components/ui';
+import { Caption, GlassPanel, SectionTitle } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { SourceContent } from '@/components/layout';
 import {
+  ChartTooltip,
   LineChart,
   Line,
   XAxis,
@@ -67,6 +68,9 @@ export interface SignalChartPanelProps {
   stats: SignalStat[];
   isLive?: boolean;
   loading?: boolean;
+  /** Initial failure only; callers pass DataState.fatalError, never refresh errors. */
+  error?: Error | null;
+  onRetry?: () => void;
   /** Total points loaded (historical) or live event count. Header annotation. */
   pointsLoaded?: number;
   liveEventCount?: number;
@@ -106,6 +110,8 @@ export function SignalChartPanel({
   stats = [],
   isLive = false,
   loading = false,
+  error,
+  onRetry,
   pointsLoaded,
   liveEventCount,
   title,
@@ -162,27 +168,35 @@ export function SignalChartPanel({
   }, [data, effectiveMode, selectedSignals]);
 
   return (
-    <FadeIn>
-      <GlassPanel className={cn('p-4 sm:p-5', className)}>
-        <div className="flex items-center gap-2 mb-4">
+    <FadeIn className="min-w-0 max-w-full">
+      <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+        <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2">
           {isLive ? (
             <Radio className="h-4 w-4 text-red-500 animate-pulse" aria-hidden="true" />
           ) : (
             <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           )}
-          <SectionTitle>{resolvedTitle}</SectionTitle>
+          <SectionTitle className="min-w-0 break-words">{resolvedTitle}</SectionTitle>
           {isLive ? (
-            <span className="ml-auto flex items-center gap-1.5 text-2xs text-red-400">
+            <Caption className="ms-auto flex flex-wrap items-center gap-1.5 text-red-400">
               <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
               {fmtInt(liveEventCount ?? 0)} {t('events')} · {fmtInt(data.length)} {t('points')}
-            </span>
+            </Caption>
           ) : data.length > 0 && pointsLoaded != null ? (
-            <span className="ml-auto text-2xs text-[var(--text-muted)]">
+            <Caption className="ms-auto">
               {fmtInt(pointsLoaded)} {t('signalChart.pointsLoaded', 'points loaded')}
-            </span>
+            </Caption>
           ) : null}
         </div>
 
+        <SourceContent
+          state={error ? 'error' : 'ready'}
+          label={resolvedTitle}
+          error={error}
+          errorMessage={t('error.loadFailed', 'Failed to load data')}
+          emptyMessage={t('signalChart.emptyRange', 'No signal samples were recorded in this time range.')}
+          errorRecovery={{ onRetry }}
+        >
         {loading && !isLive ? (
           <div style={{ height }} role="status" aria-label={t('signalChart.loading', 'Loading chart…')}>
             <Skeleton className="h-full w-full" />
@@ -266,6 +280,7 @@ export function SignalChartPanel({
             )}
           </EmbeddedChart>
         )}
+        </SourceContent>
       </GlassPanel>
     </FadeIn>
   );

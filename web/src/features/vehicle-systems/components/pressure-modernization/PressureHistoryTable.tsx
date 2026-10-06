@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { DataTable, type Column } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import type { DataState } from '@/api/dataState';
@@ -26,7 +26,8 @@ export function PressureHistoryTable({ source, loading, rows, columns, sortKey, 
         : source.fatalError ? <QueryError error={source.fatalError} onRetry={source.retry ?? undefined}
           resourceName={t('tirePressure.resource', 'Tire pressure')} />
         : !rows.length ? <EmptyState icon={<Clock className="h-8 w-8" aria-hidden="true" />}
-          message={t('tirePressure.noHistory', 'No history data')} />
+          message={t('tirePressure.noHistory', 'No history data')}
+          action={source.retry ? { label: t('common.refresh', 'Refresh'), onClick: source.retry } : undefined} />
         : <DataTable
           variant="embedded"
           tableId="vehicle-systems:tire-pressure-history"

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { StatStrip } from '@/components/data-display/stat-reference';
+import { StatStrip } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { summarizeItems, type MaintenanceItem } from './maintenanceModel';
 

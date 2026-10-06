@@ -16,10 +16,12 @@ import {
   Check, X, Navigation, RefreshCw, BatteryCharging,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { FormSection } from '@/components/forms';
+import { deriveDataState } from '@/api/dataState';
 import {
   GlassPanel, Button, Input, Select, Modal, Toggle, ConfirmDialog,
-  Tabs, PanelTitle, Caption, Label, HelperText,
+  Tabs, PanelTitle, Caption, HelperText,
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, AlertBanner } from '@/components/feedback';
@@ -179,7 +181,8 @@ export default function GeofencesPage() {
     queryFn: ({ signal }) => request<Geofence[]>('/geofences', { signal }),
   });
   const geofences = geofencesQuery.data;
-  const isLoading = geofencesQuery.isLoading;
+  const geofencesState = deriveDataState(geofencesQuery);
+  const isLoading = geofencesQuery.isLoading && !geofencesState.hasData;
 
   const {
     vehicleId,
@@ -511,10 +514,14 @@ export default function GeofencesPage() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('geofences.title', 'Geofences')}
       subtitle={t('geofences.subtitle', 'Define locations for contextual tracking and automation')}
       query={geofencesQuery}
+      dataSources={[
+        { id: 'geofences', label: t('geofences.title', 'Geofences'), query: geofencesQuery },
+        { id: 'candidates', label: t('geofences.visits.candidates', 'Visited candidates'), query: candidateQuery },
+      ]}
       secondaryActions={
         <Button
           variant="ghost"
@@ -533,8 +540,7 @@ export default function GeofencesPage() {
         </Button>
       }
     >
-      {/* 1 — KPI band: full-width responsive metric grid. Always visible with a
-          0 placeholder so the section never disappears on empty/error. */}
+      {/* 1 — KPI band remains visible with source-aware unknown values. */}
       <FadeIn>
         <section
           aria-label={t('geofences.summaryAria', 'Geofence summary')}
@@ -548,25 +554,25 @@ export default function GeofencesPage() {
             <>
               <MetricCard
                 label={t('geofences.totalGeofences', 'Total geofences')}
-                value={stats.total ?? 0}
+                value={geofencesState.hasData ? stats.total : '—'}
                 icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
                 color="purple"
               />
               <MetricCard
                 label={t('geofences.visits.reviewedPlaces', 'Reviewed places')}
-                value={stats.reviewed}
+                value={geofencesState.hasData ? stats.reviewed : '—'}
                 icon={<Check className="h-4 w-4" aria-hidden="true" />}
                 color="green"
               />
               <MetricCard
                 label={t('geofences.visits.pending', 'Awaiting review')}
-                value={stats.pending}
+                value={geofencesState.hasData ? stats.pending : '—'}
                 icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('geofences.visits.candidates', 'Visited candidates')}
-                value={candidateQuery.data?.length ?? 0}
+                value={candidateQuery.data?.length ?? '—'}
                 icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
                 color="amber"
               />
@@ -583,11 +589,7 @@ export default function GeofencesPage() {
             aria-label={t('geofences.aiSuggest.title', 'Suggest a geofence for this location')}
             className="grid grid-cols-1 gap-4 xl:grid-cols-3"
           >
-            <GlassPanel className="space-y-3 p-4 sm:p-5">
-              <PanelTitle className="flex items-center gap-2">
-                <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('geofences.aiSuggest.badge', 'Helix')}
-              </PanelTitle>
+            <LayoutCard title={t('geofences.aiSuggest.badge', 'Helix')}>
               <Select
                 value={aiLocationIdRaw}
                 onChange={(e) => setAiLocationIdRaw(e.target.value)}
@@ -609,7 +611,7 @@ export default function GeofencesPage() {
                   'Choose a visited location to propose a zone; review the draft before saving.',
                 )}
               </Caption>
-            </GlassPanel>
+            </LayoutCard>
             <div className="xl:col-span-2">
               <AISuggestNewGeofences
                 locationId={aiLocationId}
@@ -656,11 +658,7 @@ export default function GeofencesPage() {
           )}
           {/* Use Current Location */}
           {!editingId && (
-            <GlassPanel className="space-y-3 p-4">
-              <div className="flex items-center gap-2">
-                <Navigation className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-                <Label>{t('geofences.useCurrentLocation', 'Use current location')}</Label>
-              </div>
+            <FormSection title={t('geofences.useCurrentLocation', 'Use current location')}>
 
               <Tabs
                 tabs={[
@@ -738,7 +736,7 @@ export default function GeofencesPage() {
                     : t('geofences.getLocation', 'Get location')}
                 </Button>
               )}
-            </GlassPanel>
+            </FormSection>
           )}
           <Input
             label={t('geofences.formName', 'Name')}
@@ -856,6 +854,6 @@ export default function GeofencesPage() {
         }}
         onCancel={() => setDeleteTarget(null)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -16,11 +16,12 @@ import {
 
 import { useSettings } from '@/api/hooks/useSettings'
 import { useFont } from '@/components/ui/FontProvider'
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { Button, SectionTitle, Text } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
-import { EditConflictBanner } from '@/components/feedback'
+import { DataStateNotice, EditConflictBanner, QueryError } from '@/components/feedback'
+import { deriveDataState } from '@/api/dataState'
 import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useEditLease } from '@/hooks/useEditLease'
@@ -81,6 +82,7 @@ export default function SettingsPage() {
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
   const settingsQuery = useSettings()
+  const settingsState = deriveDataState(settingsQuery)
   const { data: settings, isLoading } = settingsQuery
   const { prefs: fontPrefs } = useFont()
   const toast = useToast()
@@ -195,12 +197,14 @@ export default function SettingsPage() {
   }, [settings, fontPrefs, t, displayPrecision, displayLocale, fmtNumber])
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('title', 'Settings')}
       subtitle={t('settings.organization.subtitle', 'Find a category, adjust your preferences, and keep TeslaSync working your way.')}
       contextActions={<SettingsSearch className="w-full sm:w-72" />}
       query={settingsQuery}
     >
+      {settingsState.fatalError && <QueryError error={settingsState.fatalError} onRetry={() => void settingsQuery.refetch()} />}
+      {settingsState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       <EditConflictBanner
         resourceKey={settingsLeaseKey}
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
@@ -257,7 +261,7 @@ export default function SettingsPage() {
                       title={t('tour.title', 'Onboarding tour')}
                       description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
                       action={
-                        <Button variant="ghost" className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
+                        <Button variant="ghost" wrapLabel className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
                           <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
                           {t('tour.restart', 'Open tour launcher')}
                         </Button>
@@ -274,6 +278,7 @@ export default function SettingsPage() {
                       action={
                         <Button
                           variant="ghost"
+                          wrapLabel
                           className="h-auto min-h-11 w-full whitespace-normal"
                           onClick={() => {
                             restartChecklist()
@@ -307,6 +312,6 @@ export default function SettingsPage() {
           ))}
         </div>
       </div>
-    </PageContainer>
+    </PageLayout>
   )
 }

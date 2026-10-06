@@ -178,11 +178,13 @@ vi.mock('@/components/charts', async () => {
       label,
       unit,
     }: {
-      value: number;
+      value: number | null;
       label: string;
       unit?: string;
     }) {
-      return React.createElement('div', { 'data-testid': `gauge-${label}` }, `${value}${unit ?? ''}`);
+      return React.createElement('div', {
+        'data-testid': `gauge-${label}`, 'data-reading': value == null ? 'missing' : String(value),
+      }, value == null ? '—' : `${value}${unit ?? ''}`);
     },
   };
 });
@@ -439,15 +441,38 @@ describe('SpeedProfilePage', () => {
     expect(screen.getByText('0 drives analysed')).toBeInTheDocument();
   });
 
-  it('shows only the page spinner while the initial profile load is in flight', () => {
+  it('keeps the complete report outline and independent drive evidence while the profile loads', () => {
     speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ isLoading: true }));
-    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [] }));
     renderPage();
 
-    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
-    // Panels are gated behind the container spinner.
-    expect(screen.queryByText('Speed Distribution')).not.toBeInTheDocument();
+    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
+    expect(screen.getByText('Speed Envelope')).toBeInTheDocument();
+    expect(screen.getByText('Speed Buckets')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency Insight')).toBeInTheDocument();
+    expect(captured.scatterData).toHaveLength(3);
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();
+  });
+
+  it('retains both source derivations during refresh failures', () => {
+    const bytes = JSON.stringify(PROFILE);
+    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ data: PROFILE, error: new Error('profile refresh') }));
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES, error: new Error('drive refresh') }));
+    renderPage();
+    expect(captured.barChartData).toHaveLength(4);
+    expect(captured.scatterData).toHaveLength(3);
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(JSON.stringify(PROFILE)).toBe(bytes);
+  });
+
+  it('keeps missing and nonfinite speeds distinct from a measured zero at the display boundary', () => {
+    speedProfileMock.mockReturnValue(makeQuery({
+      data: { ...PROFILE, avgSpeedMps: null, peakSpeedMps: Number.NaN, optimalSpeedMps: 0 },
+    }));
+    renderPage();
+    expect(screen.getByTestId('gauge-Avg Speed')).toHaveAttribute('data-reading', 'missing');
+    expect(screen.getByTestId('gauge-Peak Speed')).toHaveAttribute('data-reading', 'missing');
+    expect(screen.getByTestId('gauge-Optimal Speed')).toHaveAttribute('data-reading', '0');
   });
 
   it('sends the header-owned range to the profile query without a local picker', () => {

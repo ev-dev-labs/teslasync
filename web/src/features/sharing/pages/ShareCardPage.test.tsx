@@ -109,8 +109,13 @@ vi.mock('@/components/forms', () => ({
   RangePicker: () => <div data-testid="share-card-range">Range picker</div>,
 }));
 
-vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+vi.mock('@/components/layout', async () => {
+  const actual = await vi.importActual<typeof import('@/components/layout')>('@/components/layout');
+  const charts = await vi.importMock<typeof import('@/components/charts')>('@/components/charts');
+  return {
+  ...actual,
+  ChartCard: charts.ChartContainer,
+  PageLayout: ({
     title,
     actions,
     children,
@@ -126,7 +131,8 @@ vi.mock('@/components/layout', () => ({
     </main>
   ),
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}));
+  };
+});
 
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <div>{children}</div>,

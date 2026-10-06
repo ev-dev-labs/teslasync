@@ -115,11 +115,10 @@ describe('HealthProbesSection', () => {
     expect(screen.getAllByText('degraded')).toHaveLength(2)
     // database status has no value -> defaults to "unknown" (badge + KV row).
     expect(screen.getAllByText('unknown')).toHaveLength(2)
-    // goroutines + pool connections both null-coalesce to 0.
-    expect(screen.getAllByText('0')).toHaveLength(2)
-    // uptime of 0s formats to "0m"; unknown latency renders an em dash.
-    expect(screen.getByText('0m')).toBeInTheDocument()
-    expect(screen.getByText(EM_DASH)).toBeInTheDocument()
+    // Missing goroutines, uptime, latency and pool count are unknown, not zero.
+    expect(screen.queryByText('0')).toBeNull()
+    expect(screen.queryByText('0m')).toBeNull()
+    expect(screen.getAllByText(EM_DASH)).toHaveLength(4)
   })
 
   it('treats a zero latency as a real reading rather than a missing value', async () => {

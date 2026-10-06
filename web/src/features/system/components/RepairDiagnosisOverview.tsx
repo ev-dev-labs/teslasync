@@ -5,10 +5,10 @@ import { InlineCallout, StatSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 interface RepairDiagnosisOverviewProps {
-  totalSuggestions: number;
-  driveSuggestions: number;
-  chargingSuggestions: number;
-  blocked: number;
+  totalSuggestions: number | null;
+  driveSuggestions: number | null;
+  chargingSuggestions: number | null;
+  blocked: number | null;
   truncated: boolean;
   loading?: boolean;
 }
@@ -35,30 +35,30 @@ export function RepairDiagnosisOverview({
         >
           <MetricCard
             label={t('dataRepair.kpi.suggestions', 'Suggested repairs')}
-            value={totalSuggestions}
+            value={totalSuggestions ?? '—'}
             icon={<Wrench className="h-4 w-4" />}
             color="amber"
             wrapLabel
           />
           <MetricCard
             label={t('dataRepair.kpi.driveSuggestions', 'Drive boundaries')}
-            value={driveSuggestions}
+            value={driveSuggestions ?? '—'}
             icon={<Route className="h-4 w-4" />}
             color="purple"
             wrapLabel
           />
           <MetricCard
             label={t('dataRepair.kpi.chargingSuggestions', 'Charging boundaries')}
-            value={chargingSuggestions}
+            value={chargingSuggestions ?? '—'}
             icon={<BatteryCharging className="h-4 w-4" />}
             color="cyan"
             wrapLabel
           />
           <MetricCard
             label={t('dataRepair.kpi.blocked', 'Blocked')}
-            value={blocked}
+            value={blocked ?? '—'}
             icon={<AlertTriangle className="h-4 w-4" />}
-            color={blocked === 0 ? 'green' : 'red'}
+            color={blocked == null ? 'amber' : blocked === 0 ? 'green' : 'red'}
             wrapLabel
           />
         </section>

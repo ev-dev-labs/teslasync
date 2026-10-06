@@ -221,18 +221,18 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
                   className="flex items-start justify-between gap-2 py-1.5 px-1 border-b border-[var(--border-default)] last:border-b-0"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Text variant="bodySm" className="truncate">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <Text variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">
                         {upgrade.name}
                       </Text>
                       {upgrade.price && (
-                        <Badge variant="neutral" size="sm">
+                        <Badge variant="neutral" size="sm" className="max-w-full whitespace-normal break-words">
                           {formatPrice(upgrade.price)}
                         </Badge>
                       )}
                     </div>
                     {upgrade.description && (
-                      <Text variant="bodySm" className="mt-0.5 truncate">
+                      <Text variant="bodySm" className="mt-0.5 block break-words [overflow-wrap:anywhere]">
                         {upgrade.description}
                       </Text>
                     )}

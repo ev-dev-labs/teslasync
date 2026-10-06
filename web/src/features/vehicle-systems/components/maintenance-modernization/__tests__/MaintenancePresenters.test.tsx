@@ -142,6 +142,24 @@ afterEach(() => {
 });
 
 describe('complete maintenance presenters', () => {
+  it('wires empty projection/category and cost/record recovery to their independent read sources', () => {
+    mount(<MaintenancePage />);
+    for (const message of [
+      'No upcoming service projections available.',
+      'No maintenance items to categorize yet.',
+      'No cost data available yet. Log service records to see cost estimates.',
+      'No service records logged yet.',
+    ]) {
+      const status = screen.getByText(message).closest('[role="status"]');
+      if (!(status instanceof HTMLElement)) throw new Error(`Missing ${message} empty state`);
+      fireEvent.click(within(status).getByRole('button', { name: 'Refresh' }));
+    }
+    expect(h.items.refetch).toHaveBeenCalledTimes(2);
+    expect(h.records.refetch).toHaveBeenCalledTimes(2);
+    expect(h.request).not.toHaveBeenCalled();
+    expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
+  });
+
   it('distinguishes all six missing KPI values from authoritative zero counts', () => {
     const { rerender } = mount(<MaintenanceSummary source={deriveDataState(query<MaintenanceItem[]>(undefined, {
       isError: true, error: new Error('Unavailable'),

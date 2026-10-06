@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRoadHazards } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Table, Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -32,14 +32,12 @@ export default function RoadHazardMeshPage() {
   usePageTitle(t('advancedIntelligence.hazards.title', 'Road hazard mesh'));
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}
       subtitle={t(
         'advancedIntelligence.hazards.subtitle',
         'Privacy-preserving hazard clusters shown only at coarse-cell resolution.',
       )}
-      loading={vehicleId != null && query.isLoading}
-      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="info"
@@ -54,6 +52,7 @@ export default function RoadHazardMeshPage() {
 
       <FadeIn>
         <InsightPanel
+          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.hazards.clusters.title', 'Hazard clusters')}
           description={t(
             'advancedIntelligence.hazards.clusters.subtitle',
@@ -129,6 +128,6 @@ export default function RoadHazardMeshPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

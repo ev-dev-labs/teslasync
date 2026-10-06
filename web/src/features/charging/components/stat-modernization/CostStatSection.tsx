@@ -64,6 +64,7 @@ export function CostStatSection({
           message={emptyMessage ?? t('common.noChargingRecords', 'No charging records match the current selection.')}
           description={emptyDescription ?? t('common.noChargingRecordsDescription',
             'Adjust the vehicle or date filters, or return after more charging history is recorded.')}
+          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
         />
       ) : (
         <div className={bodyClassName}>{typeof children === 'function' ? children(periodHeaderId) : children}</div>

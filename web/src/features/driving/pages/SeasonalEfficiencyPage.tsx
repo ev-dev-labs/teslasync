@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -72,7 +72,7 @@ export default function SeasonalEfficiencyPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('seasonalEfficiency.title', 'Seasonal Efficiency')}
       subtitle={t(
         'seasonalEfficiency.subtitle',
@@ -121,6 +121,6 @@ export default function SeasonalEfficiencyPage() {
       <FadeIn delay={0.4}>
         <SeasonalMethodology {...sectionProps} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -141,6 +141,20 @@ beforeEach(() => {
 });
 
 describe('live regen presentation preservation', () => {
+  it('retries resolved-empty summary sources together and detailed distribution independently', () => {
+    h.aggregate = query({ ...aggregate, totalRegenWh: 0, totalDriveWh: 0 }, { refetch: retryAggregate });
+    h.detail = query([], { refetch: retryDetail });
+    harness();
+    fireEvent.click(within(screen.getByTestId('regen-kpis')).getByRole('button', { name: 'Retry' }));
+    expect(retryAggregate).toHaveBeenCalledTimes(1);
+    expect(retryDetail).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(screen.getByTestId('regen-distribution')).getByRole('button', { name: 'Retry' }));
+    expect(retryAggregate).toHaveBeenCalledTimes(1);
+    expect(retryDetail).toHaveBeenCalledTimes(2);
+    sections.forEach(id => expect(screen.getByTestId(id)).toBeInTheDocument());
+    expect(h.gauges).toHaveLength(0);
+  });
+
   it('keeps exact query operands, all sections and specialist formatter output', () => {
     harness();
     sections.forEach(id => expect(screen.getByTestId(id)).toBeInTheDocument());
@@ -183,11 +197,11 @@ describe('live regen presentation preservation', () => {
     expect(distribution.dataColumns?.map(column => column.key)).toEqual(['bucket', 'drives', 'share']);
   });
   it('keeps all shells for pending, failed, resolved-empty and retained rerenders', () => {
-    h.aggregate = query(undefined, { isLoading: true });
-    h.detail = query(undefined, { isLoading: true });
+    h.aggregate = query<RegenEfficiencyData>(undefined, { isLoading: true });
+    h.detail = query<Drive[]>(undefined, { isLoading: true });
     const view = harness();
     sections.forEach(id => expect(screen.getByTestId(id)).toBeInTheDocument());
-    h.aggregate = query(undefined, { error: new Error('aggregate failure'), isError: true, refetch: retryAggregate });
+    h.aggregate = query<RegenEfficiencyData>(undefined, { error: new Error('aggregate failure'), isError: true, refetch: retryAggregate });
     h.detail = query([drive], { refetch: retryDetail });
     view.rerender(<RegenEfficiencyPage />);
     sections.forEach(id => expect(screen.getByTestId(id)).toBeInTheDocument());
@@ -207,14 +221,16 @@ describe('live regen presentation preservation', () => {
     expect(screen.queryByTestId('captured-table')).not.toBeInTheDocument();
   });
   it('does not turn disabled/unresolved data into observed zeros or success', () => {
-    h.aggregate = query(undefined);
-    h.detail = query(undefined);
+    h.aggregate = query<RegenEfficiencyData>(undefined);
+    h.detail = query<Drive[]>(undefined);
     harness();
     expect(h.gauges).toHaveLength(0);
     expect(h.bars).toHaveLength(0);
     expect(screen.queryByText('Complete aggregate loaded')).not.toBeInTheDocument();
     expect(screen.queryByTestId('captured-table')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('regen-kpis')).queryByText('0 / 0')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('regen-kpis')).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('regen-distribution')).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
   it('distinguishes invalid aggregate ratios, unknown buckets and legitimate measured zero', () => {
     h.aggregate = query({ ...aggregate, regenRatio: Number.NaN, freeCharges: Number.POSITIVE_INFINITY });
@@ -239,7 +255,20 @@ describe('live regen presentation preservation', () => {
     expect(h.gauges).toHaveLength(0);
     expect(h.table!.data).toHaveLength(10);
     expect(h.table!.data.map(row => row.driveId)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    expect(within(screen.getByTestId('regen-kpis')).getByText(/row cap reached/)).toBeInTheDocument();
+    const summary = within(screen.getByRole('region', { name: 'Selected-window recovery summary' }));
+    const returnedRows = within(summary.getByLabelText('Detailed rows returned: 1,000'));
+    // This source tile intentionally discloses the cap in BOTH its tooltip
+    // and visible context; do not arbitrarily pick one legitimate match.
+    expect(returnedRows.getAllByText('1,000-row cap reached')).toHaveLength(2);
+    expect(returnedRows.getByRole('tooltip', { hidden: true })).toHaveTextContent('1,000-row cap reached');
+    expect(returnedRows.getByText('1,000-row cap reached', { selector: '[data-stat-context]' })).toBeInTheDocument();
+    expect(summary.getByLabelText('Eligible detailed coverage: 1,000 / 1,000')).toBeInTheDocument();
+    expect(summary.getByText('The detailed request returned 1,000 rows. Additional drives in this selected window may be absent.')).toBeInTheDocument();
+    const monthly = h.charts.find(chart => chart.chartKey === 'regen-monthly-recovery')!;
+    expect(monthly.data).toEqual([{
+      month: '2026-01', recoveredEnergy: 2000, driveEnergy: 8000,
+      recoveryRatio: (1000 * 2000) / (1000 * 8000) * 100, eligible: 1000, returned: 1000,
+    }]);
   });
   it('changes display units on rerender without rewriting raw rows, ratios or query operands', () => {
     const view = harness();

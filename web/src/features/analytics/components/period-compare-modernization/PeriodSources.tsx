@@ -68,6 +68,7 @@ export function PeriodSources({ stateA, stateB, retryA, retryB }: PeriodSourcesP
               ) : state.fatalError ? (
                 <QueryError error={state.fatalError} onRetry={retry} />
               ) : state.isRefreshBlocked ? (
+                // no-action: offline queries resume on reconnect; the existing period controls remain available, but cannot restore a connection.
                 <EmptyState message={t('compare.sources.paused', 'This period is waiting for a connection. No values are available yet.')} />
               ) : (
                 <Skeleton lines={6} />

@@ -9,7 +9,7 @@ import {
   useSyncVehicles,
   useVehicles,
 } from '@/api/hooks/useVehicles';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { VisuallyHidden } from '@/components/a11y';
 import {
   Badge,
@@ -26,7 +26,8 @@ import {
 } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner, LiveStaleDataBanner, Skeleton } from '@/components/feedback';
+import { AlertBanner, LiveStaleDataBanner, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -390,7 +391,8 @@ export default function DashboardPage() {
 
   /* ——— Core data queries (shared TanStack hooks) ——— */
   const vehiclesQuery = useVehicles();
-  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
+  const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
+  const vehiclesState = useDataState(vehiclesQuery);
   const {
     vehicleId: selectedVehicleId,
   } = useSelectedVehicle();
@@ -573,7 +575,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('title', 'Fleet operations')}
       subtitle={t(
         'subtitle',
@@ -627,10 +629,14 @@ export default function DashboardPage() {
         />
       ) : undefined}
       query={vehiclesQuery}
-      error={!authLoading && auth?.authenticated !== false ? vehiclesError : null}
+      error={!authLoading && auth?.authenticated !== false ? vehiclesState.fatalError : null}
     >
       <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start">
       <div className="min-w-0 flex-1 space-y-6">
+        <StaleRefreshWarning
+          state={vehiclesState}
+          label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}
+        />
         {/* Transient banner cluster — first-run theme prompt, live-pipe
             stale warning, customize hint, load error, and Tesla auth
             warning. Each child self-hides when its condition is inactive. */}
@@ -847,7 +853,7 @@ export default function DashboardPage() {
         document.body,
       )}
       {resetDialogProps && <ConfirmDialog {...resetDialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }
 

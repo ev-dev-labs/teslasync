@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Navigation2 } from 'lucide-react';
 import { Badge } from '@/components/ui';
+import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -203,19 +204,15 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
         {/* Progress bar */}
         <div className="flex flex-col gap-1">
-          <div
-            className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
-            role="progressbar"
-            aria-valuenow={milesToArrival != null ? Math.round(progressPercent) : undefined}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={t('widget.destinationETA.progress', 'Trip progress')}
-          >
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-slow"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+          <MetricBar
+            value={milesToArrival != null ? progressPercent : null}
+            max={100}
+            color="var(--theme-primary)"
+            ariaLabel={t('widget.destinationETA.progress', 'Trip progress')}
+            showHeader={false}
+            size="slim"
+            fill="solid"
+          />
           <div className={`${dashboardTokens.unit} flex flex-wrap justify-between gap-1`}>
             <span>{t('widget.destinationETA.remaining', 'Remaining')}</span>
             <span>{displayDistance != null ? `${fmtNumber(displayDistance)} ${distanceUnit}` : '—'}</span>

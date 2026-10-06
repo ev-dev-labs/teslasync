@@ -74,18 +74,18 @@ vi.mock('@/components/charts', () => ({
   Bar: () => null,
   BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
-  ChartContainer: ({
+  EmbeddedChart: ({
     children,
     title,
     ariaLabel,
   }: {
-    children: ReactNode;
+    children: ReactNode | ((context: { hiddenSeries?: undefined }) => ReactNode);
     title: string;
     ariaLabel: string;
   }) => (
     <div>
       <h4>{title}</h4>
-      <div role="img" aria-label={ariaLabel}>{children}</div>
+      <div role="img" aria-label={ariaLabel}>{typeof children === 'function' ? children({}) : children}</div>
     </div>
   ),
   ChartTooltip: () => null,

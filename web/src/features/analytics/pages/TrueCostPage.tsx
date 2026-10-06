@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { AITCONarration } from '@/components/ai/AITCONarration';
 
-import { CardGrid, PageLayout, Section, type CardGridItem } from '@/components/layout/layout-reference';
+import { CardGrid, PageLayout, Section, type CardGridItem } from '@/components/layout';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';

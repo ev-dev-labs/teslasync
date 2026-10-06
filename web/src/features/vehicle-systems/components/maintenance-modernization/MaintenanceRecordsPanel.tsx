@@ -1,16 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Wrench } from 'lucide-react';
 import type { DataState } from '@/api/dataState';
-import { useCardPlacement } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
-import { DataTable, GlassPanel, PanelTitle, type Column } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import { DataTable, type Column } from '@/components/ui';
 import type { ServiceRecord } from './maintenanceModel';
 import { MaintenanceSource } from './MaintenanceSource';
 
-/** Preserve the inherited direct heading/panel relationship for consumers.
- * The canonical provider owns placement; this existing surface adds no second
- * packer, observer, nested table card or header chrome. */
+/** The table retains its embedded pipeline and stable preference identity. */
 export function MaintenanceRecordsPanel({
   source,
   enabled,
@@ -23,13 +20,13 @@ export function MaintenanceRecordsPanel({
   columns: Column<ServiceRecord>[];
 }) {
   const { t } = useTranslation();
-  const placement = useCardPlacement();
   const empty = (
-    <EmptyState icon={<Wrench className="h-10 w-10" />} message={t('maintenance.noRecords', 'No service records logged yet.')} />
+    <EmptyState icon={<Wrench className="h-10 w-10" />} message={t('maintenance.noRecords', 'No service records logged yet.')}
+      action={enabled && source.retry ? { label: t('common.refresh', 'Refresh'), onClick: source.retry } : undefined}
+      actionTo={!enabled ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />
   );
   return (
-    <GlassPanel className={cn('h-full min-w-0 p-3', placement && placement.width >= 640 && 'p-4')}>
-      <PanelTitle className="mb-3">{t('maintenance.recordsTitle', 'Service records')}</PanelTitle>
+    <LayoutCard title={t('maintenance.recordsTitle', 'Service records')}>
       <MaintenanceSource
         source={source}
         enabled={enabled}
@@ -50,6 +47,6 @@ export function MaintenanceRecordsPanel({
           />
         )}
       </MaintenanceSource>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

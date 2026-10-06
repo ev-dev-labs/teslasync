@@ -1,5 +1,3 @@
-// Parent ran the original 27 cases: 25 PASS / 2 FAIL. Corrections await rerun.
-// All HTTP is mocked; this worker does not execute the behavioral suite.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
@@ -85,7 +83,7 @@ afterEach(() => {
 
 for (const contract of contracts) {
   describe(contract.name, () => {
-    it('uses both encoded bounds, raw vehicle string, and client default GET/options', async () => {
+    it('uses both encoded bounds, raw vehicle string, default GET and the query signal', async () => {
       requestMock.mockResolvedValue(contract.payload);
       const { result } = renderHook(
         () => contract.useHook('007+raw', start, end),
@@ -94,8 +92,9 @@ for (const contract of contracts) {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(requestMock.mock.calls).toEqual([[
         `${contract.path}?vehicle_id=007+raw&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+        { signal: expect.any(AbortSignal) },
       ]]);
-      expect(requestMock.mock.calls[0]).toHaveLength(1); // No method or signal options.
+      expect(requestMock.mock.calls[0][1]).not.toHaveProperty('method');
       expect(result.current.data).toBe(contract.payload);
     });
 
@@ -136,6 +135,7 @@ for (const contract of contracts) {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(requestMock).toHaveBeenCalledExactlyOnceWith(
         `${contract.path}?vehicle_id=7&start=&end=`,
+        { signal: expect.any(AbortSignal) },
       );
     });
 
@@ -145,6 +145,7 @@ for (const contract of contracts) {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(requestMock).toHaveBeenCalledExactlyOnceWith(
         `${contract.path}?vehicle_id=${id}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+        { signal: expect.any(AbortSignal) },
       );
     });
 
@@ -197,7 +198,7 @@ for (const contract of contracts) {
       expect(result.current.isStale).toBe(false);
     });
 
-    it('leaves unmount cancellation unforwarded, as in the original query', async () => {
+    it('aborts on unmount and does not cache a late response', async () => {
       let resolve: (payload: TimelineResponse | SummaryResponse) => void = () => {
         throw new Error('deferred request was not acquired');
       };
@@ -205,12 +206,16 @@ for (const contract of contracts) {
       const { client, wrapper } = harness();
       const { unmount } = renderHook(() => contract.useHook('7', start, end), { wrapper });
       await waitFor(() => expect(requestMock).toHaveBeenCalledTimes(1));
+      const signal = requestMock.mock.calls[0][1]?.signal;
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal?.aborted).toBe(false);
       unmount();
+      expect(signal?.aborted).toBe(true);
       await act(async () => { resolve(contract.payload); });
       await waitFor(() => expect(
         client.getQueryData([contract.key, '7', start, end]),
-      ).toBe(contract.payload));
-      expect(requestMock.mock.calls[0]).toHaveLength(1);
+      ).toBeUndefined());
+      expect(requestMock.mock.calls[0]).toHaveLength(2);
     });
   });
 }

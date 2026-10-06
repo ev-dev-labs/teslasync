@@ -2,16 +2,17 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, ArrowUpDown, ListOrdered, Activity } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, QueryError } from '@/components/feedback';
+import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
@@ -53,6 +54,11 @@ export default function RootCauseIntelligencePage() {
 
   const { vehicleId } = useSelectedVehicle();
   const workspace = useRootCauseWorkspace(vehicleId);
+  const signalsState = useDataState(workspace.signalsQuery, { provenance: 'historical' });
+  const evidenceState = useDataState({
+    ...workspace.evidenceBundle,
+    data: workspace.evidenceBundle.data.length > 0 ? workspace.evidenceBundle.data : undefined,
+  }, { provenance: 'historical', partial: workspace.evidenceBundle.isError });
 
   const onRetry = useCallback(() => {
     workspace.signalsQuery.refetch();
@@ -64,9 +70,12 @@ export default function RootCauseIntelligencePage() {
   }
 
   const { analysis } = workspace;
-  const isLoading = workspace.signalsQuery.isLoading || (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading);
-  const isError = workspace.signalsQuery.isError || workspace.evidenceBundle.isError;
-  const error = workspace.signalsQuery.error ?? workspace.evidenceBundle.error;
+  const isLoading = !evidenceState.hasData && (
+    (workspace.signalsQuery.isLoading && !signalsState.hasData) ||
+    (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading)
+  );
+  const error = evidenceState.fatalError ?? (!workspace.hasChosenSignal ? signalsState.fatalError : null);
+  const isError = !!error;
 
   const qualityLabel =
     analysis.quality.band === 'strong'
@@ -78,7 +87,7 @@ export default function RootCauseIntelligencePage() {
           : t('rootCauseIntelligence.quality.insufficient', 'Insufficient evidence');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('rootCauseIntelligence.title', 'Root-cause intelligence')}
       subtitle={t(
         'rootCauseIntelligence.subtitle',
@@ -88,10 +97,11 @@ export default function RootCauseIntelligencePage() {
     >
       {/* 1 — Focal signal + analysis window */}
       <FadeIn>
+        <StaleRefreshWarning state={signalsState} label={t('rootCauseIntelligence.picker.title', 'Choose a signal to investigate')} />
         <SignalWindowPicker
           catalog={workspace.catalog}
-          signalsLoading={workspace.signalsQuery.isLoading}
-          signalsError={workspace.signalsQuery.error}
+          signalsLoading={workspace.signalsQuery.isLoading && !signalsState.hasData}
+          signalsError={signalsState.fatalError}
           onRetrySignals={() => workspace.signalsQuery.refetch()}
           focalSignal={workspace.focalSignal}
           onFocalSignalChange={workspace.setFocalSignal}
@@ -99,6 +109,7 @@ export default function RootCauseIntelligencePage() {
           onWindowHoursChange={workspace.setWindowHours}
         />
       </FadeIn>
+      <StaleRefreshWarning state={evidenceState} label={t('rootCauseIntelligence.kpis.sectionLabel', 'Root-cause evidence metrics')} />
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
@@ -214,6 +225,6 @@ export default function RootCauseIntelligencePage() {
           onRetry={onRetry}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

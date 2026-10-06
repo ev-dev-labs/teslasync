@@ -92,6 +92,9 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
       )}
       empty={isEmpty}
       data={tableData}
+      exportData={chargerTypeStats.map(({ label, count, avgKw, avgKwh, avgDuration }) => ({
+        label, count, avgKw, avgKwh, avgDuration,
+      }))}
       dataColumns={tableColumns}
       height={280}
       exportable

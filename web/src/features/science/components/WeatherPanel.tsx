@@ -6,12 +6,11 @@ import type {
   ScienceWeather,
   ScienceWeatherPoint
 } from '@/api/types';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { LayoutCard, SourceContent } from '@/components/layout';
 import {
   Badge,
   DataTable,
-  GlassPanel,
-  PanelTitle,
   Text,
   type Column
 } from '@/components/ui';
@@ -50,16 +49,20 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
   ];
 
   return (
-    <GlassPanel padding="auto" className="space-y-4" data-testid="science-weather">
-      <PanelTitle>{t('science.weather.title', 'Weather coupling (correlation)')}</PanelTitle>
+    <section data-testid="science-weather" className="min-w-0">
+      <LayoutCard title={t('science.weather.title', 'Weather coupling (correlation)')}>
       <StaleRefreshWarning state={state} />
-      {state.status === 'initial' ? (
-        <Skeleton className="h-32" />
-      ) : state.fatalError ? (
-        <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} />
-      ) : !data ? (
-        <EmptyState title={t('science.weather.title', 'Weather coupling')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />
-      ) : (
+      <SourceContent
+        state={state.status === 'initial' ? 'loading' : state.fatalError ? 'error' : !data ? 'empty' : 'ready'}
+        label={t('science.weather.title', 'Weather coupling (correlation)')}
+        emptyMessage={t('science.empty', 'No fit inputs in this window.')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={state.fatalError}
+        errorRecovery={{ onRetry: () => { void query.refetch(); } }}
+        loadingContent={<Skeleton className="h-32" />}
+        emptyContent={<EmptyState title={t('science.weather.title', 'Weather coupling')} message={t('science.empty', 'No fit inputs in this window.')} action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }} />}
+      >
+      {data && (
         <>
           <Text as="p" size="sm" color="secondary">{data.honesty}</Text>
           <div className="flex flex-wrap gap-2">
@@ -97,6 +100,8 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
           <MissingBadges missing={data.missing_signals} />
         </>
       )}
-    </GlassPanel>
+      </SourceContent>
+      </LayoutCard>
+    </section>
   );
 }

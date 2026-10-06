@@ -34,7 +34,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -414,6 +414,39 @@ describe('ExportStatusWidget states', () => {
 // ── Component: standard layout (row list) ───────────────────────────────────
 
 describe('ExportStatusWidget standard layout', () => {
+  it('preserves status priority before chronology in the rich canonical feed', () => {
+    mockUseExports.mockReturnValue(qr({ data: [
+      makeExport({ id: 'failed', fsmState: 'failed', filePath: '/exports/new-failure.csv', createdAt: '2026-10-04T12:00:00Z' }),
+      makeExport({ id: 'queued', fsmState: 'queued', filePath: '/exports/queued.csv', createdAt: '2026-10-03T12:00:00Z' }),
+      makeExport({ id: 'running', fsmState: 'processing', filePath: '/exports/older-running.csv', createdAt: '2026-10-01T12:00:00Z' }),
+    ] }));
+    renderWidget(STANDARD);
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent('older-running.csv');
+    expect(rows[1]).toHaveTextContent('queued.csv');
+    expect(rows[2]).toHaveTextContent('new-failure.csv');
+    expect(within(rows[0]).getByText('Running')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('Failed')).toBeInTheDocument();
+  });
+
+  it('retains full long filenames, format, size, status and an independently reachable wide download', () => {
+    const name = 'complete-vehicle-evidence-with-a-long-unbroken-filename.csv';
+    mockUseExports.mockReturnValue(qr({ data: [
+      makeExport({ id: 'long', filePath: `/exports/${name}`, format: 'csv', fsmState: 'ready', fileSize: 2048 }),
+    ] }));
+    renderWidget(WIDE);
+    const row = screen.getByRole('listitem');
+    expect(within(row).getByText(name)).toHaveClass('whitespace-normal', '[overflow-wrap:anywhere]');
+    expect(within(row).getByText('CSV')).toBeInTheDocument();
+    expect(within(row).getByText(fmtBytes(2048))).toBeInTheDocument();
+    expect(within(row).getByText('Done')).toBeInTheDocument();
+    const download = within(row).getByRole('link', { name: 'Download' });
+    expect(download).toHaveAttribute('href', '/api/v1/export/jobs/long/download');
+    expect(download.querySelector('a')).toBeNull();
+    expect(row.querySelectorAll('a')).toHaveLength(1);
+  });
+
   it('renders a row with uppercase format, formatted size and the status badge', () => {
     mockUseExportJobs.mockReturnValue(
       qr({ data: [makeAdmin({ id: 'a1', format: 'csv', status: 'ready', fileSize: 2048 })] }),

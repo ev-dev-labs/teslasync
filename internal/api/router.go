@@ -919,7 +919,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	alertHandler := apialerts.NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	alertMessageHandler := apialertmsg.NewAlertMessageHandler(aiSettingsRepo)
 	commandHandler := apicommand.NewCommandHandler(db, teslaClient)
-	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
+	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg, aiSettingsRepo)
 	energyHandler := apienergy.NewEnergyHandler(energySvc)
 	signalLogReader := signaldb.NewSignalLogReader(db)
 	batteryHandler := apibattery.NewBatteryHandler(db, stateReader)
@@ -3417,10 +3417,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// (the SPA polls these from the dashboard). Acknowledge
 				// is a soft mark-read with per-IP rate-limit at 60/min
 				// matching every other vehicle-scoped POST. Panic is
-				// destructive (wakes the car, sounds horn, costs energy)
-				// and is sudo-gated + tightly rate-limited at 5/min.
+				// destructive (wakes the car, sounds horn, costs energy).
+				// Config writes may lock + enable Sentry. Both writes
+				// are sudo-gated + tightly rate-limited at 5/min.
 				r.Route("/guard", func(r chi.Router) {
 					r.Get("/", guardHandler.Status)
+					r.Get("/config", guardHandler.Config)
+					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/", guardHandler.SetConfig)
 					r.Get("/events", guardHandler.Events)
 					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
 					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/panic", guardHandler.Panic)

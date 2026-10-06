@@ -17,18 +17,17 @@ import {
   AlertTriangle,
   RefreshCw,
   Activity,
-  TrendingUp,
   TrafficCone,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 
 import {
   GlassPanel,
   Badge,
   Button,
   DataTable,
-  PanelTitle,
   Text,
   Caption,
   type Column,
@@ -120,8 +119,8 @@ function LocationStatusCard({ icon, label, value, active }: LocationStatusCardPr
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <Caption className="block truncate">{label}</Caption>
-        <Text variant="body" as="span" className="block truncate font-semibold">
+        <Caption className="block break-words">{label}</Caption>
+        <Text variant="body" as="span" className="block break-words font-semibold">
           {value}
         </Text>
       </span>
@@ -166,29 +165,9 @@ function RouteField({ label, children }: RouteFieldProps) {
   return (
     <div className="space-y-1">
       <Caption className="block">{label}</Caption>
-      <Text variant="body" as="div" className="truncate font-medium">
+      <Text variant="body" as="div" className="break-words font-medium">
         {children}
       </Text>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Sub-component: panel header (icon + title)                        */
-/* ------------------------------------------------------------------ */
-
-interface PanelHeadingProps {
-  icon: ReactNode;
-  children: ReactNode;
-}
-
-function PanelHeading({ icon, children }: PanelHeadingProps) {
-  return (
-    <div className="mb-3 flex items-center gap-2">
-      <span aria-hidden="true" className="text-[var(--text-muted)]">
-        {icon}
-      </span>
-      <PanelTitle>{children}</PanelTitle>
     </div>
   );
 }
@@ -235,24 +214,20 @@ export default function NavigationRoutePage() {
 
   /* ---- vehicle selector — header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
-  const { isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const vehiclesQuery = useVehicles();
 
   /* ---- latest snapshot ---- */
   const latestQuery = useLocationSnapshotLatest(vehicleId ?? 0, 15_000);
   const {
     data: latest,
-    isLoading: latestLoading,
-    error: latestError,
     refetch: refetchLatest,
   } = latestQuery;
+  const latestState = deriveDataState({ ...latestQuery, data: latest ?? undefined }, { provenance: 'live' });
+  const latestLoading = latestQuery.isLoading && !latestState.hasData;
+  const latestError = latestState.fatalError;
 
   /* ---- history ---- */
-  const {
-    data: history,
-    isLoading: historyLoading,
-    error: historyError,
-    refetch: refetchHistory,
-  } = useQuery<LocationSnapshot[]>({
+  const historyQuery = useQuery<LocationSnapshot[]>({
     queryKey: ['location-history', vehicleId],
     queryFn: ({ signal }) =>
       request<LocationSnapshot[]>(
@@ -261,12 +236,17 @@ export default function NavigationRoutePage() {
       ),
     enabled: vehicleId !== null,
   });
+  const { data: history, refetch: refetchHistory } = historyQuery;
+  const historyState = deriveDataState(historyQuery, { provenance: 'historical' });
+  const historyLoading = historyQuery.isLoading && !historyState.hasData;
+  const historyError = historyState.fatalError;
 
   /* ---- charging telemetry (for expected energy at arrival) ---- */
-  const { data: chargingTelemetry } = useChargingTelemetryLatest(
+  const chargingQuery = useChargingTelemetryLatest(
     vehicleId ?? 0,
     15_000,
   );
+  const chargingTelemetry = chargingQuery.data;
 
   /* ---- derived ---- */
   const hasActiveRoute = latest?.destination_name != null;
@@ -553,12 +533,16 @@ export default function NavigationRoutePage() {
   /* ================================================================ */
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('nav.pageTitle', 'Navigation & route')}
       subtitle={t('nav.subtitle', 'Live location tracking and navigation status')}
-      loading={vehiclesLoading}
-      error={vehiclesError as Error | null}
       query={latestQuery}
+      dataSources={[
+        { id: 'vehicles', label: t('geofences.vehicle', 'Vehicle'), query: vehiclesQuery },
+        { id: 'navigation', label: t('nav.resource', 'Navigation'), query: latestQuery, enabled: vehicleId !== null },
+        { id: 'history', label: t('nav.resourceHistory', 'Location history'), query: historyQuery, enabled: vehicleId !== null },
+        { id: 'charging', label: t('nav.metric.energyAtArrival', 'Energy at arrival'), query: chargingQuery, enabled: vehicleId !== null },
+      ]}
       secondaryActions={
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -646,18 +630,16 @@ export default function NavigationRoutePage() {
                 aria-label={t('nav.statusAria', 'Navigation status')}
                 className="space-y-3 sm:space-y-4"
               >
-                <GlassPanel className="p-4 sm:p-5" glow={hasActiveRoute ? 'cyan' : 'none'}>
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Navigation className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />
-                      <PanelTitle>{t('nav.status', 'Navigation status')}</PanelTitle>
-                    </div>
+                <LayoutCard
+                  title={t('nav.status', 'Navigation status')}
+                  actions={
                     <Badge variant={hasActiveRoute ? 'success' : 'neutral'} size="md" dot>
                       {hasActiveRoute
                         ? t('nav.active', 'Active')
                         : t('nav.inactive', 'Inactive')}
                     </Badge>
-                  </div>
+                  }
+                >
 
                   <Caption className="mb-3 flex items-center gap-1.5">
                     <RefreshCw className="h-3 w-3" aria-hidden="true" />
@@ -706,7 +688,7 @@ export default function NavigationRoutePage() {
                       )}
                     />
                   )}
-                </GlassPanel>
+                </LayoutCard>
 
                 {!hasValidLocation && latest && (
                   <AlertBanner variant="info">
@@ -793,10 +775,7 @@ export default function NavigationRoutePage() {
                 className="grid grid-cols-1 gap-4 xl:grid-cols-2"
               >
                 {/* Speed / distance profile */}
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelHeading icon={<Gauge className="h-4 w-4" />}>
-                    {t('nav.speedProfile', 'Speed profile')}
-                  </PanelHeading>
+                <LayoutCard title={t('nav.speedProfile', 'Speed profile')}>
                   {historyLoading ? (
                     <Skeleton height={260} />
                   ) : historyError ? (
@@ -882,13 +861,10 @@ export default function NavigationRoutePage() {
                       )}
                     </EmbeddedChart>
                   )}
-                </GlassPanel>
+                </LayoutCard>
 
                 {/* Home / Work presence */}
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelHeading icon={<TrendingUp className="h-4 w-4" />}>
-                    {t('nav.presenceChart', 'Home / work presence')}
-                  </PanelHeading>
+                <LayoutCard title={t('nav.presenceChart', 'Home / work presence')}>
                   {historyLoading ? (
                     <Skeleton height={260} />
                   ) : historyError ? (
@@ -931,7 +907,7 @@ export default function NavigationRoutePage() {
                       )}
                     </EmbeddedChart>
                   )}
-                </GlassPanel>
+                </LayoutCard>
               </section>
             </FadeIn>
 
@@ -942,10 +918,7 @@ export default function NavigationRoutePage() {
                 className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
               >
                 {/* Route Traffic Delay */}
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelHeading icon={<TrafficCone className="h-4 w-4 text-amber-300" />}>
-                    {t('nav.trafficDelayTitle', 'Route traffic delay')}
-                  </PanelHeading>
+                <LayoutCard title={t('nav.trafficDelayTitle', 'Route traffic delay')}>
                   {latestLoading ? (
                     <Skeleton height={64} />
                   ) : latestError ? (
@@ -965,13 +938,10 @@ export default function NavigationRoutePage() {
                       />
                     </div>
                   )}
-                </GlassPanel>
+                </LayoutCard>
 
                 {/* Route Waypoints */}
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelHeading icon={<Zap className="h-4 w-4" />}>
-                    {t('nav.waypoints', 'Route waypoints')}
-                  </PanelHeading>
+                <LayoutCard title={t('nav.waypoints', 'Route waypoints')}>
                   {latestLoading ? (
                     <Skeleton lines={4} />
                   ) : latestError ? (
@@ -1010,13 +980,11 @@ export default function NavigationRoutePage() {
                       className="py-8"
                     />
                   )}
-                </GlassPanel>
+                </LayoutCard>
 
                 {/* Recent Destinations */}
-                <GlassPanel className="p-4 sm:p-5 md:col-span-2 xl:col-span-1">
-                  <PanelHeading icon={<Clock className="h-4 w-4 text-cyan-300" />}>
-                    {t('nav.recentDestinations', 'Recent destinations')}
-                  </PanelHeading>
+                <div className="min-w-0 md:col-span-2 xl:col-span-1">
+                <LayoutCard title={t('nav.recentDestinations', 'Recent destinations')}>
                   {historyLoading ? (
                     <Skeleton lines={6} />
                   ) : historyError ? (
@@ -1040,17 +1008,15 @@ export default function NavigationRoutePage() {
                       pagination
                     />
                   )}
-                </GlassPanel>
+                </LayoutCard>
+                </div>
               </section>
             </FadeIn>
 
             {/* ─────── 6. Location History table (full-width detail band) ─────── */}
             <FadeIn delay={0.25}>
               <section aria-label={t('nav.historyAria', 'Location history')}>
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelHeading icon={<Compass className="h-4 w-4" />}>
-                    {t('nav.locationHistory', 'Location history')}
-                  </PanelHeading>
+                <LayoutCard title={t('nav.locationHistory', 'Location history')}>
                   {historyLoading ? (
                     <Skeleton lines={8} />
                   ) : historyError ? (
@@ -1080,12 +1046,12 @@ export default function NavigationRoutePage() {
                       pagination
                     />
                   )}
-                </GlassPanel>
+                </LayoutCard>
               </section>
             </FadeIn>
           </>
         )}
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

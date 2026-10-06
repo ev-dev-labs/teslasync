@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SourceContent, type SourceState } from '@/components/layout/layout-reference';
+import { SourceContent, type SourceState } from '@/components/layout';
 import { GlassPanel, Heading } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';

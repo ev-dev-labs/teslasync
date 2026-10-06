@@ -5,7 +5,7 @@ import { useRunChargingSiteTwin } from '@/api/hooks/useAdvancedIntelligence';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -47,7 +47,7 @@ export default function ChargingSiteTwinPage() {
   const result = mutation.data;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.site.title', 'Charging site twin')}
       subtitle={t(
         'advancedIntelligence.site.subtitle',
@@ -272,6 +272,6 @@ export default function ChargingSiteTwinPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

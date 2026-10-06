@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { QueryError, Skeleton } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import { Text } from '@/components/ui';
 
 export interface MaintenanceSourceProps<T> {
@@ -22,31 +22,31 @@ export function MaintenanceSource<T>({
   loading,
 }: MaintenanceSourceProps<T>) {
   const { t } = useTranslation();
-  if (source.fatalError) {
-    return <QueryError error={source.fatalError} onRetry={source.retry ?? undefined} />;
-  }
-  if (!source.hasData) {
-    if (!enabled || source.isRefreshBlocked) {
-      return <Text as="p" variant="bodySm">{t('common.noData', 'No data available')}</Text>;
-    }
-    return loading ?? <Skeleton className="h-32 w-full rounded-xl" />;
-  }
+  const unavailable = !enabled || source.isRefreshBlocked;
+  const retained = source.refreshError != null || (source.hasData && source.isRefreshBlocked);
   return (
-    <>
-      {source.refreshError && (
-        <div data-maintenance-retained>
-          <Text as="p" variant="bodySm" role="status">
-            {t('developerReference.stats.state.retained', 'Showing retained measurements')}
-          </Text>
-          <QueryError error={source.refreshError} onRetry={source.retry ?? undefined} />
-        </div>
-      )}
-      {source.isRefreshBlocked && (
+    <div data-maintenance-retained={source.refreshError ? '' : undefined}>
+      <SourceContent
+        state={source.fatalError ? 'error' : !source.hasData ? unavailable ? 'empty' : 'loading'
+          : source.data == null ? 'empty' : retained ? 'retained' : 'ready'}
+        label={t('maintenance.title', 'Maintenance')}
+        error={source.fatalError}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        emptyMessage={t('common.noData', 'No data available')}
+        emptyContent={!source.hasData ? <Text as="p" variant="bodySm">{t('common.noData', 'No data available')}</Text> : empty}
+        loadingContent={loading}
+        retainedMessage={source.refreshError
+          ? t('developerReference.stats.state.retained', 'Showing retained measurements')
+          : t('maintenance.sources.refreshBlocked', 'Refresh is paused. Retained data remains available.')}
+        errorRecovery={{ onRetry: source.retry ?? undefined }}
+      >
+      {source.isRefreshBlocked && source.refreshError && (
         <Text as="p" variant="bodySm" role="status">
           {t('maintenance.sources.refreshBlocked', 'Refresh is paused. Retained data remains available.')}
         </Text>
       )}
-      {source.data == null ? empty : children}
-    </>
+        {children}
+      </SourceContent>
+    </div>
   );
 }

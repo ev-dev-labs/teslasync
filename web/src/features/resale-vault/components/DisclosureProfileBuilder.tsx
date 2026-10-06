@@ -9,7 +9,7 @@
  * those, and says so explicitly.
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { RadioCard, Checkbox, Toggle, Select } from '@/components/ui';
 import { PanelTitle, HelperText } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
@@ -48,9 +48,8 @@ export function DisclosureProfileBuilder({
   ];
 
   return (
-    <GlassPanel padding="lg" className="space-y-6">
+    <LayoutCard title={t('resaleVault.disclosure.title', 'Disclosure profile')}>
       <div>
-        <PanelTitle>{t('resaleVault.disclosure.title', 'Disclosure profile')}</PanelTitle>
         <HelperText className="mt-1">
           {t(
             'resaleVault.disclosure.subtitle',
@@ -145,6 +144,6 @@ export function DisclosureProfileBuilder({
           { list: HARD_EXCLUDED_CATEGORIES.join(', ') },
         )}
       </InlineCallout>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

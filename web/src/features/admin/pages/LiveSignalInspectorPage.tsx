@@ -15,14 +15,14 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, RefreshCw, Radio } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button } from '@/components/ui';
-import { PanelTitle } from '@/components/ui/Typography';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Button, PanelTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { LiveIndicator } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry';
 
@@ -50,28 +50,20 @@ export default function LiveSignalInspectorPage() {
 
   const rows = useMemo(() => rowsFromResponse(live.data), [live.data]);
   const stats = useMemo(() => computeStats(rows), [rows]);
+  const liveState = useDataState(live, { provenance: 'live', unavailable: rows.length === 0 });
 
-  // Each data section renders its own affordance from this single discriminator
-  // rather than gating the whole page behind one `{data && …}`.
-  //
-  // `rows.length > 0` is deliberately evaluated BEFORE `isError`: this page
-  // polls once per second, and TanStack Query keeps the last successful `data`
-  // while flipping `isError`/`error` when a *background* refetch of the same
-  // query key fails. Checking `isError` first would blank the whole inspector
-  // to a `QueryError` on a single dropped poll, throwing away a perfectly good
-  // last-known snapshot. Instead we keep the snapshot on screen and let the
-  // header freshness chip (`query={live}`) surface the transient failure in
-  // red — a hard error is only shown when there is nothing to fall back to.
+  // Only a fatal first-load failure replaces the snapshot. Paused/erroring
+  // refreshes keep retained rows and expose source-specific recovery.
   const status: SectionStatus =
     vehicleId === null
       ? 'no-vehicle'
-      : rows.length > 0
-        ? 'ready'
-        : live.isLoading
-          ? 'loading'
-          : live.isError
-            ? 'error'
-            : 'empty';
+      : liveState.fatalError
+        ? 'error'
+        : rows.length > 0
+          ? liveState.status === 'stale' ? 'retained' : 'ready'
+          : live.isLoading
+            ? 'loading'
+            : liveState.status === 'stale' ? 'retained-empty' : 'empty';
 
   const onRetry = () => {
     void live.refetch();
@@ -103,7 +95,7 @@ export default function LiveSignalInspectorPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('admin.liveSignals.pageTitle', 'Live signal inspector')}
       subtitle={t(
         'admin.liveSignals.subtitle',
@@ -129,14 +121,14 @@ export default function LiveSignalInspectorPage() {
             <LiveSignalSourceBreakdown
               stats={stats}
               status={status}
-              error={live.error}
+              error={liveState.fatalError}
               onRetry={onRetry}
               noVehicleIcon={noVehicleIcon}
             />
             <LiveSignalKindBreakdown
               stats={stats}
               status={status}
-              error={live.error}
+              error={liveState.fatalError}
               onRetry={onRetry}
               noVehicleIcon={noVehicleIcon}
             />
@@ -154,7 +146,7 @@ export default function LiveSignalInspectorPage() {
             </PanelTitle>
             <LiveSectionState
               status={status}
-              error={live.error}
+              error={liveState.fatalError}
               onRetry={onRetry}
               skeletonHeight={320}
               noVehicleIcon={noVehicleIcon}
@@ -172,6 +164,6 @@ export default function LiveSignalInspectorPage() {
           </GlassPanel>
         </SectionErrorBoundary>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

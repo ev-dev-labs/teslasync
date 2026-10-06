@@ -5,11 +5,10 @@ import { useTranslation } from 'react-i18next';
 import {
   Badge,
   DataTable,
-  GlassPanel,
-  PanelTitle,
   Text,
   type Column,
 } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
@@ -317,23 +316,13 @@ export function BatteryPassportProvenanceMatrix({
 
   return (
     <section data-testid="battery-passport-provenance-matrix">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Fingerprint
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.provenance.title',
             'Provenance core-facts matrix',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.provenance.subtitle',
             'Exactly seven facts enter the tsbp-v1 canonical string. Display and analysis fields outside that list are not protected by this digest.',
-          )}
-        </Text>
+          )} actions={<Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <DataTable
             tableId="battery:passport-provenance"
@@ -351,7 +340,7 @@ export function BatteryPassportProvenanceMatrix({
             )}
           />
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

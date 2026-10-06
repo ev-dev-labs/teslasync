@@ -246,4 +246,20 @@ describe('DiagnosticPage — Phase-46 / Prompt 33', () => {
       screen.getByRole('button', { name: /Re-Run diagnostic/i }),
     ).toBeInTheDocument();
   });
+
+  it('keeps zero-count categories in the composition legend without inventing segments', async () => {
+    const report = buildReport({
+      overall_status: 'ok',
+      checks: [{ id: 'db', name: 'Database', status: 'ok', detail: 'SELECT 1', duration_ms: 0 }],
+    });
+    mockedRequest.mockResolvedValueOnce(report);
+    renderPage();
+    fireEvent.click(screen.getByTestId('diagnostic-run-button'));
+    const hero = within(await screen.findByTestId('diagnostic-overall'));
+    expect(hero.getByRole('img', { name: '1 Passing, 0 Warnings, 0 Failures' })).toBeInTheDocument();
+    const categories = hero.getAllByRole('listitem');
+    expect(categories.map((entry) => entry.textContent)).toEqual(['Passing1', 'Warnings0', 'Failures0']);
+    expect(screen.getByText('SELECT 1')).toBeInTheDocument();
+    expect(screen.getByTestId('diagnostic-download-button')).toBeEnabled();
+  });
 });

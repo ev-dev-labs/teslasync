@@ -17,9 +17,14 @@ export function EfficiencyScatter({ model, source, units, kind }: DrivesPresenta
   return <EfficiencyChart source={source} title={title}
     ariaLabel={isSpeed ? t('efficiency.speedVsEfficiency.aria', 'Speed versus efficiency scatter plot')
       : t('efficiency.tempVsEfficiency.aria', 'Temperature versus efficiency scatter plot')}
+    data={data}
+    dataColumns={[
+      isSpeed
+        ? { key: 'speed', label: t('efficiency.chartColumns.driveSpeed', 'Average drive speed ({{unit}})', { unit: units.unitPrefs.speed }), kind: 'measurement' }
+        : { key: 'temp', label: t('efficiency.chartColumns.driveTemperature', 'Average outside temperature ({{unit}})', { unit: units.unitPrefs.temperature }), kind: 'measurement' },
+      { key: 'efficiency', label: t('efficiency.chartColumns.driveEfficiency', 'Drive energy consumption ({{unit}})', { unit: efficiencyUnit }), kind: 'measurement' },
+    ]}
     empty={data.length < 4}>
-    {/* chart-a11y:no-table Original per-drive scatter cloud; speed aggregates
-        remain in the KPI/overview, all temperature aggregates in the breakdown table. */}
     <ResponsiveContainer width="100%" height="100%">
       <ScatterChart>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />

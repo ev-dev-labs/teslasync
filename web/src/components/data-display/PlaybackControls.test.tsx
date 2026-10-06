@@ -413,3 +413,144 @@ describe('PlaybackControls — scrubber wiring', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('PlaybackControls — optional capabilities and adaptive frame', () => {
+  it('supports a minimal play/pause/seek-only caller without optional controls', () => {
+    const onPlay = vi.fn();
+    const onPause = vi.fn();
+    const onSeek = vi.fn();
+    const { rerender } = render(
+      <PlaybackControls
+        isPlaying={false}
+        progress={0.25}
+        elapsed="1:15"
+        total="5:00"
+        onPlay={onPlay}
+        onPause={onPause}
+        onSeek={onSeek}
+      />,
+    );
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restart' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Playback speed/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(onPlay).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Playback progress' }), { key: 'ArrowRight' });
+    expect(onSeek).toHaveBeenLastCalledWith(0.26);
+    // The renderer does not update caller-owned playback state or clock.
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    expect(screen.getByText('1:15 / 5:00')).toBeInTheDocument();
+    rerender(
+      <PlaybackControls
+        isPlaying
+        progress={0.25}
+        elapsed="1:15"
+        total="5:00"
+        onPlay={onPlay}
+        onPause={onPause}
+        onSeek={onSeek}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    expect(onPause).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes explicit restart and stop to distinct callbacks without a duplicate Reset', () => {
+    const onRestart = vi.fn();
+    const onStop = vi.fn();
+    render(<PlaybackControls {...makeProps({ onRestart, onStop })} />);
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(onRestart).toHaveBeenCalledTimes(1);
+    expect(onStop).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onRestart).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports restart without a stop capability', () => {
+    const onRestart = vi.fn();
+    render(<PlaybackControls {...makeProps({ onStop: undefined, onRestart })} />);
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(onRestart).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { speed: undefined, onSpeedChange: vi.fn() },
+    { speed: 1 as const, onSpeedChange: undefined },
+  ])('omits speed selection when its value or callback is absent: %o', (capability) => {
+    render(<PlaybackControls {...makeProps(capability)} />);
+    expect(screen.queryByRole('button', { name: /Playback speed/ })).not.toBeInTheDocument();
+  });
+
+  it('removes framing for embedded use and wraps within allocated width without duplicating controls', () => {
+    const props = makeProps({ onRestart: vi.fn() });
+    const { container, rerender } = render(<PlaybackControls {...props} className="caller-slot" />);
+    const frame = container.firstElementChild;
+    expect(frame).toHaveClass('relative', 'min-w-0', 'rounded-xl', 'border', 'px-4', 'py-3', 'caller-slot');
+    const transport = frame?.lastElementChild;
+    expect(transport).toHaveClass('flex', 'min-w-0', 'flex-wrap');
+    const scrubberSlot = screen.getByRole('slider').closest('.flex-\\[1_1_12rem\\]');
+    expect(scrubberSlot).toHaveClass('min-w-0', 'flex-[1_1_12rem]');
+
+    rerender(<PlaybackControls {...props} framed={false} className="caller-slot" />);
+    expect(frame).toHaveClass('relative', 'min-w-0', 'caller-slot');
+    expect(frame).not.toHaveClass('rounded-xl', 'border', 'px-4', 'py-3', 'backdrop-blur-sm');
+    expect(screen.getAllByRole('button', { name: 'Restart' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Play' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Stop' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Playback speed/ })).toHaveLength(1);
+    expect(screen.getAllByRole('slider')).toHaveLength(1);
+  });
+
+  it('leaves unavailable speed/frame/relative-seek shortcuts unclaimed even when opted in', () => {
+    render(
+      <PlaybackControls
+        {...makeProps({ speed: undefined, onSpeedChange: undefined, enableKeyboardShortcuts: true })}
+      />,
+    );
+    for (const key of ['+', '-', ',', '.', 'ArrowLeft', 'ArrowRight', 'j', 'l']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      act(() => { window.dispatchEvent(event); });
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(screen.queryByText('Faster')).not.toBeInTheDocument();
+    expect(screen.queryByText('Slower')).not.toBeInTheDocument();
+  });
+
+  it('retains caller-owned relative-speed shortcuts without requiring a speed menu', () => {
+    const onSpeedRelative = vi.fn();
+    render(
+      <PlaybackControls
+        {...makeProps({
+          speed: undefined,
+          onSpeedChange: undefined,
+          enableKeyboardShortcuts: true,
+          onSpeedRelative,
+        })}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Playback speed/ })).not.toBeInTheDocument();
+    pressKey('+');
+    expect(onSpeedRelative).toHaveBeenLastCalledWith(1);
+    pressKey('-');
+    expect(onSpeedRelative).toHaveBeenLastCalledWith(-1);
+  });
+
+  it('does not intercept native transport keys or duplicate scrubber keyboard seeking', () => {
+    const props = makeProps({ enableKeyboardShortcuts: true, durationMs: 100_000, progress: 0.2 });
+    render(<PlaybackControls {...props} />);
+    const play = screen.getByRole('button', { name: 'Play' });
+    fireEvent.keyDown(play, { key: ' ' });
+    expect(props.onPlay).not.toHaveBeenCalled();
+    expect(play).toHaveAttribute('type', 'button');
+    fireEvent.click(play);
+    expect(props.onPlay).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Playback progress' }), { key: 'ArrowRight' });
+    expect(props.onSeek).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(props.onSeek).mock.calls[0][0]).toBeCloseTo(0.21);
+  });
+});

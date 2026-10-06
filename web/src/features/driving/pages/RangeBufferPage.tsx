@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -93,7 +93,7 @@ export default function RangeBufferPage() {
   const locale = i18n.language;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('rangeBuffer.title', 'Range Buffer')}
       subtitle={t(
         'rangeBuffer.subtitle',
@@ -198,6 +198,6 @@ export default function RangeBufferPage() {
           endDate={end}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

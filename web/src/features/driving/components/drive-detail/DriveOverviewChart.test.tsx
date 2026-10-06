@@ -114,6 +114,15 @@ describe('DriveOverviewChart', () => {
     ).toBeInTheDocument();
   });
 
+  it('adopts the shared card while retaining the overview export and sample-statistics source', () => {
+    const { container } = renderChart([point({ speed: 10, power: -5 }), point({ speed: 20, power: 15 })]);
+    expect(container.querySelectorAll('[data-card]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-chart-toolbar]')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: /Sample statistics/ })).toBeInTheDocument();
+  });
+
   it('shows the empty state and hides the legend when there is no telemetry', () => {
     renderChart([]);
     expect(screen.getAllByText('No telemetry data available')).toHaveLength(2);

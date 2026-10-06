@@ -573,6 +573,59 @@ describe('InboxBody — archived mode', () => {
 /* ── 6. Bulk selection ────────────────────────────────── */
 
 describe('InboxBody — bulk selection', () => {
+  it('distinguishes selected loaded IDs from the filtered server total', async () => {
+    installRequest({
+      total: 120,
+      logs: () => Promise.resolve([makeLog({ id: 7, title: 'Loaded selection' })]),
+    });
+    renderInbox();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Loaded selection' }));
+    const toolbar = screen.getByRole('region', { name: /bulk actions/i });
+    expect(toolbar).toHaveAttribute('data-selection-scope', 'loaded');
+    expect(toolbar).toHaveTextContent('1 selected · 1 loaded notifications · 120 matching');
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Mark read' }));
+    await waitFor(() => expect(markReadPosts()).toHaveLength(1));
+    expect(bodyOf(markReadPosts()[0])).toEqual({ ids: [7] });
+  });
+
+  it('reports unknown result totals without inventing a loaded-row denominator', async () => {
+    installRequest({ logs: () => Promise.resolve([makeLog({ id: 9, title: 'Unknown total row' })]) });
+    const implementation = mockedRequest.getMockImplementation();
+    mockedRequest.mockImplementation((path: string, options?: { method?: string }) =>
+      path.includes('count_only=true')
+        ? Promise.reject(new Error('Count unavailable'))
+        : implementation?.(path, options),
+    );
+    renderInbox();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Unknown total row' }));
+    expect(screen.getByRole('region', { name: /bulk actions/i }))
+      .toHaveTextContent('1 selected · 1 loaded notifications · total unavailable');
+  });
+
+  it('uses member IDs, never thread totals or group keys, for grouped bulk selection', async () => {
+    installRequest({
+      total: 30,
+      groups: () => Promise.resolve([makeGroup({
+        count: 12, latest: makeLog({ id: 70, title: 'Latest member' }),
+      })]),
+      members: () => Promise.resolve([makeLog({ id: 71, title: 'Expanded member' })]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=grouped' });
+    await screen.findByText('Latest member');
+    fireEvent.click(screen.getByTestId('group-expand-toggle'));
+    const member = await screen.findByText('Expanded member');
+    const row = member.closest('[aria-label="Expanded member"]');
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row as HTMLElement).getByRole('checkbox', { name: 'Select notification' }));
+    const toolbar = screen.getByRole('region', { name: /bulk actions/i });
+    expect(toolbar).toHaveAttribute('data-selection-scope', 'selected');
+    expect(toolbar).toHaveTextContent('1 selected notification members');
+    expect(toolbar).not.toHaveTextContent('30');
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Mark read' }));
+    await waitFor(() => expect(markReadPosts()).toHaveLength(1));
+    expect(bodyOf(markReadPosts()[0])).toEqual({ ids: [71] });
+  });
+
   it('drives the select-all header checkbox through none → some (indeterminate) → all', async () => {
     installRequest({
       logs: () =>

@@ -1,14 +1,7 @@
-import { ListFilter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, MetricValue, Text } from '@/components/ui';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -92,14 +85,7 @@ export function PreconditioningDepartureDisposition({
 
   return (
     <section data-testid="preconditioning-departure-disposition">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListFilter className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.departures.title',
-            'Departure disposition',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.departures.title', 'Departure disposition')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.departures.subtitle',
@@ -122,7 +108,7 @@ export function PreconditioningDepartureDisposition({
             ))}
           </Grid>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

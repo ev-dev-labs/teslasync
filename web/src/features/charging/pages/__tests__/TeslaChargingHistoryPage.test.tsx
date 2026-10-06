@@ -12,7 +12,7 @@
  *   3. A searchable, sortable, virtualized sessions table with bulk CSV export.
  *
  * Strategy mirrors ChargingHeatmapPage's test: render the REAL page + REAL shared
- * subtree (PageContainer, MetricCard, MetricBar, QueryError, charts). Only the
+ * subtree (PageLayout, StatStrip, MetricBar, QueryError, charts). Only the
  * network `request` helper and i18n are mocked — the range state and the
  * settings-driven unit/format/currency hooks all run for real so the SI → display
  * conversion is genuinely exercised.
@@ -210,7 +210,7 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  const mounted = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/charging/tesla-history']}>
         <ToastProvider>
@@ -219,17 +219,20 @@ function renderPage() {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...mounted, client };
 }
 
-// Read a KPI card's value by its label text via MetricCard's stable semantic
-// hooks: the card root is `[data-role="metric-card"]` and its value node is
-// `[data-role="metric-value"]` (both siblings of `[data-role="metric-label"]`).
 function kpiValue(label: string): string {
-  const card = screen.getByText(label).closest('[data-role="metric-card"]');
+  const card = screen.getByText(label).closest('[data-stat]');
   expect(card).not.toBeNull();
-  const value = card!.querySelector('[data-role="metric-value"]');
+  const value = card!.querySelector('[data-stat-value]');
   expect(value).not.toBeNull();
   return value!.textContent ?? '';
+}
+function waitForSummary() {
+  return waitFor(() => expect(
+    screen.getByText('Total sessions').closest('[data-stat]')?.querySelector('[data-stat-value]'),
+  ).not.toBeNull());
 }
 
 beforeEach(() => {
@@ -365,7 +368,7 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   it('renders the page shell, every section, and all panel headings', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Tesla charging history' }),
@@ -401,7 +404,7 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   it('derives the KPI band from the server summary + entry list', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     expect(kpiValue('Total sessions')).toBe('3');
     expect(kpiValue('Total energy')).toMatch(/^115(?:\.0+)?\s*kWh$/);
@@ -415,7 +418,7 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   it('renders the top-locations panel ranked by spend with formatted currency + counts', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     expect(screen.getByText('Supercharger - Fremont')).toBeInTheDocument();
     expect(screen.getByText('Supercharger - Gilroy')).toBeInTheDocument();
@@ -427,7 +430,7 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   it('shows the monthly-spending chart (not its empty state) when data exists', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     expect(
       screen.getByRole('img', { name: 'Monthly Tesla charging spending bar chart' }),
@@ -440,6 +443,27 @@ describe('TeslaChargingHistoryPage — happy path', () => {
 
 // ── Component — loading / error / empty branches ────────────────────────────
 describe('TeslaChargingHistoryPage — loading / error / empty branches', () => {
+  it('retains lifetime metrics, billing rows, search and independent panels when a background refresh fails', async () => {
+    installRequest();
+    const { client } = renderPage();
+    await waitForSummary();
+    const search = screen.getByPlaceholderText('Search by location…');
+    fireEvent.change(search, { target: { value: 'Fremont' } });
+    installRequest({ feedMode: 'reject', feedError: new ApiError('refresh failed', 500) });
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['tesla-charging-history'] });
+    });
+    const warning = await screen.findByTestId('stale-refresh-warning');
+    expect(warning).toBeInTheDocument();
+    expect(warning.closest('button')).toBeNull();
+    expect(kpiValue('Total sessions')).toBe('3');
+    expect(kpiValue('Total spend')).toBe('$30.00');
+    expect(screen.getByPlaceholderText('Search by location…')).toHaveValue('Fremont');
+    expect(screen.getByText('Monthly spending')).toBeInTheDocument();
+    expect(screen.getByText('Top locations')).toBeInTheDocument();
+    expect(screen.getByText('Charging sessions')).toBeInTheDocument();
+    expect(screen.queryAllByText('Server error')).toHaveLength(0);
+  });
   it('shows skeletons (never blank panels) while the first feed is in flight', async () => {
     installRequest({ feedMode: 'pending' });
     const { container } = renderPage();
@@ -450,8 +474,10 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
     // Panel chrome stays mounted — only the bodies are skeletons.
     expect(screen.getByText('Monthly spending')).toBeInTheDocument();
     expect(screen.getByText('Charging sessions')).toBeInTheDocument();
-    // KPI values are replaced by skeletons, so no metric label leaks.
-    expect(screen.queryByText('Total sessions')).toBeNull();
+    // Every metric identity stays mounted while its value is loading.
+    const metric = screen.getByText('Total sessions').closest('[data-stat]');
+    expect(metric).toHaveAttribute('data-state', 'loading');
+    expect(metric?.querySelector('[data-stat-value]')).toBeNull();
   });
 
   it('renders per-section QueryError with a Retry that refetches the feed', async () => {
@@ -476,7 +502,7 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
       },
     });
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     expect(
       screen.getByText('No spending data yet. Click "Refresh from Tesla" to sync.'),
@@ -498,7 +524,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('requests the globally selected VIN with no /api/v1 prefix or camelCase params', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     const calls = historyCalls();
     expect(calls.length).toBeGreaterThan(0);
@@ -512,7 +538,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('re-scopes the feed when a different vehicle is selected', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     expect(historyCalls()).toContain(
       '/tesla/charging/history?vin=5YJ3E1EA1KF000001',
@@ -530,7 +556,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('POSTs to the refresh endpoint when "Refresh from Tesla" is pressed', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     expect(refreshCalls().length).toBe(0);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }));
@@ -541,7 +567,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('filters the sessions table to an empty state when the search matches nothing', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     const search = screen.getByPlaceholderText('Search by location…');
     fireEvent.change(search, { target: { value: 'no-such-location-zzz' } });
@@ -557,7 +583,7 @@ describe('TeslaChargingHistoryPage — accessibility', () => {
   it('labels the vehicle selector and the spending chart region for assistive tech', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total sessions');
+    await waitForSummary();
 
     const select = screen.getByRole('combobox', { name: 'Select vehicle' });
     expect(select).toHaveAttribute('aria-label', 'Select vehicle');

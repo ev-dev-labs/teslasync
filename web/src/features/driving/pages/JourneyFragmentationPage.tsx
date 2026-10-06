@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { EmptyState } from '@/components/feedback';
-import { PageContainer, Grid } from '@/components/layout';
+import { PageLayout, Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { GlassPanel, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -56,7 +56,7 @@ export default function JourneyFragmentationPage() {
   }));
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('journeyFragmentation.title', 'Journey Fragmentation')}
       subtitle={t('journeyFragmentation.subtitle', 'Descriptive continuity analysis of a capped returned drive-history window')}
       contextActions={(
@@ -113,6 +113,6 @@ export default function JourneyFragmentationPage() {
           />
         )}
       </GlassPanel>
-    </PageContainer>
+    </PageLayout>
   );
 }

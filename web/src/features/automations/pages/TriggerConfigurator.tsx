@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -11,7 +11,7 @@ import {
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { buildSignalFieldOptions, BOOL_FIELD_KEYS, unitKindForSignal } from '@/lib/signals';
-import { UnitInput } from '@/components/forms';
+import { UnitInput, WeekdaySelect } from '@/components/forms';
 import { useSettings } from '@/hooks/useSettings';
 import {
   Clock,
@@ -221,16 +221,6 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
 
   const signalFieldOptions = useMemo(() => buildSignalFieldOptions(t, settings), [t, settings]);
 
-  const handleDayToggle = useCallback((days: number[], day: number) => {
-    if (days.length === 0) {
-      return DAYS.map((_, index) => index).filter((index) => index !== day);
-    }
-    const next = days.includes(day)
-      ? days.filter((current) => current !== day)
-      : [...days, day].sort();
-    return next.length === 7 ? [] : next;
-  }, []);
-
   switch (trigger.kind) {
     case 'trigger_schedule': {
       const parsed = parseCronExpr(trigger.cron_expr);
@@ -267,28 +257,21 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                 <Text as="span" variant="subhead">
                   {t('automations.builder.days', 'Days')}
                 </Text>
-                <div className="mt-1 flex gap-2">
-                  {DAYS.map((label, index) => {
-                    const active = selectedDays.length === 0 || selectedDays.includes(index);
-                    return (
-                      <UiButton
-                        key={label}
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        aria-pressed={active}
-                        className={`!h-10 !w-10 !rounded-lg !p-0 text-xs font-medium ${
-                          active
-                            ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                            : '!bg-white/[0.03] text-[var(--text-muted)] hover:!bg-white/[0.06]'
-                        }`}
-                        onClick={() => updateCron(hour, minute, handleDayToggle(selectedDays, index))}
-                      >
-                        {t(`common.days.short.${index}`, label)}
-                      </UiButton>
-                    );
-                  })}
-                </div>
+                <WeekdaySelect
+                  className="mt-1"
+                  ariaLabel={t('automations.builder.days', 'Days')}
+                  options={DAYS.map((label, id) => ({
+                    id,
+                    label: t(`common.days.short.${id}`, label),
+                    ariaLabel: t(`common.days.short.${id}`, label),
+                  }))}
+                  selectedIds={selectedDays.length === 0 ? DAYS.map((_, id) => id) : selectedDays}
+                  onChange={(days) => updateCron(
+                    hour,
+                    minute,
+                    days.length > selectedDays.length ? days.sort((a, b) => a - b) : days,
+                  )}
+                />
               </div>
             </>
           ) : (

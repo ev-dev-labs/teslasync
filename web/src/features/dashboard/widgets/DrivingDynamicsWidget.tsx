@@ -198,6 +198,8 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                   <WidgetGaugeHero
                     compact
                     gauge={{
+                      preserveReadingAndScale: true,
+                      kind: 'measurement',
                       value: metric.value,
                       max: G_MAX,
                       label: fmtNumber(metric.value),

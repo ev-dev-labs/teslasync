@@ -347,6 +347,7 @@ describe('one host observer, provider placement and preservation source contract
       'src/features/vehicle-systems/pages/ClimateControlPage.tsx'), 'utf8');
     expect(source.match(/<ClimateRenderGrid\b/g)).toHaveLength(1);
     expect(source).toContain('<PageLayout');
+    expect(source.match(/<LayoutCard\b/g)).toHaveLength(10);
     expect(source).not.toMatch(/empty=\{|max-w-\[1600px\]|ResizeObserver|useContainerWidth/);
     expect(source).toContain('tableId="vehicle-systems:climate-history"');
     expect(source).toContain('enableValueFilters');

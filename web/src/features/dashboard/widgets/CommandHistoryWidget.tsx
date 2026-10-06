@@ -136,6 +136,7 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
           timestamp: cmd.created_at ?? '',
           color: mapped.color,
           severity: mapped.severity,
+          wrap: true,
         };
       }),
     [list, t],

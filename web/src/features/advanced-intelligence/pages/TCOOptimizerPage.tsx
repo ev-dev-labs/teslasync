@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRunTCOOptimizer } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Table, Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -48,7 +48,7 @@ export default function TCOOptimizerPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.tco.title', 'TCO optimizer')}
       subtitle={t(
         'advancedIntelligence.tco.subtitle',
@@ -239,6 +239,6 @@ export default function TCOOptimizerPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

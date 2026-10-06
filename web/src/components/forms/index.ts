@@ -39,6 +39,11 @@ export {
 } from './ValidationSummary';
 export { VehicleSelect, type VehicleSelectProps } from './VehicleSelect';
 export {
+  WeekdaySelect,
+  type WeekdaySelectOption,
+  type WeekdaySelectProps,
+} from './WeekdaySelect';
+export {
   VehicleMultiSelect,
   hydrateVehicleSelection,
   buildVehiclePayload,

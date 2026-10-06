@@ -230,6 +230,23 @@ beforeEach(() => {
 });
 
 describe('ScienceLabPage', () => {
+  it('keeps canonical card shells and all source anchors during independent failures', () => {
+    scienceMocks.thermal.mockReturnValue(queryState({
+      data: undefined, isPending: true, isSuccess: false, fetchStatus: 'fetching',
+    }));
+    scienceMocks.tires.mockReturnValue(queryState({
+      data: undefined, error: new Error('TPMS unavailable'), isError: true, isSuccess: false,
+    }));
+    renderPage();
+    for (const id of ['overview', 'electrochem', 'thermal', 'weather', 'tires', 'notebook']) {
+      expect(screen.getByTestId(`science-${id}`).querySelector('[data-card]')).toBeInTheDocument();
+    }
+    const tire = screen.getByTestId('science-tires');
+    expect(within(tire).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(tire).not.toHaveTextContent('0 kPa');
+    expect(screen.getByTestId('science-electrochem')).toHaveTextContent('Rest-voltage evidence');
+    expect(screen.getByTestId('science-weather').querySelector('a[href="/drives/7"]')).toBeInTheDocument();
+  });
   it('renders all five domain panels with data', () => {
     renderPage();
     const overview = screen.getByTestId('science-overview');

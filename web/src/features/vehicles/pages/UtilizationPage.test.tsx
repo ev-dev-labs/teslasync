@@ -81,7 +81,7 @@ vi.mock('@/components/forms', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -298,6 +298,7 @@ describe('UtilizationPage', () => {
 
     drivesMock.mockReturnValue(
       query({
+        data: undefined,
         isError: true,
         error: new Error('drive history unavailable'),
       }),
@@ -366,6 +367,14 @@ describe('UtilizationPage', () => {
       start: '2026-07-01',
       end: '2026-07-31',
       limit: 1000,
+    });
+
+    it('keeps retained eligible drives in all eight sections when refresh fails', () => {
+      drivesMock.mockReturnValue(query({ data: [eligibleDrive()], isError: true, error: new Error('refresh failed') }));
+      render(<UtilizationPage />);
+      for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(drivesMock).toHaveBeenCalledWith('42', { start: '2026-07-01', end: '2026-07-31', limit: 1000 });
     });
     expect(
       screen.queryByTestId('utilization-method'),

@@ -729,7 +729,17 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
       <BulkActionsToolbar
         selectedIds={Array.from(selected)}
-        total={rows.length}
+        total={isGrouped ? null : countData?.total ?? null}
+        selectionScope={isGrouped ? 'selected' : 'loaded'}
+        selectionSummary={isGrouped
+          ? t('notifications.inbox.bulk.memberSelection', '{{count}} selected notification members', { count: selected.size })
+          : countData?.total != null
+            ? t('notifications.inbox.bulk.loadedSelection', '{{count}} selected · {{loaded}} loaded notifications · {{total}} matching', {
+                count: selected.size, loaded: rows.length, total: countData.total,
+              })
+            : t('notifications.inbox.bulk.unknownSelection', '{{count}} selected · {{loaded}} loaded notifications · total unavailable', {
+                count: selected.size, loaded: rows.length,
+              })}
         onClear={clearSelection}
         actions={bulkActions}
         itemNoun={{

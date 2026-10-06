@@ -83,7 +83,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -284,8 +284,8 @@ describe('SpeedSweetSpotPage', () => {
   });
 
   it.each([
-    ['loading', query({ isLoading: true })],
-    ['error', query({ isError: true, error: new Error('unavailable') })],
+    ['loading', query({ data: undefined, isLoading: true })],
+    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
   ])('propagates the %s state to every mounted section', (expected, result) => {
     useDrivesMock.mockReturnValue(result);
     render(<SpeedSweetSpotPage />);

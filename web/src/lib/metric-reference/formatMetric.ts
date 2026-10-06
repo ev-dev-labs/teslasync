@@ -1,4 +1,5 @@
-import { fmtNumber, getFormatterPreferences } from '@/lib/numberFormat';
+import { fmtCompact, fmtNumber, getFormatterPreferences } from '@/lib/numberFormat';
+import { formatDurationMinutes } from '@/lib/dateFormat';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import {
   convertDistanceFromSI, convertDistanceToSI, convertDurationFromSI,
@@ -6,10 +7,11 @@ import {
   convertPressureFromSI, convertSpeedFromSI, convertTempFromSI,
 } from '@/lib/unitConversion';
 import { glossary, type MetricId } from './glossary';
-import type { FormattedMetric, MetricPreferences, MetricRaw } from './types';
+import type { FormattedMetric, MetricPreferences, MetricRaw, MetricDisplayOptions } from './types';
 
 export function formatMetric(
   metricId: MetricId, raw: MetricRaw, prefs: MetricPreferences, missingReason?: string,
+  options?: MetricDisplayOptions,
 ): FormattedMetric {
   const definition = glossary[metricId];
   if (!Object.prototype.hasOwnProperty.call(glossary, metricId)) throw new Error(`Unknown metric: ${metricId}`);
@@ -29,11 +31,11 @@ export function formatMetric(
   if (typeof raw !== 'number' || !Number.isFinite(raw))
     return unavailable('invalid', 'nonfinite', 'Expected a finite numeric measurement');
   const global = getFormatterPreferences();
-  const requested = prefs.units.precision ?? global.precision;
+  const units = { ...prefs.units, ...options?.units };
+  const requested = options?.precision ?? units.precision ?? global.precision;
   const precision = Number.isFinite(requested) && requested >= 0
     ? Math.min(20, Math.floor(requested)) : global.precision;
-  const locale = prefs.units.locale ?? global.locale;
-  const units = prefs.units;
+  const locale = units.locale ?? global.locale;
   let display = Object.is(raw, -0) ? 0 : raw;
   let unit = '';
   switch (format) {
@@ -61,10 +63,19 @@ export function formatMetric(
     return unavailable('invalid', 'overflow', 'Display conversion exceeded the finite numeric range');
   if (format === 'count' && (!Number.isSafeInteger(raw) || raw < 0))
     return unavailable('invalid', 'count', 'Expected a non-negative safe integer count');
+  if (format === 'duration' && options?.durationStyle === 'roundedMinutes') {
+    if (raw < 0) return unavailable('invalid', 'duration', 'Expected a non-negative duration for this display');
+    const value = formatDurationMinutes(convertDurationFromSI(raw, 'min'));
+    return { value, unit: '', text: value, state: 'value', accessibility: value, rawValue: raw };
+  }
   const digits = format === 'count' ? 0 : precision;
   // Suppress a display-rounded negative zero without changing the retained raw measurement.
-  if (display < 0 && Math.abs(display) < 0.5 * 10 ** -digits) display = 0;
-  let value = fmtNumber(display, digits, locale);
+  const roundedDigits = options?.notation === 'compact'
+    && Math.abs(display) < (options.compactThreshold ?? 10000) ? 0 : digits;
+  if (display < 0 && Math.abs(display) < 0.5 * 10 ** -roundedDigits) display = 0;
+  let value = options?.notation === 'compact'
+    ? fmtCompact(display, options.compactThreshold)
+    : fmtNumber(display, digits, locale);
   if (format === 'currency') {
     if (prefs.currency.kind === 'iso') {
       try {

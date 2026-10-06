@@ -624,6 +624,8 @@ export function DataTable<T>({
     paginationEnabled && tableId ? `${STORAGE_PREFIX}.${tableId}.page-size` : null
 
   const [page, setPage] = useState(1)
+  // Cumulative mobile reveal must not overwrite the desktop page on resize.
+  const [mobilePage, setMobilePage] = useState(1)
   const [pageSize, setPageSize] = useState(() => {
     if (!pageSizeStorageKey) return defaultPageSize
     const stored = readStored<unknown>(pageSizeStorageKey)
@@ -639,13 +641,17 @@ export function DataTable<T>({
     if (!Number.isInteger(size) || size <= 0 || !pageSizeOptions.includes(size)) return
     setPageSize(size)
     setPage(1)
+    setMobilePage(1)
     if (pageSizeStorageKey) writeStored(pageSizeStorageKey, size)
   }, [pageSizeOptions, pageSizeStorageKey])
 
   // Reset to page 1 when data length changes (e.g. filters applied).
-  useEffect(() => { setPage(1) }, [data.length, valueSelections, enableValueFilters, deferredLocalSearch])
   useEffect(() => {
-    if (mobileActive) setPage(1)
+    setPage(1)
+    setMobilePage(1)
+  }, [data.length, valueSelections, enableValueFilters, deferredLocalSearch])
+  useEffect(() => {
+    if (mobileActive) setMobilePage(1)
   }, [mobileActive, data, sortKey, sortDir])
 
   // ── Column layout (order + hidden, persisted by tableId) ───────────────
@@ -798,7 +804,7 @@ export function DataTable<T>({
   )
 
   const toggleAll = useCallback(() => {
-    if (hasValueFilters) {
+    if (hasValueFilters || paginationControls || (localSearchEnabled && deferredLocalSearch.trim())) {
       const matchingKeys = new Set(allRowKeys)
       setSelection(allSelected
         ? selection.filter(key => !matchingKeys.has(key))
@@ -807,7 +813,8 @@ export function DataTable<T>({
     }
     if (allSelected) setSelection([])
     else setSelection(allRowKeys)
-  }, [hasValueFilters, selection, allSelected, allRowKeys, setSelection])
+  }, [hasValueFilters, paginationControls, localSearchEnabled, deferredLocalSearch,
+    selection, allSelected, allRowKeys, setSelection])
 
   const clearSelection = useCallback(() => setSelection([]), [setSelection])
 
@@ -1370,7 +1377,7 @@ export function DataTable<T>({
       {mobileActive && mobilePresentation ? (
         <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}:mobile`}>
           <MobileDataTableAdapter
-            rows={paginationEnabled ? filteredData.slice(0, page * pageSize) : filteredData}
+            rows={paginationEnabled ? filteredData.slice(0, mobilePage * pageSize) : filteredData}
             columns={visibleColumns} allColumns={columns} keyExtractor={keyExtractor}
             presentation={mobilePresentation} label={accessibleTableName} rowLabel={rowLabel}
             selectedKeys={selectionSet} selectable={isSelectable && Boolean(onSelectionChange)}
@@ -1387,9 +1394,9 @@ export function DataTable<T>({
                 {action.label}
               </Button>
             )) : undefined}
-            onLoadMore={paginationEnabled && page * pageSize < filteredData.length
-              ? () => setPage(previous => previous + 1) : undefined}
-            nextCount={Math.min(pageSize, Math.max(0, filteredData.length - page * pageSize))}
+            onLoadMore={paginationEnabled && mobilePage * pageSize < filteredData.length
+              ? () => setMobilePage(previous => previous + 1) : undefined}
+            nextCount={Math.min(pageSize, Math.max(0, filteredData.length - mobilePage * pageSize))}
             onClear={searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? () => {
               searchControls?.onChange('')
               setValueSelections({})
@@ -1398,7 +1405,7 @@ export function DataTable<T>({
             } : undefined}
             count={<Text size="sm" color="muted" role="status">
               {paginationEnabled && t('developerReference.mobileGrid.footer.showing', 'Showing {{count}} of {{total}}', {
-                count: Math.min(page * pageSize, filteredData.length), total: filteredData.length,
+                count: Math.min(mobilePage * pageSize, filteredData.length), total: filteredData.length,
               })}
               {' · '}{t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
                 filtered: filteredData.length, loaded: data.length,

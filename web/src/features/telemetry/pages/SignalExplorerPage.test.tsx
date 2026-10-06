@@ -22,7 +22,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -32,7 +32,7 @@ import type { SignalHistoryResp } from '@/api/types';
 const h = vi.hoisted(() => ({
   vehicleId: 1 as number | null,
   connected: false,
-  signalsData: ['battery_level', 'speed', 'inside_temp'] as string[],
+  signalsData: ['battery_level', 'speed', 'inside_temp'] as string[] | undefined,
   signalsError: null as unknown,
   onVehicleUpdate: null as ((data: unknown) => void) | null,
 }));
@@ -176,13 +176,14 @@ function makeHistoryResp(signal: string, values: number[]): SignalHistoryResp {
 
 function renderPage(entries: string[] = ['/signals/explorer']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const rendered = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={entries}>
         <SignalExplorerPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...rendered, client };
 }
 
 beforeEach(() => {
@@ -234,6 +235,7 @@ describe('SignalExplorerPage', () => {
 
   it('surfaces a non-blocking error banner when the signals catalog fails to load', () => {
     h.signalsError = new Error('catalog boom');
+    h.signalsData = undefined;
 
     renderPage();
 
@@ -244,6 +246,27 @@ describe('SignalExplorerPage', () => {
     expect(
       screen.getByRole('region', { name: 'Exploration summary' }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps cached signal choices reachable after catalog refresh failure', () => {
+    h.signalsError = new Error('refresh failed');
+    renderPage(['/signal-explorer?signals=battery_level']);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText(/Failed to load data/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeEnabled();
+  });
+
+  it('keeps historical values and stats readable through a failed background refresh', async () => {
+    mockedRequest.mockResolvedValue(makeHistoryResp('battery_level', [80.1, 80.2]));
+    const { client } = renderPage(['/signal-explorer?signals=battery_level']);
+    fireEvent.click(screen.getByRole('button', { name: 'Explore' }));
+    expect(await screen.findByText('80.15')).toBeInTheDocument();
+    mockedRequest.mockRejectedValue(new Error('refresh failed'));
+    await act(async () => { await client.refetchQueries({ queryKey: ['signal-explorer'] }); });
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('80.15')).toBeInTheDocument();
+    expect(screen.getAllByText('80.1').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Failed to load data/)).toBeNull();
   });
 
   it('runs a historical query on Explore, requesting SI history per signal with the correct URL contract', async () => {

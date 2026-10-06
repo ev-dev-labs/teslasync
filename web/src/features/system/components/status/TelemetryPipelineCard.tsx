@@ -33,11 +33,14 @@ import { getPollingStatus, type VehiclePollingStatus } from '@/api/polling'
 import { useMQTTStatus } from '@/api/hooks/useTelemetry'
 import type { Vehicle } from '@/api/types'
 import { fmtInt } from '@/lib/numberFormat'
+import { useTranslation } from 'react-i18next'
+import { useDataState } from '@/hooks/useDataState'
+import { QueryError, StaleRefreshWarning } from '@/components/feedback'
 
 interface TelemetryPipelineCardProps {
   vehicles: Vehicle[] | undefined
-  positionCount: number
-  drivesCount: number
+  positionCount: number | undefined
+  drivesCount: number | undefined
   chargingSessionsCount: number | undefined
   signalLogCount: number | undefined
   /** "now" passed in so the page-level tick re-renders the relative-time labels. */
@@ -188,17 +191,22 @@ export function TelemetryPipelineCard({
   signalLogCount,
   now,
 }: TelemetryPipelineCardProps) {
-  const { data: pollingStatus } = useQuery({
+  const { t } = useTranslation()
+  const pollingQuery = useQuery({
     queryKey: ['system-status', 'polling-status'],
     queryFn: getPollingStatus,
     refetchInterval: POLLING_REFRESH_MS,
   })
+  const pollingStatus = pollingQuery.data
+  const pollingState = useDataState(pollingQuery, { provenance: 'live' })
 
   // Fleet Telemetry streaming status — same source the MQTT Inspector
   // page uses. Without this, vehicles that stream via MQTT but are not
   // REST-polled would render as "offline" even when they're actively
   // sending 240+ signals per minute.
-  const { data: mqttStatus } = useMQTTStatus()
+  const mqttQuery = useMQTTStatus()
+  const mqttStatus = mqttQuery.data
+  const mqttState = useDataState(mqttQuery, { provenance: 'live' })
 
   const list = vehicles ?? []
   const pollingMap: Record<string, VehiclePollingStatus> = pollingStatus?.vehicles ?? {}
@@ -215,7 +223,7 @@ export function TelemetryPipelineCard({
       signalCount: sv.signalCount ?? sv.signal_count,
     }
   }
-  const mqttConnected = mqttStatus?.connected === true
+  const mqttConnected = mqttStatus?.connected
 
   // Fleet-wide liveness summary used in the sub-header
   const counts = list.reduce(
@@ -231,12 +239,20 @@ export function TelemetryPipelineCard({
 
   return (
     <div className="space-y-4">
+      <StaleRefreshWarning state={pollingState} label={t('systemStatus.telemetry.pollSource', 'REST polling')} />
+      {pollingState.fatalError && (
+        <QueryError error={pollingState.fatalError} onRetry={() => { void pollingQuery.refetch(); }} />
+      )}
+      <StaleRefreshWarning state={mqttState} label={t('systemStatus.telemetry.streamSource', 'Fleet Telemetry stream')} />
+      {mqttState.fatalError && (
+        <QueryError error={mqttState.fatalError} onRetry={() => { void mqttQuery.refetch(); }} />
+      )}
       {/* Fleet rollup grid */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm md:grid-cols-5">
         <div>
           <div className="text-xs text-[var(--text-muted)]">Vehicles</div>
           <div className="tabular-nums text-[var(--text-primary)]">
-            {list.length > 0 ? `${list.length} connected` : 'none configured'}
+            {vehicles == null ? '—' : list.length > 0 ? `${list.length} connected` : 'none configured'}
           </div>
         </div>
         <div>
@@ -280,9 +296,14 @@ export function TelemetryPipelineCard({
             <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-1.5 py-0.5 text-cyan-300 ring-1 ring-cyan-400/20">
               <Radio className="h-3 w-3" /> Fleet Telemetry connected
             </span>
-          ) : (
+          ) : mqttConnected === false ? (
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
               <WifiOff className="h-3 w-3" /> MQTT broker disconnected
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
+              <Radio className="h-3 w-3" aria-hidden="true" />
+              {t('systemStatus.telemetry.streamUnknown', 'Fleet Telemetry connection unknown')}
             </span>
           )}
           {/* Polling-engine state — informational when MQTT is healthy, warning otherwise */}

@@ -2,11 +2,10 @@ import { Pencil, Plus, Trash2, UsersRound } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { LayoutCard } from '@/components/layout';
 import {
   Button,
   DataTable,
-  GlassPanel,
-  PanelTitle,
   StatusPill,
   type Column,
 } from '@/components/ui';
@@ -114,9 +113,7 @@ export function DriverRoster({
   ], [actionsDisabled, actionsDisabledReason, onDelete, onEdit, t]);
 
   return (
-    <GlassPanel className="p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PanelTitle>{t('fleetOps.drivers.title', 'Fleet drivers')}</PanelTitle>
+    <LayoutCard title={t('fleetOps.drivers.title', 'Fleet drivers')} actions={
         <Button
           type="button"
           size="sm"
@@ -127,7 +124,7 @@ export function DriverRoster({
         >
           {t('fleetOps.drivers.add', 'Add driver')}
         </Button>
-      </div>
+      }>
       {loading ? <Skeleton lines={5} /> : error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.drivers.resource', 'Drivers')} />
       ) : items.length === 0 ? (
@@ -149,6 +146,6 @@ export function DriverRoster({
           pagination
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

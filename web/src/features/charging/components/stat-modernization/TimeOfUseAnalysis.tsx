@@ -97,7 +97,10 @@ export function TimeOfUseAnalysis({
                     context: t('costAnalysis.tou.offPeakDesc', 'of sessions between 10 PM–6 AM') },
                 ]} />
             ) : (
-              <EmptyState message={t('costAnalysis.tou.noInsights', 'No insights available')} />
+              <EmptyState
+                message={t('costAnalysis.tou.noInsights', 'No insights available')}
+                action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
+              />
             )}
           </div>
         </div>

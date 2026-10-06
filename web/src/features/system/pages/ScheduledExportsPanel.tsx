@@ -34,7 +34,8 @@ import {
   Table,
   Text,
 } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { TimeStamp } from '@/components/data-display';
 import { Icons } from '@/lib/icons';
 import {
@@ -91,7 +92,11 @@ function inputFromRow(row: ScheduledExport): ScheduledExportInput {
 
 export function ScheduledExportsPanel() {
   const { t } = useTranslation();
-  const { data, isLoading, isError, error, refetch } = useScheduledExports();
+  const query = useScheduledExports();
+  const { data, isLoading, refetch } = query;
+  const state = useDataState(query);
+  const error = state.fatalError;
+  const isError = !!error;
   const create = useCreateScheduledExport();
   const update = useUpdateScheduledExport();
   const remove = useDeleteScheduledExport();
@@ -164,6 +169,7 @@ export function ScheduledExportsPanel() {
 
   return (
     <GlassPanel className="min-w-0 p-6" data-testid="scheduled-exports-panel">
+      <StaleRefreshWarning state={state} label={t('dataExport.scheduled.title', 'Scheduled exports')} />
       <div className="flex items-start justify-between gap-4">
         <div>
           <Heading level="section">
@@ -341,7 +347,7 @@ export function ScheduledExportsPanel() {
       ) : null}
 
       <div className="mt-6">
-        {isLoading ? (
+        {isLoading && !state.hasData ? (
           <div className="space-y-2">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />

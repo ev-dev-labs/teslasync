@@ -1,11 +1,11 @@
-import { TrendingUp } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { preconditioningRegimeLabel } from './labels';
@@ -54,14 +54,7 @@ export function PreconditioningImprovementComparison({
 
   return (
     <section data-testid="preconditioning-improvement-comparison">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.improvement.title',
-            'Cabin-improvement comparison',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.improvement.title', 'Cabin-improvement comparison')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.improvement.subtitle',
@@ -74,7 +67,7 @@ export function PreconditioningImprovementComparison({
           requirement="comparison"
           skeletonHeight={330}
         >
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             title={t(
               'preconditioningEffectiveness.improvement.plotTitle',
               'Median observed cabin improvement by group',
@@ -117,14 +110,14 @@ export function PreconditioningImprovementComparison({
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </ChartContainer>
+          </EmbeddedChart>
           <PreconditioningComparisonCards
             comparisons={comparisons}
             metric="improvement"
             formatDelta={formatDelta}
           />
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

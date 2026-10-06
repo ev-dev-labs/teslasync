@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCheck, Radio, RefreshCw, ShieldAlert } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
@@ -17,6 +17,7 @@ import {
 import { useCommandReliabilityHistory } from '@/api/hooks/useCommands';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { chartTokens } from '@/lib/tokens';
@@ -61,6 +62,7 @@ export default function CommandReliabilityPage() {
     timezone: timeZone,
   });
   const historyQuery = useCommandReliabilityHistory(vehicleId ?? undefined, startInstant, endInstantExclusive);
+  const state = useDataState(historyQuery, { provenance: 'historical' });
 
   const summary = useMemo(
     () => analyzeCommandReliability(historyQuery.data ?? []),
@@ -93,10 +95,10 @@ export default function CommandReliabilityPage() {
   }
 
   const isLoading = historyQuery.isLoading;
-  const isError = historyQuery.isError;
+  const isError = !!state.fatalError;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('commandReliability.title', 'Command reliability')}
       subtitle={t(
         'commandReliability.subtitle',
@@ -104,6 +106,7 @@ export default function CommandReliabilityPage() {
       )}
       query={historyQuery}
     >
+      <StaleRefreshWarning state={state} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section
@@ -112,7 +115,7 @@ export default function CommandReliabilityPage() {
         >
           {isError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
+              <QueryError error={state.fatalError} onRetry={() => historyQuery.refetch()} />
             </GlassPanel>
           ) : isLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
@@ -326,6 +329,6 @@ export default function CommandReliabilityPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

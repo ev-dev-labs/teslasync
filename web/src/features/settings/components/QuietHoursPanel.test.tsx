@@ -110,6 +110,34 @@ beforeEach(() => {
 });
 
 describe('QuietHoursPanel — confirm-gated delete', () => {
+  it('does not call a failed initial read an empty schedule, and retries only the read', () => {
+    const refetch = vi.fn()
+    mockWindows.mockReturnValue({
+      ...makeQuery(undefined), isError: true, error: new Error('Read failed'), refetch,
+    })
+    renderPanel()
+    expect(screen.getByText('Quiet-hours windows unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText(/No quiet-hours windows yet/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add window' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(mockSave.mock.results[0].value.mutate).not.toHaveBeenCalled()
+    expect(mockRemove.mock.results[0].value.mutate).not.toHaveBeenCalled()
+  })
+
+  it('retains an editable schedule and confirmation boundaries after a failed refresh', () => {
+    mockWindows.mockReturnValue({
+      ...makeQuery([makeWindow()]), isError: true, error: new Error('Refresh failed'),
+    })
+    renderPanel()
+    expect(screen.getByTestId('quiet-hours-row-1')).toBeInTheDocument()
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByTestId('quiet-hours-form')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Timezone' })).toBeInTheDocument()
+    expect(mockSave.mock.results[0].value.mutate).not.toHaveBeenCalled()
+    expect(mockRemove.mock.results[0].value.mutate).not.toHaveBeenCalled()
+  })
   it('opens a danger confirm instead of deleting on click', () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));

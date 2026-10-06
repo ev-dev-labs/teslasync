@@ -1,8 +1,7 @@
 import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
 import { useGhostDrives } from '@/api/hooks/useOwnership';
-import { useDataState } from '@/hooks/useDataState';
-import { AlertBanner, QueryError } from '@/components/feedback';
+import { AlertBanner } from '@/components/feedback';
 import { Badge, Button, DataTable, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
@@ -33,7 +32,6 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
   const { t } = useTranslation();
   const units = useUnits();
   const ghostsQuery = useGhostDrives(vehicleId, windowDays);
-  const ghostsState = useDataState(ghostsQuery);
 
   const ghosts = ghostsQuery.data?.ghosts ?? [];
   const scanned = ghostsQuery.data?.scanned ?? 0;
@@ -125,6 +123,8 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
 
   return (
     <OwnershipPanel
+      source={ghostsQuery}
+      sourceEnabled={vehicleId != null}
       title={t('ownership.ghost.title', 'Ghost-driver alerts')}
       description={t(
         'ownership.ghost.subtitle',
@@ -138,11 +138,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
           </Badge>
         ) : undefined
       }
-      empty={
-        !ghostsState.fatalError &&
-        !ghostsQuery.isError &&
-        (ghostsQuery.isLoading || ghosts.length === 0)
-      }
+      empty={ghosts.length === 0}
       emptyMessage={
         ghostsQuery.isLoading
           ? t('ownership.ghost.scanning', 'Scanning recent drives…')
@@ -152,9 +148,6 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
             )
       }
     >
-      {ghostsState.fatalError ? (
-        <QueryError error={ghostsState.fatalError} onRetry={() => ghostsState.retry?.()} />
-      ) : null}
       {ghosts.length > 0 ? (
         <div className="mb-4">
           <AlertBanner

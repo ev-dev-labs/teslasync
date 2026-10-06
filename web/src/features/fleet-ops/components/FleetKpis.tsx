@@ -1,7 +1,5 @@
-import { CalendarClock, Car, Gauge, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Grid } from '@/components/layout';
-import { StatCard } from '@/components/data-display';
+import { StatStrip } from '@/components/data-display';
 import type {
   FleetAssignment,
   FleetForecastPoint,
@@ -16,6 +14,12 @@ interface FleetKpisProps {
   workOrders: FleetWorkOrder[];
   forecast: FleetForecastPoint[];
   loading: boolean;
+  availability?: {
+    reservations: boolean;
+    assignments: boolean;
+    workOrders: boolean;
+    forecast: boolean;
+  };
 }
 
 export function FleetKpis({
@@ -24,37 +28,27 @@ export function FleetKpis({
   workOrders,
   forecast,
   loading,
+  availability,
 }: FleetKpisProps) {
   const { t } = useTranslation();
   const values = fleetKpis(reservations, assignments, workOrders, forecast);
   return (
-    <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
-      <StatCard
-        label={t('fleetOps.kpi.reservations', 'Active reservations')}
-        value={values.active_reservations}
-        icon={<CalendarClock className="h-5 w-5" />}
-        loading={loading}
-      />
-      <StatCard
-        label={t('fleetOps.kpi.assignedVehicles', 'Assigned vehicles')}
-        value={values.assigned_vehicles}
-        icon={<Car className="h-5 w-5" />}
-        loading={loading}
-      />
-      <StatCard
-        label={t('fleetOps.kpi.openWorkOrders', 'Open work orders')}
-        value={values.open_work_orders}
-        icon={<Wrench className="h-5 w-5" />}
-        loading={loading}
-      />
-      <StatCard
-        label={t('fleetOps.kpi.forecastUtilization', 'Forecast utilization')}
-        value={values.expected_utilization_pct}
-        unit="%"
-        icon={<Gauge className="h-5 w-5" />}
-        loading={loading}
-        sublabel={t('fleetOps.kpi.forecastAverage', '14-day fleet average')}
-      />
-    </Grid>
+    <StatStrip
+      id="fleet-operations-summary"
+      loading={loading}
+      period={{ kind: 'unknown', label: t('fleetOps.kpi.loadedScope', 'Loaded operational records'),
+        reason: t('fleetOps.kpi.forecastAverage', '14-day fleet average') }}
+      metrics={[
+        { metricId: 'count', occurrenceId: 'reservations', label: t('fleetOps.kpi.reservations', 'Active reservations'),
+          rawValue: availability?.reservations === false ? null : values.active_reservations },
+        { metricId: 'count', occurrenceId: 'assignments', label: t('fleetOps.kpi.assignedVehicles', 'Assigned vehicles'),
+          rawValue: availability?.assignments === false ? null : values.assigned_vehicles },
+        { metricId: 'count', occurrenceId: 'work-orders', label: t('fleetOps.kpi.openWorkOrders', 'Open work orders'),
+          rawValue: availability?.workOrders === false ? null : values.open_work_orders },
+        { metricId: 'percent', occurrenceId: 'forecast', label: t('fleetOps.kpi.forecastUtilization', 'Forecast utilization'),
+          rawValue: availability?.forecast === false ? null : values.expected_utilization_pct,
+          context: t('fleetOps.kpi.forecastAverage', '14-day fleet average') },
+      ]}
+    />
   );
 }

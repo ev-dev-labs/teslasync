@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Badge, Button, CopyButton, DataTable, GlassPanel, Input, Label, Select, Text, Caption,
+  Badge, Button, CodeBlock, CopyButton, DataTable, GlassPanel, Input, Label, Select, Text, Caption,
   type Column, type SelectOption, type PaginationProps,
 } from '@/components/ui';
 import { DateTime, FormattedNumber } from '@/components/data-display';
@@ -67,20 +67,22 @@ function JsonViewer({ data, label }: { data: string | null; label: string }) {
   let formatted = data;
   try { formatted = JSON.stringify(JSON.parse(data), null, 2); } catch { /* raw diagnostic payload */ }
   return (
-    <div className="min-w-0 space-y-1">
-      <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>
+    <CodeBlock
+      text={formatted}
+      language="json"
+      heading={<Label>{label}</Label>}
+      ariaLabel={label}
+      wrap
+      className="[&_pre]:max-h-60 [&_code]:break-all"
+      action={
         <CopyButton
           text={formatted}
           iconOnly
           size="sm"
           ariaLabel={t('apiLogs.copyBody', 'Copy {{label}}', { label })}
         />
-      </div>
-      <GlassPanel className={cn('max-h-60 overflow-auto whitespace-pre-wrap break-all !p-3', typography.role.code)}>
-        {formatted}
-      </GlassPanel>
-    </div>
+      }
+    />
   );
 }
 

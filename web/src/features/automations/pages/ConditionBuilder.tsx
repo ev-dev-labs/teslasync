@@ -11,7 +11,7 @@ import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
 import { buildSignalFieldOptions, BOOL_FIELD_KEYS, unitKindForSignal } from '@/lib/signals';
-import { UnitInput, UnitListInput } from '@/components/forms';
+import { UnitInput, UnitListInput, WeekdaySelect } from '@/components/forms';
 import { useSettings } from '@/hooks/useSettings';
 import type {
   AutomationConditionKind,
@@ -441,33 +441,20 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             <Text as="span" variant="subhead">
               {t('automations.builder.days', 'Days')}
             </Text>
-            <div className="mt-1 flex gap-1">
-              {DAYS.map((label, day) => {
-                const active = selectedDays.includes(day);
-                return (
-                  <UiButton
-                    key={label}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-pressed={active}
-                    className={`!h-9 !w-9 !rounded !p-0 text-xs font-medium ${
-                      active
-                        ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                        : '!bg-white/[0.03] text-[var(--text-muted)] hover:!bg-white/[0.06]'
-                    }`}
-                    onClick={() => {
-                      const days = active
-                        ? selectedDays.filter((currentDay) => currentDay !== day)
-                        : [...selectedDays, day].sort((a, b) => a - b);
-                      onChange({ ...condition, days_of_week: days });
-                    }}
-                  >
-                    {t(`common.days.short.${day}`, label)}
-                  </UiButton>
-                );
+            <WeekdaySelect
+              className="mt-1"
+              ariaLabel={t('automations.builder.days', 'Days')}
+              options={DAYS.map((label, id) => ({
+                id,
+                label: t(`common.days.short.${id}`, label),
+                ariaLabel: t(`common.days.short.${id}`, label),
+              }))}
+              selectedIds={selectedDays}
+              onChange={(days) => onChange({
+                ...condition,
+                days_of_week: days.length > selectedDays.length ? days.sort((a, b) => a - b) : days,
               })}
-            </div>
+            />
           </div>
         </div>
       );

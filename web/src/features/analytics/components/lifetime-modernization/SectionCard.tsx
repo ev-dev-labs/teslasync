@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { LayoutCard } from '@/components/layout/layout-reference';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { useTranslation } from 'react-i18next';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { Skeleton } from '@/components/feedback';
 
 export type SectionState = 'loading' | 'error' | 'empty' | 'ready' | 'retained';
 
@@ -19,22 +20,20 @@ export function SectionCard({
   headerExtra?: ReactNode;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <LayoutCard title={title} actions={<>{icon}{headerExtra}</>}>
-      {state === 'loading' ? (
-        <Skeleton height={skeletonHeight} />
-      ) : state === 'error' ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : (
-        <>
-          {state === 'retained' && <QueryError error={error} onRetry={onRetry} />}
-          {state === 'empty' ? (
-            <EmptyState /* no-action: no source data; no specific recovery action */
-              message={emptyMessage}
-            />
-          ) : children}
-        </>
-      )}
+      <SourceContent
+        state={state}
+        label={title}
+        emptyMessage={emptyMessage}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={error}
+        errorRecovery={{ onRetry }}
+        loadingContent={<Skeleton height={skeletonHeight} />}
+      >
+        {children}
+      </SourceContent>
     </LayoutCard>
   );
 }

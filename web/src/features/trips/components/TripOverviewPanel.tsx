@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Info } from 'lucide-react';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { KVList, DateTime } from '@/components/data-display';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
@@ -20,11 +19,7 @@ export function TripOverviewPanel({ trip, isLoading, isError, error, onRetry }: 
   const { t } = useTranslation();
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('trips.detail.overview', 'Overview')}
-      </PanelTitle>
+    <LayoutCard title={t('trips.detail.overview', 'Overview')}>
       {isLoading && !trip ? (
         <Skeleton height={260} />
       ) : isError ? (
@@ -68,6 +63,6 @@ export function TripOverviewPanel({ trip, isLoading, isError, error, onRetry }: 
           ]}
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

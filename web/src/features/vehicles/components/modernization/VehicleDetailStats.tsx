@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Section } from '@/components/layout/layout-reference';
+import { Section } from '@/components/layout';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import type { DataStateSource } from '@/api/dataState';

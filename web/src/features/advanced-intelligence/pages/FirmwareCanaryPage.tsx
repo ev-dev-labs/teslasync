@@ -5,7 +5,7 @@ import { useFirmwareCanary } from '@/api/hooks/useAdvancedIntelligence';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -35,14 +35,12 @@ export default function FirmwareCanaryPage() {
   usePageTitle(t('advancedIntelligence.firmware.title', 'Firmware canary'));
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.firmware.title', 'Firmware canary')}
       subtitle={t(
         'advancedIntelligence.firmware.subtitle',
         'Compare a target vehicle with matched peer windows before deciding rollout readiness.',
       )}
-      loading={vehicleId != null && query.isLoading}
-      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="warning"
@@ -57,6 +55,7 @@ export default function FirmwareCanaryPage() {
 
       <FadeIn>
         <InsightPanel
+          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.firmware.decision.title', 'Matched cohort decisions')}
           description={t(
             'advancedIntelligence.firmware.decision.subtitle',
@@ -141,6 +140,6 @@ export default function FirmwareCanaryPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

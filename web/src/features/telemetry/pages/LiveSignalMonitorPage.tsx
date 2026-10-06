@@ -14,7 +14,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { WifiOff } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { Badge } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -109,7 +109,7 @@ export default function LiveSignalMonitorPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('liveMonitor.title', 'Live monitor')}
       subtitle={t('liveMonitor.subtitle', 'Real-time scrolling view of incoming vehicle signals')}
       metadataActions={
@@ -147,14 +147,14 @@ export default function LiveSignalMonitorPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
           <LiveThroughputPanel
-            className="xl:col-span-2"
+            className="min-w-0 max-w-full xl:col-span-2"
             history={throughput.history}
             rate={live.tailRate}
             peak={throughput.peak}
             connected={live.connected}
           />
           <SignalTypeBreakdown
-            className="xl:col-span-1"
+            className="min-w-0 max-w-full xl:col-span-1"
             numericCount={analytics.numericCount}
             booleanCount={analytics.booleanCount}
             stringCount={analytics.stringCount}
@@ -179,6 +179,6 @@ export default function LiveSignalMonitorPage() {
         title={t('liveMonitor.tailTitle', 'Live signal tail')}
         headerExtra={connectionBadge}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -51,7 +51,10 @@ export default function DrivingTips({ vehicleId, historyQuery }: DrivingTipsProp
           ))}
         </ul>
       ) : state.fatalError ? null : (
-        <EmptyState message={t('dynamics.guidance.empty', 'No measured motor evidence available for trip-specific guidance.')} />
+        // no-action: Disabled history awaits a valid trip selection in the trip toolbar.
+        <EmptyState message={t('dynamics.guidance.empty', 'No measured motor evidence available for trip-specific guidance.')}
+          action={vehicleId && historyQuery?.enabled !== false
+            ? { label: t('common.retry', 'Retry'), onClick: () => void query.refetch() } : undefined} />
       )}
     </LayoutCard>
   );

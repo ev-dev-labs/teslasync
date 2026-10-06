@@ -79,6 +79,7 @@ export function LiveSignalKindBreakdown({
       </PanelTitle>
 
       <LiveSectionState
+        label={t('admin.liveSignals.panels.kinds', 'Signal kinds')}
         status={status}
         error={error}
         onRetry={onRetry}

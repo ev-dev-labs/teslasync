@@ -148,6 +148,47 @@ beforeEach(() => {
 });
 
 describe('guard live modernization preservation', () => {
+  it('keeps named canonical form groups and pending command protection without issuing commands on mount', () => {
+    H.setConfig.isPending = true;
+    renderPage();
+    const settings = screen.getByRole('group', { name: 'Guard settings' });
+    const arming = screen.getByRole('group', { name: 'Guard mode' });
+    expect(within(settings).getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    expect(arming).toHaveTextContent('Saved policy only');
+    expect(arming).toHaveTextContent('Enabling saves policy');
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([{ events: undefined }, { events: [] }])('refreshes unknown and measured-empty events independently of location without issuing commands', ({ events }) => {
+    H.events = query(events);
+    H.state = query(state({ verifiedFields: [] }));
+    renderPage();
+    fireEvent.click(section('events').getByRole('button', { name: 'Refresh' }));
+    expect(H.events.refetch).toHaveBeenCalledOnce();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+    fireEvent.click(section('map').getByRole('button', { name: 'Refresh' }));
+    expect(H.state.refetch).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.ack.mutate).not.toHaveBeenCalled();
+  });
+
+  it('offers vehicle navigation instead of querying an unselected vehicle', () => {
+    H.vehicleId = 0;
+    H.events = query(undefined);
+    H.state = query(state({ verifiedFields: [] }));
+    renderPage();
+    for (const name of ['events', 'map']) {
+      expect(section(name).getByRole('link', { name: 'Manage vehicles' })).toHaveAttribute('href', '/vehicles');
+      expect(section(name).queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    }
+    expect(H.events.refetch).not.toHaveBeenCalled();
+    expect(H.state.refetch).not.toHaveBeenCalled();
+  });
+
   it('keeps every panel, six metrics and the single card grid when sources fail independently', () => {
     H.config = query(undefined, { error: new Error('config unavailable'), isError: true });
     H.events = query(undefined, { error: new Error('events unavailable'), isError: true });

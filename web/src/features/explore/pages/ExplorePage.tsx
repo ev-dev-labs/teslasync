@@ -29,7 +29,8 @@ import { useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { PillFilterBar } from '@/components/forms';
 import {
   GlassPanel,
   Input,
@@ -154,7 +155,7 @@ export default function ExplorePage() {
       });
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('explore.title', 'Explore features')}
       metadataActions={<Text variant="caption">{subtitle}</Text>}
     >
@@ -191,7 +192,7 @@ export default function ExplorePage() {
             />
             <MetricCard
               label={t('explore.kpi.vehicles', 'Vehicles')}
-              value={vehicleCount}
+              value={vehicles == null ? '—' : vehicleCount}
               icon={<Icons.vehicle className="h-5 w-5" aria-hidden="true" />}
               color="blue"
             />
@@ -270,7 +271,7 @@ export default function ExplorePage() {
           )}
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }
 
@@ -289,36 +290,21 @@ function SectionFilter({
 }) {
   const { t } = useTranslation();
   return (
-    <div
-      role="group"
-      className="mt-4 flex flex-wrap gap-2"
-      aria-label={t('explore.sectionsAriaLabel', 'Filter features by category')}
-      data-testid="explore-anchor-strip"
-    >
-      <Button
-        type="button"
-        size="sm"
-        variant={selected === 'all' ? 'primary' : 'outline'}
-        aria-pressed={selected === 'all'}
-        onClick={() => onSelect('all')}
-        className="min-h-9 rounded-shape-sm px-3"
-      >
-        {t('explore.all', 'All')} ({total})
-      </Button>
-      {groups.map(({ section, sectionKey, count }) => (
-        <Button
-          key={section}
-          type="button"
-          size="sm"
-          variant={selected === slugify(section) ? 'primary' : 'outline'}
-          aria-pressed={selected === slugify(section)}
-          onClick={() => onSelect(slugify(section))}
-          className="min-h-9 rounded-shape-sm px-3"
-        >
-          {t(sectionKey, section)} ({count})
-        </Button>
-      ))}
-    </div>
+    <PillFilterBar
+      semanticMode="filters"
+      scrollable={false}
+      className="mt-4 flex-wrap gap-2"
+      ariaLabel={t('explore.sectionsAriaLabel', 'Filter features by category')}
+      testId="explore-anchor-strip"
+      activeKey={selected}
+      onChange={onSelect}
+      items={[
+        { key: 'all', label: t('explore.all', 'All'), count: total },
+        ...groups.map(({ section, sectionKey, count }) => ({
+          key: slugify(section), label: t(sectionKey, section), count,
+        })),
+      ]}
+    />
   );
 }
 

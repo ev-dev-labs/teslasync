@@ -45,7 +45,7 @@ import {
   AINLSqlPlayground,
   type ReadonlySQLDraft,
 } from '@/components/ai/AINLSqlPlayground';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   Button,
   CopyButton,
@@ -96,6 +96,7 @@ export default function SqlPlaygroundPage() {
 
   const [sql, setSql] = useState<string>(() => loadPersistedSql());
   const [runMessage, setRunMessage] = useState<string>('');
+  const [copyFailed, setCopyFailed] = useState(false);
 
   // Persist the SQL textarea contents so a long query survives a navigation
   // away + back. Synchronous setItem in the effect is fine — modern browsers
@@ -110,6 +111,7 @@ export default function SqlPlaygroundPage() {
     // Textarea never flips to an uncontrolled `undefined` value.
     setSql(draft.sql ?? '');
     setRunMessage('');
+    setCopyFailed(false);
   }, []);
 
   // Editing the query invalidates any run guidance shown for the *previous*
@@ -119,11 +121,13 @@ export default function SqlPlaygroundPage() {
   const handleSqlChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setSql(e.target.value);
     setRunMessage('');
+    setCopyFailed(false);
   }, []);
 
   const handleClear = useCallback(() => {
     setSql('');
     setRunMessage('');
+    setCopyFailed(false);
   }, []);
 
   const handleRun = useCallback(() => {
@@ -163,7 +167,7 @@ export default function SqlPlaygroundPage() {
   const canRun = sql.trim().length > 0;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('powerSql.title', 'SQL playground')}
       subtitle={t(
         'powerSql.subtitle',
@@ -226,6 +230,8 @@ export default function SqlPlaygroundPage() {
                   size="md"
                   disabled={!canRun}
                   label={t('powerSql.editor.copy', 'Copy query')}
+                  onCopy={() => setCopyFailed(false)}
+                  onCopyError={() => setCopyFailed(true)}
                   title={t(
                     'powerSql.editor.copyTitle',
                     'Copy the query to paste into your database client',
@@ -239,6 +245,14 @@ export default function SqlPlaygroundPage() {
                   testId="power-sql-run-message"
                 >
                   {runMessage}
+                </InlineCallout>
+              )}
+              {copyFailed && (
+                <InlineCallout variant="warning">
+                  {t(
+                    'powerSql.editor.copyFailed',
+                    'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
+                  )}
                 </InlineCallout>
               )}
             </GlassPanel>
@@ -262,7 +276,7 @@ export default function SqlPlaygroundPage() {
                 'These tables are the only tables the curated catalog exposes. The Helix natural-language drafter refuses any query referencing tables outside this list.',
               )}
             </Text>
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">
+            <div className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr))]">
               {sortedTables.map((table) => (
                 <SchemaCatalogCard key={table.name} table={table} />
               ))}
@@ -270,6 +284,6 @@ export default function SqlPlaygroundPage() {
           </section>
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

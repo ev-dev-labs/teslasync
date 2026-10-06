@@ -1,18 +1,16 @@
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PrefetchLink } from '@/components/layout';
-import { PageLayout, LayoutCard } from '@/components/layout/layout-reference';
-import { StatStrip } from '@/components/data-display/stat-reference';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { StatStrip, KVList } from '@/components/data-display';
 import { SafetyPanelGrid } from '../components/safety-settings-modernization/SafetyPanelGrid';
 import { Icons } from '@/lib/icons';
 import {
-  GlassPanel,
   Badge,
   Button,
   DataTable,
   PanelTitle,
   Caption,
-  Label,
   Text,
   Icon,
   type Column,
@@ -54,6 +52,8 @@ import {
 } from '@/lib/safetyEnum';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState } from '@/api/dataState';
+import { VehicleSourceContent } from '../components/VehicleSourceContent';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -136,26 +136,26 @@ export function scoreBadgeVariant(pct: number): 'success' | 'warning' | 'danger'
 /* ------------------------------------------------------------------ */
 
 function SignalCard({
+  id,
   icon,
   value,
   label,
   positive,
 }: {
+  id: string;
   icon: ReactNode;
   value: string;
   label: string;
   positive?: boolean | null;
 }) {
   return (
-    <GlassPanel className="flex flex-col items-center gap-2 p-4 text-center">
-      <span className="text-[var(--text-secondary)]" aria-hidden="true">
-        {icon}
-      </span>
-      <Badge variant={positive === true ? 'success' : positive === false ? 'warning' : 'neutral'}>
+    <KVList layout="stacked" wrap items={[{
+      id, label,
+      leading: <span className="text-[var(--text-secondary)]" aria-hidden="true">{icon}</span>,
+      value: <Badge variant={positive === true ? 'success' : positive === false ? 'warning' : 'neutral'}>
         {value}
-      </Badge>
-      <Label className="block">{label}</Label>
-    </GlassPanel>
+      </Badge>,
+    }]} />
   );
 }
 
@@ -175,33 +175,11 @@ function SafetyCard({
   valueText: string;
 }) {
   return (
-    <GlassPanel className="min-w-0 space-y-2 p-4">
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'rounded-lg p-2',
-            'bg-[var(--surface-2)]',
-          )}
-        >
-          <span
-            className={cn(
-              'block h-5 w-5 rounded-md',
-              'bg-[var(--border-default)]',
-            )}
-            aria-hidden="true"
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <Text as="span" size="sm" weight="medium" color="primary" className="block break-words">
-            {label}
-          </Text>
-          <Caption className="block">{description}</Caption>
-        </div>
-      </div>
+    <LayoutCard title={label} description={description}>
       <Badge variant={enabled === true ? 'success' : 'neutral'}>
         {valueText}
       </Badge>
-    </GlassPanel>
+    </LayoutCard>
   );
 }
 
@@ -447,6 +425,9 @@ export default function SafetySettingsPage() {
   const latest = latestQuery.data ?? null;
   const history = historyQuery.data ?? [];
   const securityData = securityQuery.data ?? null;
+  const latestSource = deriveDataState({ ...latestQuery, data: latestQuery.data ?? undefined });
+  const historySource = deriveDataState(historyQuery, { provenance: 'historical' });
+  const securitySource = deriveDataState({ ...securityQuery, data: securityQuery.data ?? undefined });
 
   /* --- derived data (null-safe) --- */
   const summary = useMemo(() => latest ? summarizeFeatures(latest) : null, [latest]);
@@ -515,42 +496,45 @@ export default function SafetySettingsPage() {
           aria-label={t('safety.kpis', 'Safety summary')}
           className="min-w-0"
         >
+          <LayoutCard title={t('safety.kpis', 'Safety summary')}>
+          <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+            label={t('safety.kpis', 'Safety summary')}>
           {noVehicle ? (
             <div className="col-span-full">
-              <GlassPanel className="p-4 sm:p-5">
+              <div>
                 <EmptyState
                   icon={<Icon icon={Icons.vehicle} size="xl" />}
                   message={selectVehicleMsg}
                   actionTo={selectVehicleAction}
                 />
-              </GlassPanel>
+              </div>
             </div>
           ) : latestQuery.isLoading && !latest ? (
-            <GlassPanel className="grid grid-cols-1 gap-3 p-4 @sm:grid-cols-2 @4xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @4xl:grid-cols-5">
               {Array.from({ length: 5 }).map((_, i) => <KpiSkeleton key={i} />)}
-            </GlassPanel>
+            </div>
           ) : latestQuery.isError && !latest ? (
             <div className="col-span-full">
-              <GlassPanel className="p-4 sm:p-5">
+              <div>
                 <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
-              </GlassPanel>
+              </div>
             </div>
           ) : !latest ? (
             <div className="col-span-full">
-              <GlassPanel className="p-4 sm:p-5">
+              <div>
                 <EmptyState
                   icon={<Icon icon={Icons.securityAlert} size="xl" />}
                   /* no-action: transient — this KPI band fills once useSafety() returns its first payload for the selected vehicle; the header Refresh action (refreshAll) already covers a manual retry. */
                   message={t('safety.noData', 'No safety data available for this vehicle.')}
                 />
-              </GlassPanel>
+              </div>
             </div>
           ) : (
             <>
               <StatStrip
                 id="safety-configuration-summary"
-                title={t('safety.kpis', 'Safety summary')}
-                retained={latestQuery.isError}
+                variant="embedded"
+                retained={latestSource.refreshError != null || (latestSource.hasData && latestSource.isRefreshBlocked)}
                 period={{
                   kind: 'snapshot',
                   label: t('safety.settings.reportedSnapshot', 'Reported configuration snapshot'),
@@ -575,6 +559,8 @@ export default function SafetySettingsPage() {
               />
             </>
           )}
+          </VehicleSourceContent>
+          </LayoutCard>
         </section>
       </FadeIn>
 
@@ -584,6 +570,8 @@ export default function SafetySettingsPage() {
           label={t('safety.overview', 'Safety overview')}
           primary={
           <LayoutCard title={t('safety.settings.configurationCoverage', 'Configuration coverage')}>
+            <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+              label={t('safety.settings.configurationCoverage', 'Configuration coverage')}>
             <PanelTitle className="mb-3">{t('safety.scoreTitle', 'Safety score')}</PanelTitle>
             <Text variant="bodySm">
               {t('safety.settings.coverageExplanation', 'Enabled feature share is a configuration count, not a driving safety rating or verification that assistance is active.')}
@@ -621,11 +609,14 @@ export default function SafetySettingsPage() {
                 </Caption>
               </div>
             )}
+            </VehicleSourceContent>
           </LayoutCard>
           }
           secondary={
 
           <LayoutCard title={t('safety.liveSignals', 'Live safety signals')}>
+            <VehicleSourceContent source={securitySource} enabled={!noVehicle}
+              label={t('safety.liveSignals', 'Live safety signals')}>
             <Text variant="bodySm">
               {t('safety.settings.signalExplanation', 'Last reported security and occupant state; separate from configuration settings. No live verification command is sent.')}
             </Text>
@@ -648,6 +639,7 @@ export default function SafetySettingsPage() {
             ) : (
               <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @4xl:grid-cols-4">
                 <SignalCard
+                  id="driver-seat-belt"
                   icon={<Icon icon={Icons.userCheck} size="xl" />}
                   value={
                     securityData?.driver_seat_belt == null
@@ -660,6 +652,7 @@ export default function SafetySettingsPage() {
                   positive={securityData?.driver_seat_belt ?? null}
                 />
                 <SignalCard
+                  id="passenger-seat-belt"
                   icon={<Icon icon={Icons.userCheck} size="xl" />}
                   value={
                     securityData?.passenger_seat_belt == null
@@ -672,6 +665,7 @@ export default function SafetySettingsPage() {
                   positive={securityData?.passenger_seat_belt ?? null}
                 />
                 <SignalCard
+                  id="driver-seat-occupied"
                   icon={<Icon icon={Icons.cabin} size="xl" />}
                   value={
                     securityData?.driver_seat_occupied == null
@@ -684,6 +678,7 @@ export default function SafetySettingsPage() {
                   positive={securityData?.driver_seat_occupied ?? null}
                 />
                 <SignalCard
+                  id="locked"
                   icon={<Icon icon={Icons.locked} size="xl" />}
                   value={
                     securityData?.locked == null
@@ -697,6 +692,7 @@ export default function SafetySettingsPage() {
                 />
               </div>
             )}
+            </VehicleSourceContent>
           </LayoutCard>
           }
         />
@@ -709,6 +705,8 @@ export default function SafetySettingsPage() {
           widePrimary
           primary={
           <LayoutCard title={t('safety.adasFeatures', 'ADAS features')}>
+            <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+              label={t('safety.adasFeatures', 'ADAS features')}>
             <Text variant="bodySm">
               {t('safety.settings.readOnly', 'Reported vehicle settings only. This page does not edit or save settings, and configured assistance does not establish current intervention or availability.')}
             </Text>
@@ -745,11 +743,14 @@ export default function SafetySettingsPage() {
                 ))}
               </div>
             )}
+            </VehicleSourceContent>
           </LayoutCard>
           }
           secondary={
 
           <LayoutCard title={t('safety.drivingStats', 'Driving statistics')}>
+            <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+              label={t('safety.drivingStats', 'Driving statistics')}>
             {noVehicle ? (
               <EmptyState
                 icon={<Icon icon={Icons.vehicle} size="xl" />}
@@ -810,6 +811,7 @@ export default function SafetySettingsPage() {
                 </PrefetchLink>
               </div>
             )}
+            </VehicleSourceContent>
           </LayoutCard>
           }
         />
@@ -817,8 +819,9 @@ export default function SafetySettingsPage() {
 
       {/* 4 — Detail band: safety states over time */}
       <FadeIn delay={0.15}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('safety.statesOverTime', 'Safety states over time')}</PanelTitle>
+        <LayoutCard title={t('safety.statesOverTime', 'Safety states over time')}>
+          <VehicleSourceContent source={historySource} enabled={!noVehicle}
+            label={t('safety.statesOverTime', 'Safety states over time')}>
           <DataFreshnessAuto query={historyQuery} />
           <Caption className="mb-3 block">
             {t('safety.settings.historyExplanation', 'Recorded configuration snapshots, not intervention events. Gaps represent unknown states; the full history table follows below.')}
@@ -841,11 +844,12 @@ export default function SafetySettingsPage() {
             />
           ) : (
             <div className="h-64 sm:h-72 xl:h-80">
-              {/* The complete snapshot table directly below is the chart's data alternative. */}
+              {/* chart-a11y:no-table The full snapshot table immediately below already exposes every plotted state; avoid duplicating it. */}
               <EmbeddedChart
                 chartKey="safety-states-history"
                 title={t('safety.chartTitle', 'Safety states')}
                 ariaLabel={t('safety.chartAria', 'Safety feature states over time')}
+                ariaDescription={t('safety.settings.historyExplanation', 'Recorded configuration snapshots, not intervention events. Gaps represent unknown states; the full history table follows below.')}
                 fluid
               >
                 {({ hiddenSeries }) => (
@@ -897,13 +901,15 @@ export default function SafetySettingsPage() {
               </EmbeddedChart>
             </div>
           )}
-        </GlassPanel>
+          </VehicleSourceContent>
+        </LayoutCard>
       </FadeIn>
 
       {/* 5 — Detail band: full history table */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('safety.historyTitle', 'Safety settings history')}</PanelTitle>
+        <LayoutCard title={t('safety.historyTitle', 'Safety settings history')}>
+          <VehicleSourceContent source={historySource} enabled={!noVehicle}
+            label={t('safety.historyTitle', 'Safety settings history')}>
           <DataFreshnessAuto query={historyQuery} />
           {noVehicle ? (
             <EmptyState
@@ -937,7 +943,8 @@ export default function SafetySettingsPage() {
               pagination
             />
           )}
-        </GlassPanel>
+          </VehicleSourceContent>
+        </LayoutCard>
       </FadeIn>
     </PageLayout>
   );

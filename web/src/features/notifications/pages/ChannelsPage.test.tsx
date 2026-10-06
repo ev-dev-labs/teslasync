@@ -366,6 +366,19 @@ describe('ChannelsPage — structure', () => {
 
 // ── 2. loading / error / empty ────────────────────────────────────────────────
 describe('ChannelsPage — loading / error / empty', () => {
+  it('retains both independent sources and edit identity after failed background refreshes', () => {
+    setChannels({ data: [DISCORD, SLACK], isError: true, error: new Error('Channel refresh offline') });
+    setStats({ data: STATS, isError: true, error: new Error('Statistics refresh offline') });
+    const { container } = renderPage();
+    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-error', 'false');
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('stats-band')).toHaveTextContent('sent:95');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'edit-Ops Slack' }));
+    expect(screen.getByTestId('modal-mode')).toHaveTextContent('edit:Ops Slack');
+  });
+
   it('propagates loading flags while keeping every section heading visible', () => {
     setChannels({ data: undefined, isLoading: true });
     setStats({ data: undefined, isLoading: true });

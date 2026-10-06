@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitCommitHorizontal, ArrowUpDown, Layers, Waypoints } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
@@ -18,6 +18,7 @@ import {
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 
 import { chartTokens } from '@/lib/tokens';
 
@@ -37,6 +38,8 @@ export default function SignalChangePointsPage() {
 
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyState = useDataState(historyQuery, { provenance: 'historical' });
   const chosen = signalName !== '';
   const dataSources = useMemo(
     () => [
@@ -92,13 +95,13 @@ export default function SignalChangePointsPage() {
 
   const historyHasData = historyQuery.data !== undefined;
   const isLoading = chosen && !historyHasData && historyQuery.isLoading;
-  const isError = chosen && historyQuery.isError && !historyHasData;
-  const error = historyQuery.error;
+  const isError = chosen && historyState.fatalError != null;
+  const error = historyState.fatalError;
   const hasData = chosen && summary.samples > 0;
   const biggest = summary.biggestChange;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalChangePoints.title', 'Signal change points')}
       subtitle={t(
         'signalChangePoints.subtitle',
@@ -120,8 +123,8 @@ export default function SignalChangePointsPage() {
               ariaLabel={t('help.signalChangePoints.iconLabel', 'More info about signal selection')}
             />
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={80} />
           ) : options.length === 0 ? (
@@ -215,6 +218,8 @@ export default function SignalChangePointsPage() {
             subtitle={t('signalChangePoints.timelineHint', 'Raw values against each segment\u2019s mean; dashed markers are detected change points')}
             ariaLabel={t('signalChangePoints.timelineAria', 'Line chart of raw signal values overlaid with segment mean levels and detected abrupt change points')}
             loading={isLoading}
+            error={isError ? error : null}
+            onRetry={() => historyQuery.refetch()}
             empty={timeline.length === 0}
             height={340}
             data={timeline}
@@ -248,7 +253,11 @@ export default function SignalChangePointsPage() {
             <ArrowUpDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalChangePoints.reading', 'Reading the result')}
           </PanelTitle>
-          {!hasData ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => historyQuery.refetch()} />
+          ) : !hasData ? (
             <EmptyState /* no-action: the interpretation follows from the detected segments above. */
               icon={<GitCommitHorizontal className="h-8 w-8" />}
               message={t('signalChangePoints.noReading', 'Pick a signal to see how its change points should be read.')}
@@ -281,6 +290,6 @@ export default function SignalChangePointsPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

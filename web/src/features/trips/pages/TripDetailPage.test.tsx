@@ -330,6 +330,20 @@ describe('TripDetailPage', () => {
     expect(caps.chart?.trip).toBeUndefined();
   });
 
+  it('keeps every trip section and the same trip object during a background refresh failure', () => {
+    const trip = makeTrip();
+    h.useTrip.mockReturnValue(makeQuery({ data: trip, isError: true, error: new Error('refresh failed') }));
+    renderPage();
+
+    for (const section of [caps.chart, caps.overview, caps.table]) {
+      expect(section?.trip).toBe(trip);
+      expect(section?.isError).toBe(false);
+      expect(section?.error).toBeNull();
+    }
+    expect(caps.kpi?.trip).toBe(trip);
+    expect(screen.getByTestId('ai-suggest')).toBeInTheDocument();
+  });
+
   it('propagates the error to each data section and wires every Retry back to refetch', () => {
     const boom = new Error('boom');
     h.useTrip.mockReturnValue(

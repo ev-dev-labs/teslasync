@@ -238,6 +238,20 @@ describe('TeslaAccountPage — shell', () => {
 });
 
 describe('TeslaAccountPage — populated', () => {
+  it('keeps profile details, causal activity rows and refresh actions during a failed refresh', () => {
+    setup(makeQuery({ data: envelope(PROFILE), isError: true, error: new Error('refresh failed') }));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(panel('Account details')).getByText('Ada Lovelace')).toBeInTheDocument();
+    const list = within(panel('Activity')).getByRole('list', { name: 'Activity' });
+    expect(within(list).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      expect.stringContaining('Account linked'),
+      expect.stringContaining('Profile updated'),
+      expect.stringContaining('Last synced from Tesla'),
+    ]);
+    expect(refreshButtons()).toHaveLength(2);
+    expect(refreshButtons().every((button) => !button.hasAttribute('disabled'))).toBe(true);
+  });
+
   it('renders the four-card KPI band with real date formatting', () => {
     setup(makeQuery({ data: envelope(PROFILE) }));
     const band = kpiBand();

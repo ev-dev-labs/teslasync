@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import type { DistanceFormatter, MaintenanceItem, ServiceProjection } from './maintenanceModel';
@@ -16,7 +16,9 @@ export function MaintenanceProjectionsPanel({
   formatDistance: DistanceFormatter;
 }) {
   const { t } = useTranslation();
-  const empty = <EmptyState message={t('maintenance.noProjections', 'No upcoming service projections available.')} />;
+  const empty = <EmptyState message={t('maintenance.noProjections', 'No upcoming service projections available.')}
+    action={enabled && source.retry ? { label: t('common.refresh', 'Refresh'), onClick: source.retry } : undefined}
+    actionTo={!enabled ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />;
   return (
     <LayoutCard title={t('maintenance.projectionsTitle', 'Service projections')}>
       <MaintenanceSource

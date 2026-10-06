@@ -15,10 +15,10 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { GitCompare, Bell, Pin, PinOff, Filter, Layers, Clock, Sigma } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Select, CopyButton, PanelTitle, Text } from '@/components/ui';
 import { MetricCard, BulkActionsToolbar, SavedViewMenu, type BulkAction } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   useSignals,
@@ -28,6 +28,7 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
@@ -136,7 +137,8 @@ export default function SignalDiffPage() {
     signalsCsv,
     { enabled: vehicleId > 0 && Boolean(atAIso) && Boolean(atBIso) },
   );
-  const { data: diffResp, isLoading, error, refetch } = diffQuery;
+  const { data: diffResp, isLoading, refetch } = diffQuery;
+  const diffState = useDataState(diffQuery, { provenance: 'historical' });
 
   const allRows: SignalDiffRow[] = diffResp?.data ?? [];
   const filteredRows = useMemo(() => {
@@ -156,11 +158,11 @@ export default function SignalDiffPage() {
   // A failed diff must not read as "0 changed / 0 numeric / 0 categories" in the
   // KPI band — that silently reports "nothing changed" for what is actually an
   // error, which is dangerous on an incident-response surface. When the diff is
-  // untrustworthy (initial load or error) the diff-derived metrics show "—",
+  // unavailable (initial load or fatal error) the diff-derived metrics show "—",
   // mirroring the table + breakdown, which both switch to their error/loading
-  // UI. Pinned count and window span come from independent sources (the pinned
+  // UI. Retained results survive refresh failures. Pinned count and window span come from independent sources (the pinned
   // query and the date inputs) so they stay visible regardless.
-  const metricsUnavailable = initialLoading || Boolean(error);
+  const metricsUnavailable = initialLoading || diffState.fatalError != null;
 
   // Derived KPI metrics (from the already-fetched rows — no extra hooks).
   const numericChanges = useMemo(
@@ -252,7 +254,7 @@ export default function SignalDiffPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalDiff.title', 'Signal diff')}
       subtitle={t('signalDiff.subtitle', 'Compare signal values between two snapshots in time')}
       query={diffQuery}
@@ -337,11 +339,12 @@ export default function SignalDiffPage() {
       </FadeIn>
 
       {/* 3 — Change analysis bento: category + source-layer + pinned breakdowns */}
+      <StaleRefreshWarning state={diffState} label={t('signalDiff.tableTitle', 'Signal differences')} />
       <FadeIn delay={0.1}>
         <SignalDiffBreakdown
           rows={filteredRows}
           loading={initialLoading}
-          error={error}
+          error={diffState.fatalError}
           onRetry={() => refetch()}
           filterActive={filterActive}
           onClearFilters={() => {
@@ -355,6 +358,7 @@ export default function SignalDiffPage() {
       {/* 4 — Bulk actions (sticky) for the current table selection */}
       <BulkActionsToolbar
         selectedIds={selectedSignals}
+        selectionScope="selected"
         total={filteredRows.length}
         onClear={() => setSelectedSignals([])}
         actions={bulkActions}
@@ -367,8 +371,8 @@ export default function SignalDiffPage() {
             <GitCompare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalDiff.tableTitle', 'Signal differences')}
           </PanelTitle>
-          {error ? (
-            <QueryError error={error} onRetry={() => refetch()} />
+          {diffState.fatalError ? (
+            <QueryError error={diffState.fatalError} onRetry={() => refetch()} />
           ) : initialLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
@@ -392,6 +396,6 @@ export default function SignalDiffPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

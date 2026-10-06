@@ -8,19 +8,16 @@ import { useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, Button as UiButton, Badge, Text, Caption, Tooltip } from '@/components/ui';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { QueryError } from '@/components/feedback/QueryError';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
-import { SearchInput } from '@/components/forms';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { SourceContent } from '@/components/layout';
+import { PillFilterBar, SearchInput } from '@/components/forms';
+import { useDataState } from '@/hooks/useDataState';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
 import { Icons } from '@/lib/icons';
 
 import type { AutomationPreset } from '@/api/types';
 import type { AutomationTriggerKind } from '@/types/automations';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const iconMap: Record<string, ElementType> = {
   shield: Icons.security,
@@ -165,9 +162,10 @@ export function PresetGallery({
   actionsDisabled,
   actionsDisabledReason,
 }: PresetGalleryProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
+  const query = useAutomationPresets(category);
+  const { data, isLoading, refetch } = query;
+  const source = useDataState(query);
   const [activeCategory, setActiveCategory] = useState(category ?? 'all');
   const [search, setSearch] = useState('');
 
@@ -199,7 +197,7 @@ export function PresetGallery({
     return items;
   }, [categories, presetList, t]);
 
-  if (isLoading) {
+  if (isLoading && !source.hasData) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -209,10 +207,10 @@ export function PresetGallery({
     );
   }
 
-  if (isError && presetList.length === 0) {
+  if (source.fatalError) {
     return (
       <QueryError
-        error={error}
+        error={source.fatalError}
         onRetry={() => refetch()}
         resourceName={t('automations.presets.resource', 'Automation presets')}
       />
@@ -229,6 +227,13 @@ export function PresetGallery({
   }
 
   return (
+    <SourceContent
+      state={source.refreshError || source.isRefreshBlocked ? 'retained' : 'ready'}
+      label={t('automations.presets.resource', 'Automation presets')}
+      emptyMessage={t('automations.presets.empty', 'No preset templates available')}
+      errorMessage={t('automations.presets.resource', 'Automation presets')}
+      errorRecovery={{ onRetry: () => { void refetch(); } }}
+    >
     <div className="space-y-6">
       {!category && (
         <SearchInput
@@ -240,25 +245,15 @@ export function PresetGallery({
         />
       )}
       {!category && pills.length > 1 && (
-        <div
-          role="group"
-          aria-label={t('automations.presets.filterAria', 'Filter presets by category')}
-          className="flex flex-wrap gap-2"
-        >
-          {pills.map((item) => (
-            <UiButton
-              key={item.key}
-              type="button"
-              size="sm"
-              variant={activeCategory === item.key ? 'primary' : 'ghost'}
-              aria-pressed={activeCategory === item.key}
-              onClick={() => setActiveCategory(item.key)}
-              className="min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3"
-            >
-              {item.label} ({fmtInt(item.count)})
-            </UiButton>
-          ))}
-        </div>
+        <PillFilterBar
+          items={pills}
+          activeKey={activeCategory}
+          onChange={setActiveCategory}
+          semanticMode="filters"
+          scrollable={false}
+          ariaLabel={t('automations.presets.filterAria', 'Filter presets by category')}
+          className="flex-wrap"
+        />
       )}
       {!category && (
         <Caption role="status" className="block">
@@ -289,5 +284,6 @@ export function PresetGallery({
         </FadeIn>
       )}
     </div>
+    </SourceContent>
   );
 }

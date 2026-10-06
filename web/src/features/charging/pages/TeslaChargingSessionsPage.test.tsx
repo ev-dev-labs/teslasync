@@ -224,7 +224,7 @@ function renderPage(initialEntries: string[] = ['/tesla/charging/sessions']) {
       mutations: { retry: false },
     },
   })
-  return render(
+  const mounted = render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -235,6 +235,7 @@ function renderPage(initialEntries: string[] = ['/tesla/charging/sessions']) {
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...mounted, client }
 }
 
 beforeEach(() => {
@@ -324,6 +325,22 @@ describe('groupSessions', () => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('TeslaChargingSessionsPage', () => {
+  it('retains lifetime metrics, maps, operational evidence and the sessions table after a background refresh fails', async () => {
+    const { client } = renderPage()
+    expect(await screen.findByText('123.00 kWh')).toBeInTheDocument()
+    expect(await screen.findByTestId('sessions-map')).toHaveTextContent('map:3')
+    install({ sessionsError: true })
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['tesla-charging-sessions'] })
+    })
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByText('250.00 kW')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
+    expect(screen.getByTestId('charging-operational-brief')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
+    expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+  })
   it('updates billing precision and locale while mounted without changing canonical amounts', async () => {
     // jsdom has no layout; expose a viewport so the real virtualizer renders rows.
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
@@ -379,7 +396,7 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
     expect(screen.getByText('$99.50')).toBeInTheDocument()
     expect(screen.getByText('$0.23')).toBeInTheDocument()
-    expect(screen.getByText('250.00')).toBeInTheDocument()
+    expect(screen.getByText('250.00 kW')).toBeInTheDocument()
     expect(screen.getAllByText('Total sessions').length).toBeGreaterThan(1)
     expect(screen.getByText('Peak power')).toBeInTheDocument()
 
@@ -419,9 +436,9 @@ describe('TeslaChargingSessionsPage', () => {
     install({ sessionsPending: true })
     renderPage()
 
-    expect(
-      await screen.findByRole('status', { name: 'Loading monthly charging costs…' }),
-    ).toHaveAttribute('aria-busy', 'true')
+    await waitFor(() => expect(
+      screen.getByRole('figure', { name: 'Monthly Tesla charging cost bar chart' }),
+    ).toHaveAttribute('aria-busy', 'true'))
     expect(screen.getByTestId('table-skeleton')).toBeInTheDocument()
 
     // KPI values are withheld — never a half-populated dashboard.
@@ -433,7 +450,7 @@ describe('TeslaChargingSessionsPage', () => {
     install({ sessionsError: true })
     renderPage()
 
-    expect(await screen.findByText("Can't reach server")).toBeInTheDocument()
+    expect((await screen.findAllByText("Can't reach server")).length).toBeGreaterThan(0)
 
     // No stale/fabricated KPI values leak through the error branch.
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)

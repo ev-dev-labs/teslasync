@@ -35,6 +35,7 @@ const GlancePage = lazy(() => import('./features/dashboard/pages/GlancePage'))
 const MobileGridReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/mobile-grid/MobileGridReferencePage')) : null
 const LayoutReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/layout/LayoutReferencePage')) : null
 const StatReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/stats/StatReferencePage')) : null
+const SharedLibraryReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/shared-library/SharedLibraryCompletionPage')) : null
 
 // Vehicles
 const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
@@ -564,6 +565,11 @@ export default function App() {
       <Route path="watch" element={<SafeRoute name="WatchFace"><WatchFace /></SafeRoute>} />
       <Route path="onboarding" element={<SafeRoute name="Onboarding"><Onboarding /></SafeRoute>} />
       <Route path="connect" element={<SafeRoute name="Connect"><ConnectPage /></SafeRoute>} />
+      {SharedLibraryReference && <Route path="dev/shared-library" element={
+        <main className="mx-auto min-w-0 max-w-6xl p-4">
+          <SafeRoute name="SharedLibraryReference"><SharedLibraryReference /></SafeRoute>
+        </main>
+      } />}
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}

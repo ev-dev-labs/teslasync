@@ -15,8 +15,9 @@ import {
   type OfficialNHTSACommunicationsArtifactURL,
 } from '@/api/hooks/useServiceIntelligence';
 import { DateTime } from '@/components/data-display';
-import { AlertBanner, EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Table, Badge, Button, Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { AlertBanner, EmptyState, Skeleton } from '@/components/feedback';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { Table, Badge, Button, Caption, Text } from '@/components/ui';
 
 const catalogFreshnessMs = 8 * 24 * 60 * 60 * 1000;
 
@@ -66,20 +67,14 @@ export function CommunicationsCatalogPanel({
   const latestAttempt = status?.latest_attempt ?? null;
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <PanelTitle className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}
-          </PanelTitle>
-          <Text as="p" variant="helper" className="mt-1">
-            {t(
-              'serviceIntelligence.catalog.subtitle',
-              'Administrator controls for the normalized manufacturer-communications index.',
-            )}
-          </Text>
-        </div>
+    <LayoutCard
+      title={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}
+      description={t(
+        'serviceIntelligence.catalog.subtitle',
+        'Administrator controls for the normalized manufacturer-communications index.',
+      )}
+      actions={<div className="flex flex-wrap items-center gap-2">
+        <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         <Badge
           variant={
             freshness === 'fresh'
@@ -95,13 +90,17 @@ export function CommunicationsCatalogPanel({
               ? t('serviceIntelligence.catalog.stale', 'Stale')
               : t('serviceIntelligence.catalog.unavailable', 'Not imported')}
         </Badge>
-      </div>
-
-      {loading ? (
-        <Skeleton lines={5} className="py-3" />
-      ) : error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : (
+      </div>}
+    >
+      <SourceContent
+        state={loading ? 'loading' : error ? 'error' : 'ready'}
+        label={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}
+        error={error}
+        errorMessage={t('serviceIntelligence.common.loadError', 'This source could not be loaded.')}
+        emptyMessage={t('serviceIntelligence.catalog.emptyTitle', 'TSB catalog is not populated')}
+        loadingContent={<Skeleton lines={5} className="py-3" />}
+        errorRecovery={{ onRetry }}
+      >
         <div className="space-y-4">
           <Table aria-label={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}><tbody>
             <tr>
@@ -248,6 +247,7 @@ export function CommunicationsCatalogPanel({
                         </Badge>
                       )}
                       <Button
+                        wrapLabel
                         type="button"
                         size="sm"
                         variant={isLatest ? 'secondary' : 'outline'}
@@ -276,7 +276,7 @@ export function CommunicationsCatalogPanel({
             </ol>
           </div>
         </div>
-      )}
-    </GlassPanel>
+      </SourceContent>
+    </LayoutCard>
   );
 }

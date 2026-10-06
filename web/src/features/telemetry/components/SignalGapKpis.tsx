@@ -18,21 +18,22 @@ interface SignalGapKpisProps {
   buckets: GapBuckets;
   freshnessPct: number;
   hasVehicle: boolean;
+  unavailable?: boolean;
 }
 
 /** All-zero buckets — the render-safe fallback before an analysis exists. */
 const EMPTY_BUCKETS: GapBuckets = { total: 0, active: 0, aging: 0, stale: 0, never: 0 };
 
-export function SignalGapKpis({ buckets, freshnessPct, hasVehicle }: SignalGapKpisProps) {
+export function SignalGapKpis({ buckets, freshnessPct, hasVehicle, unavailable = false }: SignalGapKpisProps) {
   const { t } = useTranslation();
 
   // Null-safe reads: the page always derives a real buckets object, but a
   // caller mid-load (or a stubbed test) can hand us `undefined`. Collapse to a
   // zeroed shape so the band renders '—'/0 instead of throwing on `.total`.
   const b = buckets ?? EMPTY_BUCKETS;
-  const num = (n: number): string | number => (hasVehicle ? (n ?? 0) : '—');
+  const num = (n: number): string | number => (hasVehicle && !unavailable ? (n ?? 0) : '—');
   // Guard NaN/undefined so the freshness chip never shows "NaN%".
-  const freshnessLabel = hasVehicle
+  const freshnessLabel = hasVehicle && !unavailable
     ? `${Number.isFinite(freshnessPct) ? freshnessPct : 0}%`
     : '—';
 

@@ -17,7 +17,9 @@ import { AlertTriangle, ArrowUpDown, Filter, Plus, RefreshCw, X } from 'lucide-r
 
 import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, SectionTitle, type Column } from '@/components/ui';
 import { StatCard, TimeStamp } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
+import { PillFilterBar } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 import { useSignalGaps } from '@/api/hooks/useTelemetry';
 import { fmtInt } from '@/lib/numberFormat';
@@ -25,6 +27,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalRow } from '@/types/telemetry';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
 
 type CatalogRow = SignalRow & { rawValue: string | number | boolean | null };
 
@@ -85,7 +88,10 @@ export function SignalCatalogPanel({
 }: SignalCatalogPanelProps) {
   const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
-  const { data: liveData, isLoading, dataUpdatedAt } = useSignalGaps(vehicleId);
+  const query = useSignalGaps(vehicleId);
+  const { data: liveData, isLoading, dataUpdatedAt } = query;
+  const sourceState = useDataState(query, { provenance: 'live' });
+  const unavailable = sourceState.fatalError != null || (isLoading && !sourceState.hasData);
 
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<CatalogFilterMode>('all');
@@ -202,7 +208,7 @@ export function SignalCatalogPanel({
         header: t('signalGap.lastValue', 'Last value'),
         filterValue: (signal) => signal.rawValue,
         filterValueLabel: (_value, signal) => signal.value,
-        render: (signal) => <Text mono size="xs" color="secondary" className="block max-w-[200px] truncate">{signal.value}</Text>,
+        render: (signal) => <Text mono variant="caption" color="secondary" className="block max-w-full whitespace-pre-wrap break-words">{signal.value}</Text>,
       },
       {
         key: 'lastUpdated',
@@ -224,19 +230,20 @@ export function SignalCatalogPanel({
   }, [selection, selectedSet, selectionMax, t, displayPrecision, displayLocale]);
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('min-w-0 max-w-full space-y-4', className)}>
       {showSummary ? (
         <FadeIn delay={0.05}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard label={t('signalGap.totalSignals',  'Total signals')}     value={signals.length} icon={<ArrowUpDown className="h-4 w-4" />} />
-            <StatCard label={t('signalGap.active',        'Active (<30s)')}     value={activeCount}    icon={<RefreshCw className="h-4 w-4" />} />
-            <StatCard label={t('signalGap.stale',         'Stale (>5min)')}     value={staleCount}     icon={<AlertTriangle className="h-4 w-4" />} />
-            <StatCard label={t('signalGap.neverReceived', 'Never received')}    value={neverCount}     icon={<AlertTriangle className="h-4 w-4" />} />
+            <StatCard label={t('signalGap.totalSignals',  'Total signals')}     value={unavailable ? '—' : signals.length} icon={<ArrowUpDown className="h-4 w-4" />} />
+            <StatCard label={t('signalGap.active',        'Active (<30s)')}     value={unavailable ? '—' : activeCount}    icon={<RefreshCw className="h-4 w-4" />} />
+            <StatCard label={t('signalGap.stale',         'Stale (>5min)')}     value={unavailable ? '—' : staleCount}     icon={<AlertTriangle className="h-4 w-4" />} />
+            <StatCard label={t('signalGap.neverReceived', 'Never received')}    value={unavailable ? '—' : neverCount}     icon={<AlertTriangle className="h-4 w-4" />} />
           </div>
         </FadeIn>
       ) : null}
 
-      <GlassPanel className="p-4 sm:p-5">
+      <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
+        <StaleRefreshWarning state={sourceState} label={t('signalGap.catalogTitle', 'Signal catalog')} />
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {title ? <SectionTitle>{title}</SectionTitle> : null}
           <Text as="span" size="2xs" color="muted" className="ml-auto flex items-center gap-2">
@@ -257,31 +264,30 @@ export function SignalCatalogPanel({
           />
           <div className="flex flex-wrap items-center gap-2">
             <Filter className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-            {(['all', 'stale', 'active'] as CatalogFilterMode[]).map((mode) => (
-              <Button
-                key={mode}
-                variant="ghost"
-                size="sm"
-                aria-pressed={filterMode === mode}
-                onClick={() => setFilterMode(mode)}
-                className={cn(
-                  'border',
-                  filterMode === mode
-                    ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-                    : 'text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]',
-                )}
-              >
-                {mode === 'all' ? t('signalGap.all', 'All') : mode === 'stale' ? t('signalGap.staleOnly', 'Stale only') : t('signalGap.activeOnly', 'Active only')}
-              </Button>
-            ))}
+            <PillFilterBar
+              semanticMode="filters"
+              scrollable={false}
+              className="flex-wrap"
+              ariaLabel={t('signalGap.status', 'Status')}
+              activeKey={filterMode}
+              onChange={(key) => {
+                if (key === 'all' || key === 'stale' || key === 'active') setFilterMode(key);
+              }}
+              items={[
+                { key: 'all', label: t('signalGap.all', 'All') },
+                { key: 'stale', label: t('signalGap.staleOnly', 'Stale only') },
+                { key: 'active', label: t('signalGap.activeOnly', 'Active only') },
+              ]}
+            />
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:ms-auto">
             <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
             {(['staleness', 'alpha', 'category'] as CatalogSortMode[]).map((mode) => (
               <Button
                 key={mode}
                 variant="ghost"
                 size="sm"
+                wrapLabel
                 aria-pressed={sortMode === mode}
                 onClick={() => setSortMode(mode)}
                 className={cn(
@@ -298,6 +304,14 @@ export function SignalCatalogPanel({
         </div>
 
         <div className="mt-4">
+          <SourceContent
+            state={sourceState.fatalError ? 'error' : 'ready'}
+            label={t('signalGap.catalogTitle', 'Signal catalog')}
+            error={sourceState.fatalError}
+            errorMessage={t('error.loadFailed', 'Failed to load data')}
+            emptyMessage={t('signalGap.noData', 'No signal data available')}
+            errorRecovery={{ onRetry: sourceState.retry ?? undefined }}
+          >
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12" />)}
@@ -323,9 +337,10 @@ export function SignalCatalogPanel({
                 : t('signalGap.noMatch', 'No signals match current filters')}
             </Text>
           )}
+          </SourceContent>
 
           {dataUpdatedAt > 0 && (
-            <Text as="p" size="2xs" color="muted" className="mt-3 text-right">
+            <Text as="p" variant="caption" color="muted" className="mt-3 text-end">
               {t('signalGap.lastRefreshed', 'Last refreshed')}: <TimeStamp value={new Date(dataUpdatedAt)} format="relative" />
             </Text>
           )}

@@ -1,5 +1,9 @@
 {
   "chart": {
+    "sampling": {
+      "disclosure": "Showing {{rendered}} of {{source}} observations for display.",
+      "a11yDisclosure": "Visual series is sampled: {{rendered}} of {{source}} observations are rendered."
+    },
     "export": {
       "menuLabel": "Export chart",
       "disabledTooltip": "Chart not ready to export",

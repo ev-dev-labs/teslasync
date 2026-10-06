@@ -39,9 +39,9 @@ vi.mock('@/api/hooks/useAnalytics', () => ({
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
-vi.mock('@/components/layout/layout-reference', async () => {
-  const actual = await vi.importActual<typeof import('@/components/layout/layout-reference')>(
-    '@/components/layout/layout-reference',
+vi.mock('@/components/layout', async () => {
+  const actual = await vi.importActual<typeof import('@/components/layout')>(
+    '@/components/layout',
   );
   return {
     ...actual,

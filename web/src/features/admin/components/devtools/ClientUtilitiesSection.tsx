@@ -2,9 +2,9 @@ import { useState, useMemo, useCallback, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Car, Key, Clock, Braces, Link, Fingerprint, Hash, HardDrive,
-  Palette, Timer, Network, BookOpen, Regex, Lock, ChevronDown,
+  Palette, Timer, Network, BookOpen, Regex, Lock,
 } from 'lucide-react'
-import { Button as UiButton, Input as UiInput, GlassPanel } from '@/components/ui'
+import { Accordion, Input as UiInput, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ICON_COLOR_MAP } from './constants'
 
@@ -68,35 +68,27 @@ const ExpandableToolCard = memo(function ExpandableToolCard({
   onToggle: (id: string) => void
 }) {
   const Icon = tool.icon
-  const panelId = `devtools-tool-panel-${tool.id}`
   return (
-    <GlassPanel hover className="overflow-hidden transition-all duration-normal">
-      <UiButton
-        type="button"
-        variant="ghost"
-        onClick={() => onToggle(tool.id)}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        className="!h-auto !w-full !justify-start !rounded-none !p-4 text-left hover:!bg-transparent"
-      >
-        <div
+    <Accordion
+      title={tool.name}
+      description={tool.desc}
+      open={expanded}
+      onOpenChange={() => onToggle(tool.id)}
+      headerClassName="p-4"
+      bodyClassName="p-4"
+      icon={
+        <span
           aria-hidden="true"
           className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', ICON_COLOR_MAP[tool.color] ?? ICON_COLOR_MAP.cyan)}
         >
           <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tool.name}</h3>
-          <p className="text-xs text-[var(--text-secondary)]">{tool.desc}</p>
-        </div>
-        <ChevronDown aria-hidden="true" className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal', expanded && 'rotate-180')} />
-      </UiButton>
-      {expanded && (
-        <div id={panelId} role="region" aria-label={tool.name} className="border-t border-white/[0.04] p-4">
-          <tool.Component />
-        </div>
-      )}
-    </GlassPanel>
+        </span>
+      }
+    >
+      <div id={`devtools-tool-panel-${tool.id}`}>
+        <tool.Component />
+      </div>
+    </Accordion>
   )
 })
 ExpandableToolCard.displayName = 'ExpandableToolCard'
@@ -150,9 +142,9 @@ export function ClientUtilitiesSection() {
           ))}
         </div>
       ) : (
-        <p role="status" className="py-8 text-center text-sm text-[var(--text-muted)]">
+        <Text as="p" variant="bodySm" role="status" className="py-8 text-center">
           {t('devtools.noToolsFound', 'No tools match your search')}
-        </p>
+        </Text>
       )}
     </div>
   )

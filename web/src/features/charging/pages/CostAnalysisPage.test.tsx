@@ -41,7 +41,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -264,7 +264,7 @@ function renderPage(initialEntries: string[] = ['/cost-analysis']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
-  return render(
+  const mounted = render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -275,6 +275,7 @@ function renderPage(initialEntries: string[] = ['/cost-analysis']) {
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...mounted, client }
 }
 
 beforeEach(() => {
@@ -288,6 +289,25 @@ beforeEach(() => {
 })
 
 describe('CostAnalysisPage', () => {
+  it('keeps all loaded sections and calculator inputs across independent background failures', async () => {
+    const { client } = renderPage()
+    expect(await screen.findByText('$0.10')).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('spinbutton', { name: /Gas price/i }), { target: { value: '5.25' } })
+    install({ sessionsError: true, forecastError: true })
+    await act(async () => {
+      await Promise.all([
+        client.refetchQueries({ queryKey: ['charging'] }),
+        client.refetchQueries({ queryKey: ['cost-forecast'] }),
+      ])
+    })
+    await waitFor(() => expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2))
+    expect(screen.getByRole('spinbutton', { name: /Gas price/i })).toHaveValue(5.25)
+    expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
+    expect(screen.getByText('Monthly cost breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()
+    expect(screen.getAllByText('60.00 kWh').length).toBeGreaterThan(0)
+    expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+  })
   it('renders the full dashboard with every section once sessions + forecast load', async () => {
     renderPage()
 
@@ -300,7 +320,10 @@ describe('CostAnalysisPage', () => {
     expect(await screen.findByText('$0.10')).toBeInTheDocument()
     expect(screen.getAllByText('$6.00').length).toBeGreaterThan(0)
     expect(screen.getAllByText('3 sessions').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('60.00 kWh').length).toBeGreaterThan(0)
+    const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
+      .getByText('Total Energy').closest('[data-stat]')
+    expect(energy).not.toBeNull()
+    expect(energy?.querySelector('[data-stat-value]')?.parentElement).toHaveTextContent('60.00 kWh')
 
     // All nine section headings are present — nothing stubbed out.
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
@@ -348,6 +371,9 @@ describe('CostAnalysisPage', () => {
     // The KPI values are not fabricated while data is loading.
     expect(screen.queryByText('$0.10')).toBeNull()
     expect(screen.queryByText('60.00 kWh')).toBeNull()
+    const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
+      .queryByText('Total Energy')?.closest('[data-stat]')
+    expect(energy?.querySelector('[data-stat-value]')?.parentElement).toBeUndefined()
   })
 
   it('surfaces retryable error banners and still renders the independent forecast', async () => {

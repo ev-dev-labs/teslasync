@@ -66,8 +66,8 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
   );
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <PanelTitle className="mb-3 flex items-center gap-2">
+    <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+      <PanelTitle className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
         <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('liveMonitor.topSignals', 'Most active signals')}
       </PanelTitle>
@@ -89,9 +89,9 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
           {rows.map((s) => {
             const count = s.count ?? 0;
             return (
-              <li key={s.name} className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <Code className="truncate" title={s.name}>
+              <li key={s.name} className="min-w-0 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Code className="min-w-0 break-words" title={s.name}>
                     {s.name}
                   </Code>
                   <Badge variant={TYPE_VARIANT[s.type] ?? 'neutral'} size="sm">

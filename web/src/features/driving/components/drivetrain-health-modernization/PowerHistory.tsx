@@ -10,7 +10,7 @@ import type { DriveHistoryChartProps } from './chartTypes';
 
 export function PowerHistory({ rows, state, loading }: DriveHistoryChartProps) {
   const { t } = useTranslation();
-  const { formatPower } = useUnits();
+  const { formatPower, unitPrefs } = useUnits();
   const hidden = useHiddenSeries('drivetrain-power-output');
   const table = rows.map(row => ({
     date: row.date,
@@ -32,7 +32,7 @@ export function PowerHistory({ rows, state, loading }: DriveHistoryChartProps) {
       exportData={table}
       dataColumns={[
         { key: 'date', label: t('drivetrain.col.date', 'Date') },
-        { key: 'power_max_kw', label: t('drivetrain.col.powerMax', 'Peak (kW)') },
+        { key: 'power_max_kw', label: `${t('drivetrain.modernization.peakAveragePower', 'Peak-labelled average drive power')} (${unitPrefs.power})` },
         { key: 'power_min_kw', label: t('drivetrain.col.powerMin', 'Regen (kW)') },
       ]}
     >

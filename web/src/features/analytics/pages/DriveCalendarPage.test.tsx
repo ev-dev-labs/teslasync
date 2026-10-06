@@ -30,7 +30,7 @@ vi.mock('@/hooks/usePageTitle', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -170,8 +170,8 @@ describe('DriveCalendarPage', () => {
   });
 
   it.each([
-    ['loading', query({ isLoading: true })],
-    ['error', query({ isError: true, error: new Error('unavailable') })],
+    ['loading', query({ data: undefined, isLoading: true })],
+    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
   ])('threads the %s state to every independent section', (expected, result) => {
     useHistoryMock.mockReturnValue(result);
     renderCalendar();
@@ -179,6 +179,19 @@ describe('DriveCalendarPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent(expected);
     }
+  });
+
+  it('retains all six independently mounted sections during a failed history refresh', () => {
+    const retry = vi.fn();
+    useHistoryMock.mockReturnValue(query({
+      data: [], isError: true, error: new Error('refresh unavailable'), refetch: retry,
+    }));
+    renderCalendar('/drive-calendar?from=2024-07-01&to=2024-09-30');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(useHistoryMock).toHaveBeenCalledWith('42', expect.any(String), expect.any(String));
   });
 
   it('preserves the no-vehicle selection state', () => {

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout, Section } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -13,32 +13,34 @@ import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 
 import {
-  CycleStressAccounting,
   CycleStressComposition,
   CycleStressContinuity,
   CycleStressDepthDistribution,
-  CycleStressDirectory,
   CycleStressDurationProfile,
   CycleStressEvidenceSupport,
   CycleStressExponentSensitivity,
-  CycleStressKpiBand,
   CycleStressMeanSocProfile,
   CycleStressMethodology,
   CycleStressMonthTrend,
   CycleStressSourceCoverage,
   CycleStressThresholdSensitivity,
   CycleStressTurningPointTimeline,
-  type CycleStressQueryState,
 } from '../components/cycle-stress';
+import {
+  CycleStressAccounting,
+  CycleStressDirectory,
+  CycleStressSummary,
+  cycleStressQueryState,
+} from '../components/cycle-stress-modernization';
 import {
   analyzeCycleStress,
   DEEP_CYCLE_THRESHOLD_PCT,
   DEFAULT_CYCLE_HISTORY_LIMIT,
   DEPTH_STRESS_EXPONENT,
-  type CycleSource,
 } from '../lib/cycleStress';
 
-const TWO_COLUMNS = { default: 1, xl: 2 } as const;
+const TWO_COLUMNS = { default: 1 } as const;
+const PAIRED_CHARTS = 'min-w-0 items-stretch @[1024px]:grid-cols-2';
 
 export default function CycleStressPage() {
   const { t, i18n } = useTranslation();
@@ -93,76 +95,12 @@ export default function CycleStressPage() {
     ],
   );
 
-  const vehicleSelected = vehicleId != null;
-  const hasSessionData =
-    vehicleSelected && sessionsQuery.data !== undefined;
-  const hasDriveData =
-    vehicleSelected && drivesQuery.data !== undefined;
-  const sessionAvailable =
-    vehicleSelected && (hasSessionData || sessionsQuery.isSuccess);
-  const driveAvailable =
-    vehicleSelected && (hasDriveData || drivesQuery.isSuccess);
-  const sessionLoading =
-    vehicleSelected
-    && !sessionAvailable
-    && (sessionsQuery.isLoading || sessionsQuery.isFetching);
-  const driveLoading =
-    vehicleSelected
-    && !driveAvailable
-    && (drivesQuery.isLoading || drivesQuery.isFetching);
-  const failedSources: CycleSource[] = [];
-  if (sessionsQuery.isError && !hasSessionData) {
-    failedSources.push('charging');
-  }
-  if (drivesQuery.isError && !hasDriveData) {
-    failedSources.push('drive');
-  }
-  const loadingSources: CycleSource[] = [];
-  if (sessionLoading) loadingSources.push('charging');
-  if (driveLoading) loadingSources.push('drive');
-  const anyAvailable = sessionAvailable || driveAvailable;
-  const allSettled = !sessionLoading && !driveLoading;
-  const initialError =
-    vehicleSelected
-    && !anyAvailable
-    && allSettled
-    && failedSources.length > 0
-      ? sessionsQuery.error ?? drivesQuery.error
-      : null;
-  const refreshError =
-    anyAvailable
-    && (
-      (sessionsQuery.isError && hasSessionData)
-      || (drivesQuery.isError && hasDriveData)
-    )
-      ? sessionsQuery.error ?? drivesQuery.error
-      : null;
-  const retry = () => {
-    if (sessionsQuery.isError || !sessionAvailable) {
-      void sessionsQuery.refetch();
-    }
-    if (drivesQuery.isError || !driveAvailable) {
-      void drivesQuery.refetch();
-    }
-  };
-  const state: CycleStressQueryState = {
-    vehicleSelected,
-    isLoading:
-      vehicleSelected
-      && !anyAvailable
-      && loadingSources.length > 0,
-    isResolved:
-      vehicleSelected && (anyAvailable || allSettled),
-    error: initialError,
-    refreshError,
-    failedSources,
-    loadingSources,
-    onRetry: retry,
-  };
+  const trust = cycleStressQueryState(vehicleId != null, sessionsQuery, drivesQuery);
+  const { state } = trust;
   const locale = i18n.language;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('cycleStress.title', 'Cycle Stress')}
       subtitle={t(
         'cycleStress.subtitle',
@@ -170,9 +108,9 @@ export default function CycleStressPage() {
       )}
     >
       <FadeIn>
-        <CycleStressKpiBand
+        <CycleStressSummary
           result={result}
-          state={state}
+          trust={trust}
           locale={locale}
           deepThresholdPct={deepThresholdPct}
           exponent={exponent}
@@ -182,34 +120,43 @@ export default function CycleStressPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <CycleStressDepthDistribution result={result} state={state} />
-          <CycleStressMonthTrend
-            result={result}
-            state={state}
-            locale={locale}
-          />
-        </Grid>
+        <Section id="cycle-stress-ranges"
+          title={t('cycleStress.modernization.ranges', 'Cycle depth and calendar trend')}>
+          <Grid cols={TWO_COLUMNS} gap={4} className={PAIRED_CHARTS}>
+            <CycleStressDepthDistribution result={result} state={state} />
+            <CycleStressMonthTrend
+              result={result}
+              state={state}
+              locale={locale}
+            />
+          </Grid>
+        </Section>
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <CycleStressThresholdSensitivity
-            result={result}
-            state={state}
-          />
-          <CycleStressExponentSensitivity
-            result={result}
-            state={state}
-          />
-        </Grid>
+        <Section id="cycle-stress-sensitivity"
+          title={t('cycleStress.modernization.sensitivity', 'Sensitivity lenses')}>
+          <Grid cols={TWO_COLUMNS} gap={4} className={PAIRED_CHARTS}>
+            <CycleStressThresholdSensitivity
+              result={result}
+              state={state}
+            />
+            <CycleStressExponentSensitivity
+              result={result}
+              state={state}
+            />
+          </Grid>
+        </Section>
       </FadeIn>
 
       <FadeIn delay={0.15}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <CycleStressMeanSocProfile result={result} state={state} />
-          <CycleStressDurationProfile result={result} state={state} />
-        </Grid>
+        <Section id="cycle-stress-profiles"
+          title={t('cycleStress.modernization.profiles', 'Operating profiles')}>
+          <Grid cols={TWO_COLUMNS} gap={4} className={PAIRED_CHARTS}>
+            <CycleStressMeanSocProfile result={result} state={state} />
+            <CycleStressDurationProfile result={result} state={state} />
+          </Grid>
+        </Section>
       </FadeIn>
 
       <FadeIn delay={0.2}>
@@ -271,6 +218,6 @@ export default function CycleStressPage() {
       <FadeIn delay={0.55}>
         <CycleStressMethodology result={result} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -5,7 +5,8 @@ import { RefreshCw } from 'lucide-react';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
 import { Button } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -57,6 +58,8 @@ export default function PreconditioningEffectivenessPage() {
   const { unitPrefs, formatDuration } = useUnits();
   const climateQuery = useClimateHistory(vehicleIdStr);
   const drivesQuery = useDriveHistory(vehicleIdStr || undefined, 1000);
+  const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
+  const drivesSource = deriveDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => summarizePreconditioningEffectiveness(
       climateQuery.data ?? [],
@@ -95,14 +98,8 @@ export default function PreconditioningEffectivenessPage() {
         isFetching: climateQuery.isFetching,
         isPaused:
           !climateHasData && climateQuery.fetchStatus === 'paused',
-        error:
-          climateQuery.isError && !climateHasData
-            ? climateQuery.error
-            : null,
-        refreshError:
-          climateQuery.isError && climateHasData
-            ? climateQuery.error
-            : null,
+        error: climateSource.fatalError,
+        refreshError: climateSource.refreshError,
         onRetry: retryClimate,
       },
       drives: {
@@ -120,14 +117,8 @@ export default function PreconditioningEffectivenessPage() {
         isFetching: drivesQuery.isFetching,
         isPaused:
           !drivesHaveData && drivesQuery.fetchStatus === 'paused',
-        error:
-          drivesQuery.isError && !drivesHaveData
-            ? drivesQuery.error
-            : null,
-        refreshError:
-          drivesQuery.isError && drivesHaveData
-            ? drivesQuery.error
-            : null,
+        error: drivesSource.fatalError,
+        refreshError: drivesSource.refreshError,
         onRetry: retryDrives,
       },
       onRefresh: refreshAll,
@@ -141,6 +132,8 @@ export default function PreconditioningEffectivenessPage() {
       climateQuery.isLoading,
       climateQuery.isPending,
       climateQuery.isSuccess,
+      climateSource.fatalError,
+      climateSource.refreshError,
       drivesHaveData,
       drivesQuery.error,
       drivesQuery.fetchStatus,
@@ -149,6 +142,8 @@ export default function PreconditioningEffectivenessPage() {
       drivesQuery.isLoading,
       drivesQuery.isPending,
       drivesQuery.isSuccess,
+      drivesSource.fatalError,
+      drivesSource.refreshError,
       refreshAll,
       retryClimate,
       retryDrives,
@@ -177,7 +172,7 @@ export default function PreconditioningEffectivenessPage() {
   const refreshing = climateQuery.isFetching || drivesQuery.isFetching;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t(
         'preconditioningEffectiveness.title',
         'Preconditioning effectiveness',
@@ -299,6 +294,6 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.16}>
         <PreconditioningMethodology summary={summary} state={queryState} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

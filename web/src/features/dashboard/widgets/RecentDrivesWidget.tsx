@@ -44,6 +44,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       timestamp: drive.start_ts,
       color: 'var(--accent-primary)',
       href: `/drives/${drive.id}`,
+      wrap: true,
     };
   });
   const trust = useDataState({

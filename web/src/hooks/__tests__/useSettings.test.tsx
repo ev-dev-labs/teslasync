@@ -104,6 +104,25 @@ afterEach(() => {
 // ── 1. Derivation branches ────────────────────────────────────────────────────
 
 describe('useSettings — derived flags', () => {
+  it('exposes the existing query refetch for read-only source recovery', async () => {
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.settingsUnavailable).toBe(false))
+    const originalRefetch = result.current.refetch
+    vi.mocked(request).mockClear()
+    nextSettings = { locale: 'fr-FR', decimal_precision: 4 }
+
+    await act(async () => {
+      await result.current.refetch()
+    })
+
+    await waitFor(() => expect(result.current.locale).toBe('fr-FR'))
+    expect(result.current.decimals).toBe(4)
+    expect(result.current.refetch).toBe(originalRefetch)
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(request).toHaveBeenCalledWith('/settings')
+  })
+
   it('revalidates unit preferences when a page mounts with a still-fresh settings cache', async () => {
     const { Wrapper, qc } = makeWrapper()
     qc.setQueryData(['settings'], { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 })

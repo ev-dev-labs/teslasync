@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import { FlaskConical } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartLegend,
   ChartTooltip,
   Line,
@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
 import {
@@ -80,11 +80,7 @@ export function CabinThermalPredictionScenario({
 
   return (
     <section data-testid="cabin-thermal-prediction">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <FlaskConical className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.prediction.title', 'Accepted-fit worked scenario')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.prediction.title', 'Accepted-fit worked scenario')}>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'cabinThermal.prediction.subtitle',
@@ -112,7 +108,7 @@ export function CabinThermalPredictionScenario({
                   },
                 )}
               </Text>
-              <ChartContainer
+              <EmbeddedChart toolbar exportable size="standard"
                 className="border-0 bg-transparent p-0 shadow-none"
                 title={t('cabinThermal.prediction.plotTitle', 'Passive-soak curve')}
                 ariaLabel={t(
@@ -141,11 +137,11 @@ export function CabinThermalPredictionScenario({
                     </LineChart>
                   </ResponsiveContainer>
                 )}
-              </ChartContainer>
+              </EmbeddedChart>
             </>
           ) : null}
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

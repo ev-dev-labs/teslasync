@@ -445,6 +445,21 @@ describe('ConditionBuilder — time window', () => {
     expect(screen.getByRole('button', { name: 'Sat' })).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('keeps empty as none when the last condition weekday is removed', () => {
+    const { onChange } = renderBuilder([timeWindow({
+      days_of_week: [3], start_time: '23:00', end_time: '02:00', timezone: 'Europe/London',
+    })]);
+    const group = screen.getByRole('group', { name: 'Days' });
+    fireEvent.click(within(group).getByRole('button', { name: 'Wed' }));
+    expect(lastArg(onChange)[0]).toEqual(timeWindow({
+      days_of_week: [], start_time: '23:00', end_time: '02:00', timezone: 'Europe/London',
+    }));
+    expect(within(group).getAllByRole('button')).toHaveLength(7);
+    for (const button of within(group).getAllByRole('button')) {
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+    }
+  });
+
   it('adds a day (sorted numerically) when an unpressed toggle is clicked', () => {
     const { onChange } = renderBuilder([timeWindow()]);
     fireEvent.click(screen.getByRole('button', { name: 'Sun' }));

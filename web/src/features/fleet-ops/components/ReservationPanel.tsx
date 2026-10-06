@@ -2,7 +2,8 @@ import { CalendarDays } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { DataTable, GlassPanel, PanelTitle, StatusPill, type Column } from '@/components/ui';
+import { DataTable, Text, StatusPill, type Column } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { formatDateShort, formatDateTime, formatTime } from '@/lib/dateFormat';
 import type { FleetReservation } from '@/api/hooks/useFleetOps';
 import { ReservationActions } from './ReservationActions';
@@ -113,8 +114,7 @@ export function ReservationPanel({
   ]);
 
   return (
-    <GlassPanel className="p-5">
-      <PanelTitle>{t('fleetOps.reservations.title', 'Reservation calendar')}</PanelTitle>
+    <LayoutCard title={t('fleetOps.reservations.title', 'Reservation calendar')}>
       {loading ? <Skeleton lines={7} /> : error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.reservations.resource', 'Reservations')} />
       ) : items.length === 0 ? (
@@ -129,13 +129,13 @@ export function ReservationPanel({
         <div className="mt-4 space-y-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {calendarDays.map((day) => (
-              <div key={day} className="min-h-28 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateShort(day)}</p>
+              <div key={day} className="min-h-28 min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                <Text as="p" weight="semibold">{formatDateShort(day)}</Text>
                 <div className="mt-2 space-y-2">
                   {upcoming.filter((item) => item.starts_at.startsWith(day)).map((item) => (
-                    <div key={item.id} className="rounded-lg bg-cyan-500/10 p-2 text-xs text-cyan-200">
-                      <p className="truncate font-medium">{item.title}</p>
-                      <p className="mt-1 text-[var(--text-muted)]">{formatTime(item.starts_at)} · {item.vehicle_display_name}</p>
+                    <div key={item.id} className="min-w-0 rounded-lg bg-[var(--surface-1)] p-2">
+                      <Text as="p" weight="medium" className="break-words">{item.title}</Text>
+                      <Text as="p" variant="caption" className="mt-1 break-words">{formatTime(item.starts_at)} · {item.vehicle_display_name}</Text>
                       <ReservationActions
                         item={item}
                         onEdit={onEdit}
@@ -161,6 +161,6 @@ export function ReservationPanel({
           />
         </div>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

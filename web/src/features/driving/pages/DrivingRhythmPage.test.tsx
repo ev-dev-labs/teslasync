@@ -90,7 +90,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -280,10 +280,10 @@ describe('DrivingRhythmPage', () => {
   });
 
   it.each([
-    ['loading', query({ isLoading: true })],
+    ['loading', query({ data: undefined, isLoading: true })],
     [
       'error',
-      query({ isError: true, error: new Error('rhythm unavailable') }),
+      query({ data: undefined, isError: true, error: new Error('rhythm unavailable') }),
     ],
   ])('propagates the %s state to every mounted section', (expected, result) => {
     useHistoryMock.mockReturnValue(result);
@@ -307,6 +307,7 @@ describe('DrivingRhythmPage', () => {
     const refetch = vi.fn();
     useHistoryMock.mockReturnValue(
       query({
+        data: undefined,
         isError: true,
         error: new Error('offline'),
         refetch,

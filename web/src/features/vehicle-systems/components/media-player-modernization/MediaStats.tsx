@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { StatStrip, type StatMetric } from '@/components/data-display';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { MediaSnapshot } from '@/api/types';
-import { finiteReading, listeningStats, sourcePresentation } from './mediaPresentation';
+import { deriveDataState, type DataState } from '@/api/dataState';
+import { finiteReading, listeningStats } from './mediaPresentation';
 
 interface Props {
   filtered: readonly MediaSnapshot[];
@@ -13,19 +14,37 @@ interface Props {
   mediaLoading: boolean;
   historyError: unknown;
   mediaError: unknown;
+  historySource?: DataState<readonly MediaSnapshot[]>;
+  mediaSource?: DataState<MediaSnapshot>;
   start: string;
   end: string;
 }
 
 export function MediaStats({
   filtered, history, latest, hasVehicle, historyLoading, mediaLoading,
-  historyError, mediaError, start, end,
+  historyError, mediaError, historySource, mediaSource, start, end,
 }: Props) {
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const stats = listeningStats(filtered);
-  const historyState = sourcePresentation(history, historyLoading, historyError);
-  const mediaState = sourcePresentation(latest, mediaLoading, mediaError);
+  const trustedHistory = historySource ?? deriveDataState({
+    data: history, isLoading: historyLoading, error: historyError,
+  }, { provenance: 'historical' });
+  const trustedMedia = mediaSource ?? deriveDataState({
+    data: latest ?? undefined, isLoading: mediaLoading, error: mediaError,
+  });
+  const historyState = {
+    loading: historyLoading && !trustedHistory.hasData,
+    fatal: trustedHistory.fatalError != null,
+    available: trustedHistory.hasData,
+    retained: trustedHistory.refreshError != null || (trustedHistory.hasData && trustedHistory.isRefreshBlocked),
+  };
+  const mediaState = {
+    loading: mediaLoading && !trustedMedia.hasData,
+    fatal: trustedMedia.fatalError != null,
+    available: trustedMedia.hasData,
+    retained: trustedMedia.refreshError != null || (trustedMedia.hasData && trustedMedia.isRefreshBlocked),
+  };
   const unavailable = t('media.modernization.unavailable', 'This source is unavailable');
   const loading = t('media.modernization.loading', 'Loading this source');
   const unknown = t('media.modernization.unknownReading', 'No reading reported');

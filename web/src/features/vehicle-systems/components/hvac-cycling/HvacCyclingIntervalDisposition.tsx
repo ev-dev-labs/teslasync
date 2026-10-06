@@ -1,14 +1,7 @@
-import { GitCompareArrows } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, MetricValue, Text } from '@/components/ui';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
@@ -46,11 +39,7 @@ export function HvacCyclingIntervalDisposition({
 
   return (
     <section data-testid="hvac-cycling-interval-disposition">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <GitCompareArrows className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.intervals.title', 'Interval disposition')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.intervals.title', 'Interval disposition')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.intervals.subtitle',
@@ -106,7 +95,7 @@ export function HvacCyclingIntervalDisposition({
             )}
           </Text>
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

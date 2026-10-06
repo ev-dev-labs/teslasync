@@ -20,7 +20,7 @@ import {
   Workflow,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import {
   Badge,
   Button,
@@ -31,10 +31,11 @@ import {
   Text,
 } from '@/components/ui'
 import { MetricCard, TimeStamp } from '@/components/data-display'
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { AINLSearch } from '@/components/ai/AINLSearch'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDataState } from '@/hooks/useDataState'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
 import type { SearchHit, SearchHitType } from '@/api/types'
@@ -102,7 +103,9 @@ export default function SearchPage() {
     limit: 25,
     disabled: tooShort,
   })
-  const { data, isFetching, error, refetch } = searchQuery
+  const { data, isFetching, refetch } = searchQuery
+  const state = useDataState(searchQuery)
+  const error = state.fatalError
 
   const hits = data?.hits ?? []
 
@@ -146,7 +149,7 @@ export default function SearchPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('search.title', 'Search')}
       subtitle={t(
         'search.subtitle',
@@ -173,6 +176,7 @@ export default function SearchPage() {
         default install never see this surface — kept unwrapped so the null
         render leaves no empty spacer.
       */}
+      {!isIdle && !tooShort && <StaleRefreshWarning state={state} />}
       <AINLSearch />
 
       {/* Query + facet toolbar — full-width hero */}
@@ -367,8 +371,9 @@ export default function SearchPage() {
                             aria-label={t('search.result.open', 'Open {{title}}', {
                               title: hit.title,
                             })}
+                            wrapLabel
                             className={cn(
-                              'w-full justify-start gap-3 rounded-lg px-2 py-3 text-left',
+                              'w-full justify-start gap-3 rounded-lg px-2 py-3 text-start',
                               typography.weight.regular,
                             )}
                           >
@@ -376,11 +381,11 @@ export default function SearchPage() {
                               {searchHitIconSm(hit.type)}
                             </span>
                             <span className="min-w-0 flex-1">
-                              <Text as="span" variant="body" className="block truncate">
+                              <Text as="span" variant="body" className="block break-words">
                                 {hit.title}
                               </Text>
                               {hit.subtitle && (
-                                <Text as="span" variant="caption" className="block truncate">
+                                <Text as="span" variant="caption" className="block break-words">
                                   {hit.subtitle}
                                 </Text>
                               )}
@@ -388,7 +393,7 @@ export default function SearchPage() {
                             {hit.when && (
                               <TimeStamp
                                 value={hit.when}
-                                className={cn('hidden shrink-0 sm:inline', typography.role.caption)}
+                                className={cn('shrink-0 max-w-full break-words', typography.role.caption)}
                               />
                             )}
                             <ArrowRight
@@ -406,7 +411,7 @@ export default function SearchPage() {
           </section>
         )}
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }
 

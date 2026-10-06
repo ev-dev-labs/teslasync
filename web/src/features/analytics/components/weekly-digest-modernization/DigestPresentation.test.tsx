@@ -187,6 +187,7 @@ describe('driving and charging details', () => {
     expect(retry).toHaveBeenCalledOnce();
     expect(screen.getAllByTestId('metric')).toHaveLength(4);
     expect(screen.getByText('No top drive is available for this week yet.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
   });
   it('keeps all charging facts, converted daily energy and zero-baseline dash', () => {
     render(<ChargingPanel metrics={digest({ prevChargeEnergyWh: 0 })} period={period}
@@ -229,6 +230,13 @@ describe('battery, alerts and supervised-driving states', () => {
     render(<BatteryPanel metrics={digest({ chargingSessionCount: 0 })} period={period} />);
     expect(screen.getByRole('region', { name: 'Battery health' })).toBeInTheDocument();
     expect(screen.getByText('No battery data is available for this week.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Charging' })).toHaveAttribute('href', '/charging');
+  });
+  it('does not turn a healthy zero-alert week into a recovery task', () => {
+    render(<AlertsPanel metrics={digest({ alertTotal: 0 })} period={period} alertPieData={[]} />);
+    expect(screen.getByText('No alerts this week — everything looks great!')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
   it('keeps severity order/names/counts and the distribution data table', () => {
     render(<AlertsPanel metrics={digest({ alertTotal: 3, alertsByType: { critical: 2, custom: 1 } })}
@@ -248,6 +256,7 @@ describe('battery, alerts and supervised-driving states', () => {
     insights.totals.fsd_distance_m = null;
     const view = render(<FsdPanel period={period} insights={insights} />);
     expect(screen.getByText('No supervised-driving distance was measured this week.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd?days=7');
     insights.totals.fsd_distance_m = 0;
     view.rerender(<FsdPanel period={period} insights={insights} />);
     expect(screen.getByText('0.00 km')).toBeInTheDocument();

@@ -53,6 +53,7 @@ export function FsdPanel({
               'analytics.weeklyDigest.fsdNotMeasured',
               'No supervised-driving distance was measured this week.',
             )}
+            actionTo={{ label: t('routes.fSDInsights', 'FSD insights'), to: '/fsd?days=7' }}
             className="py-8"
           />
         ) : (

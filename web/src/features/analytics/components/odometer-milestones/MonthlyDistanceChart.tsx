@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -18,6 +17,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
@@ -66,8 +66,8 @@ export function MonthlyDistanceChart({
       )}
       data-testid="milestone-monthly"
     >
-      <ChartContainer
-        className="h-full"
+      <ChartCard
+        size="standard"
         title={t(
           'milestones.monthly.title',
           'Monthly distance & drive frequency',
@@ -195,7 +195,7 @@ export function MonthlyDistanceChart({
             </ResponsiveContainer>
           )
         }
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

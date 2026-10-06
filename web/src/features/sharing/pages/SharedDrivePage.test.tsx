@@ -219,6 +219,12 @@ vi.mock('@/components/charts', () => ({
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }))
 
+vi.mock('@/components/layout', async () => {
+  const actual = await vi.importActual<typeof import('@/components/layout')>('@/components/layout')
+  const charts = await vi.importMock<typeof import('@/components/charts')>('@/components/charts')
+  return { ...actual, ChartCard: charts.ChartContainer }
+})
+
 /* ── Motion barrel → inert passthrough (avoid framer timing/act churn) ────── */
 vi.mock('@/components/motion', async () => {
   const actual = await vi.importActual<typeof import('@/components/motion')>('@/components/motion')

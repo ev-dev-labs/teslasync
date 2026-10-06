@@ -13,8 +13,8 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge, Input } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { Badge, Input, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
 import { FileCheck2, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-react';
 import { verifyReport } from '../lib/reportVerifier';
@@ -89,11 +89,8 @@ export function ImportVerifyPanel() {
   };
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.import.title', 'Import & verify a report')}</PanelTitle>
-        <FileCheck2 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
-      </div>
+    <LayoutCard title={t('resaleVault.import.title', 'Import & verify a report')}
+      actions={<FileCheck2 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
 
       <HelperText>
         {t(
@@ -109,7 +106,7 @@ export function ImportVerifyPanel() {
           onChange={onInputChange}
           label={t('resaleVault.import.chooseFile', 'Choose report file')}
         />
-        {fileName && <span className="ml-2 text-xs text-[var(--text-muted)]">{fileName}</span>}
+        {fileName && <HelperText className="ms-2 break-words">{fileName}</HelperText>}
       </div>
 
       {isVerifying && <HelperText>{t('resaleVault.import.verifying', 'Verifying…')}</HelperText>}
@@ -157,7 +154,7 @@ export function ImportVerifyPanel() {
           </div>
 
           {result.errors.length > 0 && (
-            <ul className="list-disc space-y-1 pl-4 text-[var(--text-secondary)]">
+            <ul className="list-disc space-y-1 ps-4 text-[var(--text-secondary)]">
               {result.errors.map((message, index) => (
                 <li key={index}>{message}</li>
               ))}
@@ -184,6 +181,6 @@ export function ImportVerifyPanel() {
       <InlineCallout variant="info" icon={<ShieldAlert />}>
         {LOCAL_ATTESTATION_NOTE}
       </InlineCallout>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

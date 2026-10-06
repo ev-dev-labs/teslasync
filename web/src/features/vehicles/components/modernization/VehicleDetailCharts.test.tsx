@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { act, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive, VehicleState } from '@/api/types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -22,6 +22,16 @@ interface ChartFixtureProps {
   chartKey?: string;
   height?: number;
 }
+function EmbeddedChartFixture({ children, title, ariaLabel, data, dataColumns, chartKey, height }: ChartFixtureProps) {
+  return (
+    <div data-testid="embedded-fixture" aria-label={ariaLabel} data-title={title}
+      data-series={JSON.stringify(data)} data-columns={JSON.stringify(dataColumns)}
+      data-chart-key={chartKey} data-height={height}>
+      {typeof children === 'function' ? children({ hiddenSeries: { isHidden: key => key === 'distance' && fixtures.hideDistance } }) : children}
+    </div>
+  );
+}
+vi.mock('@/components/charts/EmbeddedChart', () => ({ EmbeddedChart: EmbeddedChartFixture }));
 vi.mock('@/components/charts', () => ({
   CHART_COLORS: ['#06b6d4', '#a855f7'], AREA_DEFAULTS: {}, areaGradient: () => null,
   LinearGauge: ({ value, label }: { value: number; label: string }) => <div data-testid="battery-gauge" data-value={value} aria-label={label} />,
@@ -31,13 +41,7 @@ vi.mock('@/components/charts', () => ({
   BarChart: ({ data, children }: { data: unknown; children: ReactNode }) => <div data-testid="battery-bars" data-series={JSON.stringify(data)}>{children}</div>,
   AreaChart: ({ data, children }: { data: unknown; children: ReactNode }) => <div data-testid="drive-areas" data-series={JSON.stringify(data)}>{children}</div>,
   Area: ({ dataKey, hide }: { dataKey: string; hide: boolean }) => <div data-testid={`series-${dataKey}`} data-hidden={String(hide)} />,
-  EmbeddedChart: ({ children, title, ariaLabel, data, dataColumns, chartKey, height }: ChartFixtureProps) => (
-    <div data-testid="embedded-fixture" aria-label={ariaLabel} data-title={title}
-      data-series={JSON.stringify(data)} data-columns={JSON.stringify(dataColumns)}
-      data-chart-key={chartKey} data-height={height}>
-      {typeof children === 'function' ? children({ hiddenSeries: { isHidden: key => key === 'distance' && fixtures.hideDistance } }) : children}
-    </div>
-  ),
+  EmbeddedChart: EmbeddedChartFixture,
 }));
 
 import { VehicleDetailCharts } from './VehicleDetailCharts';
@@ -61,6 +65,10 @@ function syntheticDrive(id: number, distance_m: number, duration_s: number): Dri
   };
 }
 const syntheticDrives = [syntheticDrive(2, 80_000, 3_600), syntheticDrive(1, 40_000, 1_800)];
+function DriveLocationProbe() {
+  const location = useLocation();
+  return <output data-testid="drive-location">{location.pathname}</output>;
+}
 beforeEach(() => { fixtures.distance = 'km'; fixtures.hideDistance = false });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -107,12 +115,26 @@ describe('production vehicle charts through shared layout', () => {
   });
 
   it('keeps both titled chart shells and the original successful empty-drive state', () => {
-    render(<VehicleDetailCharts state={syntheticState} drives={[]}
-      stateQuery={{ data: { state: syntheticState } }} drivesQuery={{ data: [] }} />);
+    render(<MemoryRouter><VehicleDetailCharts state={syntheticState} drives={[]}
+      stateQuery={{ data: { state: syntheticState } }} drivesQuery={{ data: [] }} /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Battery overview' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Drive distance trend' })).toBeInTheDocument();
     expect(screen.getByText('No drive data for chart')).toBeInTheDocument();
     expect(screen.getByTestId('battery-bars')).toBeInTheDocument();
+  });
+
+  it('offers existing drive-history navigation from the successful empty trend without hiding battery evidence', () => {
+    render(<MemoryRouter initialEntries={['/vehicles/1']}>
+      <VehicleDetailCharts state={syntheticState} drives={[]}
+        stateQuery={{ data: { state: syntheticState } }} drivesQuery={{ data: [] }} />
+      <DriveLocationProbe />
+    </MemoryRouter>);
+    const history = screen.getByRole('link', { name: 'View all' });
+    expect(history).toHaveAttribute('href', '/drives');
+    expect(screen.getByText('No drive data for chart')).toBeInTheDocument();
+    expect(screen.getByTestId('battery-bars')).toBeInTheDocument();
+    fireEvent.click(history);
+    expect(screen.getByTestId('drive-location')).toHaveTextContent('/drives');
   });
 
   it('uses the allocated shared-grid boundary for equal paired plot heights', () => {

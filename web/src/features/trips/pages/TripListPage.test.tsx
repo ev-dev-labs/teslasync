@@ -113,6 +113,11 @@ vi.mock('framer-motion', () => {
 //    mirrors the props the page relies on — title, ariaLabel (role=img body),
 //    the action toolbar, and the loading / empty flags — and renders children
 //    only in the populated state, exactly like the real component. ────────────
+vi.mock('@/components/layout', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/layout')>()),
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
 vi.mock('@/components/charts', () => ({
   ChartContainer: ({
     title,
@@ -496,6 +501,18 @@ describe('TripListPage — error', () => {
 });
 
 describe('TripListPage — exports', () => {
+  it('keeps complete loaded-set exports and trip cards during a background refresh failure', () => {
+    mockUseTrips.mockReturnValue(makeQuery({ data: TRIPS, isError: true, error: new Error('refresh failed') }));
+    renderPage();
+    expect(cardByName('Weekend to Coast')).toBeInTheDocument();
+    expect(cardByName('Trip #2')).toBeInTheDocument();
+    expect(cardByName('Airport run')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    expect(mockExportJSON).toHaveBeenCalledWith(TRIPS, 'teslasync-trips.json');
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+    expect(mockExportCSV.mock.calls[0]?.[0]).toHaveLength(TRIPS.length);
+  });
+
   it('exports a flat SI CSV row per trip under the v2 filename', () => {
     renderPage();
 

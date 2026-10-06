@@ -145,30 +145,36 @@ export function VehicleHero({
                 fixed-diameter rings used. */}
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 mb-6">
               <LinearGauge
+                preserveReadingAndScale
                 value={state.battery_level} max={100} label={t('hero.battery', 'Battery')} unit="%"
                 tone={state.battery_level == null || !Number.isFinite(state.battery_level) ? 'neutral' : state.battery_level > 50 ? 'success' : 'warning'} size={70}
               />
               <LinearGauge
+                preserveReadingAndScale
                 value={gaugeReading(state.rated_range, toDistanceDisplay)} max={600}
                 label={t('hero.range', 'Range')} unit={distanceUnit} tone="accent" size={70}
               />
               {status === 'driving' && (
                 <LinearGauge
+                  preserveReadingAndScale
                   value={gaugeReading(state.speed, toSpeedDisplay)} max={250}
                   label={t('hero.speed', 'Speed')} unit={speedUnit} tone="purple" size={70}
                 />
               )}
               {status === 'charging' && (
                 <LinearGauge
+                  preserveReadingAndScale
                   value={gaugeReading(state.charger_power, value => value)} max={250}
                   label={t('hero.power', 'Power')} unit="kW" tone="success" size={70}
                 />
               )}
               <LinearGauge
+                preserveReadingAndScale
                 value={gaugeReading(state.inside_temp, toTemperatureDisplay)} {...tempRange}
                 label={t('hero.inside', 'Inside')} unit={tempUnit} tone="warning" size={70}
               />
               <LinearGauge
+                preserveReadingAndScale
                 value={gaugeReading(state.outside_temp, toTemperatureDisplay)} {...tempRange}
                 label={t('hero.outside', 'Outside')} unit={tempUnit} tone="primary" size={70}
               />
@@ -224,7 +230,7 @@ export function VehicleHero({
                   <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} aria-hidden />
                   <div className="min-w-0">
                     <Text as="p" size="2xs" color="secondary" className="tracking-wider">{item.label}</Text>
-                    <Text as="p" size="sm" weight="semibold" color="primary" className="truncate">{item.value}</Text>
+                    <Text as="p" size="sm" weight="semibold" color="primary" className="break-words [overflow-wrap:anywhere]">{item.value}</Text>
                   </div>
                 </div>
               ))}

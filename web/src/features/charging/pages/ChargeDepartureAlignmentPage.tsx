@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock3, Gauge, AlertTriangle, Link2 } from 'lucide-react';
+import { Link2 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { Text, Button } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { QueryError, StaleRefreshWarning, DataStateNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
@@ -22,18 +21,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
 
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
-
-import { analyzeChargeDepartureAlignment, type AlignmentFlag } from '../lib/chargeDepartureAlignment';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-const FLAG_DEFAULTS: Record<AlignmentFlag, string> = {
-  tight_margin: 'Cut it close on departure',
-  excess_buffer: 'Added far more than that trip used',
-  early_full_dwell: 'Sat at full charge before leaving',
-  long_dwell: 'Long gap before departure',
-  soc_mismatch: 'SoC reading looks inconsistent',
-};
+import { deriveDataState } from '@/api/dataState';
+import { analyzeChargeDepartureAlignment } from '../lib/chargeDepartureAlignment';
+import { AlignmentStats, AlignmentPairs, observedBounds } from '../components/charge-departure-alignment-modernization';
 
 const CHART_KEY = 'charge-departure-alignment';
 
@@ -42,7 +32,6 @@ function dayLabel(ms: number, locale: string): string {
 }
 
 export default function ChargeDepartureAlignmentPage() {
-  const { fmtPercent } = useNumberFormatting();
   const { t, i18n } = useTranslation();
   usePageTitle(t('chargeDepartureAlignment.title', 'Charge \u2192 Departure Alignment'));
 
@@ -52,6 +41,8 @@ export default function ChargeDepartureAlignmentPage() {
 
   const sessionsQuery = useChargingHistory(vehicleIdStr);
   const drivesQuery = useDriveHistory(vehicleIdStr);
+  const sessionsState = deriveDataState(sessionsQuery, { provenance: 'historical' });
+  const drivesState = deriveDataState(drivesQuery, { provenance: 'historical' });
   const dataSources = useMemo(
     () => [
       {
@@ -71,6 +62,14 @@ export default function ChargeDepartureAlignmentPage() {
   const summary = useMemo(
     () => analyzeChargeDepartureAlignment(sessionsQuery.data ?? [], drivesQuery.data ?? []),
     [sessionsQuery.data, drivesQuery.data],
+  );
+  const chargeBounds = useMemo(
+    () => observedBounds((sessionsQuery.data ?? []).map(session => session.ended_at)),
+    [sessionsQuery.data],
+  );
+  const driveBounds = useMemo(
+    () => observedBounds((drivesQuery.data ?? []).map(drive => drive.startTs)),
+    [drivesQuery.data],
   );
 
   const chartData = useMemo(
@@ -95,17 +94,38 @@ export default function ChargeDepartureAlignmentPage() {
     return <NoVehicleSelected pageTitle={t('chargeDepartureAlignment.title', 'Charge \u2192 Departure Alignment')} />;
   }
 
-  const sessionsHaveData = sessionsQuery.data !== undefined;
-  const drivesHaveData = drivesQuery.data !== undefined;
+  const available = sessionsState.hasData && drivesState.hasData;
   const isLoading =
-    (!sessionsHaveData && sessionsQuery.isLoading)
-    || (!drivesHaveData && drivesQuery.isLoading);
-  const isError =
-    (sessionsQuery.isError && !sessionsHaveData)
-    || (drivesQuery.isError && !drivesHaveData);
+    (!sessionsState.hasData && sessionsQuery.isLoading)
+    || (!drivesState.hasData && drivesQuery.isLoading);
+  const fatalError = sessionsState.fatalError ?? drivesState.fatalError;
+  const missingReason = t(
+    'chargeDepartureAlignment.modernization.pending',
+    'Both charging and drive history must be loaded before pairings can be evaluated.',
+  );
+  const retained = available && (
+    sessionsState.refreshError != null || drivesState.refreshError != null
+    || sessionsState.isRefreshBlocked || drivesState.isRefreshBlocked
+  );
+  const sourceEntries = [
+    {
+      id: 'charging-history', state: sessionsState,
+      label: t('dataSources.labels.chargingHistory', 'Charging history'),
+      query: sessionsQuery, bounds: chargeBounds,
+      count: sessionsQuery.data?.length,
+      boundsLabel: t('chargeDepartureAlignment.modernization.chargeBounds', 'Observed charge-end timestamps'),
+    },
+    {
+      id: 'drive-history', state: drivesState,
+      label: t('dataSources.labels.driveHistory', 'Drive history'),
+      query: drivesQuery, bounds: driveBounds,
+      count: drivesQuery.data?.length,
+      boundsLabel: t('chargeDepartureAlignment.modernization.driveBounds', 'Observed drive-start timestamps'),
+    },
+  ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('chargeDepartureAlignment.title', 'Charge \u2192 Departure Alignment')}
       subtitle={t(
         'chargeDepartureAlignment.subtitle',
@@ -113,82 +133,60 @@ export default function ChargeDepartureAlignmentPage() {
       )}
       query={[sessionsQuery, drivesQuery]}
       dataSources={dataSources}
+      busy={sessionsState.isRefreshing || drivesState.isRefreshing}
+      className="w-full min-w-0"
     >
+      {/* Recovery belongs to each source; retained arrays never become fatal errors. */}
+      {sourceEntries.map(({ id, state, label, query }) => (
+        <div key={id} data-alignment-source={id}>
+          <StaleRefreshWarning state={state} label={label} />
+          {state.fatalError && <QueryError
+            error={state.fatalError} resourceName={label}
+            onRetry={() => { void query.refetch(); }}
+          />}
+          {!state.hasData && state.isRefreshBlocked && !state.fatalError && (
+            <DataStateNotice state="stale" title={label}>
+              <Text as="p" variant="bodySm">{t(
+                'chargeDepartureAlignment.modernization.paused',
+                'History loading is paused. Connect to resume or retry this source.',
+              )}</Text>
+              <Button variant="secondary" onClick={() => { void query.refetch(); }}>
+                {t('error.retry', 'Retry')}
+              </Button>
+            </DataStateNotice>
+          )}
+        </div>
+      ))}
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('chargeDepartureAlignment.kpis', 'Charge departure alignment metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={sessionsQuery.error ?? drivesQuery.error} onRetry={() => { sessionsQuery.refetch(); drivesQuery.refetch(); }} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={96} className="rounded-xl" />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('chargeDepartureAlignment.avgDwell', 'Avg. Dwell Time')}
-                value={formatDurationSecondsAsMinutes(summary.avgDwellS)}
-                subtitle={t('chargeDepartureAlignment.avgDwellHint', 'from charge end to next drive')}
-                icon={<Clock3 className="h-4 w-4" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('chargeDepartureAlignment.avgMargin', 'Avg. Readiness Margin')}
-                value={summary.avgReadinessMarginPct != null ? fmtPercent(summary.avgReadinessMarginPct) : '\u2014'}
-                subtitle={t('chargeDepartureAlignment.avgMarginHint', 'SoC left once that drive ended')}
-                icon={<Gauge className="h-4 w-4" />}
-                color="purple"
-                help={{
-                  i18nKey: 'help.chargeDepartureAlignment.avgMargin',
-                  defaultValue:
-                    'The realized safety buffer: how much charge was still left when the paired drive finished. A low average does not itself mean anything went wrong \u2014 it only describes what happened, not what was intended.',
-                }}
-              />
-              <MetricCard
-                label={t('chargeDepartureAlignment.misaligned', 'Misaligned Rate')}
-                value={fmtPercent(summary.misalignedRatePct)}
-                subtitle={t('chargeDepartureAlignment.misalignedHint', '{{n}} of {{total}} paired sessions', {
-                  n: summary.misalignedCount,
-                  total: summary.pairedCount,
-                })}
-                icon={<AlertTriangle className="h-4 w-4" />}
-                color={summary.misalignedRatePct >= 40 ? 'amber' : 'green'}
-                help={{
-                  i18nKey: 'help.chargeDepartureAlignment.misaligned',
-                  defaultValue:
-                    'Share of pairings that tripped at least one heuristic (a tight margin, a very long or already-full dwell, far more energy added than that trip used, or an inconsistent SoC reading). Each is circumstantial on its own.',
-                }}
-              />
-              <MetricCard
-                label={t('chargeDepartureAlignment.paired', 'Paired Sessions')}
-                value={summary.pairedCount}
-                subtitle={t('chargeDepartureAlignment.pairedHint', 'of {{n}} ended charges within 24h of a drive', {
-                  n: summary.totalEndedCharges,
-                })}
-                icon={<Link2 className="h-4 w-4" />}
-                color="blue"
-              />
-            </>
-          )}
-        </section>
+        <AlignmentStats
+          summary={available ? summary : undefined}
+          loading={isLoading} retained={retained} missingReason={missingReason}
+          historyContext={
+            <dl className="grid min-w-0 gap-3 @xl:grid-cols-2">
+              {sourceEntries.map(({ id, label, count, bounds, boundsLabel }) => (
+                <div key={id} className="min-w-0 space-y-1 break-words" data-alignment-bounds={id}>
+                  <dt>{label}</dt>
+                  <dd>{t('chargeDepartureAlignment.modernization.loaded', '{{count}} records loaded', {
+                    count: count ?? undefined,
+                    replace: { count: count ?? '—' },
+                  })}</dd>
+                  <dd>{boundsLabel}: {bounds != null
+                    ? t('chargeDepartureAlignment.modernization.bounds', '{{first}} → {{last}} ({{count}} valid timestamps)', {
+                      first: new Date(bounds.first).toLocaleString(i18n.language),
+                      last: new Date(bounds.last).toLocaleString(i18n.language),
+                      count: bounds.count,
+                    })
+                    : t('chargeDepartureAlignment.modernization.noBounds', 'No valid observed timestamps available.')}</dd>
+                </div>
+              ))}
+            </dl>
+          }
+        />
       </FadeIn>
 
       {/* 2 — Dwell and readiness margin over time */}
       <FadeIn delay={0.1}>
-        {!isLoading && !isError && chartData.length === 0 ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: pairs appear once a charge and a following drive both exist. */
-              icon={<Link2 className="h-8 w-8" />}
-              message={t(
-                'chargeDepartureAlignment.noData',
-                'No charge could be paired with a following drive within 24 hours yet.',
-              )}
-            />
-          </GlassPanel>
-        ) : (
           <ChartContainer
             title={t('chargeDepartureAlignment.chart', 'Dwell Time vs. Readiness Margin')}
             subtitle={t('chargeDepartureAlignment.chartHint', 'Bars are minutes parked after charging; the line is SoC left after that drive')}
@@ -198,9 +196,21 @@ export default function ChargeDepartureAlignmentPage() {
             )}
             chartKey={CHART_KEY}
             loading={isLoading}
+            error={fatalError}
+            onRetry={() => {
+              if (sessionsState.fatalError) void sessionsQuery.refetch();
+              if (drivesState.fatalError) void drivesQuery.refetch();
+            }}
             empty={chartData.length === 0}
+            emptyMessage={!available ? missingReason : t(
+              'chargeDepartureAlignment.noData',
+              'No charge could be paired with a following drive within 24 hours yet.',
+            )}
+            emptyIcon={<Link2 className="h-8 w-8" />}
+            className="w-full min-w-0"
             height={340}
             data={exportData}
+            exportData={exportData}
             dataColumns={[
               { key: 'date', label: t('chargeDepartureAlignment.col.date', 'Date') },
               { key: 'dwellMin', label: t('chargeDepartureAlignment.col.dwell', 'Dwell (min)') },
@@ -243,64 +253,12 @@ export default function ChargeDepartureAlignmentPage() {
               </ComposedChart>
             </ResponsiveContainer>
           </ChartContainer>
-        )}
       </FadeIn>
 
       {/* 3 — Pair detail */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('chargeDepartureAlignment.detail', 'Recent Pairs')}
-            <HelpTooltip
-              size="sm"
-              i18nKey="help.chargeDepartureAlignment.detail"
-              defaultValue="Pairing a charge with the next drive is a temporal adjacency, not a proof of intent \u2014 a charge could have been meant for a later trip. A small negative SoC drift between charge-end and drive-start is ordinary vampire drain, not a fault."
-              ariaLabel={t('help.chargeDepartureAlignment.iconLabel', 'More info about how pairs are formed')}
-            />
-          </PanelTitle>
-          {isLoading ? (
-            <Skeleton height={180} />
-          ) : summary.pairs.length === 0 ? (
-            <EmptyState /* no-action: pairs appear once a charge and a following drive both exist. */
-              icon={<Link2 className="h-8 w-8" />}
-              message={t('chargeDepartureAlignment.noPairs', 'No paired sessions to show yet.')}
-            />
-          ) : (
-            <ul className="grid gap-3 lg:grid-cols-2">
-              {[...summary.pairs].reverse().slice(0, 12).map((p) => (
-                <li key={`${p.chargeId}-${p.driveId}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <Text variant="bodySm" className="font-medium">
-                      {dayLabel(p.chargeEndedMs, i18n.language)}
-                    </Text>
-                    <Text variant="caption">{formatDurationSecondsAsMinutes(p.dwellS)} {t('chargeDepartureAlignment.dwellSuffix', 'dwell')}</Text>
-                  </div>
-                  <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-1">
-                    <Text variant="caption">{t('chargeDepartureAlignment.margin', 'Readiness margin')}</Text>
-                    <Text variant="bodySm">{p.readinessMarginPct != null ? fmtPercent(p.readinessMarginPct) : '\u2014'}</Text>
-                    <Text variant="caption">{t('chargeDepartureAlignment.socUsed', 'SoC that drive used')}</Text>
-                    <Text variant="bodySm">{p.socUsedPct != null ? fmtPercent(p.socUsedPct) : '\u2014'}</Text>
-                  </div>
-                  {p.flags.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {p.flags.map((flag) => (
-                        <Badge key={flag} variant="neutral" size="sm">
-                          {t(`chargeDepartureAlignment.flag.${flag}`, FLAG_DEFAULTS[flag])}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <Badge variant="success" size="sm">
-                      {t('chargeDepartureAlignment.wellMatched', 'Well matched')}
-                    </Badge>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </GlassPanel>
+        <AlignmentPairs pairs={summary.pairs} loading={isLoading} available={available} missingReason={missingReason} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

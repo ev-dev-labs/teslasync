@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Activity, Plus } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { GlassPanel, Pagination, Select, type SelectOption } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
@@ -79,7 +79,7 @@ export default function AutomationHistoryPage() {
   }, [data, page, totalPages]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('automations.historyPage.title', 'Automation history')}
       subtitle={t('automations.historyPage.subtitle', 'Review every execution and its outcome across the selected period.')}
       copyLink
@@ -146,6 +146,6 @@ export default function AutomationHistoryPage() {
         </GlassPanel>
       </FadeIn>
       <AutomationExecutionDetail id={selectedId} onClose={() => setSelectedId(null)} />
-    </PageContainer>
+    </PageLayout>
   );
 }

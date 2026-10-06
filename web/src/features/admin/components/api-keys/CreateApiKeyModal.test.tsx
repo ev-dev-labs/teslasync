@@ -151,6 +151,9 @@ describe('CreateApiKeyModal', () => {
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('New API key')).toBeInTheDocument();
     expect(within(dialog).getByLabelText('Name')).toBeInTheDocument();
+    const details = within(dialog).getByRole('group', { name: 'Key details' });
+    expect(within(details).getByLabelText('Name')).toBeInTheDocument();
+    expect(within(details).getByLabelText('Permissions')).toBeInTheDocument();
 
     const select = within(dialog).getByLabelText('Permissions') as HTMLSelectElement;
     // Default permission is the least-privileged "read".
@@ -204,6 +207,7 @@ describe('CreateApiKeyModal', () => {
 
     // Phase 2: the one-time reveal replaces the form.
     expect(await screen.findByRole('heading', { name: 'API key created' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Key details' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Generate key' })).not.toBeInTheDocument();
     expect(
       screen.getByText("Copy this key now — it won't be shown again."),

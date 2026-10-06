@@ -192,4 +192,14 @@ describe('VehicleManagementPage', () => {
       'management:no-vehicle',
     )
   })
+
+  it('retains the selected management workspace and explains a failed roster refresh', () => {
+    const vehicle = makeVehicle(2, 'Cybertruck')
+    installHooks({ vehicles: [vehicle], selected: vehicle, error: new Error('refresh failed') })
+    renderPage()
+    expect(screen.getByTestId('vehicle-management-workspace')).toHaveTextContent('management:2')
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.queryByText('Vehicle context unavailable')).not.toBeInTheDocument()
+    expect(setVehicleIdMock).not.toHaveBeenCalled()
+  })
 })

@@ -73,6 +73,7 @@ function status(overrides: Partial<OnboardingStatus> = {}): OnboardingStatus {
 let mockStatus: OnboardingStatus = status();
 let mockIsLoading = false;
 let mockIsFetching = false;
+let mockError: Error | null = null;
 
 vi.mock('@/api/hooks/useOnboarding', () => ({
   useOnboardingStatus: () => ({
@@ -80,6 +81,8 @@ vi.mock('@/api/hooks/useOnboarding', () => ({
     isLoading: mockIsLoading,
     isFetching: mockIsFetching,
     refetch: refetchSpy,
+    isError: mockError != null,
+    error: mockError,
   }),
 }));
 
@@ -117,6 +120,7 @@ describe('OnboardingPage', () => {
     navigateMock.mockClear();
     mockIsLoading = false;
     mockIsFetching = false;
+    mockError = null;
     mockStatus = status();
     try {
       window.localStorage.removeItem('teslasync:onboarding:skipped:v1');
@@ -238,5 +242,19 @@ describe('OnboardingPage', () => {
     expect(screen.getByText(/keep using TeslaSync and viewing stored history/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue to dashboard/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Skip for now/i })).toBeNull();
+  });
+
+  it('retains setup status, current-step action and every section after a background error', () => {
+    mockStatus = status({ tesla_connected: true, vehicle_count: 0 });
+    mockError = new Error('Refresh unavailable');
+    const { container } = renderPage();
+    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(screen.getByText('Vehicles synced')).toBeInTheDocument();
+    expect(screen.getByText(/What you.ll unlock/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Connect Tesla account/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /Skip for now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Check again/i })).toBeInTheDocument();
   });
 });

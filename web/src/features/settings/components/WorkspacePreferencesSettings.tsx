@@ -206,6 +206,7 @@ export function WorkspacePreferencesSettings() {
         <Button
           type="button"
           variant="ghost"
+          wrapLabel
           size="sm"
           onClick={handleReset}
           icon={<RotateCcw className="h-4 w-4" aria-hidden />}

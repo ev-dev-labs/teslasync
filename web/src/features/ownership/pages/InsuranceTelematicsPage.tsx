@@ -22,7 +22,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -77,7 +77,8 @@ export default function InsuranceTelematicsPage() {
 
   usePageTitle(t('ownership.insurance.title', 'Insurance telematics studio'));
 
-  const { data, isLoading, error } = useInsuranceRiskProfile(vehicleId, windowDays);
+  const riskQuery = useInsuranceRiskProfile(vehicleId, windowDays);
+  const { data } = riskQuery;
   const upsert = useUpsertInsurancePolicy();
   const remove = useDeleteInsurancePolicy();
   const { confirm, dialogProps } = useConfirm();
@@ -289,14 +290,13 @@ export default function InsuranceTelematicsPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.insurance.title', 'Insurance telematics studio')}
       subtitle={t(
         'ownership.insurance.subtitle',
         'Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.',
       )}
-      loading={isLoading}
-      error={error as Error | null}
+      query={riskQuery}
       contextActions={
         <div className="flex flex-wrap items-center gap-2">
           <Select
@@ -324,6 +324,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn>
         <OwnershipPanel
           title={t('ownership.insurance.summary.title', 'Underwriting position')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.summary.subtitle',
             'Exposure-normalised risk over the selected window.',
@@ -417,6 +419,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.insurance.premium.title', 'Premium simulation')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.premium.subtitle',
             'What the stored policy would cost if the telematics discount tracked the measured loss cost.',
@@ -652,6 +656,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.insurance.trend.title', 'Risk trajectory')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.trend.subtitle',
             'Rolling risk score and loss cost across the window — a rising line means underwriting exposure is growing.',
@@ -708,6 +714,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.insurance.factors.title', 'Factor decomposition')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.factors.subtitle',
             'Every weighted signal behind the score, with the baseline it was measured against.',
@@ -732,6 +740,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.insurance.levers.title', 'Ranked improvement levers')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.levers.subtitle',
             'What each behavioural change is worth, ordered by payoff per unit of effort.',
@@ -756,6 +766,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.25}>
         <OwnershipPanel
           title={t('ownership.insurance.packet.title', 'Insurer evidence packet')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.packet.subtitle',
             'A stable content hash over the exposure, factors, and window. Quote it when disputing a rating so both sides know they are looking at the same dataset.',
@@ -779,6 +791,8 @@ export default function InsuranceTelematicsPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           quality={data?.quality}
           evidence={data?.evidence}
           unsupported={[
@@ -794,6 +808,6 @@ export default function InsuranceTelematicsPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

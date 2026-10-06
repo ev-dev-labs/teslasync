@@ -132,6 +132,7 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
         timestamp: ev.created_at ?? ev.ts,
         color: derived.color,
         severity: derived.severity,
+        wrap: true,
       };
     });
   }, [events, isWide, t]);

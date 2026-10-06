@@ -9,6 +9,7 @@ const root = existsSync(path.resolve(process.cwd(), 'src/features'))
 const feature = path.resolve(root, 'src/features/vehicle-systems');
 const source = (name: string) => readFileSync(path.resolve(feature, 'components/pressure-modernization', name), 'utf8');
 const page = readFileSync(path.resolve(feature, 'pages/TirePressurePage.tsx'), 'utf8');
+const hooks = readFileSync(path.resolve(root, 'src/api/hooks/usePressurePage.ts'), 'utf8');
 
 describe('pressure shipping source preservation', () => {
   it('uses one full-width layout and one allocated-width packing observer', () => {
@@ -27,10 +28,12 @@ describe('pressure shipping source preservation', () => {
   });
 
   it('keeps exact query, workspace, privacy and persistence identities', () => {
-    expect(page).toContain("queryKey: ['tire-pressure-latest', activeVehicleId]");
-    expect(page).toContain("queryKey: ['tire-pressure-history', activeVehicleId, start, end]");
-    expect(page).toContain('/tire-pressure/latest?vehicle_id=${activeVehicleId}');
-    expect(page).toContain('/tire-pressure?vehicle_id=${activeVehicleId}&start=${start}&end=${end}');
+    expect(page).toContain('usePressurePageLatest(activeVehicleId)');
+    expect(page).toContain('usePressurePageHistory(activeVehicleId, start, end)');
+    expect(hooks).toContain("queryKey: ['tire-pressure-latest', activeVehicleId]");
+    expect(hooks).toContain("queryKey: ['tire-pressure-history', activeVehicleId, start, end]");
+    expect(hooks).toContain('/tire-pressure/latest?vehicle_id=${activeVehicleId}');
+    expect(hooks).toContain('/tire-pressure?vehicle_id=${activeVehicleId}&start=${start}&end=${end}');
     expect(page).toContain("persistKey: 'tire-pressure.range'");
     expect(page).toContain('<AITirePressureTrendReasoning vehicleId={activeVehicleId ?? undefined}');
     expect(page).not.toMatch(/<RangePicker|<VehicleSelect|<DateRangeFilter/);

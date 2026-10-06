@@ -8,6 +8,8 @@ import {
   ConfirmDialog,
   ErrorText,
   PanelTitle,
+  Heading,
+  HelperText,
   Toggle,
   Badge,
   Input,
@@ -17,6 +19,8 @@ import {
 import { ListSkeleton, EmptyState, useToast } from '@/components/feedback'
 import { VisuallyHidden } from '@/components/a11y'
 import { FadeIn } from '@/components/motion'
+import { SourceContent } from '@/components/layout'
+import { deriveDataState } from '@/api/dataState'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import {
@@ -199,7 +203,9 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const { seedDraft, onSeedConsumed } = props
   const { t } = useTranslation('settings')
   const toast = useToast()
-  const { data: rawWindows, isLoading } = useQuietHours()
+  const windowsQuery = useQuietHours()
+  const windowsState = deriveDataState(windowsQuery)
+  const { data: rawWindows, isLoading } = windowsQuery
   const save = useSaveQuietHours()
   const remove = useDeleteQuietHours()
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
@@ -379,23 +385,24 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   return (
     <FadeIn delay={0.135}>
       <GlassPanel className="p-6 space-y-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <IconBox color="purple">
               <Moon className="h-5 w-5" />
             </IconBox>
-            <div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            <div className="min-w-0">
+              <Heading level="section">
                 {t('quietHours.title', 'Quiet hours / do-not-disturb')}
-              </h2>
-              <p className="text-xs text-[var(--text-muted)]">
+              </Heading>
+              <HelperText>
                 {t('quietHours.subtitle', 'Defer non-critical notifications during sleep, meetings, or other time-of-day windows.')}
-              </p>
+              </HelperText>
             </div>
           </div>
           {!draft && (
             <Button
               variant="primary"
+              wrapLabel
               size="sm"
               icon={<Plus className="h-4 w-4" />}
               onClick={startCreate}
@@ -406,6 +413,14 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
           )}
         </div>
 
+        <SourceContent
+          state={windowsState.fatalError ? 'error' : windowsState.status === 'stale' ? 'retained' : 'ready'}
+          label={t('quietHours.title', 'Quiet hours / do-not-disturb')}
+          emptyMessage={t('quietHours.empty', 'No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.')}
+          errorMessage={t('quietHours.unavailable', 'Quiet-hours windows unavailable.')}
+          error={windowsState.fatalError}
+          errorRecovery={{ onRetry: () => void windowsQuery.refetch() }}
+        >
         {isLoading ? (
           <ListSkeleton
             rows={2}
@@ -425,7 +440,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               return (
                 <li
                   key={w.id}
-                  className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4 space-y-2"
+                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4 space-y-2"
                   data-testid={`quiet-hours-row-${w.id}`}
                 >
                   <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -443,6 +458,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                     <div className="flex items-center gap-2">
                       <Button
                         variant="secondary"
+                        wrapLabel
                         size="sm"
                         icon={<Pencil className="h-3.5 w-3.5" />}
                         onClick={() => startEdit(w)}
@@ -451,6 +467,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                       </Button>
                       <Button
                         variant="danger"
+                        wrapLabel
                         size="sm"
                         icon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => void removeWindow(w)}
@@ -492,11 +509,12 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
             })}
           </ul>
         )}
+        </SourceContent>
 
         {draft && (
           <form
             onSubmit={submit}
-            className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.03] p-4 space-y-4"
+            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4 space-y-4"
             data-testid="quiet-hours-form"
           >
             <div className="flex items-center justify-between gap-3">

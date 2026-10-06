@@ -1,13 +1,7 @@
-import { RadioTower } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, Text } from '@/components/ui';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
@@ -55,11 +49,7 @@ export function ComfortConsistencySourceAvailability({
 
   return (
     <section data-testid="comfort-consistency-source-availability">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <RadioTower className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.sources.title', 'Source and field availability')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.sources.title', 'Source and field availability')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.sources.subtitle',
@@ -114,7 +104,7 @@ export function ComfortConsistencySourceAvailability({
             />
           </Grid>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

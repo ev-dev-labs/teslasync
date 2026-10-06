@@ -1,15 +1,9 @@
-import { GitMerge, Repeat2 } from 'lucide-react';
+import { Repeat2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, MetricValue, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
@@ -47,14 +41,7 @@ export function PreconditioningJoinSupport({
 
   return (
     <section data-testid="preconditioning-join-support">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <GitMerge className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.join.title',
-            'Join-window support and overlap disclosure',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.join.title', 'Join-window support and overlap disclosure')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.join.subtitle',
@@ -92,7 +79,7 @@ export function PreconditioningJoinSupport({
             </Text>
           </AlertBanner>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

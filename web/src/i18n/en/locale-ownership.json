@@ -1089,58 +1089,110 @@
         "title": "{{count}} of {{scanned}} drives look like someone else",
         "body": "Valet, teen, thief — or just an unusual trip. Label the drive if you recognise it; the cluster learns from every label."
       }
+    },
+    "source": {
+      "empty": "No supported data is available yet.",
+      "error": "This source could not be loaded."
     }
   },
-  "annotation": {
-    "add": "Add annotation",
-    "addTitle": "Add annotation",
-    "cat": {
-      "custom": "Custom",
-      "issue": "Issue",
-      "maintenance": "Maintenance",
-      "milestone": "Milestone",
-      "trip": "Trip",
-      "upgrade": "Upgrade"
-    },
-    "category": "Category",
-    "date": "Date",
-    "descPlaceholder": "Optional description...",
-    "description": "Description",
-    "label": "Label",
-    "labelPlaceholder": "e.g., battery replaced",
-    "listTitle": "Annotations",
-    "removeNamed": "Remove annotation: {{label}}"
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
   },
   "chart": {
-    "a11y": {
-      "fallbackTableLabel": "{{title}} — data table",
-      "summary": "Chart: {{title}}"
-    },
     "col": {
       "date": "Date",
       "value": "Value"
+    }
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
     },
-    "export": {
-      "copy": "Copy image to clipboard",
-      "copyFailed": "Failed to copy chart image",
-      "copyFallback": "Clipboard not available — image downloaded instead",
-      "copySuccess": "Chart image copied to clipboard",
-      "csv": "Download data as CSV",
-      "disabledTooltip": "Chart not ready to export",
-      "failed": "Could not prepare the {{format}} export.",
-      "menuLabel": "Export chart",
-      "png": "Save as PNG",
-      "preparing": "Preparing chart export…",
-      "svg": "Save as SVG"
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
     },
-    "loading": "Loading chart…",
-    "noData": "No data available",
-    "noDataDescription": "No chartable observations are available for the current selection yet."
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
   },
   "impersonation": {
     "toast": {
       "ended": "Impersonation ended",
       "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "unlocked": "✓ Unlocked"
+  },
+  "live": {
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
     }
   },
   "rbac": {
@@ -1155,6 +1207,21 @@
       "noData": "No elevation data available",
       "title": "Elevation profile"
     }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
   },
   "toast": {
     "admin": {
@@ -1351,5 +1418,12 @@
         }
       }
     }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

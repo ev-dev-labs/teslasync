@@ -1,12 +1,10 @@
-import { Flag, Gauge } from 'lucide-react';
+import { Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ProgressRing } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import {
-  GlassPanel,
   HelpTooltip,
-  PanelTitle,
   Text,
 } from '@/components/ui';
 
@@ -66,11 +64,8 @@ export function MilestoneProgress({
       )}
       data-testid="milestone-progress"
     >
-      <GlassPanel className="p-4 sm:p-6">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Flag className="h-4 w-4 text-amber-300" aria-hidden="true" />
-          {t('milestones.progress.title', 'Progress to the next round number')}
-          <HelpTooltip
+      <LayoutCard title={t('milestones.progress.title', 'Progress to the next round number')}
+        actions={<HelpTooltip
             size="sm"
             i18nKey="help.milestones.body"
             defaultValue="Calibration is the odometer immediately before the chronologically first row in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit."
@@ -78,8 +73,8 @@ export function MilestoneProgress({
               'help.milestones.iconLabel',
               'More info about milestone math',
             )}
-          />
-        </PanelTitle>
+          />}
+      >
         <MilestoneSectionBody state={state}>
           <div className="grid items-center gap-6 lg:grid-cols-[auto_1fr]">
             <ProgressRing
@@ -149,7 +144,7 @@ export function MilestoneProgress({
             <Text variant="bodySm">{evidence}</Text>
           </div>
         </MilestoneSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

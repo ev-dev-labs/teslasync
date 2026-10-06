@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -119,7 +119,7 @@ export default function FSDInsightsPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('fsd.title', 'FSD Insights')}
       subtitle={t(
         'fsd.subtitle',
@@ -171,6 +171,6 @@ export default function FSDInsightsPage() {
       <FadeIn delay={0.25}>
         <FsdConfidencePanel insights={insightsState.data} state={sectionState} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -11,7 +11,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -355,14 +355,13 @@ export default function JurisdictionCompliancePage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.compliance.title', 'Jurisdictional compliance & road-usage charge')}
       subtitle={t(
         'ownership.compliance.subtitle',
         'Apportion every metre you drove to the jurisdiction it happened in, price it against that jurisdiction’s road-usage rate, and seal the period into an immutable filing record.',
       )}
-      loading={reportQuery.isLoading}
-      error={reportQuery.error as Error | null}
+      query={[reportQuery, ratesQuery, filingsQuery]}
       contextActions={
         <div className="flex items-center gap-2">
           <Select
@@ -388,7 +387,8 @@ export default function JurisdictionCompliancePage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.compliance.summary.title', 'Period liability')}>
+        <OwnershipPanel title={t('ownership.compliance.summary.title', 'Period liability')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <StatGrid
             stats={[
               {
@@ -444,6 +444,8 @@ export default function JurisdictionCompliancePage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.compliance.apportion.title', 'Apportionment by jurisdiction')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.compliance.apportion.subtitle',
             'Confidence is 95% when both endpoints fall in the same box, 70% when only one does, and 60% for a cross-border split.',
@@ -467,6 +469,8 @@ export default function JurisdictionCompliancePage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.compliance.rates.title', 'Jurisdiction rate table')}
+          source={ratesQuery}
+          editing={rateOpen}
           description={t(
             'ownership.compliance.rates.subtitle',
             'When boxes overlap, the smallest one that contains the point wins — so a city can sit inside a state.',
@@ -643,6 +647,9 @@ export default function JurisdictionCompliancePage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.compliance.filings.title', 'Sealed filings')}
+          source={filingsQuery}
+          sourceEnabled={vehicleId != null}
+          editing={filingOpen}
           description={t(
             'ownership.compliance.filings.subtitle',
             'Sealing a period snapshots the distance, energy and charge behind a digest, so a later dispute can be settled against the exact figures you filed.',
@@ -711,7 +718,8 @@ export default function JurisdictionCompliancePage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <OwnershipPanel title={t('ownership.compliance.digest.title', 'Period digest')}>
+        <OwnershipPanel title={t('ownership.compliance.digest.title', 'Period digest')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
           <Text as="p" variant="caption">
             {t(
               'ownership.compliance.digest.body',
@@ -724,6 +732,8 @@ export default function JurisdictionCompliancePage() {
 
       <FadeIn delay={0.25}>
         <EvidencePanel
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -739,6 +749,6 @@ export default function JurisdictionCompliancePage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

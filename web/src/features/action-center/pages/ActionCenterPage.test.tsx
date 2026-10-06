@@ -171,6 +171,28 @@ beforeEach(() => {
 });
 
 describe('ActionCenterPage', () => {
+  it('preserves recommendation actions and provider evidence on a failed background refresh', () => {
+    useActionCenterMock.mockReturnValue(queryResult({
+      isError: true, error: new Error('Refresh offline'),
+    }));
+    const { container } = renderPage();
+    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
+    expect(screen.getByText('Review active alert')).toBeInTheDocument();
+    expect(screen.getByText(/^available$/i)).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /acknowledge/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('does not claim zero recommendation counts before summary evidence exists', () => {
+    useActionCenterMock.mockReturnValue(queryResult({ data: undefined }));
+    renderPage();
+    const summary = screen.getByLabelText('Action center summary');
+    expect(within(summary).getAllByText('—')).toHaveLength(6);
+    expect(within(summary).queryByText('0')).not.toBeInTheDocument();
+  });
+
   it('renders prioritized evidence, confidence, impact transparency, and provider status', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Action center' })).toBeInTheDocument();

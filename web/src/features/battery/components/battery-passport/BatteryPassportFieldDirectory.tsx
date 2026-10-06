@@ -5,11 +5,10 @@ import { useTranslation } from 'react-i18next';
 import {
   Badge,
   DataTable,
-  GlassPanel,
-  PanelTitle,
   Text,
   type Column,
 } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
@@ -419,23 +418,13 @@ export function BatteryPassportFieldDirectory({
 
   return (
     <section data-testid="battery-passport-field-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.fields.title',
             'Certificate field directory',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.fields.subtitle',
             'Every top-level response field plus nested thermal and trend fields, with source, meaning, and hash relationship.',
-          )}
-        </Text>
+          )} actions={<ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <DataTable
             tableId="battery:passport-fields"
@@ -450,7 +439,7 @@ export function BatteryPassportFieldDirectory({
             )}
           />
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -46,7 +46,7 @@ export default function NotificationHealthPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('notificationHealth.subtitle', 'Understand alert noise, delivery reliability, and delivery speed in one place.')}
     >
@@ -89,6 +89,6 @@ export default function NotificationHealthPage() {
           <NotificationLatencyPanel />
         </div>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

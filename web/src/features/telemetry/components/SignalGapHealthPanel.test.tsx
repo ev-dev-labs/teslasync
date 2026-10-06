@@ -101,6 +101,12 @@ vi.mock('@/components/feedback', () => ({
       </button>
     </div>
   ),
+  StaleRefreshWarning: ({ state }: { state: { refreshError?: Error | null; retry?: (() => void) | null } }) => state.refreshError ? (
+    <div data-testid="retained-notice">
+      {state.refreshError.message}
+      <button type="button" onClick={() => state.retry?.()}>Recover refresh</button>
+    </div>
+  ) : null,
 }));
  
 
@@ -109,6 +115,7 @@ import type { SignalGapAnalysis } from '../hooks/useSignalGapAnalysis';
 import { GAP_BUCKET_COLORS, type GapBuckets } from '../signalGapUtils';
 
 type QueryOverrides = Partial<{
+  data: unknown;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -158,6 +165,15 @@ function expectNoBody() {
 // ── Header (always present) ───────────────────────────────────────────────────
 
 describe('SignalGapHealthPanel — header', () => {
+  it('keeps all bucket segments through a retained refresh error and exposes recovery', () => {
+    const refetch = vi.fn();
+    renderPanel({ query: { data: {}, isError: true, error: new Error('refresh failed'), refetch } });
+    expect(screen.queryByTestId('query-error')).toBeNull();
+    expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-count', '4');
+    expect(screen.getByRole('img', { name: /across 10 signals/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Recover refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
   it('always renders the distribution title in a level-3 heading with a decorative glyph', () => {
     const { container } = renderPanel({ hasVehicle: false });
 

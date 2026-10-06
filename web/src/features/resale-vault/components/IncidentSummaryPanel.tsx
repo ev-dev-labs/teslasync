@@ -6,8 +6,8 @@
  * identity-bearing free text.
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge } from '@/components/ui';
-import { PanelTitle } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import type { SecurityIncidentsEvidence } from '../lib/types';
@@ -20,8 +20,7 @@ export function IncidentSummaryPanel({ incidents }: IncidentSummaryPanelProps) {
   const { t } = useTranslation();
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <PanelTitle>{t('resaleVault.incidents.title', 'Security incidents')}</PanelTitle>
+    <LayoutCard title={t('resaleVault.incidents.title', 'Security incidents')}>
 
       {!incidents ? (
         // no-action: mirrors this vehicle's Guard security-event history as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
@@ -47,6 +46,6 @@ export function IncidentSummaryPanel({ incidents }: IncidentSummaryPanelProps) {
           )}
         </>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

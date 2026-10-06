@@ -33,6 +33,7 @@ export function DetailSourceOutline({ loading = false }: DetailSourceOutlineProp
         {loading ? (
           id === 'metrics' ? <StatGridSkeleton cards={8} /> : <ChartBlockSkeleton height={220} />
         ) : (
+          // no-action: the page's source error already provides retry and /charging navigation; repeating it in all 15 dependent shells adds no recovery.
           <EmptyState message={t('charging.detail.sessionRequired', 'Session details appear when the charge session is available.')} />
         )}
       </LayoutCard>

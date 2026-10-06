@@ -27,11 +27,11 @@ export function BatteryStatistics({ query }: BatteryStatisticsProps) {
         onRetry={() => { void query.refetch(); }}
         skeleton={<Skeleton className="h-40 rounded-xl" />}
         empty={
-          // Battery estimates populate automatically after sufficient telemetry.
           <EmptyState
             icon={<Battery className="h-8 w-8" aria-hidden="true" />}
             message={t('statistics.noBattery', 'No battery health data available')}
             description={t('statistics.noBatteryDescription', 'Battery health estimates appear after enough charging and range telemetry has accumulated.')}
+            actionTo={{ label: t('routes.batteryHealth', 'Battery health'), to: '/battery' }}
             className="py-8"
           />
         }

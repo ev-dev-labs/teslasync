@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
   Music, Disc3, Radio, Bluetooth, Podcast,
-  Headphones, Volume2, ListMusic, BarChart3, AlertCircle,
+  Headphones, Volume2, BarChart3, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 
-import { CardGrid, PageLayout } from '@/components/layout/layout-reference';
+import { CardGrid, PageLayout, LayoutCard } from '@/components/layout';
 import {
-  GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column,
+  Badge, DataTable, Text, Caption, type Column,
 } from '@/components/ui';
 
 import { TimeStamp } from '@/components/data-display';
@@ -31,8 +31,10 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
 import type { MediaSnapshot } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState } from '@/api/dataState';
+import { VehicleSourceContent } from '../components/VehicleSourceContent';
 import {
-  MediaSlot, MediaStats, finiteReading, playbackProgress, sourcePresentation,
+  MediaSlot, MediaStats, finiteReading, playbackProgress,
 } from '../components/media-player-modernization';
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -118,9 +120,21 @@ export default function MediaPlayerPage() {
 
   const latest = mediaQuery.data ?? null;
   const history = historyQuery.data ?? [];
-  const anyError = mediaQuery.error ?? historyQuery.error ?? null;
-  const mediaState = sourcePresentation(mediaQuery.data, mediaQuery.isLoading, mediaQuery.error);
-  const historyState = sourcePresentation(historyQuery.data, historyQuery.isLoading, historyQuery.error);
+  const mediaSource = deriveDataState({ ...mediaQuery, data: mediaQuery.data ?? undefined });
+  const historySource = deriveDataState(historyQuery, { provenance: 'historical' });
+  const anyError = mediaSource.fatalError ?? historySource.fatalError;
+  const mediaState = {
+    retained: mediaSource.refreshError != null || (mediaSource.hasData && mediaSource.isRefreshBlocked),
+    loading: mediaQuery.isLoading && !mediaSource.hasData,
+    fatal: mediaSource.fatalError != null,
+    available: mediaSource.hasData,
+  };
+  const historyState = {
+    retained: historySource.refreshError != null || (historySource.hasData && historySource.isRefreshBlocked),
+    loading: historyQuery.isLoading && !historySource.hasData,
+    fatal: historySource.fatalError != null,
+    available: historySource.hasData,
+  };
 
   /* ── Filtered history (client-side range guard) ───────────── */
 
@@ -317,17 +331,13 @@ export default function MediaPlayerPage() {
 
       {/* ── Row 1 — Now Playing hero + Volume gauge ──────────── */}
       <FadeIn>
+        <section aria-label={t('media.nowPlayingSection', 'Now playing')}>
         <CardGrid label={t('media.nowPlayingSection', 'Now playing')} items={[
           { id: 'media-now-playing', size: 'half', content: <MediaSlot>
           {/* Now Playing — retained metadata in the shared packed layout */}
-          <GlassPanel
-            className="h-full min-w-0 p-4 sm:p-5"
-          >
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Music className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-              {t('media.nowPlaying', 'Now playing')}
-            </PanelTitle>
-
+          <LayoutCard title={t('media.nowPlaying', 'Now playing')}>
+            <VehicleSourceContent source={mediaSource} enabled={hasVehicle}
+              label={t('media.nowPlaying', 'Now playing')}>
             {!hasVehicle ? (
               noVehicleState(
                 <Music className="h-8 w-8" />,
@@ -349,7 +359,8 @@ export default function MediaPlayerPage() {
                 resourceName={t('media.resource', 'Media')}
               />
             ) : !latest ? (
-              <EmptyState message={t('media.modernization.noSnapshot', 'No media snapshot available')} />
+              <EmptyState message={t('media.modernization.noSnapshot', 'No media snapshot available')}
+                action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void mediaQuery.refetch(); } }} />
             ) : (
               <div className="flex items-start gap-4 sm:gap-6">
                 {/* Album-art placeholder */}
@@ -420,24 +431,21 @@ export default function MediaPlayerPage() {
                 </div>
               </div>
             )}
-            {hasVehicle && mediaState.retained && (
-              <QueryError error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />
-            )}
-          </GlassPanel>
+            </VehicleSourceContent>
+          </LayoutCard>
           </MediaSlot> },
           { id: 'media-volume', size: 'half', content: <MediaSlot>
           {/* Volume gauge */}
-          <GlassPanel className="flex flex-col p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Volume2 className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-              {t('media.volume', 'Volume')}
-            </PanelTitle>
+          <LayoutCard title={t('media.volume', 'Volume')}>
+            <VehicleSourceContent source={mediaSource} enabled={hasVehicle}
+              label={t('media.volume', 'Volume')}>
             {!hasVehicle ? noVehicleState(
               <Volume2 className="h-8 w-8" />,
               t('media.selectVehicle', 'Select a vehicle to see what’s playing'),
             ) : mediaState.loading ? <Skeleton height={128} />
               : mediaState.fatal ? <QueryError error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />
-              : !latest ? <EmptyState message={t('media.modernization.noSnapshot', 'No media snapshot available')} />
+              : !latest ? <EmptyState message={t('media.modernization.noSnapshot', 'No media snapshot available')}
+                action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void mediaQuery.refetch(); } }} />
               : <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2">
               <LinearGauge
                 value={latest?.audio_volume}
@@ -460,22 +468,24 @@ export default function MediaPlayerPage() {
                 <Caption>{t('media.modernization.fallbackScale', 'No positive maximum reported; gauge uses the existing fallback scale of 11.')}</Caption>
               )}
             </div>}
-            {hasVehicle && mediaState.retained && (
-              <QueryError error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />
-            )}
-          </GlassPanel>
+            </VehicleSourceContent>
+          </LayoutCard>
           </MediaSlot> },
         ]} />
+        </section>
       </FadeIn>
 
       {/* ── Row 2 — KPI band ─────────────────────────────────── */}
       <FadeIn delay={0.05}>
+        <section aria-label={t('media.statsSection', 'Listening stats')}>
         <MediaStats
+          historySource={historySource} mediaSource={mediaSource}
           filtered={filtered} history={historyQuery.data} latest={latest}
           hasVehicle={hasVehicle} historyLoading={historyQuery.isLoading}
           mediaLoading={mediaQuery.isLoading} historyError={historyQuery.error}
           mediaError={mediaQuery.error} start={start} end={end}
         />
+        </section>
       </FadeIn>
 
       {/* ── Row 3 — Charts bento ─────────────────────────────── */}
@@ -483,11 +493,10 @@ export default function MediaPlayerPage() {
         <CardGrid label={t('media.chartsSection', 'Media charts')} items={[
           { id: 'media-volume-history', size: 'half', content: <MediaSlot>
           {/* Volume over time — all finite source samples retained */}
-          <GlassPanel className="h-full min-w-0 p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Volume2 className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-              {t('media.volumeOverTime', 'Volume over time')}
-            </PanelTitle>
+          <section role="region" aria-label={t('media.volumeOverTime', 'Volume over time')}>
+          <LayoutCard title={t('media.volumeOverTime', 'Volume over time')}>
+            <VehicleSourceContent source={historySource} enabled={hasVehicle}
+              label={t('media.volumeOverTime', 'Volume over time')}>
             {!hasVehicle ? (
               noVehicleState(
                 <BarChart3 className="h-8 w-8" />,
@@ -536,18 +545,15 @@ export default function MediaPlayerPage() {
                 </EmbeddedChart>
               </div>
             )}
-            {hasVehicle && historyState.retained && (
-              <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
-            )}
-          </GlassPanel>
+            </VehicleSourceContent>
+          </LayoutCard>
+          </section>
           </MediaSlot> },
           { id: 'media-source-distribution', size: 'half', content: <MediaSlot>
           {/* Source distribution */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Disc3 className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-              {t('media.sourceDistribution', 'Source distribution')}
-            </PanelTitle>
+          <LayoutCard title={t('media.sourceDistribution', 'Source distribution')}>
+            <VehicleSourceContent source={historySource} enabled={hasVehicle}
+              label={t('media.sourceDistribution', 'Source distribution')}>
             {!hasVehicle ? (
               noVehicleState(
                 <Disc3 className="h-8 w-8" />,
@@ -610,24 +616,20 @@ export default function MediaPlayerPage() {
                 </ul>
               </>
             )}
-            {hasVehicle && historyState.retained && (
-              <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
-            )}
-          </GlassPanel>
+            </VehicleSourceContent>
+          </LayoutCard>
           </MediaSlot> },
         ]} />
       </FadeIn>
 
       {/* ── Row 4 — Playback History (full-width detail band) ── */}
       <FadeIn delay={0.15}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <ListMusic className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-            {t('media.playbackHistory', 'Playback history')}
-            <Badge variant="neutral" size="sm" className="ml-auto">
+        <LayoutCard title={t('media.playbackHistory', 'Playback history')}
+          actions={<Badge variant="neutral" size="sm">
               {hasVehicle && historyState.available ? fmtInt(filtered.length) : '—'} {t('media.records', 'records')}
-            </Badge>
-          </PanelTitle>
+            </Badge>}>
+          <VehicleSourceContent source={historySource} enabled={hasVehicle}
+            label={t('media.playbackHistory', 'Playback history')}>
           {!hasVehicle ? (
             noVehicleState(
               <Music className="h-8 w-8" />,
@@ -675,10 +677,8 @@ export default function MediaPlayerPage() {
               pagination
             />
           )}
-          {hasVehicle && historyState.retained && (
-            <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
-          )}
-        </GlassPanel>
+          </VehicleSourceContent>
+        </LayoutCard>
       </FadeIn>
     </PageLayout>
   );

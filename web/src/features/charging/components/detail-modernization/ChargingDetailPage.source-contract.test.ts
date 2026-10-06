@@ -52,6 +52,10 @@ describe('charging detail source preservation (not mounted/runtime evidence)', (
     expect(page).toContain('const A11Y_TABLE_ROW_CAP = 2000');
     expect(page).toContain('telemetryCount > A11Y_TABLE_ROW_CAP');
     expect(page.match(/data=\{isLargeDataset \? undefined : /g)).toHaveLength(4);
+    for (const rows of ['chargeCurve', 'timeSeriesData', 'tempData', 'voltCurrentData'])
+      expect(page).toContain(`exportData={${rows}}`);
+    expect(page.match(/^\s+exportable$/gm)).toHaveLength(4);
+    expect(page.match(/^\s+fullscreen$/gm)).toHaveLength(4);
     expect(page.match(/\{\.\.\.seriesPerfProps\}/g)).toHaveLength(9);
     expect(page).toContain('return synthesizeCurve(session)');
   });

@@ -6,7 +6,8 @@ import {
   useScienceTires,
   useScienceWeather,
 } from '@/api/hooks/useScience';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useDataState } from '@/hooks/useDataState';
 
 import { asList, useT } from './helpers';
@@ -81,13 +82,11 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
   ];
 
   return (
-    <GlassPanel padding="auto" className="space-y-4" data-testid="science-overview">
-      <div className="space-y-1">
-        <PanelTitle>{t('science.overview.title', 'Evidence at a glance')}</PanelTitle>
-        <Text as="p" size="sm" color="secondary">
-          {t('science.overview.subtitle', 'What this vehicle actually contributed in the selected window. Counts are observations, not a health grade.')}
-        </Text>
-      </div>
+    <section data-testid="science-overview" className="min-w-0">
+      <LayoutCard
+        title={t('science.overview.title', 'Evidence at a glance')}
+        description={t('science.overview.subtitle', 'What this vehicle actually contributed in the selected window. Counts are observations, not a health grade.')}
+      >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => {
           const unavailable = card.state.fatalError != null;
@@ -120,6 +119,7 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
           );
         })}
       </div>
-    </GlassPanel>
+      </LayoutCard>
+    </section>
   );
 }

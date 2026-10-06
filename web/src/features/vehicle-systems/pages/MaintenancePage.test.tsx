@@ -368,11 +368,11 @@ describe('MaintenancePage', () => {
     // KPI band — the raw-status reduce, scoped to its a11y landmark so the
     // labels don't collide with the status badges elsewhere on the page.
     const kpis = within(screen.getByRole('region', { name: 'Maintenance summary' }));
-    expect(kpis.getByText('Total items')).toBeInTheDocument();
-    expect(kpis.getByText('Overdue')).toBeInTheDocument();
-    expect(kpis.getByText('Due soon')).toBeInTheDocument();
-    expect(kpis.getByText('Healthy')).toBeInTheDocument();
-    expect(kpis.getByText('Completed')).toBeInTheDocument();
+    expect(kpis.getByText('Total items', { selector: '[data-stat-label]' })).toBeInTheDocument();
+    expect(kpis.getByText('Overdue', { selector: '[data-stat-label]' })).toBeInTheDocument();
+    expect(kpis.getByText('Due soon', { selector: '[data-stat-label]' })).toBeInTheDocument();
+    expect(kpis.getByText('Healthy', { selector: '[data-stat-label]' })).toBeInTheDocument();
+    expect(kpis.getByText('Completed', { selector: '[data-stat-label]' })).toBeInTheDocument();
     expect(kpis.getByText('4')).toBeInTheDocument(); // total items
     expect(kpis.getByText('3')).toBeInTheDocument(); // distinct categories
 
@@ -489,7 +489,7 @@ describe('MaintenancePage', () => {
     expect(screen.getByText('No maintenance items to categorize yet.')).toBeInTheDocument();
     expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
     // Shell + AI slot still mount.
-    expect(screen.getByText('Total items')).toBeInTheDocument();
+    expect(screen.getByText('Total items', { selector: '[data-stat-label]' })).toBeInTheDocument();
     expect(screen.getByTestId('ai-predictive-maintenance')).toBeInTheDocument();
   });
 
@@ -569,8 +569,8 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    expect(screen.getByText('Total spent')).toBeInTheDocument();
-    expect(screen.getByText('Avg / service')).toBeInTheDocument();
+    expect(screen.getByText('Total spent', { selector: '[data-stat-label]' })).toBeInTheDocument();
+    expect(screen.getByText('Avg / service', { selector: '[data-stat-label]' })).toBeInTheDocument();
     // Single record → the <2-dates branch: every figure collapses to $500.
     expect(screen.getAllByText('$500.00').length).toBeGreaterThanOrEqual(2);
   });

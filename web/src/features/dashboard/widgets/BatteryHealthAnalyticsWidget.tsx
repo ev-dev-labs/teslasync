@@ -86,6 +86,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
       <div className="flex min-w-0 flex-col gap-3">
         {healthScore != null ? (
           <LinearGauge
+            preserveReadingAndScale
             value={healthScore}
             max={100}
             label={t('widget.batteryHealthAnalytics.score', 'health')}

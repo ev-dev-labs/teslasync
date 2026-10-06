@@ -7,8 +7,8 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge, Button } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { Badge, Button, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
 import { KeyRound, ShieldAlert } from 'lucide-react';
 import { LOCAL_ATTESTATION_NOTE } from '../lib/constants';
@@ -25,11 +25,8 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
   const { capability, keys, activeKey, isLoading, isMutating, error, generateKey, rotateKey, revokeKey } = vault;
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.keys.title', 'Signature & key management')}</PanelTitle>
-        <KeyRound className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
-      </div>
+    <LayoutCard title={t('resaleVault.keys.title', 'Signature & key management')}
+      actions={<KeyRound className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
 
       {capability && !capability.supported && (
         <InlineCallout variant="warning" icon={<ShieldAlert />}>
@@ -44,10 +41,10 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => void generateKey()} loading={isMutating} disabled={isLoading}>
+        <Button wrapLabel size="sm" onClick={() => void generateKey()} loading={isMutating} disabled={isLoading}>
           {t('resaleVault.keys.generate', 'Generate new key')}
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => void rotateKey()} loading={isMutating} disabled={isLoading || !activeKey}>
+        <Button wrapLabel size="sm" variant="secondary" onClick={() => void rotateKey()} loading={isMutating} disabled={isLoading || !activeKey}>
           {t('resaleVault.keys.rotate', 'Rotate active key')}
         </Button>
       </div>
@@ -92,8 +89,9 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
               {!key.revoked_at && (
                 <div className="mt-2">
                   {revokeTarget === key.key_id ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
+                        wrapLabel
                         size="sm"
                         variant="danger"
                         onClick={() => {
@@ -122,6 +120,6 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
       <InlineCallout variant="info" icon={<ShieldAlert />}>
         {LOCAL_ATTESTATION_NOTE}
       </InlineCallout>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

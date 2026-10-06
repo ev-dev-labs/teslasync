@@ -1,23 +1,18 @@
-import { Clock3 } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from '@/components/charts';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import { chartTokens } from '@/lib/tokens';
@@ -52,11 +47,7 @@ export function ComfortConsistencyHourlyProfile({
 
   return (
     <section data-testid="comfort-consistency-hourly-profile">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Clock3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.hourly.title', 'Hourly comfort consistency')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.hourly.title', 'Hourly comfort consistency')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.hourly.subtitle',
@@ -69,7 +60,7 @@ export function ComfortConsistencyHourlyProfile({
           requirement="intervals"
           skeletonHeight={320}
         >
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             title={t('comfortConsistency.hourly.plotTitle', 'Within-band duration by local hour')}
             ariaLabel={t(
               'comfortConsistency.hourly.aria',
@@ -110,7 +101,7 @@ export function ComfortConsistencyHourlyProfile({
                 />
               </BarChart>
             </ResponsiveContainer>
-          </ChartContainer>
+          </EmbeddedChart>
           <Text as="h4" variant="label" className="mb-3 mt-4">
             {t('comfortConsistency.hourly.supportGrid', 'Per-hour observed support')}
           </Text>
@@ -135,7 +126,7 @@ export function ComfortConsistencyHourlyProfile({
             ))}
           </div>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

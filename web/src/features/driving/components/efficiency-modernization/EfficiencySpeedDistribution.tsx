@@ -14,10 +14,11 @@ export function EfficiencySpeedDistribution({ model, source, units }: DrivesPres
   return <EfficiencyChart source={source}
     title={t('efficiency.speedDist', 'Efficiency by speed range')}
     ariaLabel={t('efficiency.speedDist.aria', 'Efficiency by speed-range bar chart')}
-    data={speedDist.map(b => ({ range: b.range, avgEff: b.avgEff }))}
+    data={speedDist}
     dataColumns={[
       { key: 'range', label: t('efficiency.col.range', 'Speed range') },
-      { key: 'avgEff', label: `${t('efficiency.avg', 'Avg')} ${efficiencyUnit}` },
+      { key: 'avgEff', label: t('efficiency.chartColumns.averageEfficiency', 'Average drive energy consumption ({{unit}})', { unit: efficiencyUnit }), kind: 'measurement' },
+      { key: 'count', label: t('efficiency.chartColumns.driveCount', 'Contributing drives'), kind: 'count' },
     ]}
     empty={speedDist.length === 0}>
     <ResponsiveContainer width="100%" height="100%">

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -73,7 +73,7 @@ export default function ArrivalReliabilityPage() {
   const timeZone = analysis.timeZone;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('arrivalReliability.title', 'Arrival Reliability')}
       subtitle={t(
         'arrivalReliability.subtitle',
@@ -163,6 +163,6 @@ export default function ArrivalReliabilityPage() {
           timeZone={timeZone}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

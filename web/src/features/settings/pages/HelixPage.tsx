@@ -28,7 +28,7 @@
  * Loading is owned by AISettings, not this page
  * ─────────────────────────────────────────────
  * This page does NOT gate its body behind a page-level
- * `<PageContainer loading>` spinner. `AISettings` reads `useSettings()`
+ * `<PageLayout loading>` spinner. `AISettings` reads `useSettings()`
  * itself and always renders its stable opt-in surface (KPI strip + mode
  * picker) with a safe `off` default while the settings query is still in
  * flight — that IS the ADR-015 §I7 "always rendered" contract. Wrapping
@@ -39,7 +39,7 @@
  *
  * Layout (modern-ui full-width bento)
  * ───────────────────────────────────
- *   <PageContainer title="Helix">       page-level h1 + subtitle + breadcrumbs
+ *   <PageLayout title="Helix">          page-level h1 + subtitle + breadcrumbs
  *     <AISettings />                     full-width responsive bento controller:
  *       ├── HelixStatusStrip             KPI band (mode / features / provider / spend)
  *       ├── mode picker (RadioCard ×3)   hero control — off / local / cloud
@@ -57,7 +57,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { AISettings } from '../components'
 
@@ -69,7 +69,7 @@ export default function HelixPage() {
   // and must stay mounted so the opt-in surface is always rendered
   // (ADR-015 §I7). See the module docstring for the full rationale.
   return (
-    <PageContainer
+    <PageLayout
       title={t('helix.page.title', 'Helix')}
       subtitle={t(
         'helix.page.subtitle',
@@ -81,6 +81,6 @@ export default function HelixPage() {
       }}
     >
       <AISettings />
-    </PageContainer>
+    </PageLayout>
   )
 }

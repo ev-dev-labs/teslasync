@@ -182,21 +182,23 @@ let mutateAsyncSpy: ReturnType<typeof vi.fn>;
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <ExportsPage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const result = render(tree());
+  return { ...result, rerenderPage: () => result.rerender(tree()) };
 }
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Export summary' });
 
-/** Read the MetricCard value <p> that immediately follows its label span. */
+/** Read the canonical stat's value without relying on typography siblings. */
 function kpiValue(label: string): string {
   const span = within(kpiRegion()).getByText(label);
-  return span.closest('p')?.nextElementSibling?.textContent ?? '';
+  return span.closest('[data-stat]')?.querySelector('[data-stat-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -379,5 +381,45 @@ describe('ExportsPage — refresh', () => {
     expect(refreshers.length).toBeGreaterThanOrEqual(1);
     fireEvent.click(refreshers[refreshers.length - 1]);
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains all jobs, summary, download links and selected members when a refresh fails', () => {
+    const query = makeQuery({ data: JOBS });
+    mockJobs.mockReturnValue(query);
+    const view = renderPage();
+    const table = screen.getByRole('table');
+    fireEvent.click(within(table).getAllByRole('checkbox', { name: /export,/ })[0]);
+    query.error = new Error('background failure');
+    query.isError = true;
+    view.rerenderPage();
+    expect(kpiValue('Total exports')).toBe('6');
+    expect(within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(6);
+    expect(screen.getByRole('link', { name: 'Download export job-ready-1' })).toBeInTheDocument();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(screen.queryByText('Server error')).not.toBeInTheDocument();
+    expect(screen.getByText('Storage used')).toBeInTheDocument();
+  });
+
+  it('does not substitute zero totals when the initial source failed', () => {
+    mockJobs.mockReturnValue(makeQuery({ data: undefined, error: new Error('offline'), isError: true }));
+    renderPage();
+    const region = kpiRegion();
+    const total = within(region).getByText('Total exports').closest('[data-stat]');
+    expect(total).toHaveAttribute('data-state', 'missing');
+    expect(kpiValue('Total exports')).toBe('—');
+    expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
+  });
+
+  it.each([
+    { fetchStatus: 'paused', message: 'The export-job query is paused; no empty result is inferred.' },
+    { fetchStatus: 'idle', message: 'Export-job availability has not resolved yet.' },
+  ])('does not infer empty exports or zero totals from an initial $fetchStatus source', ({ fetchStatus, message }) => {
+    mockJobs.mockReturnValue(makeQuery({ fetchStatus }));
+    renderPage();
+    expect(screen.getAllByText(message)).toHaveLength(2);
+    expect(kpiValue('Total exports')).toBe('—');
+    expect(screen.queryByText('No exports yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
+    expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
   });
 });

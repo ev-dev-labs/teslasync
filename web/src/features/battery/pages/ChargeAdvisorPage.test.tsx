@@ -88,6 +88,10 @@ vi.mock('@/hooks/useVehicleLive', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
+    unitPrefs: {
+      distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+      energy: 'kWh', duration: 'h', power: 'kW', precision: 1, locale: 'en-US',
+    },
     formatEnergy: (value: number | null | undefined) =>
       value == null || !Number.isFinite(value) ? '—' : `${(value / 1_000).toFixed(1)} kWh`,
   }),

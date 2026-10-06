@@ -1,8 +1,8 @@
-import { ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Table, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { formatDateTime } from '@/lib/dateFormat';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
@@ -20,11 +20,7 @@ export function ShareCardCoverageDisclosure({
       data-testid="share-card-coverage-disclosure"
       aria-label={t('shareCard.coverage.aria', 'Share card coverage and cap disclosure')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <ShieldAlert className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.coverage.title', 'Coverage and cap disclosure')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.coverage.title', 'Coverage and cap disclosure')}>
         <ShareCardSectionBody state={state}>
           <AlertBanner variant={analysis.historyCapReached ? 'warning' : 'info'}>
             {analysis.historyCapReached
@@ -71,7 +67,7 @@ export function ShareCardCoverageDisclosure({
             </tbody>
           </Table>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

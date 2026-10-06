@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -44,6 +46,7 @@ export default function ColdStartPage() {
     limit: DRIVE_WINDOW_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
+  const sourceState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(() => summarizeColdStarts(drives), [drives]);
   const penaltyCost =
     summary.totalPenaltyWh != null && costPerKwh != null && costPerKwh > 0
@@ -61,15 +64,15 @@ export default function ColdStartPage() {
   }
 
   const sectionState: ColdStartSectionState = {
-    isLoading: drivesQuery.isLoading,
-    error: drivesQuery.isError ? drivesQuery.error : null,
+    isLoading: sourceState.status === 'initial',
+    error: sourceState.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('coldStart.title', 'Cold Start Cost')}
       subtitle={t(
         'coldStart.subtitle',
@@ -77,6 +80,7 @@ export default function ColdStartPage() {
       )}
       query={drivesQuery}
     >
+      <StaleRefreshWarning state={sourceState} label={t('coldStart.title', 'Cold Start Cost')} />
       <FadeIn>
         <ColdStartKpis
           summary={summary}
@@ -133,6 +137,6 @@ export default function ColdStartPage() {
           />
         </Grid>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

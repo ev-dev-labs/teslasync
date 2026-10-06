@@ -62,6 +62,7 @@ export function VehicleSecurityPanel({ securityData, state }: {
           /> },
         ]} />
       ) : (
+        // no-action: Successful empty security telemetry awaits vehicle reporting; the source wrapper owns failure retry.
         <EmptyState message={t('vehicles.detail.noSecurityData', 'No security data available')} />
       )}
     </GlassPanel>

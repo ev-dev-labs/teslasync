@@ -85,8 +85,8 @@ function setup() {
 
 function expectRow(label: string, value: string) {
   const labelNode = screen.getByText(label, { exact: true });
-  const row = labelNode.parentElement;
-  if (!row) throw new Error(`Missing row for ${label}`);
+  const row = labelNode.closest('dt')?.nextElementSibling;
+  if (!(row instanceof HTMLElement)) throw new Error(`Missing row for ${label}`);
   expect(within(row).getByText(value, { exact: true })).toBeInTheDocument();
 }
 

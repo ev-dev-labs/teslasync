@@ -2,12 +2,13 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartLegend, ChartTooltip,
+  ChartLegend, ChartTooltip,
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
   ChartBrush, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { Table, Text } from '@/components/ui';
@@ -50,11 +51,14 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
   return (
     <FadeIn>
       {/* chart-a11y:no-table dense per-sample drive trace; mean/max/min summary table follows below in the rich legend */}
-      <ChartContainer
+      <ChartCard
         title={t('driveDetail.driveChart', 'Drive overview')}
         ariaLabel={t('driveDetail.driveChart.aria', 'Drive overview composed chart of speed, range, SOC and power over time')}
         chartKey="drive-detail-overview"
         height={360}
+        size="standard"
+        toolbar
+        exportable
       >
         {({ hiddenSeries }) => (
           hasChart ? (
@@ -117,7 +121,7 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
             </div>
           )
         )}
-      </ChartContainer>
+      </ChartCard>
       {/* Rich legend with Mean/Max/Min stats */}
       <DriveStatsLegend chartData={chartData} />
     </FadeIn>

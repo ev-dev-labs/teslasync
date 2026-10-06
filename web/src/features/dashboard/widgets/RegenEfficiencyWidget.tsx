@@ -59,7 +59,8 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   ], [data, t, formatEnergy, fmtInt]);
 
   const gaugeConfig = useMemo(() => ({
-    value: regenPct ?? 0,
+    value: regenPct,
+    preserveReadingAndScale: true,
     max: 100,
     label: regenPct == null ? '—' : `${fmtNumber(regenPct)}%`,
     unit: t('widget.regenEfficiency.recovery', 'recovery'),

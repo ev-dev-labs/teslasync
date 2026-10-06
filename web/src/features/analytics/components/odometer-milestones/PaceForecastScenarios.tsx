@@ -1,9 +1,9 @@
-import { CalendarRange, Gauge } from 'lucide-react';
+import { CalendarRange } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import { Grid } from '@/components/layout';
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Grid, LayoutCard } from '@/components/layout';
+import { Badge, Table, Text } from '@/components/ui';
 
 
 import type { OdometerMilestoneResult, PaceScenario } from '../../lib/odometerMilestones';
@@ -49,17 +49,12 @@ export function PaceForecastScenarios({
       )}
       data-testid="milestone-scenarios"
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Gauge className="h-4 w-4 text-purple-300" aria-hidden="true" />
-          {t('milestones.scenarios.title', 'Pace & forecast scenarios')}
-        </PanelTitle>
-        <Text variant="caption" className="mb-4 block">
-          {t(
+      <LayoutCard title={t('milestones.scenarios.title', 'Pace & forecast scenarios')}
+        description={t(
             'milestones.scenarios.subtitle',
             'Each projection divides eligible distance by its actual observed span through this page’s frozen as-of time.',
           )}
-        </Text>
+      >
         <MilestoneSectionBody state={state}>
           {summary.accounting.eligibleRows === 0 ? (
             <EmptyState
@@ -200,7 +195,7 @@ export function PaceForecastScenarios({
             )}
           </Text>
         </MilestoneSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

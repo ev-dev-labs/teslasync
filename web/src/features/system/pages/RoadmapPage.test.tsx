@@ -209,6 +209,12 @@ describe('RoadmapPage — delivery progress', () => {
 
     // Legend carries exactly one entry per phase with its count.
     expect(scope.getAllByRole('listitem')).toHaveLength(4);
+    expect(scope.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual([
+      'Completed10',
+      'Active focus1',
+      'Up next2',
+      'Future4',
+    ]);
     expect(scope.getByText('Future')).toBeInTheDocument();
     expect(scope.getByText('4')).toBeInTheDocument();
     expect(scope.getByText('1')).toBeInTheDocument();

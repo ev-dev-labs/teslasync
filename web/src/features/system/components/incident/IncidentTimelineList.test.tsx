@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
 import { IncidentTimelineList } from './IncidentTimelineList'
@@ -62,9 +62,14 @@ describe('IncidentTimelineList', () => {
     expect(screen.getByText('Resolved')).toBeInTheDocument()
 
     // Each timestamp is formatted per-entry, en-US in UTC → "Apr 4, 2026, …".
-    expect(screen.getByText(/Apr 4, 2026/)).toBeInTheDocument()
-    expect(screen.getByText(/Apr 3, 2026/)).toBeInTheDocument()
-    expect(screen.getByText(/Apr 2, 2026/)).toBeInTheDocument()
+    expect(within(list).getByText(/Apr 4, 2026/)).toBeInTheDocument()
+    expect(within(list).getByText(/Apr 3, 2026/)).toBeInTheDocument()
+    expect(within(list).getByText(/Apr 2, 2026/)).toBeInTheDocument()
+    expect(within(list).getAllByRole('listitem').map((entry) => entry.textContent)).toEqual([
+      expect.stringContaining('We are investigating.'),
+      expect.stringContaining('Mitigation applied.'),
+      expect.stringContaining('All systems nominal.'),
+    ])
   })
 
   it('shows the author caption only for updates that carry an author', () => {
@@ -123,7 +128,7 @@ describe('IncidentTimelineList', () => {
     render(<IncidentTimelineList updates={[makeUpdate({ message: multiline })]} />)
 
     const paragraph = screen.getByText(
-      (_content, el) => el?.tagName === 'P' && el.textContent === multiline,
+      (_content, el) => el?.tagName === 'SPAN' && el.textContent === multiline,
     )
     expect(paragraph).toBeInTheDocument()
     expect(paragraph).toHaveClass('whitespace-pre-wrap')

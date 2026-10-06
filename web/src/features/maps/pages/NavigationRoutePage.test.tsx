@@ -11,8 +11,8 @@
  * they are exercised transitively through the page render.
  *
  * What is covered:
- *   1. SHELL       — page-level loading (Spinner) / error (message) gate
- *                    everything; the empty "select a vehicle" state.
+ *   1. SHELL       — independent fleet loading/failure does not hide usable
+ *                    navigation; the empty "select a vehicle" state.
  *   2. READY       — metrics band derives SI→display values, the nav hero
  *                    shows the active route, every a11y region is labelled,
  *                    and the header actions render.
@@ -405,8 +405,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('NavigationRoutePage — shell gating', () => {
-  it('shows the page-level spinner and hides all content while vehicles load', () => {
+describe('NavigationRoutePage — independent source posture', () => {
+  it('keeps the active route while the fleet and history are loading', () => {
     h.vehiclesLoading = true;
     h.historyMode = 'pending';
 
@@ -415,22 +415,33 @@ describe('NavigationRoutePage — shell gating', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: /Navigation & route/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument();
-    // Body regions are gated out behind the spinner.
-    expect(screen.queryByRole('region', { name: 'Route metrics' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Navigation status' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Route metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Navigation status' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
-  it('renders the vehicles error message instead of the page body', () => {
+  it('keeps usable navigation visible when the independent fleet source fails', () => {
     h.vehiclesError = new Error('vehicles down');
     h.historyMode = 'pending';
 
     renderPage();
 
-    // ErrorDisplay renders production-safe structured copy rather than the
-    // raw error.message — status-less errors fall into the network branch.
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Route metrics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Route metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Navigation status' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+  });
+
+  it('keeps a retained route and arrival telemetry during a latest-source refresh failure', () => {
+    h.latestError = new Error('latest refresh failed');
+    h.historyMode = 'pending';
+    renderPage();
+
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+    expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Route metrics' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
   it('prompts to select a vehicle and never fetches history when none is active', () => {

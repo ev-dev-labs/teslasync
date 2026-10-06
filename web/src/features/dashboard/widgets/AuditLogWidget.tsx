@@ -188,6 +188,7 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
         timestamp: entry.createdAt ?? '',
         color: SEVERITY_COLOR[sev],
         severity: sev,
+        wrap: true,
       } satisfies EventFeedItem;
     });
 
@@ -201,6 +202,7 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
         timestamp: event.createdAt ?? '',
         color: SEVERITY_COLOR[sev],
         severity: sev,
+        wrap: true,
       } satisfies EventFeedItem;
     });
 

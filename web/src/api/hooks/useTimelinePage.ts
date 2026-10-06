@@ -33,7 +33,7 @@ export interface SummaryResponse {
 /**
  * Exact TimelinePage observer contract. Vehicle IDs deliberately remain strings
  * and unencoded, as in the original query; only the two bounds are encoded.
- * No select, signal forwarding, or local retry/stale/polling policy is added.
+ * No select or local retry/stale/polling policy is added.
  */
 export function useTimelinePageTimeline(
   activeId: string,
@@ -44,9 +44,10 @@ export function useTimelinePageTimeline(
 
   return useQuery({
     queryKey: ['vehicle-timeline', activeId, startInstant, endInstantExclusive],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<TimelineResponse>(
         `/vehicle-states/timeline?${rangeQuery}`,
+        { signal },
       ),
     enabled: activeId !== '',
   });
@@ -62,9 +63,10 @@ export function useTimelinePageSummary(
 
   return useQuery({
     queryKey: ['vehicle-summary', activeId, startInstant, endInstantExclusive],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<SummaryResponse>(
         `/vehicle-states/summary?${rangeQuery}`,
+        { signal },
       ),
     enabled: activeId !== '',
   });

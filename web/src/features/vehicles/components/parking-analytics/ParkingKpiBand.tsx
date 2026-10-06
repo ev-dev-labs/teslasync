@@ -1,7 +1,7 @@
-import { MapPin, Moon, ParkingCircle, Timer } from 'lucide-react';
+import { ParkingCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
+import { StatStrip } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
@@ -56,69 +56,26 @@ export function ParkingKpiBand({
           ))
         ) : (
           <>
-            <MetricCard
-              label={t('parking.parkedShare', 'Time parked')}
-              value={
-                summary.parkedShare != null
-                  ? `${fmtNumber(summary.parkedShare * 100)}%`
-                  : '—'
-              }
-              subtitle={commonSample}
-              icon={<ParkingCircle className="h-5 w-5" aria-hidden="true" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('parking.nightShare', 'Overnight share')}
-              value={
-                summary.nightShare != null
-                  ? `${fmtNumber(summary.nightShare * 100)}%`
-                  : '—'
-              }
-              subtitle={t(
-                'parking.kpis.overnightSample',
-                '22:00–06:00 · {{count}} stints',
-                { count: summary.stints.length },
-              )}
-              icon={<Moon className="h-5 w-5" aria-hidden="true" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('parking.longestStint', 'Longest stint')}
-              value={
-                summary.longestStint
-                  ? formatDuration(summary.longestStint.durationMs / 1_000)
-                  : '—'
-              }
-              subtitle={
-                summary.longestStint
-                  ? t(
-                      'parking.kpis.longestSample',
-                      '{{location}} · longest of {{count}} stints',
-                      {
-                        location:
-                          summary.longestStint.location
-                          ?? t('parking.unknown', 'Unknown location'),
-                        count: summary.stints.length,
-                      },
-                    )
-                  : commonSample
-              }
-              icon={<Timer className="h-5 w-5" aria-hidden="true" />}
-              color="amber"
-            />
-            <MetricCard
-              label={t('parking.locations', 'Locations')}
-              value={fmtInt(knownLocations)}
-              subtitle={t(
-                'parking.kpis.locationQuality',
-                '{{known}} located · {{missing}} missing',
-                {
-                  known: fmtInt(summary.coverage.knownLocationStints),
-                  missing: fmtInt(summary.coverage.missingLocationStints),
-                },
-              )}
-              icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
-              color="green"
+            <StatStrip id="parking-summary" className="col-span-full"
+              period={{ kind: 'unknown', label: t('parking.kpis', 'Parking summary metrics'), reason: commonSample }}
+              metrics={[
+                { metricId: 'text', occurrenceId: 'parked-share', label: t('parking.parkedShare', 'Time parked'),
+                  rawValue: summary.parkedShare != null ? `${fmtNumber(summary.parkedShare * 100)}%` : null,
+                  context: commonSample },
+                { metricId: 'text', occurrenceId: 'night-share', label: t('parking.nightShare', 'Overnight share'),
+                  rawValue: summary.nightShare != null ? `${fmtNumber(summary.nightShare * 100)}%` : null,
+                  context: t('parking.kpis.overnightSample', '22:00–06:00 · {{count}} stints', { count: summary.stints.length }) },
+                { metricId: 'text', occurrenceId: 'longest-stint', label: t('parking.longestStint', 'Longest stint'),
+                  rawValue: summary.longestStint ? formatDuration(summary.longestStint.durationMs / 1_000) : null,
+                  context: summary.longestStint ? t('parking.kpis.longestSample', '{{location}} · longest of {{count}} stints', {
+                    location: summary.longestStint.location ?? t('parking.unknown', 'Unknown location'),
+                    count: summary.stints.length,
+                  }) : commonSample },
+                { metricId: 'count', occurrenceId: 'locations', label: t('parking.locations', 'Locations'), rawValue: knownLocations,
+                  context: t('parking.kpis.locationQuality', '{{known}} located · {{missing}} missing', {
+                    known: fmtInt(summary.coverage.knownLocationStints), missing: fmtInt(summary.coverage.missingLocationStints),
+                  }) },
+              ]}
             />
             {summary.stints.length === 0 ? (
               <EmptyState

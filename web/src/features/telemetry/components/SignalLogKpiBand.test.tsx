@@ -116,6 +116,15 @@ function plus(seconds: number): string {
 }
 
 describe('SignalLogKpiBand', () => {
+  it('shows unknown result counts on unavailable history while keeping selected-signal scope known', () => {
+    render(<SignalLogKpiBand summary={makeSummary({ signalsSelected: 3 })} unavailable />);
+    expect(metricValue('Total records')).toBe('—');
+    expect(metricValue('Numeric points')).toBe('—');
+    expect(metricValue('Text points')).toBe('—');
+    expect(metricValue('Boolean points')).toBe('—');
+    expect(metricValue('Signals')).toBe('3');
+    expect(screen.queryByText('0 with data')).toBeNull();
+  });
   it('renders six skeletons and no metric copy while the first batch loads', () => {
     const { container } = render(<SignalLogKpiBand summary={makeSummary()} loading />);
 

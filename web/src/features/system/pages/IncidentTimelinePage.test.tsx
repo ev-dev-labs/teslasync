@@ -198,6 +198,23 @@ beforeEach(() => {
 });
 
 describe('IncidentTimelinePage', () => {
+  it('retains incident updates and recovery actions when a background refresh fails', () => {
+    const retry = vi.fn();
+    mockUseIncident.mockReturnValue({
+      ...loadedQuery(baseIncident()),
+      isError: true,
+      error: new Error('refresh failed'),
+      refetch: retry,
+    });
+    renderAt();
+    expect(screen.getByRole('heading', { level: 1, name: 'API gateway intermittent 502s' })).toBeInTheDocument();
+    expect(screen.getByText('Restart completed. Watching error rate before resolving.')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resolve' })).toBeEnabled();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
   it('parses the route :id into a positive numeric id (invalid / 0 / negative → null)', () => {
     mockUseIncident.mockReturnValue(loadedQuery(undefined));
 

@@ -167,6 +167,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
           timestamp: updateTimestamp(upd),
           color: isCurrent ? '#22d3ee' : meta.color,
           severity: meta.severity,
+          wrap: true,
         };
       }),
     [sorted, t],
@@ -209,6 +210,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
         <div className="flex-1 min-h-0 overflow-y-auto">
           <WidgetEventFeed
             items={feedItems}
+            order="source"
             maxItems={15}
             compact={false}
             emptyMessage={t('widget.noUpdates', 'No update history')}

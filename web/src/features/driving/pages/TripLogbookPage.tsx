@@ -4,7 +4,7 @@ import {
   NotebookPen, Briefcase, Building2, Heart, HelpCircle, Sparkles, Receipt,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, PanelTitle, Text, Button, Select, Input, HelpTooltip,
   DataTable, type Column,
@@ -225,7 +225,7 @@ export default function TripLogbookPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('logbook.title', 'Trip Logbook')}
       subtitle={t('logbook.subtitle', 'Classify drives for tax deduction and expense reimbursement')}
       query={drivesQuery}
@@ -410,6 +410,6 @@ export default function TripLogbookPage() {
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

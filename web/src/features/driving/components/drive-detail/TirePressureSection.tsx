@@ -2,10 +2,11 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartTooltip, AREA_DEFAULTS,
+  ChartTooltip, AREA_DEFAULTS,
   LineChart, Line, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
@@ -95,10 +96,13 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
         ))}</tbody>
       </Table>
       {/* chart-a11y:no-table dense per-sample tire pressure trace; min/max stats appear above the chart in the per-wheel tiles */}
-      <ChartContainer
+      <ChartCard
         title={t('driveDetail.tirePressure', 'Tire pressure during drive')}
         ariaLabel={t('driveDetail.tirePressure.aria', 'Front and rear tire pressure lines over the drive timeline')}
         height={310}
+        size="standard"
+        toolbar
+        exportable
       >
         {stats.hasTirePressure ? (
           <>
@@ -129,7 +133,7 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
             <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
           </div>
         )}
-      </ChartContainer>
+      </ChartCard>
     </FadeIn>
   );
 }

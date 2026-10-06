@@ -249,9 +249,9 @@ describe('PowerFlowDashboardPage — loading', () => {
     expect(statusRegion()).toBeInTheDocument();
     expect(overviewRegion()).toBeInTheDocument();
 
-    // Status badges + KPI labels + gauge are all behind skeletons.
+    // Structural metric labels stay present; source values and the gauge wait.
     expect(within(statusRegion()).queryByText('Backup Capable')).toBeNull();
-    expect(within(kpiRegion()).queryByText('Solar Production')).toBeNull();
+    expect(within(kpiRegion()).getByText('Solar Production')).toBeInTheDocument();
     expect(within(kpiRegion()).queryByText('3.20 kW')).toBeNull();
     expect(within(overviewRegion()).queryByText('State of Charge')).toBeNull();
 
@@ -368,6 +368,27 @@ describe('PowerFlowDashboardPage — discharging / exporting branch', () => {
 });
 
 describe('PowerFlowDashboardPage — edge branches', () => {
+  it('does not turn an unknown state of charge into a zero-valued meter', () => {
+    setLive({ data: makeLive({ percentage_charged: null }) });
+    renderPage();
+    const overview = overviewRegion();
+    expect(within(overview).queryByRole('meter', { name: /State of Charge/i })).toBeNull();
+    expect(within(overview).getByRole('group', { name: /State of Charge/i })).not.toHaveAttribute('aria-valuenow');
+    expect(within(overview).getByText('Unknown')).toBeInTheDocument();
+  });
+
+  it('keeps signed current values, direction labels, gauge and both charts during cached refresh failures', () => {
+    setLive({ data: makeLive(), isError: true, error: new Error('live refresh failed') });
+    setHistory({ data: HISTORY, isError: true, error: new Error('history refresh failed') });
+    renderPage();
+    expect(within(kpiRegion()).getByText('-1.50 kW')).toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Charging')).toBeInTheDocument();
+    expect(within(overviewRegion()).getByRole('meter', { name: /State of Charge/i })).toHaveAttribute('aria-valuenow', '46.3');
+    expect(within(historyRegion()).getByRole('group', { name: /stacked area chart/i })).toBeInTheDocument();
+    expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+  });
+
   it('drops direction labels for zero flows and hides the grid-services chip', () => {
     setLive({
       data: makeLive({

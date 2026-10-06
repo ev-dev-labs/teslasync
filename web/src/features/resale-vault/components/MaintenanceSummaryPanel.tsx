@@ -5,8 +5,8 @@
  * trustworthy this section's per-vehicle attribution is.
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { InlineCallout } from '@/components/feedback';
@@ -23,8 +23,7 @@ export function MaintenanceSummaryPanel({ maintenance }: MaintenanceSummaryPanel
   const { formatDistance } = useUnits();
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <PanelTitle>{t('resaleVault.maintenance.title', 'Maintenance & service')}</PanelTitle>
+    <LayoutCard title={t('resaleVault.maintenance.title', 'Maintenance & service')}>
 
       {!maintenance ? (
         // no-action: mirrors Tesla's account-wide maintenance endpoint (see scope note below); no refetch handler reaches this panel.
@@ -55,7 +54,7 @@ export function MaintenanceSummaryPanel({ maintenance }: MaintenanceSummaryPanel
               <ul className="space-y-2">
                 {maintenance.service_records.map((record) => (
                   <li key={record.item_id} className="rounded-lg border border-white/[0.06] p-2.5 text-xs">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-medium text-[var(--text-primary)]">{record.date}</span>
                       <span className="text-[var(--text-muted)]">
                         {record.odometer_m != null ? formatDistance(record.odometer_m) : '—'}
@@ -69,6 +68,6 @@ export function MaintenanceSummaryPanel({ maintenance }: MaintenanceSummaryPanel
           )}
         </>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

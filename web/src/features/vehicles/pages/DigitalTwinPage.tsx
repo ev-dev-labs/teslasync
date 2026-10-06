@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, AppWindow, Car, DoorOpen, Info, Lightbulb, Lock, PlugZap, ShieldCheck, Unlock,
+  Activity, AppWindow, Car, DoorOpen, Info, Lightbulb, Lock, PlugZap, ShieldCheck,
 } from 'lucide-react';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -10,10 +10,11 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest,
 } from '@/api/hooks/useVehicles';
-import { PageContainer } from '@/components/layout';
-import { Badge, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
-import { MetricCard, StatusBadge } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { PageLayout, Section } from '@/components/layout';
+import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { StatStrip, StatusBadge } from '@/components/data-display';
+import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
 
@@ -60,6 +61,9 @@ export default function DigitalTwinPage() {
   const securityQ = useSecurityLatest(vehicleId, REFRESH_INTERVAL);
   const stateQ = useVehicleState(vehicleId, { refetchInterval: REFRESH_INTERVAL });
   const chargingQ = useChargingTelemetryLatest(vehicleId, REFRESH_INTERVAL);
+  const securityState = useDataState(securityQ, { provenance: 'live' });
+  const stateState = useDataState(stateQ, { provenance: 'live' });
+  const chargingState = useDataState(chargingQ, { provenance: 'live' });
 
   const securityData = securityQ.data ?? null;
   const chargingData = chargingQ.data ?? null;
@@ -189,7 +193,7 @@ export default function DigitalTwinPage() {
   // them has arrived, loading only while all are still pending.
   const anyLiveData = Boolean(securityData || vehicleState || chargingData);
   const combinedLoading = !anyLiveData && (securityQ.isLoading || stateQ.isLoading || chargingQ.isLoading);
-  const combinedError = anyLiveData ? undefined : (securityQ.error ?? stateQ.error ?? chargingQ.error);
+  const combinedError = anyLiveData ? undefined : (securityState.fatalError ?? stateState.fatalError ?? chargingState.fatalError);
   const refetchAll = () => {
     void securityQ.refetch();
     void stateQ.refetch();
@@ -199,7 +203,7 @@ export default function DigitalTwinPage() {
   const freshnessQueries = vehicleId > 0 ? [securityQ, stateQ, chargingQ] : undefined;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('digitalTwin.title', 'Digital twin')}
       subtitle={t('digitalTwin.subtitle', 'Real-time vehicle physical state')}
       loading={vehiclesLoading}
@@ -215,59 +219,37 @@ export default function DigitalTwinPage() {
         </GlassPanel>
       ) : (
         <div className="space-y-6">
+          <StaleRefreshWarning state={securityState} label={t('digitalTwin.securityTitle', 'Security & status')} />
+          <StaleRefreshWarning state={stateState} label={t('digitalTwin.liveStatusTitle', 'Live status')} />
+          <StaleRefreshWarning state={chargingState} label={t('common.charging', 'Charging')} />
           {/* 1 — KPI band: full-width responsive metric grid */}
           <FadeIn>
             <section
               aria-label={t('digitalTwin.overview', 'Overview')}
-              className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-6"
             >
-              <MetricCard
-                label={t('digitalTwin.kpiStatus', 'Status')}
-                value={statusText}
-                icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-                color={statusNeon(badgeStatus)}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiLock', 'Lock')}
-                value={lockValue}
-                icon={twinState.locked === false ? <Unlock className="h-5 w-5" aria-hidden="true" /> : <Lock className="h-5 w-5" aria-hidden="true" />}
-                color={twinState.locked === false ? 'amber' : 'green'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiDoorsOpen', 'Doors open')}
-                value={openingsKnown ? String(openCount) : '—'}
-                subtitle={t('digitalTwin.ofOpenings', 'of 6 openings')}
-                icon={<DoorOpen className="h-5 w-5" aria-hidden="true" />}
-                color={openCount > 0 ? 'amber' : 'green'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiWindowsOpen', 'Windows open')}
-                value={windowsKnown ? String(windowsOpenCount) : '—'}
-                subtitle={t('digitalTwin.ofWindows', 'of 4 windows')}
-                icon={<AppWindow className="h-5 w-5" aria-hidden="true" />}
-                color={windowsOpenCount > 0 ? 'amber' : 'green'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiSentry', 'Sentry mode')}
-                value={sentryValue}
-                icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-                color={twinState.sentryMode ? 'cyan' : 'blue'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiChargePort', 'Charge port')}
-                value={chargePortValue}
-                icon={<PlugZap className="h-5 w-5" aria-hidden="true" />}
-                color={twinState.isCharging ? 'cyan' : 'blue'}
+              <StatStrip id="digital-twin-summary"
+                period={{ kind: 'snapshot', label: t('digitalTwin.snapshot', 'Latest vehicle signals'),
+                  observedAt: typeof twinState.lastUpdated === 'string' ? twinState.lastUpdated : null,
+                  provenance: t('dataSources.labels.liveVehicleState', 'Live vehicle state') }}
+                metrics={[
+                  { metricId: 'text', occurrenceId: 'twin-status', label: t('digitalTwin.kpiStatus', 'Status'), rawValue: statusText },
+                  { metricId: 'text', occurrenceId: 'twin-lock', label: t('digitalTwin.kpiLock', 'Lock'), rawValue: twinState.locked === null ? null : lockValue },
+                  { metricId: 'count', occurrenceId: 'twin-doors', label: t('digitalTwin.kpiDoorsOpen', 'Doors open'), rawValue: openingsKnown ? openCount : null,
+                    context: t('digitalTwin.ofOpenings', 'of 6 openings') },
+                  { metricId: 'count', occurrenceId: 'twin-windows', label: t('digitalTwin.kpiWindowsOpen', 'Windows open'), rawValue: windowsKnown ? windowsOpenCount : null,
+                    context: t('digitalTwin.ofWindows', 'of 4 windows') },
+                  { metricId: 'text', occurrenceId: 'twin-sentry', label: t('digitalTwin.kpiSentry', 'Sentry mode'),
+                    rawValue: twinState.sentryMode === null ? null : sentryValue },
+                  { metricId: 'text', occurrenceId: 'twin-port', label: t('digitalTwin.kpiChargePort', 'Charge port'),
+                    rawValue: !twinState.isCharging && twinState.chargePortOpen === null ? null : chargePortValue },
+                ]}
               />
             </section>
           </FadeIn>
 
           {/* 2 — Hero: interactive twin + live status */}
           <FadeIn delay={0.1}>
-            <section aria-labelledby="twin-live-heading" className="space-y-3">
-              <SectionTitle id="twin-live-heading">
-                {t('digitalTwin.sectionLive', 'Live overview')}
-              </SectionTitle>
+            <Section id="twin-live-heading" title={t('digitalTwin.sectionLive', 'Live overview')}>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
                 <GlassPanel className="flex flex-col items-center justify-center p-6 sm:p-8 xl:col-span-2">
                   <VehicleTwin
@@ -309,22 +291,19 @@ export default function DigitalTwinPage() {
                   </div>
                 </GlassPanel>
               </div>
-            </section>
+            </Section>
           </FadeIn>
 
           {/* 3 — Component state: full-width detail bento */}
           <FadeIn delay={0.2}>
-            <section aria-labelledby="twin-components-heading" className="space-y-3">
-              <SectionTitle id="twin-components-heading">
-                {t('digitalTwin.sectionComponents', 'Component state')}
-              </SectionTitle>
+            <Section id="twin-components-heading" title={t('digitalTwin.sectionComponents', 'Component state')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4 xl:gap-5">
                 <TwinDetailPanel
                   title={t('digitalTwin.doorsTitle', 'Doors & openings')}
                   icon={<DoorOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   items={doorItems}
                   isLoading={securityQ.isLoading}
-                  error={securityQ.error}
+                  error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
                   emptyMessage={t('digitalTwin.noDoorData', 'No door data available')}
@@ -335,7 +314,7 @@ export default function DigitalTwinPage() {
                   icon={<AppWindow className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   items={windowItems}
                   isLoading={securityQ.isLoading}
-                  error={securityQ.error}
+                  error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
                   emptyMessage={t('digitalTwin.noWindowData', 'No window data available')}
@@ -358,17 +337,17 @@ export default function DigitalTwinPage() {
                   icon={<Lightbulb className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   items={lightItems}
                   isLoading={securityQ.isLoading}
-                  error={securityQ.error}
+                  error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
                   emptyMessage={t('digitalTwin.noLightData', 'No lights data available')}
                   onRetry={() => securityQ.refetch()}
                 />
               </div>
-            </section>
+            </Section>
           </FadeIn>
         </div>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -27,11 +27,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CalendarClock, AlertTriangle, X } from 'lucide-react'
 import { GlassPanel, Button, ConfirmDialog, Input, Badge, PanelTitle, Text } from '@/components/ui'
-import { OperationalWriteNotice, useToast } from '@/components/feedback'
+import { OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning, useToast } from '@/components/feedback'
 import { useMaintenanceState, useUpdateMaintenance } from '@/api/hooks/useAdmin'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import { useOperationalMode } from '@/hooks/useOperationalMode'
+import { useDataState } from '@/hooks/useDataState'
 import { cn } from '@/lib/cn'
 
 interface ScheduledMaintenanceCardProps {
@@ -49,7 +50,9 @@ function interpolateCopy(template: string, values: Record<string, string | numbe
 
 export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps) {
   const { t } = useTranslation()
-  const { data: state } = useMaintenanceState()
+  const query = useMaintenanceState()
+  const { data: state } = query
+  const sourceState = useDataState(query)
   const mutation = useUpdateMaintenance()
   const operationalMode = useOperationalMode()
   const toast = useToast()
@@ -190,6 +193,9 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
       </div>
 
       <div className="mt-3 space-y-3 text-sm">
+        <StaleRefreshWarning state={sourceState} label={t('systemStatus.maintenance.title', 'Scheduled maintenance')} />
+        {sourceState.fatalError && <QueryError error={sourceState.fatalError} onRetry={() => { void query.refetch(); }} />}
+        {query.isLoading && !sourceState.hasData && <Skeleton height={44} />}
         <OperationalWriteNotice
           title={t(
             'systemStatus.maintenance.readOnly',
@@ -200,7 +206,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
           <Text variant="bodySm">{state.maintenance_message}</Text>
         )}
         {isActive && untilTs != null && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" variant="caption">
             {minutesToStart != null && minutesToStart > 0
               ? interpolateCopy(
                 t(
@@ -216,15 +222,15 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
                 t('systemStatus.maintenance.until', 'Until {{time}}'),
                 { time: formatDateTime(new Date(untilTs)) },
               )}
-          </p>
+          </Text>
         )}
         {!isActive && !showSchedule && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" variant="caption">
             {t(
               'systemStatus.maintenance.description',
               'Schedule a window for upgrades or hardware moves. The status banner will switch to blue “Maintenance” instead of red “Down”.',
             )}
-          </p>
+          </Text>
         )}
 
         {!isActive && !showSchedule && (
@@ -236,6 +242,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
             disabled={!operationalMode.canWrite}
             title={operationalMode.writeBlockReason ?? undefined}
             className="gap-1.5"
+            wrapLabel
           >
             <CalendarClock className="h-3.5 w-3.5" aria-hidden />
             {t('systemStatus.maintenance.scheduleAction', 'Schedule a window')}

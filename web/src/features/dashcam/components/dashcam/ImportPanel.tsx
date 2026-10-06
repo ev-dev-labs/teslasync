@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload } from 'lucide-react';
-import { Input, Button } from '@/components/ui';
-import { GlassPanel } from '@/components/ui';
+import { Input, Button, Caption } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useImportClips } from '../../hooks/useClipCatalog';
 import { useDashcamSettings } from '../../hooks/useDashcamSettings';
 import { defaultDashcamSettings } from '../../lib/types';
@@ -42,19 +41,10 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
   };
 
   return (
-    <GlassPanel padding="md" className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Upload className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-          {t('dashcam.import.title', 'Import clips from disk')}
-        </h2>
-      </div>
-      <p className="text-xs text-[var(--text-muted)]">
-        {t(
-          'dashcam.import.description',
-          'Clips never leave this browser tab. Files are parsed and stored locally in IndexedDB, along with any redaction masks and notes you add.',
-        )}
-      </p>
+    <LayoutCard
+      title={t('dashcam.import.title', 'Import clips from disk')}
+      description={t('dashcam.import.description', 'Clips never leave this browser tab. Files are parsed and stored locally in IndexedDB, along with any redaction masks and notes you add.')}
+    >
       <div className="grid gap-3 sm:grid-cols-2">
         <Input
           ref={videoInputRef}
@@ -72,8 +62,9 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
           onChange={(e) => setSidecarFile(e.target.files?.[0] ?? null)}
         />
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Button
+          wrapLabel
           onClick={handleImport}
           disabled={videoFiles.length === 0}
           loading={importClips.isPending}
@@ -81,11 +72,11 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
           {t('dashcam.import.cta', 'Import {{count}} clip(s)', { count: videoFiles.length })}
         </Button>
         {videoFiles.length > 0 && (
-          <span className="text-xs text-[var(--text-muted)]">
+          <Caption>
             {t('dashcam.import.selected', '{{count}} file(s) selected', { count: videoFiles.length })}
-          </span>
+          </Caption>
         )}
       </div>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

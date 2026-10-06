@@ -146,14 +146,14 @@ export function MobileDataTableAdapter<T>({
           {allColumns.filter(column => presentation.canShowField?.(column.key, detailRow) !== false).map(column => (
             <div key={column.key} className="min-w-0 break-words">
               <Text size="sm" color="muted">{column.header}</Text>
-              <div className={column.align === 'right' ? 'tabular-nums' : undefined}>{column.render(detailRow)}</div>
+              <div className={column.align === 'right' ? 'tabular-nums' : undefined}>{column.render(detailRow) ?? '—'}</div>
             </div>
           ))}
           {presentation.allDetails?.(detailRow).filter(field =>
             presentation.canShowField?.(field.key, detailRow) !== false).map(field => (
             <div key={field.key} className="min-w-0 break-words">
               <Text size="sm" color="muted">{field.label}</Text>
-              <div>{field.value}</div>
+              <div>{field.value ?? '—'}</div>
             </div>
           ))}
         </div>}

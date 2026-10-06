@@ -11,7 +11,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -529,14 +529,13 @@ export default function WarrantyCommandPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.warranty.title', 'Warranty coverage & claim readiness')}
       subtitle={t(
         'ownership.warranty.subtitle',
         'Track which limit actually ends each coverage — calendar or odometer — at your real measured pace, and know before you call whether your evidence would survive a claim review.',
       )}
-      loading={overviewQuery.isLoading}
-      error={overviewQuery.error as Error | null}
+      query={[overviewQuery, warrantiesQuery]}
     >
       <AlertBanner
         variant="warning"
@@ -549,7 +548,8 @@ export default function WarrantyCommandPage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.warranty.summary.title', 'Coverage posture')}>
+        <OwnershipPanel title={t('ownership.warranty.summary.title', 'Coverage posture')}
+          source={overviewQuery} sourceEnabled={vehicleId != null} empty={!overview}>
           <StatGrid
             stats={[
               {
@@ -593,6 +593,8 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.warranty.coverages.title', 'Coverage burn-down')}
+          source={overviewQuery}
+          sourceEnabled={vehicleId != null}
           empty={coverages.length === 0}
           emptyMessage={t(
             'ownership.warranty.coverages.empty',
@@ -606,6 +608,8 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.warranty.readiness.title', 'Claim readiness checklist')}
+          source={overviewQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.warranty.readiness.subtitle',
             'Each requirement is evaluated against data already on this server, so you know what a reviewer would find.',
@@ -629,6 +633,9 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.warranty.list.title', 'Recorded coverages')}
+          source={warrantiesQuery}
+          sourceEnabled={vehicleId != null}
+          editing={formOpen}
           empty={warranties.length === 0 && !formOpen}
           emptyMessage={t('ownership.warranty.list.empty', 'No warranties recorded yet.')}
           actions={
@@ -786,6 +793,9 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.warranty.claims.title', 'Claim ledger')}
+          source={warrantiesQuery}
+          sourceEnabled={vehicleId != null}
+          editing={claimFor != null}
           description={t(
             'ownership.warranty.claims.subtitle',
             'Record what you asked for and what came back, so the next claim starts from a known history.',
@@ -865,7 +875,8 @@ export default function WarrantyCommandPage() {
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <OwnershipPanel title={t('ownership.warranty.bundle.title', 'Evidence bundle')}>
+        <OwnershipPanel title={t('ownership.warranty.bundle.title', 'Evidence bundle')}
+          source={overviewQuery} sourceEnabled={vehicleId != null} empty={!overview}>
           <Text as="p" variant="caption">
             {t(
               'ownership.warranty.bundle.body',
@@ -880,6 +891,8 @@ export default function WarrantyCommandPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={overviewQuery}
+          sourceEnabled={vehicleId != null}
           quality={overview?.quality}
           evidence={overview?.evidence}
           unsupported={[
@@ -895,6 +908,6 @@ export default function WarrantyCommandPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

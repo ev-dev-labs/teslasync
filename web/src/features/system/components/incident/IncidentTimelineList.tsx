@@ -5,7 +5,8 @@
  */
 import { MessageSquare } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Badge, Text, Caption } from '@/components/ui'
+import { Badge, Caption } from '@/components/ui'
+import { Timeline } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { type IncidentUpdateEntry } from '@/api/hooks/useIncidents'
@@ -25,6 +26,8 @@ export function IncidentTimelineList({ updates }: IncidentTimelineListProps) {
   // prop (bad data, direct misuse) must degrade to the empty state, never crash
   // on `.length`/`.map`.
   const items = updates ?? []
+  const oldestAt = items[items.length - 1]?.at
+  const newestAt = items[0]?.at
 
   if (items.length === 0) {
     return (
@@ -37,19 +40,23 @@ export function IncidentTimelineList({ updates }: IncidentTimelineListProps) {
   }
 
   return (
-    <ul className="space-y-3" aria-label={t('incidentTimeline.updatesLabel', 'Incident updates')}>
-      {items.map((u, idx) => (
-        <li key={`${u.at}-${idx}`} className="flex gap-3 border-l-2 border-[var(--border-subtle)] pl-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={STATUS_BADGE[u.status] ?? 'neutral'} size="sm">{statusLabel(u.status)}</Badge>
-              <Caption>{fmtAbs(u.at)}</Caption>
-              {u.author ? <Caption>· {u.author}</Caption> : null}
-            </div>
-            <Text as="p" variant="body" className="mt-1 whitespace-pre-wrap">{u.message ?? ''}</Text>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <Timeline
+      label={t('incidentTimeline.updatesLabel', 'Incident updates')}
+      chronology="newest-first"
+      summaryBounds={{
+        start: oldestAt && Number.isFinite(Date.parse(oldestAt)) ? fmtAbs(oldestAt) : null,
+        end: newestAt && Number.isFinite(Date.parse(newestAt)) ? fmtAbs(newestAt) : null,
+      }}
+      items={items.map((update) => ({
+        time: fmtAbs(update.at),
+        title: (
+          <span className="flex flex-wrap items-center gap-2">
+            <Badge variant={STATUS_BADGE[update.status] ?? 'neutral'} size="sm">{statusLabel(update.status)}</Badge>
+            {update.author ? <Caption as="span">· {update.author}</Caption> : null}
+          </span>
+        ),
+        subtitle: <span className="block whitespace-pre-wrap break-words">{update.message ?? ''}</span>,
+      }))}
+    />
   )
 }

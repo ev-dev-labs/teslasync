@@ -17,6 +17,9 @@ interface DevToolsOverviewProps {
    * derived from local constants, so they stay truthful regardless.
    */
   errored?: boolean
+  /** Independent source availability; a neighboring failure never hides a known count. */
+  telemetryUnknown?: boolean
+  vehiclesUnknown?: boolean
 }
 
 // Catalog sizes are static — computed once from the shared constants so the
@@ -32,7 +35,10 @@ const TELEMETRY_SIGNAL_COUNT = TELEMETRY_FIELDS.reduce(
  * catalogs surfaced across the tabs, so the page opens with an at-a-glance
  * status summary instead of a bare tab strip.
  */
-export function DevToolsOverview({ errorVinCount, vehicleCount, loading = false, errored = false }: DevToolsOverviewProps) {
+export function DevToolsOverview({
+  errorVinCount, vehicleCount, loading = false, errored = false,
+  telemetryUnknown, vehiclesUnknown,
+}: DevToolsOverviewProps) {
   const { t } = useTranslation()
 
   const placeholder = '—'
@@ -40,11 +46,12 @@ export function DevToolsOverview({ errorVinCount, vehicleCount, loading = false,
   const vehicles = vehicleCount ?? 0
   // Live metrics are unknown while loading or when the source errored with
   // no cached value — show the placeholder instead of a misleading count.
-  const liveUnknown = loading || errored
+  const errorsUnknown = telemetryUnknown ?? (loading || errored)
+  const fleetUnknown = vehiclesUnknown ?? (loading || errored)
   // While the error count is unknown, health-coding the icon green ("0 errors,
   // healthy") or red would contradict the "—" placeholder and imply a fleet
   // status we can't vouch for — fall back to a neutral tone until it resolves.
-  const telemetryTone = liveUnknown ? 'cyan' : errors > 0 ? 'red' : 'green'
+  const telemetryTone = errorsUnknown ? 'cyan' : errors > 0 ? 'red' : 'green'
 
   return (
     <section
@@ -53,14 +60,14 @@ export function DevToolsOverview({ errorVinCount, vehicleCount, loading = false,
     >
       <MetricCard
         label={t('devtools.overview.telemetryErrors', 'Telemetry errors')}
-        value={liveUnknown ? placeholder : errors}
+        value={errorsUnknown ? placeholder : errors}
         subtitle={t('devtools.overview.affectedVins', 'affected VINs')}
         icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
         color={telemetryTone}
       />
       <MetricCard
         label={t('devtools.overview.vehicles', 'Vehicles')}
-        value={liveUnknown ? placeholder : vehicles}
+        value={fleetUnknown ? placeholder : vehicles}
         subtitle={t('devtools.overview.inFleet', 'in fleet')}
         icon={<Car className="h-5 w-5" aria-hidden="true" />}
         color="cyan"

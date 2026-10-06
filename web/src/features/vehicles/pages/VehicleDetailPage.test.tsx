@@ -510,12 +510,29 @@ describe('VehicleDetailPage', () => {
       await client.invalidateQueries({ queryKey: ['vehicles', '1'], exact: true })
     })
     expect(screen.getByRole('heading', { name: 'My Roadster', level: 1 })).toBeInTheDocument()
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    // invalidateQueries awaits the read, not the observer's scheduled render.
+    const warning = await screen.findByTestId('stale-refresh-warning')
+    expect(warning).toBeInTheDocument()
+    expect(warning).toHaveAttribute('role', 'status')
+    expect(within(warning).getByText('Vehicle detail may be out of date')).toBeInTheDocument()
+    expect(within(warning).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument()
+    expect(client.getQueryData(['vehicles', '1'])).toBe(VEHICLE)
+    expect(client.getQueryState(['vehicles', '1'])?.error).toBeInstanceOf(ApiError)
     for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
     expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
     expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
     expect(H.captured.RecentChargesSection?.sessions).toBe(SESSIONS)
     expect(screen.queryByText(/synthetic/i)).not.toBeInTheDocument()
+
+    const recordCalls = () => H.requestMock.mock.calls.filter((call) => call[0] === '/vehicles/1').length
+    const beforeRetry = recordCalls()
+    H.requestMock.mockImplementation(defaultRequest)
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(recordCalls()).toBeGreaterThan(beforeRetry))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(client.getQueryData(['vehicles', '1'])).toBe(VEHICLE)
+    expect(client.getQueryState(['vehicles', '1'])?.error).toBeNull()
+    for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
   })
 
   it('keeps independent state, systems, histories and settings usable on first vehicle-record failure', async () => {

@@ -133,6 +133,7 @@ export function useSettings() {
       settings: s,
       settingsState,
       settingsUnavailable,
+      refetch,
       isMiles: s.unit_of_length === 'mi',
       isFahrenheit: s.unit_of_temp === 'F',
       isPSI: (s.unit_of_pressure ?? 'bar') === 'psi',
@@ -141,5 +142,5 @@ export function useSettings() {
       density,
       rangeType,
     }
-  }, [s, decimals, locale, settingsState, settingsUnavailable])
+  }, [s, decimals, locale, settingsState, settingsUnavailable, refetch])
 }

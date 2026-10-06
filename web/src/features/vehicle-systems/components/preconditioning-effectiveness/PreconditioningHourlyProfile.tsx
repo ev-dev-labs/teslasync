@@ -1,11 +1,11 @@
-import { Clock3 } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
@@ -13,12 +13,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { MetricLabel, Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -55,14 +50,7 @@ export function PreconditioningHourlyProfile({
 
   return (
     <section data-testid="preconditioning-hourly-profile">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Clock3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.hourly.title',
-            'Classification and hourly profile',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.hourly.title', 'Classification and hourly profile')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.hourly.subtitle',
@@ -75,7 +63,7 @@ export function PreconditioningHourlyProfile({
           requirement="classified"
           skeletonHeight={330}
         >
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             title={t(
               'preconditioningEffectiveness.hourly.plotTitle',
               'Classified departures by local hour',
@@ -121,7 +109,7 @@ export function PreconditioningHourlyProfile({
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </ChartContainer>
+          </EmbeddedChart>
           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {occupied.map((bucket) => (
               <div
@@ -157,7 +145,7 @@ export function PreconditioningHourlyProfile({
             ))}
           </div>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

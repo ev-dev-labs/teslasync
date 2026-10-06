@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OutageAutobiography, SessionCertificate } from '@/types/teslaPhysics';
 
@@ -48,6 +48,8 @@ const certificate: SessionCertificate = {
   honesty: 'Hashed export of session boundaries.',
 };
 
+const sources = vi.hoisted(() => ({ outage: vi.fn(), certificate: vi.fn() }));
+
 function queryStub<T>(data: T) {
   return {
     data,
@@ -64,13 +66,18 @@ function queryStub<T>(data: T) {
 }
 
 vi.mock('@/api/hooks/useTeslaPhysics', () => ({
-  useOutageAutobiography: () => queryStub(outage),
-  useSessionCertificate: () => queryStub(certificate),
+  useOutageAutobiography: () => sources.outage(),
+  useSessionCertificate: () => sources.certificate(),
 }));
 
 import OutageAutobiographyPage from './OutageAutobiographyPage';
 
 describe('OutageAutobiographyPage', () => {
+  beforeEach(() => {
+    sources.outage.mockReturnValue(queryStub(outage));
+    sources.certificate.mockReturnValue(queryStub(certificate));
+  });
+
   it('treats unknown MQTT as unknown and keeps replay/event-time honesty', () => {
     render(<OutageAutobiographyPage />);
     expect(screen.getByText('Outage autobiography')).toBeInTheDocument();
@@ -78,5 +85,40 @@ describe('OutageAutobiographyPage', () => {
     expect(screen.getByText('Replay keeps event time')).toBeInTheDocument();
     expect(screen.getByText(/gap is not a measured zero/i)).toBeInTheDocument();
     expect(screen.queryByText('MQTT not connected')).not.toBeInTheDocument();
+  });
+
+  it('keeps outage evidence and certificate recovery independent', () => {
+    const retry = vi.fn();
+    sources.certificate.mockReturnValue({
+      ...queryStub(undefined),
+      error: new Error('certificate unavailable'),
+      isError: true,
+      refetch: retry,
+    });
+    render(<OutageAutobiographyPage />);
+    expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
+    expect(screen.getByText(outage.notes[0])).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the outage panel and certificate visible when no outage data has resolved', () => {
+    sources.outage.mockReturnValue(queryStub(undefined));
+    render(<OutageAutobiographyPage />);
+    expect(screen.getByRole('heading', { name: 'Catch-up after MQTT or carbon loss' })).toBeInTheDocument();
+    expect(screen.getByText('No outage evidence has been recorded for this vehicle yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
+  });
+
+  it('retains notes and certificate export affordance after refresh failure', () => {
+    sources.outage.mockReturnValue({ ...queryStub(outage), error: new Error('outage refresh'), isError: true });
+    sources.certificate.mockReturnValue({ ...queryStub(certificate), error: new Error('certificate refresh'), isError: true });
+    render(<OutageAutobiographyPage />);
+    expect(screen.getByText(outage.notes[1])).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(within(screen.getAllByTestId('stale-refresh-warning')[0]!).getByText('Outage autobiography may be out of date')).toBeInTheDocument();
   });
 });

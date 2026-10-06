@@ -97,7 +97,7 @@ export function PostureTaxonomy({ counts, pending }: PostureTaxonomyProps) {
               className="grid min-h-14 grid-cols-[1.75rem_minmax(0,1fr)] grid-rows-2 items-center gap-x-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2"
               title={hints[category]}
             >
-              <dt className="col-span-2 grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-x-2 truncate text-xs font-medium text-[var(--text-muted)]">
+              <dt className="col-span-2 grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-x-2 whitespace-normal break-words [overflow-wrap:anywhere] text-xs font-medium text-[var(--text-muted)]">
                 <span className="relative row-span-2 flex h-7 w-7 shrink-0 items-center justify-center">
                 <Icon className={cn('h-4 w-4', tone)} aria-hidden="true" />
                 <span className={cn('absolute -bottom-0.5 -end-0.5 h-1.5 w-1.5 rounded-full', dot)} aria-hidden="true" />

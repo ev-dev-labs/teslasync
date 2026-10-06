@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { Text, Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatMetric, glossary, type MetricPreferences } from '@/lib/metric-reference';
@@ -39,7 +40,7 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
     .filter(Boolean).join('; ');
   const content = <>
     <Tooltip content={description} multiline>
-      <Text as="span" variant="metricLabel" data-stat-label className="block text-[0.8125rem] leading-5 text-[var(--text-secondary)]"
+      <Text as="span" variant="metricLabel" data-stat-label className="block leading-5 text-[var(--text-secondary)]"
         tabIndex={metric.href ? undefined : 0}>{label}</Text>
     </Tooltip>
     {loading ? <span aria-hidden="true" className="mt-1 block h-7 w-24 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
@@ -49,7 +50,7 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
         {result.unit && <>{['temperature', 'percent', 'score'].includes(definition.format) ? '' : ' '}
           <span data-stat-unit className="font-normal text-[var(--text-secondary)]">{result.unit}</span></>}
       </Text>}
-    {loading && <span className="sr-only">{t('developerReference.stats.state.loading', 'Loading measurements')}</span>}
+    {loading && <VisuallyHidden>{t('developerReference.stats.state.loading', 'Loading measurements')}</VisuallyHidden>}
     {!loading && reason && <span className="mt-1 block text-xs text-[var(--text-secondary)]">{reason}</span>}
     {!loading && metric.context != null && <div id={contextId} data-stat-context
       className="mt-1 text-xs text-[var(--text-secondary)]">{metric.context}</div>}

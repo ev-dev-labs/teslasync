@@ -14,8 +14,9 @@ export interface PeriodStats {
 export function usePeriodStats(vehicleId: string, days: number) {
   return useQuery({
     queryKey: ['period-stats', vehicleId, days],
-    queryFn: () => request<PeriodStats>(
+    queryFn: ({ signal }) => request<PeriodStats>(
       `/analytics/period-stats?vehicle_id=${vehicleId}&days=${days}`,
+      { signal },
     ),
     enabled: !!vehicleId,
   });

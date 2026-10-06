@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -74,6 +74,10 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
+    unitPrefs: {
+      distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+      energy: 'Wh', duration: 's', power: 'W', precision: 1, locale: 'en-US',
+    },
     formatEnergy: (value: number) => `${value} Wh`,
     formatPower: (value: number) => `${value} W`,
     formatDistance: (value: number) => `${value} m`,
@@ -176,5 +180,28 @@ describe('EnergyLedgerPage partial-data contract', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
     expect(H.drives.current.refetch).toHaveBeenCalledTimes(1);
     expect(H.sessions.current.refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains the accounting shell and four metrics when cached histories fail to refresh', () => {
+    H.sessions.current = query({
+      data: [], isError: true, error: new Error('cached charging refresh failed'),
+    });
+    H.drives.current = query({
+      data: [], isError: true, error: new Error('cached drive refresh failed'),
+    });
+    renderPage();
+
+    const summary = screen.getByRole('region', { name: 'Energy ledger metrics' });
+    expect(summary.querySelectorAll('[data-stat]')).toHaveLength(4);
+    for (const label of ['Books Closure', 'Reached the Wheels', 'Vampire Drain', 'Unexplained']) {
+      expect(within(summary).getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Energy ledger evidence is unavailable.')).not.toBeInTheDocument();
+    expect(screen.getByText('Month by Month')).toBeInTheDocument();
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: /refresh/i }));
+    expect(H.sessions.current.refetch).toHaveBeenCalledTimes(1);
+    expect(H.drives.current.refetch).not.toHaveBeenCalled();
   });
 });

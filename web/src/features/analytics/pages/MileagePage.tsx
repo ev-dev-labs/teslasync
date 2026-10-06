@@ -4,7 +4,7 @@ import {
   Gauge, BarChart3,
 } from 'lucide-react';
 
-import { PageLayout, Section, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout/layout-reference';
+import { PageLayout, Section, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout';
 
 import { DataTable, type Column } from '@/components/ui';
 import { MetricBar, KVList } from '@/components/data-display';
@@ -291,7 +291,10 @@ export default function MileagePage() {
                 <KVList items={activityItems} />
               </div>
             ) : (
-              <EmptyState message={t('mileage.summary.unavailable', 'Mileage summary has not been supplied.')} />
+              <EmptyState
+                message={t('mileage.summary.unavailable', 'Mileage summary has not been supplied.')}
+                action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void statsQuery.refetch(); } }}
+              />
             )}
         </LayoutCard>
       ),

@@ -39,8 +39,8 @@ import {
   AINLDashboardComposer,
   type DashboardLayoutDraft,
 } from '@/components/ai/AINLDashboardComposer';
-import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, Heading, HelperText, Text, Textarea } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { Button, CopyButton, GlassPanel, Heading, HelperText, Text, Textarea } from '@/components/ui';
 import { InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -151,18 +151,7 @@ export default function DashboardsPage() {
     setStatus(null);
   }, []);
 
-  const handleCopy = useCallback(async () => {
-    const trimmed = dashboardJson.trim();
-    if (!trimmed) {
-      setStatus({
-        variant: 'warning',
-        text: t(
-          'powerDashboards.editor.copyEmpty',
-          'Type or paste a dashboard JSON envelope above before copying.',
-        ),
-      });
-      return;
-    }
+  const handleCopyError = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
       setStatus({
         variant: 'warning',
@@ -173,25 +162,24 @@ export default function DashboardsPage() {
       });
       return;
     }
-    try {
-      await navigator.clipboard.writeText(trimmed);
-      setStatus({
-        variant: 'success',
-        text: t(
-          'powerDashboards.editor.copySuccess',
-          'Copied. Paste the JSON into your Grafana dashboard editor (dashboard settings → JSON Model).',
-        ),
-      });
-    } catch {
-      setStatus({
-        variant: 'warning',
-        text: t(
-          'powerDashboards.editor.copyFailed',
-          'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
-        ),
-      });
-    }
-  }, [dashboardJson, t]);
+    setStatus({
+      variant: 'warning',
+      text: t(
+        'powerDashboards.editor.copyFailed',
+        'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
+      ),
+    });
+  }, [t]);
+
+  const handleCopied = useCallback(() => {
+    setStatus({
+      variant: 'success',
+      text: t(
+        'powerDashboards.editor.copySuccess',
+        'Copied. Paste the JSON into your Grafana dashboard editor (dashboard settings → JSON Model).',
+      ),
+    });
+  }, [t]);
 
   const sortedPanels = useMemo(
     () => [...CURATED_DASHBOARD_PANELS].sort((a, b) => a.name.localeCompare(b.name)),
@@ -240,7 +228,7 @@ export default function DashboardsPage() {
 
   return (
     <div data-testid="power-dashboards-composer-root">
-      <PageContainer
+      <PageLayout
         title={t('powerDashboards.title', 'Dashboard composer')}
         subtitle={t(
           'powerDashboards.subtitle',
@@ -304,7 +292,7 @@ export default function DashboardsPage() {
               </HelperText>
               <Textarea
                 value={dashboardJson}
-                onChange={(e) => setDashboardJson(e.target.value)}
+                onChange={(e) => { setDashboardJson(e.target.value); setStatus(null); }}
                 placeholder={t(
                   'powerDashboards.editor.placeholder',
                   '{\n  "title": "Fleet overview",\n  "slots": [\n    {\n      "panel_name": "drives_per_day_timeseries",\n      "grid_pos": { "x": 0, "y": 0, "w": 24, "h": 8 }\n    }\n  ]\n}',
@@ -315,16 +303,16 @@ export default function DashboardsPage() {
                 className="font-mono"
               />
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Button
+                <CopyButton
+                  text={dashboardJson.trim()}
                   variant="primary"
-                  onClick={handleCopy}
+                  size="md"
+                  onCopy={handleCopied}
+                  onCopyError={handleCopyError}
                   disabled={!canCopy}
-                  aria-disabled={!canCopy ? 'true' : 'false'}
-                >
-                  <ClipboardCopy className="h-4 w-4" aria-hidden="true" />
-                  {t('powerDashboards.editor.copy', 'Copy to clipboard')}
-                </Button>
-                <Button variant="secondary" onClick={handleClear} disabled={!canClear}>
+                  label={t('powerDashboards.editor.copy', 'Copy to clipboard')}
+                />
+                <Button variant="secondary" wrapLabel onClick={handleClear} disabled={!canClear}>
                   <Eraser className="h-4 w-4" aria-hidden="true" />
                   {t('powerDashboards.editor.clear', 'Clear')}
                 </Button>
@@ -382,7 +370,7 @@ export default function DashboardsPage() {
             </GlassPanel>
           </section>
         </FadeIn>
-      </PageContainer>
+      </PageLayout>
     </div>
   );
 }

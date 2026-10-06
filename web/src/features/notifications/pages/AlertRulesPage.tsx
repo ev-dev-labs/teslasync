@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel,
   Badge,
@@ -31,11 +31,13 @@ import {
   Skeleton,
   QueryError,
   EditConflictBanner,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput } from '@/components/forms';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useEditLease } from '@/hooks/useEditLease';
 import { useConfirm } from '@/hooks/useConfirm';
 
@@ -127,7 +129,11 @@ export default function AlertRulesPage() {
   useEditLease(leaseKey);
 
   const rulesQuery = useAlertRules();
-  const { data: rulesRaw, isLoading, isError, error, refetch } = rulesQuery;
+  const { data: rulesRaw, refetch } = rulesQuery;
+  const rulesState = useDataState(rulesQuery);
+  const isLoading = !rulesState.hasData && rulesQuery.isLoading;
+  const error = rulesState.fatalError;
+  const isError = error != null;
   const rules: AlertRule[] = useMemo(() => rulesRaw ?? [], [rulesRaw]);
   const channelsQuery = useNotificationChannels();
   const channels = useMemo(() => channelsQuery.data ?? [], [channelsQuery.data]);
@@ -484,7 +490,7 @@ export default function AlertRulesPage() {
     const editId = /^\d+$/.test(editIdParam) ? Number(editIdParam) : NaN;
     const editingRule = Number.isSafeInteger(editId) ? rules.find(rule => rule.id === editId) : undefined;
     return (
-      <PageContainer
+      <PageLayout
         title={editingRule
           ? t('alertRules.editNamed', 'Edit {{name}}', { name: editingRule.name })
           : t('alertRules.editTitle', 'Edit notification rule')}
@@ -495,6 +501,7 @@ export default function AlertRulesPage() {
         }
         query={rulesQuery}
       >
+        <StaleRefreshWarning state={rulesState} label={t('alertRules.title', 'Alert rules')} />
         {isLoading ? <Skeleton height={240} /> : isError ? (
           <QueryError error={error} onRetry={() => refetch()} />
         ) : editingRule ? (
@@ -510,12 +517,12 @@ export default function AlertRulesPage() {
             actionTo={{ label: t('alertRules.backToRules', 'Back to rules'), to: '/notifications/rules' }}
           />
         )}
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('alertRules.title', 'Alert rules')}
       subtitle={t(
         'alertRules.subtitle',
@@ -525,6 +532,7 @@ export default function AlertRulesPage() {
       primaryAction={primaryAction}
       query={rulesQuery}
     >
+      <StaleRefreshWarning state={rulesState} label={t('alertRules.title', 'Alert rules')} />
       <EditConflictBanner
         resourceKey={leaseKey}
         resourceLabel={t('editConflict.resource.alertRules', 'Your alert rules')}
@@ -538,37 +546,37 @@ export default function AlertRulesPage() {
         >
           <MetricCard
             label={t('alertRules.kpi.total', 'Total rules')}
-            value={fmtInt(stats.total)}
+            value={rulesState.hasData ? fmtInt(stats.total) : '—'}
             icon={<Icons.notifications className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
             label={t('common.enabled', 'Enabled')}
-            value={fmtInt(stats.enabled)}
+            value={rulesState.hasData ? fmtInt(stats.enabled) : '—'}
             icon={<Icons.power className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
             label={t('common.disabled', 'Disabled')}
-            value={fmtInt(stats.disabled)}
+            value={rulesState.hasData ? fmtInt(stats.disabled) : '—'}
             icon={<Icons.pause className="h-5 w-5" />}
             color="amber"
           />
           <MetricCard
             label={t('severity.critical', 'Critical')}
-            value={fmtInt(stats.critical)}
+            value={rulesState.hasData ? fmtInt(stats.critical) : '—'}
             icon={<Icons.alertCircle className="h-5 w-5" />}
             color="red"
           />
           <MetricCard
             label={t('alertRules.status.snoozed', 'Snoozed')}
-            value={fmtInt(stats.snoozed)}
+            value={rulesState.hasData ? fmtInt(stats.snoozed) : '—'}
             icon={<Icons.moon className="h-5 w-5" />}
             color="purple"
           />
           <MetricCard
             label={t('alertRules.kpi.computed', 'Computed')}
-            value={fmtInt(stats.computed)}
+            value={rulesState.hasData ? fmtInt(stats.computed) : '—'}
             icon={<Icons.activity className="h-5 w-5" />}
             color="blue"
           />
@@ -809,6 +817,6 @@ export default function AlertRulesPage() {
       </FadeIn>
 
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

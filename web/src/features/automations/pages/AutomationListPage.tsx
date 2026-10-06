@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button, GlassPanel, Input, Select, type SelectOption } from '@/components/ui';
 import { BulkActionToolbar, MetricCard } from '@/components/data-display';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { OperationalWriteNotice, QueryError, Skeleton } from '@/components/feedback';
+import { OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useAutomations, useBulkAutomationsUpdate } from '@/api/hooks/useAutomations';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -40,7 +41,10 @@ export default function AutomationListPage() {
   usePageTitle(t('automationList.title', 'Automation rules'));
 
   const automationsQuery = useAutomations();
-  const { data: rowsRaw, isLoading, error, refetch } = automationsQuery;
+  const { data: rowsRaw, refetch } = automationsQuery;
+  const automationsState = useDataState(automationsQuery);
+  const isLoading = !automationsState.hasData && automationsQuery.isLoading;
+  const error = automationsState.fatalError;
   const automations: Automation[] = useMemo(() => rowsRaw ?? [], [rowsRaw]);
 
   const { data: vehiclesRaw } = useVehicles();
@@ -158,7 +162,7 @@ export default function AutomationListPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('automationList.title', 'Automation rules')}
       subtitle={t(
         'automationList.subtitle',
@@ -184,6 +188,7 @@ export default function AutomationListPage() {
           'Bulk automation controls are read-only',
         )}
       />
+      <StaleRefreshWarning state={automationsState} label={t('automationList.title', 'Automation rules')} />
 
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
@@ -246,6 +251,12 @@ export default function AutomationListPage() {
       <BulkActionToolbar
         selectedIds={effectiveSelected}
         total={filtered.length}
+        selectionScope="filtered"
+        selectionSummary={t(
+          'automationList.bulk.selectionSummary',
+          '{{count}} selected · {{filtered}} matching loaded rules · {{loaded}} loaded',
+          { count: effectiveSelected.length, filtered: filtered.length, loaded: automations.length },
+        )}
         onClear={clearSelection}
         itemNoun={{
           one: t('automationList.noun.one', 'automation'),
@@ -257,6 +268,7 @@ export default function AutomationListPage() {
             label: t('automationList.bulk.enable', 'Enable'),
             icon: <Icons.play className="h-4 w-4" />,
             disabled: !operationalMode.canWrite,
+            disabledReason: operationalMode.writeBlockReason ?? undefined,
             onClick: (ids) => runBulk(ids, 'enable'),
           },
           {
@@ -264,6 +276,7 @@ export default function AutomationListPage() {
             label: t('automationList.bulk.disable', 'Disable'),
             icon: <Icons.pause className="h-4 w-4" />,
             disabled: !operationalMode.canWrite,
+            disabledReason: operationalMode.writeBlockReason ?? undefined,
             onClick: (ids) => runBulk(ids, 'disable'),
           },
           {
@@ -272,6 +285,7 @@ export default function AutomationListPage() {
             variant: 'danger',
             icon: <Icons.delete className="h-4 w-4" />,
             disabled: !operationalMode.canWrite,
+            disabledReason: operationalMode.writeBlockReason ?? undefined,
             confirm: {
               title: t('automationList.bulk.deleteConfirm.title', 'Delete automations?'),
               description: t(
@@ -313,6 +327,6 @@ export default function AutomationListPage() {
           <RoutineWizard actionsDisabled={!operationalMode.canWrite} />
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

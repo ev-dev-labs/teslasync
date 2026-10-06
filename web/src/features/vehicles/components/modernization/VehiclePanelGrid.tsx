@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { CardGrid, type CardSize } from '@/components/layout/layout-reference';
+import { CardGrid, type CardGridItem } from '@/components/layout';
 import { VehiclePanelCell } from './VehiclePanelCell';
 
 export interface VehiclePanelGridItem {
   id: string;
-  size: CardSize;
+  size: CardGridItem['size'];
   content: ReactNode;
 }
 

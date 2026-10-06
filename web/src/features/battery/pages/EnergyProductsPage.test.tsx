@@ -133,6 +133,7 @@ interface SitesQueryStub {
   isFetching: boolean;
   isStale: boolean;
   dataUpdatedAt: number;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
 }
 
 function makeSitesQuery(overrides: Partial<SitesQueryStub> = {}): SitesQueryStub {
@@ -496,5 +497,71 @@ describe('resourceIcon', () => {
     expect(resourceIcon('solar')).toBe(Sun);
     expect(resourceIcon('wall_connector')).toBe(Zap);
     expect(resourceIcon('')).toBe(Zap);
+  });
+
+  describe('EnergyProductsPage — modernization trust regressions', () => {
+    it('retains discovered sites, aggregate capacity, and site configuration after a refresh error', () => {
+      h.sites = makeSitesQuery({ data: [makeSite()], isError: true, error: new Error('refresh failed') });
+      renderPage();
+
+      expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Energy summary' })).getByText('13.50 kWh')).toBeInTheDocument();
+      expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
+      expect(screen.getByText('PG&E EV2-A')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }));
+      expect(refreshSitesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('retains configuration values and the rate-plan action after a site-info refresh error', () => {
+      h.siteInfo = makeSiteInfoQuery({ data: makeSiteInfo(), isError: true, error: new Error('config refresh failed') });
+      renderPage();
+
+      expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
+      expect(screen.getByRole('meter', { name: /backup reserve/i })).toHaveAttribute('aria-valuenow', '20');
+      expect(screen.getByText('5.00 kW')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Update rate plan' }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('shows offline trust alongside retained sites rather than an empty discovery state', () => {
+      h.sites = makeSitesQuery({ data: [makeSite()], fetchStatus: 'paused' });
+      renderPage();
+
+      expect(screen.getByText(/The device is offline, so this section is showing the last values it received/)).toBeInTheDocument();
+      expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
+      expect(screen.getByText('87.50%')).toBeInTheDocument();
+      expect(screen.queryByText(/No energy products found/)).not.toBeInTheDocument();
+    });
+
+    it('does not fabricate a complete aggregate capacity when a site capacity is missing', () => {
+      h.sites = makeSitesQuery({ data: [
+        makeSite(),
+        makeSite({ id: 2, energy_site_id: 2, site_name: 'Cabin', total_pack_energy: null }),
+      ] });
+      renderPage();
+
+      const summary = screen.getByRole('region', { name: 'Energy summary' });
+      const capacity = within(summary).getByText('Total Capacity').closest('[data-stat]');
+      expect(capacity).toHaveAttribute('data-state', 'missing');
+      expect(capacity?.querySelector('[data-stat-value]')).toHaveTextContent('—');
+      expect(within(summary).queryByText('13.50 kWh')).not.toBeInTheDocument();
+      expect(screen.getByText('Cabin')).toBeInTheDocument();
+      expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
+    });
+
+    it('keeps an unreceived site snapshot distinct from a measured empty site list', () => {
+      h.sites = makeSitesQuery();
+      renderPage();
+
+      const summary = screen.getByRole('region', { name: 'Energy summary' });
+      const count = within(summary).getByText('Energy Sites').closest('[data-stat]');
+      expect(count).toHaveAttribute('data-state', 'missing');
+      expect(count?.querySelector('[data-stat-value]')).toHaveTextContent('—');
+      expect(within(summary).queryByText('0.00 Wh')).not.toBeInTheDocument();
+      expect(screen.getByText('No energy-site snapshot has loaded. Refresh from Tesla to discover your installations.')).toBeInTheDocument();
+    });
   });
 });

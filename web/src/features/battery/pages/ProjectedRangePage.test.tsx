@@ -35,6 +35,10 @@ vi.mock('@/components/charts', async (importOriginal) => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return { ...actual, ...chartTestDoubles };
 });
+vi.mock('@/components/charts/EmbeddedChart', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { EmbeddedChart: chartTestDoubles.EmbeddedChart };
+});
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) reads it at module load for
 // the reduced-motion preference. Install a no-op before any import runs.
@@ -195,6 +199,7 @@ interface QueryOverrides {
   isLoading?: boolean;
   error?: unknown;
   refetch?: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
 }
 
 function makeQuery(overrides: QueryOverrides = {}) {
@@ -207,6 +212,7 @@ function makeQuery(overrides: QueryOverrides = {}) {
     error: overrides.error ?? null,
     dataUpdatedAt: overrides.data != null ? Date.now() : 0,
     refetch: overrides.refetch ?? vi.fn(),
+    fetchStatus: overrides.fetchStatus ?? 'idle',
   };
 }
 
@@ -284,11 +290,13 @@ function renderPage() {
   );
 }
 
-/** Read a MetricCard's value text by its (unique) label. */
+/** Read the canonical stat tile's complete displayed value by its label. */
 function metricValue(label: string): string {
   const labelSpan = screen.getByText(label);
-  const card = labelSpan.closest('[data-role="metric-card"]');
-  return card?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = labelSpan.closest('[data-stat]');
+  const value = card?.querySelector('[data-stat-value]')?.textContent ?? '';
+  const unit = card?.querySelector('[data-stat-unit]')?.textContent ?? '';
+  return `${value}${unit ? ` ${unit}` : ''}`;
 }
 
 beforeEach(() => {
@@ -418,8 +426,10 @@ describe('ProjectedRangePage · states', () => {
     rangeMock.mockReturnValue(makeQuery({ data: undefined }));
     renderPage();
 
-    // KPI shell still renders (with safe zeros), proving no whole-section hiding.
-    expect(metricValue('Your Estimate')).toContain('0');
+    // No measurement is not a measured zero (MDC-026 / dataState contract).
+    // The KPI shell remains, with an explicit missing value.
+    expect(metricValue('Your Estimate')).toBe('—');
+    expect(metricValue('Your Estimate')).not.toContain('0');
     // The `!data` branches of the gauge, curve and what-if calculator.
     expect(screen.getByText('Efficiency data unavailable yet.')).toBeInTheDocument();
     expect(screen.getByText('Range projection curve will appear once this vehicle logs drives.')).toBeInTheDocument();
@@ -553,5 +563,68 @@ describe('ProjectedRangePage · mile units', () => {
 
     // No efficiency figure anywhere on the page may keep the km unit.
     expect(screen.queryAllByText(/Wh\/km/)).toHaveLength(0);
+  });
+
+  describe('ProjectedRangePage · modernization trust regressions', () => {
+    it('keeps every loaded data section and slider calculation after a refresh failure', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), error: new Error('refresh failed') }));
+      renderPage();
+
+      expect(metricValue('Your Estimate')).toContain('300');
+      expect(screen.getByText('Winter City')).toBeInTheDocument();
+      expect(screen.getByText('190.00')).toBeInTheDocument();
+      expect(screen.getByText('-8.50%')).toBeInTheDocument();
+      expect(screen.getByText('Based on 42 recent drives')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Rated versus projected range across battery level' })).toBeInTheDocument();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Temperature'), { target: { value: '-10' } });
+      expect(screen.getByText('242.70 km')).toBeInTheDocument();
+    });
+
+    it('keeps a retained projection visible when its refresh is paused offline', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), fetchStatus: 'paused' }));
+      renderPage();
+
+      expect(screen.getByText(/The device is offline, so this section is showing the last values it received/)).toBeInTheDocument();
+      expect(metricValue('Battery')).toContain('72');
+      expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
+      expect(screen.getByText('Range Factors')).toBeInTheDocument();
+    });
+
+    it('distinguishes measured zero from missing range and battery measurements', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection({
+        your_estimate_km: 0, tesla_estimate_km: 0, current_battery_pct: 0,
+      }) }));
+      renderPage();
+
+      expect(metricValue('Your Estimate')).toBe('0.00 km');
+      expect(metricValue('Tesla Estimate')).toBe('0.00 km');
+      expect(metricValue('Battery')).toContain('0.00');
+      expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    });
+
+    it('does not invent a 75 kWh usable capacity for incomplete calculator inputs', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: {
+        ...makeProjection(), usable_capacity_wh: null,
+      } }));
+      renderPage();
+
+      expect(metricValue('Usable Capacity')).toBe('—');
+      expect(screen.getByText('Measured battery level and usable capacity are required to calculate a range.')).toBeInTheDocument();
+      expect(screen.queryByText('304.20 km')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Speed')).toBeInTheDocument();
+      expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
+    });
+
+    it('retains all temperature and speed cells without a forced matrix minimum width', () => {
+      renderPage();
+      const matrix = screen.getByRole('region', { name: 'Personal Efficiency Matrix (Wh/km)' });
+
+      expect(within(matrix).getByLabelText('Mild, Highway')).toHaveTextContent('190.00');
+      expect(within(matrix).getByLabelText('Cold, City')).toHaveTextContent('210.00');
+      expect(matrix.querySelectorAll('[aria-label*=", "]')).toHaveLength(12);
+      expect(matrix.querySelector('[class*="min-w-["]')).toBeNull();
+    });
   });
 });

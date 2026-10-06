@@ -352,6 +352,10 @@ describe('DestinationETAWidget — query states', () => {
     expect(screen.getByText('Home Depot')).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    const track = screen.getByRole('progressbar', { name: 'Trip progress' });
+    expect(track).not.toHaveAttribute('aria-valuenow');
+    expect(track.querySelector('[data-metric-fill]')).toBeNull();
+    expect(screen.queryByRole('slider')).toBeNull();
   });
 });
 

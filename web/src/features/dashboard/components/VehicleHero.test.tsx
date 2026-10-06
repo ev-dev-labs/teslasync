@@ -146,6 +146,27 @@ function renderHero(overrides: Partial<Props> = {}) {
 afterEach(() => cleanup());
 
 describe('VehicleHero', () => {
+  it('preserves out-of-scale measurements without changing gauge scales or hiding identity and actions', () => {
+    const state = {
+      ...baseState,
+      battery_level: 125,
+      rated_range: 800,
+      inside_temp: 80,
+      outside_temp: -50,
+    };
+    renderHero({ state });
+    expect(screen.getByRole('group', { name: 'Battery' })).toHaveTextContent('125.00');
+    expect(screen.getByRole('group', { name: 'Range' })).toHaveTextContent('800.00');
+    expect(screen.getByRole('group', { name: 'Range' })).toHaveTextContent('600.00');
+    expect(screen.getByRole('group', { name: 'Inside' })).toHaveTextContent('80.00');
+    expect(screen.getByRole('group', { name: 'Outside' })).toHaveTextContent('-50.00');
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'My Model 3' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Details' })).toHaveAttribute('href', '/vehicles/7');
+    expect(screen.getByRole('link', { name: 'Commands' })).toHaveAttribute('href', '/commands');
+    expect(state.rated_range).toBe(800);
+  });
+
   it('renders the vehicle name heading, live status badge, and VIN subtitle', () => {
     renderHero({ state: { ...baseState, state: 'online' } });
 

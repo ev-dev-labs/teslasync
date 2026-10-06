@@ -29,7 +29,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   Badge,
   Button,
@@ -41,7 +41,7 @@ import {
   MetricLabel,
   SectionTitle,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { CompositionRail, MetricCard } from '@/components/data-display';
 import { AlertBanner, EmptyState, Spinner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useOptionalToast } from '@/components/feedback/Toast';
@@ -286,42 +286,17 @@ function OverallHero({
         </div>
 
         <div className="mt-4">
-          <div
-            className="flex h-2.5 overflow-hidden rounded-full bg-white/[0.04]"
-            role="img"
-            aria-label={barAria}
-          >
-            {segments.map((s) => {
-              const pct = summary.total > 0 ? (s.count / summary.total) * 100 : 0;
-              if (pct <= 0) return null;
-              return (
-                <div
-                  key={s.key}
-                  className={cn('h-full', toneFill(s.key))}
-                  style={{ width: `${pct}%` }}
-                />
-              );
-            })}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-            {segments.map((s) => (
-              <div key={s.key} className="flex items-center gap-1.5">
-                <span className={cn('inline-block h-2.5 w-2.5 rounded-full', toneFill(s.key))} />
-                <Text variant="bodySm" as="span">
-                  {s.label}
-                </Text>
-                <Text
-                  as="span"
-                  size="xs"
-                  weight="semibold"
-                  color="primary"
-                  className="tabular-nums"
-                >
-                  {s.count}
-                </Text>
-              </div>
-            ))}
-          </div>
+          <CompositionRail
+            summary={barAria}
+            segments={segments.map((segment) => ({
+              id: segment.key,
+              label: segment.label,
+              detail: segment.count,
+              widthPercent: summary.total > 0 ? (segment.count / summary.total) * 100 : 0,
+              hideFromTrack: segment.count <= 0,
+              fillClassName: toneFill(segment.key),
+            }))}
+          />
         </div>
       </GlassPanel>
     </section>
@@ -477,7 +452,7 @@ export default function DiagnosticPage() {
   ) : null;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('diagnostic.title', 'System diagnostic')}
       subtitle={t(
         'diagnostic.subtitle',
@@ -560,6 +535,6 @@ export default function DiagnosticPage() {
           </FadeIn>
         )}
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

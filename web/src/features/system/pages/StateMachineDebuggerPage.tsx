@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
 
 import type { Column } from '@/components/ui';
@@ -511,7 +511,7 @@ export default function StateMachineDebuggerPage() {
   const subFsmType = fsmType === 'all' ? 'vehicle' : fsmType;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('fsm.title', 'FSM debugger')}
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
@@ -954,7 +954,7 @@ export default function StateMachineDebuggerPage() {
           </FadeIn>
         ) : null;
       })()}
-    </PageContainer>
+    </PageLayout>
   );
 }
 

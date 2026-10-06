@@ -26,11 +26,11 @@ export function MileageStatistics({ query, fromKm, distanceUnit }: MileageStatis
         onRetry={() => { void query.refetch(); }}
         skeleton={<Skeleton className="h-40 rounded-xl" />}
         empty={
-          // Mileage totals populate automatically after a completed drive.
           <EmptyState
             icon={<Car className="h-8 w-8" aria-hidden="true" />}
             message={t('statistics.noMileage', 'No mileage data available')}
             description={t('statistics.noMileageDescription', 'Distance totals and projections appear after the first completed drive is recorded.')}
+            actionTo={{ label: t('statistics.viewDrives', 'View drives'), to: '/drives' }}
             className="py-8"
           />
         }

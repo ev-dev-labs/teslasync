@@ -2,7 +2,8 @@ import { Battery, BellRing, PlugZap, Route } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, StatSkeleton } from '@/components/feedback';
 import { MetricCard } from '@/components/data-display';
-import { Badge, GlassPanel } from '@/components/ui';
+import { Badge, Caption } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 
@@ -51,18 +52,13 @@ export function MetricComparisonGrid({
 
   const metrics = release?.metrics ?? [];
   return (
-    <GlassPanel className="p-5 md:p-6">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-          {t('benchmarks.metrics.title', 'Private comparisons')}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          {t(
+    <LayoutCard
+      title={t('benchmarks.metrics.title', 'Private comparisons')}
+      description={t(
             'benchmarks.metrics.subtitle',
             'Ranges and percentiles are noisy estimates, not exact fleet rankings.',
           )}
-        </p>
-      </div>
+    >
       {loading ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => <StatSkeleton key={index} />)}
@@ -85,15 +81,16 @@ export function MetricComparisonGrid({
                   subtitle={range}
                   icon={<Icon className="h-4 w-4" />}
                   color={metric.suppressed ? 'amber' : 'cyan'}
+                  wrapLabel
                 />
-                <div className="flex items-center justify-between px-1 text-xs text-[var(--text-muted)]">
-                  <span>
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 px-1">
+                  <Caption className="min-w-0 break-words">
                     {metric.percentile != null
                       ? t('benchmarks.metrics.percentile', '{{value}}th performance percentile', {
                           value: fmtNumber(metric.percentile),
                         })
                       : t('benchmarks.metrics.noPercentile', 'Percentile unavailable')}
-                  </span>
+                  </Caption>
                   <Badge variant={metric.quality === 'strong' ? 'success' : 'neutral'} size="sm">
                     {t(`benchmarks.quality.${metric.quality}`, metric.quality)}
                   </Badge>
@@ -113,6 +110,6 @@ export function MetricComparisonGrid({
           className="py-8"
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

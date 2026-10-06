@@ -1,34 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Zap,
   Clock,
-  DollarSign,
-  TrendingDown,
-  BatteryCharging,
   CalendarClock,
   CheckCircle2,
-  History,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout, LayoutCard, ChartCard, Grid } from '@/components/layout';
 import {
-  GlassPanel,
   Button,
   Select,
   Input,
   Slider,
   Badge,
   DataTable,
-  PanelTitle,
   Text,
   Caption,
   ErrorText,
+  useSortToggle,
   type Column,
 } from '@/components/ui';
-import { UnitInput } from '@/components/forms';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { UnitInput, FormSection } from '@/components/forms';
+import { StatStrip, type StatMetric } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -44,13 +39,27 @@ import {
   useChargePlans,
   useRatePlans,
 } from '@/api/hooks/useCharging';
-import { RateTimeline } from '../components/RateTimeline';
-import { AutopilotPanel } from '../components/AutopilotPanel';
-import { ChargePointsPanel } from '../components/ChargePointsPanel';
+import { RateTimeline } from '../components/smart-charge-modernization/RateTimeline';
+import { AutopilotCard } from '../components/smart-charge-modernization/AutopilotCard';
+import { ChargePointsCard } from '../components/smart-charge-modernization/ChargePointsCard';
 import { AISmartChargeScheduleSuggestion } from '@/components/ai/AISmartChargeScheduleSuggestion';
 import type { ChargePlan, OptimizeChargeResponse } from '@/types/charging';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+
+const plannerColumns = { default: 1, xl: 3 };
+const factColumns = { default: 1, sm: 2, lg: 4 };
+
+function historySortValue(plan: ChargePlan, key: string): number | string {
+  if (key === 'estimated_cost' || key === 'savings') return knownNumber(plan[key]) ?? Number.NEGATIVE_INFINITY;
+  if (key === 'created_at') return Number.isFinite(Date.parse(plan.created_at)) ? Date.parse(plan.created_at) : Number.NEGATIVE_INFINITY;
+  if (key === 'rate_plan') return plan.rate_plan ?? '';
+  if (key === 'status') return plan.status ?? '';
+  return '';
+}
 
 /**
  * Default "Depart By" value for the datetime-local input: tomorrow at 07:30 in
@@ -98,7 +107,7 @@ function ScheduleFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <Caption>{label}</Caption>
-      <Text as="p" variant="body" className="mt-0.5 truncate font-medium">
+      <Text as="p" variant="body" className="mt-0.5 break-words font-medium">
         {value}
       </Text>
     </div>
@@ -114,17 +123,16 @@ export default function SmartChargePage() {
 
   // Data hooks
   const { vehicleId: selectedId } = useSelectedVehicle();
-  const {
-    data: ratePlans,
-    isError: ratePlansError,
-    error: ratePlansErrorObj,
-    refetch: refetchRatePlans,
-  } = useRatePlans();
+  const ratePlansQuery = useRatePlans();
+  const { data: ratePlans, refetch: refetchRatePlans } = ratePlansQuery;
+  const ratePlansState = useDataState(ratePlansQuery);
   const optimizeMutation = useOptimizeCharge();
   const applyMutation = useApplySchedule();
 
   // Form state — vehicleId comes from the global selection.
   const vehicleIdNum = selectedId ?? undefined;
+  const currentVehicleId = useRef(vehicleIdNum);
+  currentVehicleId.current = vehicleIdNum;
   const [targetSoc, setTargetSoc] = useState(80);
   const [departBy, setDepartBy] = useState(defaultDepartBy);
   // No hardcoded plan: the effect below defaults to the first available plan
@@ -140,20 +148,25 @@ export default function SmartChargePage() {
   // Result state
   const [result, setResult] = useState<OptimizeChargeResponse | null>(null);
   const [applied, setApplied] = useState(false);
+  const { sortKey, sortDir, onSort, sortFn } = useSortToggle();
+
+  useEffect(() => {
+    setResult(null);
+    setApplied(false);
+  }, [vehicleIdNum]);
 
   // Plan-history query — also drives the page-level freshness chip.
   const plansQuery = useChargePlans(vehicleIdNum);
   const {
     data: plans,
     isLoading: plansLoading,
-    isError: plansError,
-    error: plansErrorObj,
     refetch: refetchPlans,
   } = plansQuery;
+  const plansState = useDataState(plansQuery, { provenance: 'historical' });
 
   const ratePlanOptions = useMemo(
     () =>
-      (ratePlans ?? []).map((p) => ({
+      safeArray(ratePlans).map((p) => ({
         value: p.id,
         label: `${p.name} (${p.utility})`,
       })),
@@ -224,7 +237,9 @@ export default function SmartChargePage() {
         battery_capacity_kwh: batteryCapacity,
       },
       {
-        onSuccess: (data) => setResult(data),
+        onSuccess: (data) => {
+          if (currentVehicleId.current === vehicleIdNum) setResult(data);
+        },
       },
     );
   };
@@ -234,19 +249,53 @@ export default function SmartChargePage() {
     applyMutation.mutate(
       { plan_id: result.plan_id },
       {
-        onSuccess: () => setApplied(true),
+        onSuccess: () => {
+          if (currentVehicleId.current === vehicleIdNum) setApplied(true);
+        },
       },
     );
   };
 
-  const historyItems = plans ?? [];
+  const historyItems = useMemo(() => sortFn(safeArray(plans), historySortValue), [plans, sortFn]);
   const comparison = result?.comparison;
   const savingsPositive = (comparison?.savings ?? 0) > 0;
 
   const optimizeErrorMsg = optimizeMutation.isError
-    ? (optimizeMutation.error as Error)?.message ||
+    ? optimizeMutation.error?.message ||
       t('chargePlanner.optimizeError', 'Optimization failed')
     : '';
+
+  // Preserve the planner's specialist currency/rate presentation. Its existing
+  // wire contract is not a canonical SI metric contract.
+  const costMetrics: StatMetric[] = [
+    {
+      metricId: 'text', occurrenceId: 'charge-now',
+      label: t('chargePlanner.chargeNowCost', 'Charge now'),
+      rawValue: comparison && knownNumber(comparison.charge_now_cost) != null ? formatCurrency(comparison.charge_now_cost) : null,
+      description: t('chargePlanner.currentRate', 'At current rates'),
+      context: t('chargePlanner.currentRate', 'At current rates'),
+    },
+    {
+      metricId: 'text', occurrenceId: 'optimized-cost',
+      label: t('chargePlanner.optimizedCost', 'Optimized cost'),
+      rawValue: comparison && knownNumber(comparison.optimized_cost) != null ? formatCurrency(comparison.optimized_cost) : null,
+      context: result ? `${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh)}¢/kWh` : undefined,
+    },
+    {
+      metricId: 'text', occurrenceId: 'savings',
+      label: t('chargePlanner.savings', 'Savings'),
+      rawValue: comparison && knownNumber(comparison.savings) != null ? formatCurrency(comparison.savings) : null,
+      comparisonContent: comparison && savingsPositive && knownNumber(comparison.savings_percent) != null
+        ? <Text variant="bodySm">{fmtPercent(comparison.savings_percent)}</Text> : undefined,
+    },
+    {
+      metricId: 'text', occurrenceId: 'energy-needed',
+      label: t('chargePlanner.energyNeeded', 'Energy needed'),
+      rawValue: result && knownNumber(result.kwh_needed) != null ? `${fmtNumber(result.kwh_needed)} kWh` : null,
+      context: result && knownNumber(result.estimated_duration_hours) != null
+        ? t('chargePlanner.estDuration', '~{{hours}}h', { hours: fmtNumber(result.estimated_duration_hours) }) : undefined,
+    },
+  ];
 
   const historyColumns = useMemo<Column<ChargePlan>[]>(
     () => [
@@ -325,7 +374,7 @@ export default function SmartChargePage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('chargePlanner.title', 'Smart charge')}
       subtitle={t('chargePlanner.subtitle', 'Optimize charging schedule for the cheapest TOU rates')}
       query={plansQuery}
@@ -347,74 +396,36 @@ export default function SmartChargePage() {
         <FadeIn delay={0.05}>
           <section
             aria-label={t('chargePlanner.costComparison', 'Cost comparison')}
-            className="grid grid-cols-2 gap-4 lg:grid-cols-4"
           >
-            <MetricCard
-              label={t('chargePlanner.chargeNowCost', 'Charge now')}
-              value={comparison ? formatCurrency(comparison.charge_now_cost ?? 0) : '—'}
-              icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
-              color="red"
-              subtitle={t('chargePlanner.currentRate', 'At current rates')}
-            />
-            <MetricCard
-              label={t('chargePlanner.optimizedCost', 'Optimized cost')}
-              value={comparison ? formatCurrency(comparison.optimized_cost ?? 0) : '—'}
-              icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
-              color="green"
-              subtitle={
-                result
-                  ? `${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh ?? 0)}¢/kWh`
-                  : undefined
-              }
-            />
-            <MetricCard
-              label={t('chargePlanner.savings', 'Savings')}
-              value={comparison ? formatCurrency(comparison.savings ?? 0) : '—'}
-              icon={<BatteryCharging className="h-5 w-5" aria-hidden="true" />}
-              color="cyan"
-              change={
-                comparison && savingsPositive
-                  ? { value: fmtPercent(comparison.savings_percent ?? 0), positive: true }
-                  : undefined
-              }
-            />
-            <MetricCard
-              label={t('chargePlanner.energyNeeded', 'Energy needed')}
-              value={result ? `${fmtNumber(result.kwh_needed ?? 0)} kWh` : '—'}
-              icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-              color="amber"
-              subtitle={
-                result
-                  ? t('chargePlanner.estDuration', '~{{hours}}h', {
-                      hours: fmtNumber(result.estimated_duration_hours ?? 0),
-                    })
-                  : undefined
-              }
+            <StatStrip
+              id="smart-charge-cost-comparison"
+              metrics={costMetrics}
+              period={{
+                kind: 'unknown',
+                label: t('chargePlanner.costComparison', 'Cost comparison'),
+                reason: t('chargePlanner.modernization.estimateContext', 'Optimizer estimates for the selected departure and rate plan; not measured charging costs.'),
+              }}
             />
           </section>
         </FadeIn>
 
         {/* ── 2 · Autopilot — always-on profile, next-run preview, realized savings ── */}
         <FadeIn delay={0.08}>
-          <AutopilotPanel vehicleId={vehicleIdNum} />
+          <AutopilotCard key={vehicleIdNum ?? 'none'} vehicleId={vehicleIdNum} />
         </FadeIn>
 
         {/* ── 3 · Primary bento — settings control rail + rate-timeline hero ── */}
         <FadeIn delay={0.1}>
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Grid cols={plannerColumns}>
             {/* Charge settings (control rail) */}
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-              <PanelTitle className="mb-4 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('chargePlanner.settings', 'Charge settings')}
-              </PanelTitle>
-
+            <FormSection title={t('chargePlanner.settings', 'Charge settings')}>
               <div className="space-y-4">
                 {/* Live plans failed: say so with a retry instead of silently
                     substituting the built-in fallback list below. */}
-                {ratePlansError && (
+                <StaleRefreshWarning state={ratePlansState} />
+                {ratePlansState.fatalError && (
                   <QueryError
-                    error={ratePlansErrorObj}
+                    error={ratePlansState.fatalError}
                     onRetry={() => void refetchRatePlans()}
                     compact
                     resourceName={t('chargePlanner.ratePlansResource', 'rate plans')}
@@ -476,6 +487,7 @@ export default function SmartChargePage() {
                 />
 
                 <Button
+                  wrapLabel
                   onClick={handleOptimize}
                   disabled={!vehicleIdNum || optimizeMutation.isPending}
                   loading={optimizeMutation.isPending}
@@ -492,54 +504,43 @@ export default function SmartChargePage() {
                   </Caption>
                 )}
               </div>
-            </GlassPanel>
+            </FormSection>
 
             {/* Rate timeline (hero) */}
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('chargePlanner.rateTimeline', '24-hour rate timeline')}
-              </PanelTitle>
-
-              {optimizeMutation.isPending ? (
-                <Skeleton height={160} />
-              ) : optimizeMutation.isError ? (
-                <div className="py-8 text-center">
-                  <ErrorText>{optimizeErrorMsg}</ErrorText>
-                </div>
-              ) : !result ? (
-                <EmptyState /* no-action: awaiting a user-triggered optimization run */
-                  icon={<Clock className="h-8 w-8" />}
-                  message={t(
-                    'chargePlanner.runToSeeTimeline',
-                    'Run an optimization to see the 24-hour rate timeline and the cheapest charge window.',
-                  )}
-                />
-              ) : (
-                <>
-                  <RateTimeline rates={result.hourly_rates ?? []} chargeWindow={chargeWindow} />
-                  <Text as="p" variant="caption" className="mt-3">
-                    {t('chargePlanner.windowInfo', 'Optimal window: {{start}} — {{end}}', {
-                      start: formatTime(result.schedule.start_time),
-                      end: formatTime(result.schedule.end_time),
-                    })}
-                  </Text>
-                </>
-              )}
-            </GlassPanel>
-          </section>
+            <div className="min-w-0 xl:col-span-2">
+            <ChartCard
+              title={t('chargePlanner.rateTimeline', '24-hour rate timeline')}
+              ariaLabel={t('chargePlanner.rateTimelineChart', '24-hour electricity rate timeline')}
+              data={safeArray(result?.hourly_rates).map(({ hour, rate_cents, tier }) => ({ hour, rate_cents, tier }))}
+              exportData={safeArray(result?.hourly_rates).map(({ hour, rate_cents, tier }) => ({ hour, rate_cents, tier }))}
+              exportable
+              fullscreen
+              dataColumns={[
+                { key: 'hour', label: t('powershare.time', 'Time') },
+                { key: 'rate_cents', label: t('chargePlanner.modernization.rateCentsPerKwh', 'Rate (cents/kWh)') },
+                { key: 'tier', label: t('chargePlanner.modernization.rateTier', 'Rate tier') },
+              ]}
+              loading={optimizeMutation.isPending}
+              error={optimizeMutation.isError ? optimizeMutation.error : null}
+              empty={!result}
+              emptyMessage={t('chargePlanner.runToSeeTimeline', 'Run an optimization to see the 24-hour rate timeline and the cheapest charge window.')}
+              footer={result ? <Text as="p" variant="caption">{t('chargePlanner.windowInfo', 'Optimal window: {{start}} — {{end}}', {
+                start: formatTime(result.schedule.start_time), end: formatTime(result.schedule.end_time),
+              })}</Text> : undefined}
+            >
+              <RateTimeline rates={safeArray(result?.hourly_rates)} chargeWindow={chargeWindow} />
+            </ChartCard>
+            </div>
+          </Grid>
         </FadeIn>
 
         {/* ── 4 · Schedule bento — recommended schedule + alternatives ── */}
         <FadeIn delay={0.15}>
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Grid cols={plannerColumns}>
             {/* Recommended schedule + apply */}
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <div className="min-w-0 xl:col-span-2">
+            <LayoutCard title={t('chargePlanner.schedule', 'Recommended schedule')}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <PanelTitle className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                  {t('chargePlanner.schedule', 'Recommended schedule')}
-                </PanelTitle>
                 {result &&
                   (applied ? (
                     <Badge variant="success" size="md" className="gap-1">
@@ -548,6 +549,7 @@ export default function SmartChargePage() {
                     </Badge>
                   ) : (
                     <Button
+                      wrapLabel
                       onClick={handleApply}
                       disabled={applyMutation.isPending}
                       loading={applyMutation.isPending}
@@ -573,18 +575,18 @@ export default function SmartChargePage() {
                 <>
                   {applyMutation.isError && (
                     <ErrorText className="mb-3">
-                      {(applyMutation.error as Error)?.message ||
+                      {applyMutation.error?.message ||
                         t('chargePlanner.applyError', 'Failed to apply schedule')}
                     </ErrorText>
                   )}
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <Grid cols={factColumns}>
                     <ScheduleFact
                       label={t('chargePlanner.currentSoc', 'Current SOC')}
-                      value={`${result.current_soc ?? 0}%`}
+                      value={knownNumber(result.current_soc) != null ? `${result.current_soc}%` : '—'}
                     />
                     <ScheduleFact
                       label={t('chargePlanner.targetSocLabel', 'Target SOC')}
-                      value={`${result.target_soc ?? 0}%`}
+                      value={knownNumber(result.target_soc) != null ? `${result.target_soc}%` : '—'}
                     />
                     <ScheduleFact
                       label={t('chargePlanner.startTime', 'Start time')}
@@ -594,17 +596,14 @@ export default function SmartChargePage() {
                       label={t('chargePlanner.endTime', 'End time')}
                       value={formatTime(result.schedule.end_time)}
                     />
-                  </div>
+                  </Grid>
                 </>
               )}
-            </GlassPanel>
+            </LayoutCard>
+            </div>
 
             {/* Alternative windows */}
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('chargePlanner.alternatives', 'Alternative windows')}
-              </PanelTitle>
+            <LayoutCard title={t('chargePlanner.alternatives', 'Alternative windows')}>
 
               {optimizeMutation.isPending ? (
                 <Skeleton height={120} />
@@ -616,50 +615,49 @@ export default function SmartChargePage() {
                     'Optimize a schedule to compare alternative charge windows.',
                   )}
                 />
-              ) : (result.alternative_windows ?? []).length === 0 ? (
+              ) : safeArray(result.alternative_windows).length === 0 ? (
                 <EmptyState /* no-action: transient — the optimizer returned a single best window */
                   icon={<Clock className="h-8 w-8" />}
                   message={t('chargePlanner.noAlternatives', 'No alternative windows for this plan.')}
                 />
               ) : (
                 <ul className="space-y-2">
-                  {(result.alternative_windows ?? []).map((alt, i) => (
+                  {safeArray(result.alternative_windows).map((alt, i) => (
                     <li
                       key={i}
-                      className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-3 py-2"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2"
                     >
                       <Text variant="bodySm" className="tabular-nums">
                         {formatTime(alt.start_time)} — {formatTime(alt.end_time)}
                       </Text>
-                      <Caption className="truncate">{alt.rate_tier}</Caption>
+                      <Caption className="break-words">{alt.rate_tier}</Caption>
                       <Text variant="body" className="font-medium tabular-nums">
-                        {formatCurrency(alt.estimated_cost ?? 0)}
+                        {knownNumber(alt.estimated_cost) != null ? formatCurrency(alt.estimated_cost) : '—'}
                       </Text>
                     </li>
                   ))}
                 </ul>
               )}
-            </GlassPanel>
-          </section>
+            </LayoutCard>
+          </Grid>
         </FadeIn>
 
         {/* ── 5 · Detail band — plan history ── */}
         <FadeIn delay={0.2}>
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('chargePlanner.history', 'Plan history')}
-            </PanelTitle>
-
-            {plansLoading && historyItems.length === 0 ? (
+          <LayoutCard title={t('chargePlanner.history', 'Plan history')}>
+            <StaleRefreshWarning state={plansState} />
+            {plansLoading && !plansState.hasData ? (
               <Skeleton height={200} />
-            ) : plansError ? (
-              <QueryError error={plansErrorObj} onRetry={() => refetchPlans()} />
+            ) : plansState.fatalError ? (
+              <QueryError error={plansState.fatalError} onRetry={() => refetchPlans()} />
             ) : (
               <DataTable
                 enableValueFilters
                 tableId="charging:smart-charge-history"
                 columns={historyColumns}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={onSort}
                 mobileColumns={['created_at', 'savings', 'status']}
                 data={historyItems}
                 keyExtractor={(p) => p.id}
@@ -670,14 +668,14 @@ export default function SmartChargePage() {
                 pagination
               />
             )}
-          </GlassPanel>
+          </LayoutCard>
         </FadeIn>
 
         {/* ── 6 · OCPP band — non-Tesla charge points ── */}
         <FadeIn delay={0.25}>
-          <ChargePointsPanel />
+          <ChargePointsCard />
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

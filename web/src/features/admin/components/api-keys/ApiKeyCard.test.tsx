@@ -157,4 +157,18 @@ describe('ApiKeyCard', () => {
     expect(screen.getByRole('button', { name: 'Revoke key Grafana' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete key Grafana' })).toBeInTheDocument();
   });
+
+  it('keeps long key and bound-subject identities available inside the canonical card without truncation', () => {
+    const name = 'Fleet integration identity '.repeat(12);
+    const prefix = 'tsk_live_' + 'abcdef'.repeat(30);
+    const key = makeKey({ name, keyPrefix: prefix, subject: 'operator-' + 'x'.repeat(120) });
+    const onDelete = vi.fn();
+    const { container } = render(<ApiKeyCard apiKey={key} onRevoke={vi.fn()} onDelete={onDelete} />);
+    expect(container.querySelector('[data-print-card]')).toBeInTheDocument();
+    expect(screen.getByText(name.trim())).not.toHaveClass('truncate');
+    expect(screen.getByText(prefix)).not.toHaveClass('truncate');
+    expect(screen.getByText(`Signed in as ${key.subject}`)).not.toHaveClass('truncate');
+    fireEvent.click(screen.getByRole('button', { name: `Delete key ${name.trim()}` }));
+    expect(onDelete).toHaveBeenCalledWith(key);
+  });
 });

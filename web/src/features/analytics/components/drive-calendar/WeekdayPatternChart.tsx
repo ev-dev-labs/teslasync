@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
-  ChartContainer,
   ChartTooltip,
   CHART_COLORS,
   ResponsiveContainer,
@@ -15,6 +14,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { QueryError } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -64,8 +64,9 @@ export function WeekdayPatternChart({
   );
 
   return (
-    <ChartContainer
-      className={className}
+    <div className={className}>
+    <ChartCard
+      size="standard"
       title={t('driveCalendar.weekdayPattern.title', 'Day-of-week pattern')}
       subtitle={t(
         'driveCalendar.weekdayPattern.subtitle',
@@ -143,6 +144,7 @@ export function WeekdayPatternChart({
           </BarChart>
         </ResponsiveContainer>
       )}
-    </ChartContainer>
+    </ChartCard>
+    </div>
   );
 }

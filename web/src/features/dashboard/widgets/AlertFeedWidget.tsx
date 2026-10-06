@@ -55,6 +55,7 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
         timestamp: a.created_at,
         color: SEVERITY_HEX[sev],
         href: getAlertDrillthroughHref(a),
+        wrap: true,
       };
     }),
     [alerts, isWide, severityLabels],

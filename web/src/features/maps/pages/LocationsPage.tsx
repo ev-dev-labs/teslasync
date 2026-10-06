@@ -30,8 +30,9 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, Pagination, PanelTitle, Text } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
+import { Button, GlassPanel, Pagination, Text } from '@/components/ui';
 import { EntityPreviewDrawer, MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -143,7 +144,11 @@ export default function LocationsPage() {
     },
     enabled: vehicleId !== null,
   });
-  const { data: rawLocations, isLoading, isError, error, refetch } = locationsQuery;
+  const { data: rawLocations, refetch } = locationsQuery;
+  const source = deriveDataState(locationsQuery, { provenance: 'historical' });
+  const isLoading = locationsQuery.isLoading && !source.hasData;
+  const isError = source.fatalError !== null;
+  const error = source.fatalError;
 
   const locations = rawLocations;
 
@@ -205,10 +210,11 @@ export default function LocationsPage() {
 
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('locations.title', 'Visited locations')}
       subtitle={t('locations.subtitle', "Places you've been — ranked by frequency")}
       query={locationsQuery}
+      dataSources={[{ id: 'locations', label: t('locations.title', 'Visited locations'), query: locationsQuery, enabled: vehicleId !== null }]}
     >
       {/* ── 1. KPI band ───────────────────────────────────────────── */}
       <FadeIn>
@@ -276,11 +282,7 @@ export default function LocationsPage() {
 
       {/* ── 3. Detail band — searchable, paginated leaderboard ──────── */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('locations.all', 'All locations')}
-          </PanelTitle>
+        <LayoutCard title={t('locations.all', 'All locations')}>
 
           <FilterBar className="mb-3">
             <SearchInput
@@ -352,7 +354,7 @@ export default function LocationsPage() {
                           #{i + 1}
                         </Text>
                         <div className="min-w-0 flex-1">
-                          <Text as="p" size="sm" weight="medium" color="primary" className="truncate">
+                          <Text as="p" size="sm" weight="medium" color="primary" className="break-words">
                             {loc.address_name ?? '—'}
                           </Text>
                           <Text as="p" variant="caption" className="mt-0.5">
@@ -409,7 +411,7 @@ export default function LocationsPage() {
               />
             </div>
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
 
       <EntityPreviewDrawer
@@ -507,6 +509,6 @@ export default function LocationsPage() {
             : []
         }
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

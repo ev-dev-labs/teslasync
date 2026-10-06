@@ -5,7 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
@@ -13,13 +13,8 @@ import {
   YAxis,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import { chartTokens } from '@/lib/tokens';
@@ -70,11 +65,7 @@ export function ComfortConsistencyStabilizationOutcomes({
 
   return (
     <section data-testid="comfort-consistency-stabilization-outcomes">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <TimerReset className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.stabilization.title', 'Stabilization and overshoot outcomes')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.stabilization.title', 'Stabilization and overshoot outcomes')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.stabilization.subtitle',
@@ -135,7 +126,7 @@ export function ComfortConsistencyStabilizationOutcomes({
               )}
             />
           ) : (
-            <ChartContainer
+            <EmbeddedChart toolbar exportable size="standard"
               className="mt-4"
               title={t('comfortConsistency.stabilization.plotTitle', 'Observed overshoot distribution')}
               ariaLabel={t(
@@ -163,10 +154,10 @@ export function ComfortConsistencyStabilizationOutcomes({
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </ChartContainer>
+            </EmbeddedChart>
           )}
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

@@ -13,8 +13,8 @@
  * formatter alone understands a per-distance compound unit.
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { Badge, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { EmptyState, InlineCallout } from '@/components/feedback';
 import { Info } from 'lucide-react';
@@ -41,8 +41,7 @@ export function DrivingChargingSummaryPanel({ driving, charging }: DrivingChargi
   };
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <PanelTitle>{t('resaleVault.usage.title', 'Driving & charging history')}</PanelTitle>
+    <LayoutCard title={t('resaleVault.usage.title', 'Driving & charging history')}>
 
       {!driving && !charging ? (
         // no-action: mirrors this vehicle's drive/charge history query results as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
@@ -95,6 +94,6 @@ export function DrivingChargingSummaryPanel({ driving, charging }: DrivingChargi
           )}
         </>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

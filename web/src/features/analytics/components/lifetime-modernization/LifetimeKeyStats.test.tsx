@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { LifetimeStats } from '@/api/hooks/useAnalytics';
+import { Button } from '@/components/ui';
 
 const state = vi.hoisted(() => ({
   locale: 'de-DE', precision: 3, distance: 'mi' as 'mi' | 'km',
@@ -33,7 +34,8 @@ vi.mock('@/components/data-display', () => ({
   }) => <div data-specialist aria-label={label}>{loading ? 'pending' : <>{value} {unit} {sublabel}</>}</div>,
 }));
 // Keep actual shared StatStrip/formatMetric/StatTile. Isolate only peripheral UI.
-vi.mock('@/components/ui', () => ({
+vi.mock('@/components/ui', async () => ({
+  Button: (await vi.importActual<typeof import('@/components/ui')>('@/components/ui')).Button,
   GlassPanel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Heading: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
   Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
@@ -42,7 +44,7 @@ vi.mock('@/components/ui', () => ({
 vi.mock('@/components/feedback', () => ({
   EmptyState: ({ message }: { message: string }) => <div>{message}</div>,
   QueryError: ({ onRetry }: { onRetry: () => void }) =>
-    <div role="alert" onClick={onRetry}>source refresh failed</div>,
+    <div role="alert">source refresh failed<Button onClick={onRetry}>Retry</Button></div>,
 }));
 
 import { LifetimeKeyStats } from './LifetimeKeyStats';

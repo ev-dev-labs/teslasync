@@ -10,11 +10,12 @@ import {
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { cn } from '@/lib/cn';
 
@@ -45,6 +46,9 @@ export default function SignalMutualInformationPage() {
   const signalsQuery = useSignals(id);
   const historyA = useSignalHistory(id, signalA, HISTORY_HOURS);
   const historyB = useSignalHistory(id, signalB, HISTORY_HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyAState = useDataState(historyA, { provenance: 'historical' });
+  const historyBState = useDataState(historyB, { provenance: 'historical' });
   const signalAChosen = signalA !== '';
   const signalBChosen = signalB !== '';
   const bothChosen = signalAChosen && signalBChosen;
@@ -109,19 +113,17 @@ export default function SignalMutualInformationPage() {
     || (!historyBHasData && historyB.isLoading)
   );
   const isError = bothChosen && (
-    (historyA.isError && !historyAHasData)
-    || (historyB.isError && !historyBHasData)
+    historyAState.fatalError != null
+    || historyBState.fatalError != null
   );
   const error =
-    historyA.isError && !historyAHasData
-      ? historyA.error
-      : historyB.error;
+    historyAState.fatalError ?? historyBState.fatalError;
   const maxContribution = Math.max(
     0,
     ...(result?.cells ?? []).map((cell) => Math.abs(cell.contribution)),
   );
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalMutualInformation.title', 'Signal mutual information')}
       subtitle={t(
         'signalMutualInformation.subtitle',
@@ -136,8 +138,8 @@ export default function SignalMutualInformationPage() {
             <Network className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalMutualInformation.selection.title', 'Signals to compare')}
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={96} />
           ) : options.length === 0 ? (
@@ -241,7 +243,10 @@ export default function SignalMutualInformationPage() {
       <FadeIn delay={0.2}>
         {isError ? (
           <GlassPanel className="p-4 sm:p-5">
-            <QueryError error={error} onRetry={() => historyA.refetch()} />
+            <QueryError error={error} onRetry={() => {
+              if (historyAState.fatalError) historyAState.retry?.();
+              if (historyBState.fatalError) historyBState.retry?.();
+            }} />
           </GlassPanel>
         ) : (
           <ChartContainer
@@ -288,7 +293,14 @@ export default function SignalMutualInformationPage() {
             <Grid3X3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalMutualInformation.heatmap.title', 'Contribution heatmap')}
           </PanelTitle>
-          {result == null ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => {
+              if (historyAState.fatalError) historyAState.retry?.();
+              if (historyBState.fatalError) historyBState.retry?.();
+            }} />
+          ) : result == null ? (
             <EmptyState /* no-action: the two signal selectors above are the relevant next action. */
               icon={<Grid3X3 className="h-8 w-8" />}
               message={bothChosen
@@ -338,6 +350,6 @@ export default function SignalMutualInformationPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

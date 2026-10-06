@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wind, Zap, Recycle, Waypoints } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, HelpTooltip } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
@@ -88,7 +88,7 @@ export default function EnergyAnatomyPage() {
   const isError = drivesQuery.isError;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('energyAnatomy.title', 'Energy Anatomy')}
       subtitle={t('energyAnatomy.subtitle', 'Where a period of traction energy physically went')}
       query={drivesQuery}
@@ -262,6 +262,6 @@ export default function EnergyAnatomyPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

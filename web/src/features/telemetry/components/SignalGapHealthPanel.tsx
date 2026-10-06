@@ -11,7 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import {
   BarChart,
   Bar,
@@ -48,6 +49,7 @@ interface BucketSegment {
 export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPanelProps) {
   const { t } = useTranslation();
   const { query, buckets } = analysis;
+  const sourceState = useDataState(query, { provenance: 'live' });
 
   const segments = useMemo<BucketSegment[]>(
     () => [
@@ -60,11 +62,12 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
   );
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
+    <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
         <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('signalGap.distributionTitle', 'Signal health distribution')}
       </PanelTitle>
+      {hasVehicle && <StaleRefreshWarning state={sourceState} label={t('signalGap.distributionTitle', 'Signal health distribution')} />}
 
       {!hasVehicle ? (
         <EmptyState
@@ -74,8 +77,8 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
         />
       ) : query.isLoading ? (
         <Skeleton height={260} />
-      ) : query.isError ? (
-        <QueryError error={query.error} onRetry={() => query.refetch()} />
+      ) : sourceState.fatalError ? (
+        <QueryError error={sourceState.fatalError} onRetry={() => query.refetch()} />
       ) : (buckets.total ?? 0) === 0 ? (
         // no-action: transient — the distribution fills once this vehicle streams its first signal; nothing the user can trigger sooner.
         <EmptyState

@@ -1,5 +1,8 @@
 {
   "battery": {
+    "modernization": {
+      "pausedInitial": "This request is paused while the device is offline. No measurements have loaded yet."
+    },
     "aiNarrative": {
       "title": "Explain the battery health forecast",
       "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
@@ -8,6 +11,13 @@
     },
     "cells": {
       "title": "Battery cells",
+      "modernization": {
+        "snapshot": "Latest available snapshot",
+        "snapshotSource": "Vehicle-scoped backend snapshot; cells are synthesized from brick extrema. Request time is not measurement time.",
+        "unknown": "Measurement unavailable",
+        "signalAvailability": "Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.",
+        "noCellSnapshot": "Cell voltage data is unavailable. Any pack and temperature values reported by the backend remain visible."
+      },
       "insight": {
         "highSpread": "High voltage spread",
         "highSpreadDesc": "Cell imbalance is significant. Consider a full charge to 100% to allow BMS balancing, then discharge to 90%.",
@@ -56,6 +66,18 @@
     },
     "degradation": {
       "title": "Battery degradation",
+      "sampleWindow": "Available battery history",
+      "estimateEvidence": "Health, capacity, range and forecasts are estimates derived from available telemetry snapshots, not direct pack-capacity measurements.",
+      "noSoh": "Battery health is not available yet.",
+      "predictionAndHabits": "Prediction and charging habits",
+      "analysis": "Range and risk analysis",
+      "guidance": "Recommendations and health factors",
+      "initialPaused": "Battery analytics loading is paused. Reconnect to load this vehicle’s history.",
+      "stressValue": {
+        "Low": "Low",
+        "Medium": "Medium",
+        "High": "High"
+      },
       "prediction": "Prediction",
       "predictionDesc": "At current rate, battery reaches",
       "inApprox": "in approximately",

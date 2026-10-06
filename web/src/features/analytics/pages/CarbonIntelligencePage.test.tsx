@@ -128,6 +128,11 @@ vi.mock('@/components/forms', () => ({
   RangePicker: () => <div data-testid="carbon-range">Range picker</div>,
 }));
 
+vi.mock('@/components/layout', async () => ({
+  ...(await vi.importActual<typeof import('@/components/layout')>('@/components/layout')),
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
 vi.mock('@/components/charts', () => {
   const Wrapper = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const SvgWrapper = ({ children }: { children?: ReactNode }) => (

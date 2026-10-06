@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import {
   CardGrid,
-  useCardPlacement,
   type CardGridItem,
-} from '@/components/layout/layout-reference';
+} from '@/components/layout';
+import { useCardPlacement } from '@/components/layout/layout-reference';
 import { cn } from '@/lib/cn';
 
 /** Placement only: existing sections remain the panel/chart/action owners. */

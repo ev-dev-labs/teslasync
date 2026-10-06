@@ -143,6 +143,20 @@ describe('RepairSuggestionCard', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps causal evidence order and bounds the summary by the contradiction, not the earlier proposal', () => {
+    render(<RepairSuggestionCard suggestion={buildSuggestion()} onApply={vi.fn()} />);
+    const region = screen.getByRole('region', { name: 'Evidence timeline' });
+    const list = within(region).getByRole('list', { name: 'Evidence timeline' });
+    const entries = within(list).getAllByRole('listitem');
+    expect(entries).toHaveLength(4);
+    expect(entries[0]).toHaveTextContent('Session started');
+    expect(entries[1]).toHaveTextContent('Last evidence the session was still running');
+    expect(entries[2]).toHaveTextContent('Contradicting evidence');
+    expect(entries[3]).toHaveTextContent('Proposed end');
+    expect(entries[2]).toHaveTextContent('Charging record · charging_session.started_at = #900');
+    expect(entries[3]).toHaveTextContent('Never later than the contradicting evidence');
+  });
+
   it('marks an open session and shows "Still open" as the stored end', () => {
     render(<RepairSuggestionCard suggestion={buildSuggestion()} onApply={vi.fn()} />);
     expect(screen.getByText('Open')).toBeInTheDocument();

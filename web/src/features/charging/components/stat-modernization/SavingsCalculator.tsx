@@ -97,7 +97,10 @@ export function SavingsCalculator({
                     context: `~${text('currency', gasComparison.yearlySavings)} ${t('costAnalysis.calculator.perYear', '/ year')}` },
                 ]} />
             ) : !error && (
-              <EmptyState message={t('costAnalysis.calculator.noData', 'Not enough data for comparison')} />
+              <EmptyState
+                message={t('costAnalysis.calculator.noData', 'Not enough data for comparison')}
+                action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
+              />
             )}
           </div>
         </div>

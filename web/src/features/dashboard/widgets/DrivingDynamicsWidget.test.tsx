@@ -321,6 +321,20 @@ afterEach(() => {
 });
 
 describe('DrivingDynamicsWidget — standard layout', () => {
+  it('preserves an acceleration reading above the fixed 1.2g scale', () => {
+    const data = makeDynamics({ avgAccelerationG: 2 });
+    useDrivingDynamicsMock.mockReturnValue(makeQuery({ data }));
+    renderWidget({ cols: 2, rows: 2 });
+    const gauge = screen.getByRole('group', { name: '2.00' });
+    expect(gauge).not.toHaveAttribute('aria-valuenow');
+    expect(gauge).toHaveTextContent('2.00');
+    expect(gauge).toHaveTextContent('0.00 – 1.20');
+    expect(screen.getByText('Accel')).toBeInTheDocument();
+    expect(screen.getByText('Brake')).toBeInTheDocument();
+    expect(screen.getByText('Lateral')).toBeInTheDocument();
+    expect(data.avgAccelerationG).toBe(2);
+  });
+
   it('renders the titled shell, the three g-force gauges, and the severity badge', () => {
     useDrivingDynamicsMock.mockReturnValue(
       makeQuery({

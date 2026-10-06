@@ -9,7 +9,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
+import { Heading, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -86,14 +87,7 @@ export function PreconditioningMethodology({
 
   return (
     <section data-testid="preconditioning-methodology">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BookOpenCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.method.title',
-            'Methodology and interpretation guardrails',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.method.title', 'Methodology and interpretation guardrails')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.method.subtitle',
@@ -134,7 +128,7 @@ export function PreconditioningMethodology({
             </Text>
           </AlertBanner>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

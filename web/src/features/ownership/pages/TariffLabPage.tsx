@@ -24,7 +24,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -381,14 +381,13 @@ export default function TariffLabPage() {
   const bestResult = results.find((row) => row.rank === 1) ?? null;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.tariff.title', 'Utility tariff arbitrage lab')}
       subtitle={t(
         'ownership.tariff.subtitle',
         'Replay your real measured charging load against every rate plan you can author — flat, time-of-use, tiered, real-time, and demand — then rank them on annualised cost.',
       )}
-      loading={tariffQuery.isLoading}
-      error={tariffQuery.error as Error | null}
+      query={tariffQuery}
     >
       <AlertBanner
         variant="info"
@@ -637,6 +636,8 @@ export default function TariffLabPage() {
       <FadeIn delay={0.25}>
         <OwnershipPanel
           title={t('ownership.tariff.plans.title', 'Your rate plan library')}
+          source={tariffQuery}
+          editing={formOpen}
           description={t(
             'ownership.tariff.plans.subtitle',
             'Author any plan your utility offers. Prices are stored per watt-hour in currency minor units so exotic structures stay exact.',
@@ -901,6 +902,6 @@ export default function TariffLabPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

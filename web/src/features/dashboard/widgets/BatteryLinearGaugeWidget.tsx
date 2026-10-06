@@ -51,6 +51,7 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
       <div className="flex min-w-0 flex-col gap-2">
         {batteryLevel != null ? (
           <LinearGauge
+            preserveReadingAndScale
             value={batteryLevel}
             max={100}
             label={t('widget.level', 'Level')}

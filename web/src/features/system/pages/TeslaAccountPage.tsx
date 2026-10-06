@@ -4,13 +4,14 @@ import {
   ContactRound, Activity, Link2,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText } from '@/components/ui';
 import { MetricCard, KVList, Avatar, Timeline } from '@/components/data-display';
-import { QueryError, EmptyState, Skeleton, StatGridSkeleton } from '@/components/feedback';
+import { QueryError, EmptyState, Skeleton, StatGridSkeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useTeslaUserProfile, useRefreshTeslaProfile } from '@/api/hooks/useUser';
 import { formatDate, formatDateTime, formatRelative } from '@/lib/dateFormat';
 
@@ -27,12 +28,24 @@ export default function TeslaAccountPage() {
   usePageTitle(t('teslaAccount.title', 'Tesla account'));
 
   const profileQuery = useTeslaUserProfile();
-  const { data, isLoading, isError, error, refetch } = profileQuery;
+  const { data, isLoading: queryLoading, refetch } = profileQuery;
+  const profileState = useDataState(profileQuery);
+  const isLoading = queryLoading && !profileState.hasData;
+  const error = profileState.fatalError;
+  const isError = !!error;
   const refreshMutation = useRefreshTeslaProfile();
 
   const profile = data?.profile ?? null;
   const hasProfile = profile != null;
   const fetchedAt = profile?.fetched_at ?? data?.fetched_at ?? null;
+  const activityTimes = [profile?.created_at, profile?.updated_at, fetchedAt].flatMap((iso) => {
+    const instant = iso ? Date.parse(iso) : NaN;
+    return Number.isFinite(instant) ? [instant] : [];
+  });
+  const activityBounds = {
+    start: activityTimes.length > 0 ? formatDateTime(new Date(Math.min(...activityTimes))) : null,
+    end: activityTimes.length > 0 ? formatDateTime(new Date(Math.max(...activityTimes))) : null,
+  };
 
   const accountId = profile?.id != null ? `#${profile.id}` : '—';
   const memberSince = profile?.created_at ? formatDate(profile.created_at) : '—';
@@ -55,12 +68,13 @@ export default function TeslaAccountPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('teslaAccount.title', 'Tesla account')}
       subtitle={t('teslaAccount.subtitle', 'Your Tesla account profile synced from the Fleet API')}
       secondaryActions={actions}
       query={profileQuery}
     >
+      <StaleRefreshWarning state={profileState} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section
@@ -251,6 +265,9 @@ export default function TeslaAccountPage() {
               <QueryError error={error} onRetry={retry} resourceName={resourceName} />
             ) : hasProfile ? (
               <Timeline
+                label={t('teslaAccount.activity.title', 'Activity')}
+                chronology="oldest-first"
+                summaryBounds={activityBounds}
                 items={[
                   {
                     icon: <Link2 className="h-3 w-3" aria-hidden="true" />,
@@ -284,6 +301,6 @@ export default function TeslaAccountPage() {
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

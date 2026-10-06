@@ -58,7 +58,7 @@ describe('real DataTable mobile bridge', () => {
     const warnings = vi.spyOn(console, 'warn')
     try {
       const data = [...rows.slice(0, 2), { ...rows[2], id: '0-expanded', name: 'Suffix' }, rows[2]]
-      function StatefulCell({ row, kind }: { row: Row; kind: 'cell' | 'expanded' }) {
+      const StatefulCell = ({ row, kind }: { row: Row; kind: 'cell' | 'expanded' }) => {
         const [mountedKey] = useState(row.id)
         const [count, setCount] = useState(0)
         return <Button aria-label={`${kind} ${row.name}`} onClick={() => setCount(value => value + 1)}>
@@ -68,7 +68,7 @@ describe('real DataTable mobile bridge', () => {
       const statefulColumns: Column<Row>[] = [...columns, {
         key: 'cellState', header: 'Cell state', render: row => <StatefulCell row={row} kind="cell" />,
       }]
-      function Controlled({ data }: { data: Row[] }) {
+      const Controlled = ({ data }: { data: Row[] }) => {
         const [keys, setKeys] = useState<(string | number)[]>([])
         const [expanded, setExpanded] = useState<(string | number)[]>([0, '0'])
         return <>

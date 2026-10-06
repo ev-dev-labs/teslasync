@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { LayoutCard, useCardPlacement } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
+import { useCardPlacement } from '@/components/layout/layout-reference';
 import { cn } from '@/lib/cn';
 
 /** Keep history list semantics while letting the shared grid own the span. */

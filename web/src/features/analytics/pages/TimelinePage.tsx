@@ -5,7 +5,7 @@ import {
   Activity, BarChart3, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
-import { PageLayout, CardGrid, LayoutCard, ChartCard } from '@/components/layout/layout-reference';
+import { PageLayout, CardGrid, LayoutCard, ChartCard } from '@/components/layout';
 import { Badge, Button, DataTable, Text, Caption, type Column } from '@/components/ui';
 
 import { useRangeState } from '@/hooks/useRangeState';
@@ -14,6 +14,7 @@ import {
   DataFreshnessAuto,
   EntityPreviewDrawer,
   MetricBar,
+  CompositionRail,
 } from '@/components/data-display';
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -282,11 +283,17 @@ export default function TimelinePage() {
         filterValue: (row) => row.from_state,
         header: t('timeline.fromState', 'From state'),
         sortable: true,
-        render: (row) => (
-          <Badge variant={row.from_state == null ? 'neutral' : STATE_BADGE[row.from_state] ?? 'neutral'} size="sm">
-            {row.from_state ?? '—'}
-          </Badge>
-        ),
+        render: (row) => {
+          const fromState = row.from_state;
+          if (fromState == null) {
+            return <Badge variant="neutral" size="sm">—</Badge>;
+          }
+          return (
+            <Badge variant={STATE_BADGE[fromState] ?? 'neutral'} size="sm">
+              {fromState}
+            </Badge>
+          );
+        },
       },
       {
         key: 'to_state',
@@ -399,27 +406,45 @@ export default function TimelinePage() {
                 icon={<Clock className="h-8 w-8" />}
                 message={t('timeline.noStateData', 'No state distribution available yet')}
               />
+          ) : summaryRows.some((row) =>
+            !Number.isFinite(row.total_seconds)
+            || (totalSeconds > 0 && (row.total_seconds < 0 || row.total_seconds > totalSeconds))
+          ) ? (
+            <div className="space-y-3">
+              <Text variant="bodySm">
+                {t('timeline.invalidComposition', 'Proportional track unavailable for the returned dwell totals; individual state evidence remains visible.')}
+              </Text>
+              <ul className="flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
+                {summaryRows.map((row, index) => (
+                  <li key={`${row.state}:${index}`} className="min-w-0 break-words">
+                    <Text variant="bodySm" className="block">{row.state}</Text>
+                    <Text variant="caption" className="block">
+                      {Number.isFinite(row.total_seconds) && row.total_seconds >= 0
+                        ? formatDurationFromSeconds(row.total_seconds)
+                        : '—'} ({fmtPercent(row.percentage)})
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : (
-            <div className="flex h-8 overflow-hidden rounded-full">
-              {summaryRows.map((row) => {
+            <CompositionRail
+              size="lg"
+              summary={t('timeline.stateTimeline', 'State distribution')}
+              segments={summaryRows.map((row, index) => {
                 const pct = totalSeconds > 0
                   ? (row.total_seconds / totalSeconds) * 100
                   : 0;
-                if (pct < 0.3) return null;
-                return (
-                  <div
-                    key={row.state}
-                    className={cn('relative transition-all')}
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor:
-                        STATE_COLORS[row.state] ?? STATE_COLORS.offline,
-                    }}
-                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage)})`}
-                  />
-                );
+                return {
+                  id: `${row.state}:${index}`,
+                  label: row.state,
+                  widthPercent: pct,
+                  hideFromTrack: pct < 0.3,
+                  color: STATE_COLORS[row.state] ?? STATE_COLORS.offline,
+                  detail: `${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage)})`,
+                };
               })}
-            </div>
+            />
           )}
             </TimelineSource>
           <div className="mt-3 flex flex-wrap gap-3">

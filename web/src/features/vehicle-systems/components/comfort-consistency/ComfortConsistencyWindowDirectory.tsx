@@ -1,13 +1,7 @@
-import { ListTree } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { Badge, MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 
@@ -67,11 +61,7 @@ export function ComfortConsistencyWindowDirectory({
 
   return (
     <section data-testid="comfort-consistency-window-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.directory.title', 'Stabilization-window directory')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.directory.title', 'Stabilization-window directory')}>
         <Text as="p" variant="caption">
           {t(
             'comfortConsistency.directory.subtitle',
@@ -168,7 +158,7 @@ export function ComfortConsistencyWindowDirectory({
             ))}
           </ol>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

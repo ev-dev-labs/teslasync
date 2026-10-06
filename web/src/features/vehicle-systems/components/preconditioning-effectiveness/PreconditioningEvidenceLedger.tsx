@@ -8,9 +8,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { StatStrip, type StatMetric } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { preconditioningEvidenceLabel } from './labels';
@@ -65,6 +64,61 @@ export function PreconditioningEvidenceLedger({
             'Evidence availability is unresolved.',
           );
 
+  const metrics: StatMetric[] = [
+    {
+      metricId: 'text', occurrenceId: 'classified-departures',
+      label: t('preconditioningEffectiveness.kpis.classified', 'Classified departures'),
+      rawValue: resolved ? fmtInt(summary.joinedDepartures) : null,
+      context: <><Activity aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+        ? t('preconditioningEffectiveness.kpis.classifiedHint', '{{classified}} of {{valid}} unique valid drives', {
+            classified: fmtInt(summary.joinedDepartures), valid: fmtInt(summary.driveRows.uniqueValidDrives),
+          }) : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'hvac-active-share',
+      label: t('preconditioningEffectiveness.kpis.active', 'Observed HVAC-active pre-drive'),
+      rawValue: resolved && summary.conditionedShare != null ? fmtPercent(summary.conditionedShare * 100) : null,
+      context: <><ThermometerSun aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
+        ? t('preconditioningEffectiveness.kpis.activeHint', '{{count}} classified departures', {
+            count: summary.conditionedDepartures,
+          }) : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'hvac-off-control',
+      label: t('preconditioningEffectiveness.kpis.control', 'Explicitly HVAC-off control'),
+      rawValue: resolved ? fmtInt(summary.unconditionedDepartures) : null,
+      context: <><Snowflake aria-hidden="true" className="h-5 w-5 text-purple-300" />{resolved
+        ? t('preconditioningEffectiveness.kpis.controlHint', 'Every joined window row explicitly reported HVAC off')
+        : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'readiness-difference',
+      label: t('preconditioningEffectiveness.kpis.readinessDifference', 'Observed readiness difference'),
+      rawValue: comparisonPublished && summary.overall.startDeltaAdvantageC != null
+        ? formatDelta(summary.overall.startDeltaAdvantageC, { signed: true }) : null,
+      context: <><Gauge aria-hidden="true" className="h-5 w-5 text-emerald-300" />{resolved
+        ? t('preconditioningEffectiveness.kpis.readinessHint', 'Control median gap minus active median gap')
+        : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'improvement-difference',
+      label: t('preconditioningEffectiveness.kpis.improvementDifference', 'Observed improvement difference'),
+      rawValue: comparisonPublished && summary.overall.improvementLiftC != null
+        ? formatDelta(summary.overall.improvementLiftC, { signed: true }) : null,
+      context: <><Scale aria-hidden="true" className="h-5 w-5 text-amber-300" />{resolved
+        ? t('preconditioningEffectiveness.kpis.improvementHint', 'Active median improvement minus control median improvement')
+        : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'comparison-confidence',
+      label: t('preconditioningEffectiveness.kpis.confidence', 'Comparison confidence'),
+      rawValue: resolved && summary.overall.evidence !== 'none' ? fmtPercent(summary.overall.confidence * 100) : null,
+      context: <><ShieldCheck aria-hidden="true"
+        className={`h-5 w-5 ${summary.overall.evidence === 'strong' ? 'text-emerald-300' : 'text-amber-300'}`}
+      />{resolved ? preconditioningEvidenceLabel(t, summary.overall.evidence) : unavailable}</>,
+    },
+  ];
+
   return (
     <section
       data-testid="preconditioning-kpis"
@@ -73,125 +127,14 @@ export function PreconditioningEvidenceLedger({
         'Preconditioning effectiveness evidence ledger',
       )}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('preconditioningEffectiveness.kpis.title', 'KPI and evidence ledger')}
-        </PanelTitle>
-        <Grid cols={{ default: 1, sm: 2, xl: 6 }} gap={3}>
-          <MetricCard
-            label={t(
-              'preconditioningEffectiveness.kpis.classified',
-              'Classified departures',
-            )}
-            value={resolved ? fmtInt(summary.joinedDepartures) : '—'}
-            subtitle={resolved
-              ? t(
-                  'preconditioningEffectiveness.kpis.classifiedHint',
-                  '{{classified}} of {{valid}} unique valid drives',
-                  {
-                    classified: fmtInt(summary.joinedDepartures),
-                    valid: fmtInt(summary.driveRows.uniqueValidDrives),
-                  },
-                )
-              : unavailable}
-            icon={<Activity className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t(
-              'preconditioningEffectiveness.kpis.active',
-              'Observed HVAC-active pre-drive',
-            )}
-            value={
-              resolved && summary.conditionedShare != null
-                ? fmtPercent(summary.conditionedShare * 100)
-                : resolved
-                  ? '—'
-                  : '—'
-            }
-            subtitle={resolved
-              ? t(
-                  'preconditioningEffectiveness.kpis.activeHint',
-                  '{{count}} classified departures',
-                  { count: summary.conditionedDepartures },
-                )
-              : unavailable}
-            icon={<ThermometerSun className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t(
-              'preconditioningEffectiveness.kpis.control',
-              'Explicitly HVAC-off control',
-            )}
-            value={resolved ? fmtInt(summary.unconditionedDepartures) : '—'}
-            subtitle={resolved
-              ? t(
-                  'preconditioningEffectiveness.kpis.controlHint',
-                  'Every joined window row explicitly reported HVAC off',
-                )
-              : unavailable}
-            icon={<Snowflake className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t(
-              'preconditioningEffectiveness.kpis.readinessDifference',
-              'Observed readiness difference',
-            )}
-            value={comparisonPublished
-              ? formatDelta(summary.overall.startDeltaAdvantageC, {
-                  signed: true,
-                })
-              : '—'}
-            subtitle={resolved
-              ? t(
-                  'preconditioningEffectiveness.kpis.readinessHint',
-                  'Control median gap minus active median gap',
-                )
-              : unavailable}
-            icon={<Gauge className="h-5 w-5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t(
-              'preconditioningEffectiveness.kpis.improvementDifference',
-              'Observed improvement difference',
-            )}
-            value={comparisonPublished
-              ? formatDelta(summary.overall.improvementLiftC, {
-                  signed: true,
-                })
-              : '—'}
-            subtitle={resolved
-              ? t(
-                  'preconditioningEffectiveness.kpis.improvementHint',
-                  'Active median improvement minus control median improvement',
-                )
-              : unavailable}
-            icon={<Scale className="h-5 w-5" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t(
-              'preconditioningEffectiveness.kpis.confidence',
-              'Comparison confidence',
-            )}
-            value={
-              resolved && summary.overall.evidence !== 'none'
-                ? fmtPercent(summary.overall.confidence * 100)
-                : '—'
-            }
-            subtitle={resolved
-              ? preconditioningEvidenceLabel(t, summary.overall.evidence)
-              : unavailable}
-            icon={<ShieldCheck className="h-5 w-5" />}
-            color={summary.overall.evidence === 'strong' ? 'green' : 'amber'}
-          />
-        </Grid>
+      <LayoutCard title={t('preconditioningEffectiveness.kpis.title', 'KPI and evidence ledger')}>
+        <StatStrip id="preconditioning-evidence" variant="embedded" metrics={metrics}
+          period={{ kind: 'unknown', label: t('preconditioningEffectiveness.kpis.aria', 'Preconditioning effectiveness evidence ledger') }}
+          retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)
+            || (resolved && (state.climate.isPaused || state.drives.isPaused))}
+        />
         <PreconditioningQueryStatus summary={summary} state={state} />
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

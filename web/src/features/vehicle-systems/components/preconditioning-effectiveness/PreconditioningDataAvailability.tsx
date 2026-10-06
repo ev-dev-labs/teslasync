@@ -1,14 +1,8 @@
-import { ClipboardCheck, DatabaseZap } from 'lucide-react';
+import { DatabaseZap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { Badge, MetricLabel, Text } from '@/components/ui';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -135,14 +129,7 @@ export function PreconditioningDataAvailability({
 
   return (
     <section data-testid="preconditioning-availability">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.availability.title',
-            'Data availability and query state',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.availability.title', 'Data availability and query state')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.availability.subtitle',
@@ -198,7 +185,7 @@ export function PreconditioningDataAvailability({
             </Text>
           </div>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

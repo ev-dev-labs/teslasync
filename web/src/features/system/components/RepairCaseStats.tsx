@@ -35,7 +35,9 @@ export function RepairCaseStats({ statistics, loading = false }: RepairCaseStats
     },
     {
       label: t('dataRepair.cases.active', 'Active cases'),
-      value: (statistics?.open ?? 0) + (statistics?.in_review ?? 0),
+      value: statistics?.open != null && statistics?.in_review != null
+        ? statistics.open + statistics.in_review
+        : null,
       hint: t('dataRepair.cases.activeHint', 'Active review workload'),
       icon: UserRoundX,
       iconClass: 'bg-rose-400/10 text-rose-300',
@@ -55,7 +57,7 @@ export function RepairCaseStats({ statistics, loading = false }: RepairCaseStats
             className="min-w-0 bg-[var(--panel-bg)] px-4 py-4 sm:px-5 sm:py-5"
           >
             <div className="flex items-center justify-between gap-2">
-              <MetricLabel className="truncate">{metric.label}</MetricLabel>
+              <MetricLabel className="break-words">{metric.label}</MetricLabel>
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-shape-md ${metric.iconClass}`}
               >
@@ -65,9 +67,9 @@ export function RepairCaseStats({ statistics, loading = false }: RepairCaseStats
             {loading ? (
               <Skeleton className="mt-3 h-8 w-16" />
             ) : (
-              <MetricValue className="mt-2 tabular-nums">{metric.value ?? 0}</MetricValue>
+              <MetricValue className="mt-2 tabular-nums">{metric.value ?? '—'}</MetricValue>
             )}
-            <Text as="p" variant="caption" className="mt-1 truncate">
+            <Text as="p" variant="caption" className="mt-1 break-words">
               {metric.hint}
             </Text>
           </div>

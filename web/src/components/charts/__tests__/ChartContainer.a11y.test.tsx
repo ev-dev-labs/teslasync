@@ -13,6 +13,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
 import { EmbeddedChart } from '../EmbeddedChart';
+import { ChartCard } from '@/components/layout/layout-reference/ChartCard';
 
 let previousPreferences: ReturnType<typeof getFormatterPreferences>;
 
@@ -75,6 +76,59 @@ function renderChart(ui: React.ReactNode) {
 }
 
 describe('ChartContainer accessibility contract', () => {
+  it('keeps exactly one host heading and stable figure/table descriptions with an embedded toolbar opt-in', () => {
+    const description = 'Complete specialist chart description with source gaps.';
+    const { container } = renderChart(
+      <ChartCard title="Specialist source title" ariaLabel="Specialist source measurements"
+        ariaDescription={description} toolbar
+        action={<span data-testid="original-toolbar-action">Original toolbar detail</span>}
+        height={460} mobileHeight={300}
+        data={[{ reading: 0 }, { reading: null }]}
+        dataColumns={[{ key: 'reading', label: 'Original source reading' }]}>
+        <div data-testid="original-chart-tree">Original specialist plotted tree</div>
+      </ChartCard>,
+    );
+    expect(screen.getAllByRole('heading', { name: 'Specialist source title' })).toHaveLength(1);
+    const figure = screen.getByRole('figure', { name: 'Specialist source title' });
+    expect(figure).toHaveAccessibleDescription(/Complete specialist chart description with source gaps\./);
+    const titleId = figure.getAttribute('aria-labelledby');
+    expect(titleId ? document.getElementById(titleId)?.textContent : null).toBe('Specialist source title');
+    expect(figure.querySelector('[data-chart-toolbar]'))
+      .toContainElement(screen.getByTestId('original-toolbar-action'));
+    expect(figure).not.toHaveClass('rounded-panel', 'shadow-panel', 'p-5');
+    expect(container.querySelectorAll('[data-card]')).toHaveLength(1);
+    const viewport = screen.getByRole('img', { name: 'Specialist source measurements' });
+    expect(viewport).toContainElement(screen.getByTestId('original-chart-tree'));
+    expect(viewport).not.toContainElement(screen.getByTestId('original-toolbar-action'));
+    expect(viewport).toHaveStyle({
+      '--chart-height-desktop': '460px', '--chart-height-mobile': '300px',
+    });
+    const table = screen.getByRole('table', { name: 'Specialist source title — data table' });
+    expect(within(table).getByRole('cell', { name: '0' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '—' })).toBeInTheDocument();
+  });
+
+  it('retains figure descriptions and measured table cells through the shared card adapter', () => {
+    const description = 'One recorded energy measurement in the selected source window.';
+    renderChart(
+      <ChartCard title="Recorded energy" ariaLabel="Recorded energy in the selected source window"
+        ariaDescription={description}
+        data={[{ date: '2026-10-05', energy: '0.85 kWh' }]}
+        dataColumns={[{ key: 'date', label: 'Date' }, { key: 'energy', label: 'Measured energy' }]}>
+        <span>Original plotted content</span>
+      </ChartCard>,
+    );
+    expect(screen.getByRole('figure', { name: 'Recorded energy' }))
+      .toHaveAccessibleDescription(/One recorded energy measurement in the selected source window\./);
+    expect(screen.getByRole('img', {
+      name: 'Recorded energy in the selected source window',
+    })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Recorded energy — data table' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Measured energy' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '0.85 kWh' })).toBeInTheDocument();
+    expect(screen.getByText('Original plotted content')).toBeInTheDocument();
+  });
+
   it('reactively formats typed numeric table cells while preserving IDs, counts, strings and unknowns', () => {
     setGlobalPrecision(2);
     setGlobalLocale('en-US');

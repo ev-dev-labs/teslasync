@@ -271,6 +271,16 @@ afterEach(() => {
 /* ── Page render ─────────────────────────────────────────────────── */
 
 describe('SignalDiffPage', () => {
+  it('keeps retained diff metrics, breakdown and rows through refresh failure', () => {
+    h.diff = makeQuery({ data: diffResponse(ROWS), isError: true, error: new Error('refresh failed') });
+    renderPage();
+    expect(kpiValueText('Changed signals')).toBe('4');
+    expect(kpiValueText('Numeric changes')).toBe('2');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-rows', '4');
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '4');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
   it('renders the header, KPI band, and derived counts when the diff resolves', () => {
     renderPage();
 

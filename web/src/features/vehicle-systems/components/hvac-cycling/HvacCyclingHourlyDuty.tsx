@@ -1,18 +1,18 @@
-import { Clock3 } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { GlassPanel, MetricLabel, PanelTitle, Text } from '@/components/ui';
+import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import { chartTokens } from '@/lib/tokens';
@@ -46,11 +46,7 @@ export function HvacCyclingHourlyDuty({
 
   return (
     <section data-testid="hvac-cycling-hourly-duty">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Clock3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.hourly.title', 'Hourly HVAC duty')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.hourly.title', 'Hourly HVAC duty')}>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'hvacCycling.hourly.subtitle',
@@ -63,7 +59,7 @@ export function HvacCyclingHourlyDuty({
           requirement="intervals"
           skeletonHeight={230}
         >
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             className="border-0 bg-transparent p-0 shadow-none"
             title={t('hvacCycling.hourly.plotTitle', 'Duty by local hour')}
             ariaLabel={t(
@@ -113,7 +109,7 @@ export function HvacCyclingHourlyDuty({
                 />
               </BarChart>
             </ResponsiveContainer>
-          </ChartContainer>
+          </EmbeddedChart>
           <Text as="h4" variant="label" className="mb-2 mt-3">
             {t('hvacCycling.hourly.supportGrid', 'Per-hour observed support')}
           </Text>
@@ -136,7 +132,7 @@ export function HvacCyclingHourlyDuty({
             ))}
           </div>
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -17,6 +16,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { QueryError } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -65,8 +65,9 @@ export function MonthlyActivityChart({
   const drivesName = t('driveCalendar.monthly.drivesSeries', 'Drives');
 
   return (
-    <ChartContainer
-      className={className}
+    <div className={className}>
+    <ChartCard
+      size="standard"
       title={t('driveCalendar.monthly.title', 'Monthly distance & activity')}
       subtitle={t(
         'driveCalendar.monthly.subtitle',
@@ -168,6 +169,7 @@ export function MonthlyActivityChart({
           </ResponsiveContainer>
         )
       }
-    </ChartContainer>
+    </ChartCard>
+    </div>
   );
 }

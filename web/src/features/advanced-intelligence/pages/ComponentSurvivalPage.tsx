@@ -6,7 +6,7 @@ import { CHART_COLORS } from '@/components/charts';
 import { MetricBar, StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -30,14 +30,12 @@ export default function ComponentSurvivalPage() {
   usePageTitle(t('advancedIntelligence.survival.title', 'Component survival'));
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.survival.title', 'Component survival')}
       subtitle={t(
         'advancedIntelligence.survival.subtitle',
         'Review probabilistic service horizons, competing risks, and intervention sensitivity.',
       )}
-      loading={vehicleId != null && query.isLoading}
-      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="info"
@@ -52,6 +50,7 @@ export default function ComponentSurvivalPage() {
 
       <FadeIn>
         <InsightPanel
+          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.survival.cards.title', 'Component survival cards')}
           empty={items.length === 0}
           emptyMessage={vehicleId == null
@@ -156,6 +155,6 @@ export default function ComponentSurvivalPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -139,6 +139,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
         timestamp: obs.ts ?? '',
         color: SOURCE_COLORS[source] ?? 'var(--text-muted)',
         severity: 'info' as const,
+        wrap: true,
       };
     });
   }, [observations, t, displayPrecision, displayLocale]);

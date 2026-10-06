@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Area,
   AreaChart,
-  ChartContainer,
   ChartGradient,
   ChartTooltip,
   CHART_COLORS,
@@ -17,6 +16,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
@@ -67,8 +67,8 @@ export function OdometerGrowthChart({
       )}
       data-testid="milestone-growth"
     >
-      <ChartContainer
-        className="h-full"
+      <ChartCard
+        size="standard"
         title={t('milestones.growth.title', 'Observed odometer growth')}
         subtitle={t(
           'milestones.growth.subtitle',
@@ -170,7 +170,7 @@ export function OdometerGrowthChart({
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

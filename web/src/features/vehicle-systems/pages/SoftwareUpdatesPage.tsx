@@ -8,16 +8,15 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Smartphone, Calendar, Clock, ExternalLink,
-  RefreshCw, ListChecks, History,
+  RefreshCw, ListChecks,
 } from 'lucide-react';
 
-import { PageLayout, CardGrid, LayoutCard } from '@/components/layout/layout-reference';
-import { GlassPanel, Badge, Button, Pagination, PanelTitle, Text, Caption } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
+import { Badge, Button, Pagination, Text, Caption } from '@/components/ui';
+import { StatStrip, type StatMetric } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai/AISoftwareUpdateChangelogSummarizer';
@@ -30,7 +29,7 @@ import { formatDate } from '@/lib/dateFormat';
 
 import { neonColorMap } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
-import { request } from '@/api/client';
+import { useSoftwareUpdatesPage, PAGE_SIZE, type SoftwareUpdate } from '@/api/hooks/useSoftwareUpdatesPage';
 
 import { type CadencePoint } from '../components/SoftwareUpdateCadenceChart';
 import { SoftwareCadenceCard } from '../components/software-updates-modernization/SoftwareCadenceCard';
@@ -39,21 +38,8 @@ import { observedCount, softwareSourceState } from '../components/software-updat
 import { SoftwareUpdateStatusBreakdown } from '../components/SoftwareUpdateStatusBreakdown';
 import { getUpdateStatus } from '../components/softwareUpdateStatus';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-/** Wire shape from GET /software-updates (snake_case, matching Go JSON tags). */
-interface SoftwareUpdate {
-  id: number;
-  vehicle_id: number;
-  version: string;
-  status: string;
-  installed_at: string | null;
-  scheduled_at: string | null;
-  created_at: string;
-}
-
-const PAGE_SIZE = 50;
+import { deriveDataState } from '@/api/dataState';
+import { VehicleSourceContent } from '../components/VehicleSourceContent';
 
 /** `YYYY-MM` → short label, e.g. `Mar '25`. */
 function monthLabel(key: string): string {
@@ -80,22 +66,10 @@ export default function SoftwareUpdatesPage() {
     defaultPresetId: 'all',
   });
 
-  const updatesQuery = useQuery({
-    queryKey: ['software-updates', vehicleId, page, start, end],
-    queryFn: ({ signal }) => {
-      const params = new URLSearchParams({
-        vehicle_id: String(vehicleId),
-        limit: String(PAGE_SIZE),
-        offset: String((page - 1) * PAGE_SIZE),
-        start,
-        end,
-      });
-      return request<SoftwareUpdate[]>(`/software-updates?${params.toString()}`, { signal });
-    },
-    enabled: vehicleId !== null,
-  });
+  const updatesQuery = useSoftwareUpdatesPage(vehicleId, page, start, end);
   const { data, isLoading, isError, error, refetch } = updatesQuery;
   const source = softwareSourceState(data, isLoading, isError);
+  const historySource = deriveDataState(updatesQuery, { provenance: 'historical' });
 
   // Defensive coercion — an unexpected non-array response shape must not crash
   // the derivations below.
@@ -206,6 +180,9 @@ export default function SoftwareUpdatesPage() {
     ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
     : undefined;
   const unavailableMessage = t('softwareUpdates.source.unavailable', 'Update history is not available. Select a vehicle to load its history.');
+  const unavailableContent = <EmptyState message={unavailableMessage}
+    action={vehicleId != null ? { label: t('common.refresh', 'Refresh'), onClick: handleRetry } : undefined}
+    actionTo={vehicleId == null ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />;
 
   return (
     <PageLayout
@@ -228,7 +205,7 @@ export default function SoftwareUpdatesPage() {
             label: t('softwareUpdates.source.period', 'Loaded update history'),
             reason: t('softwareUpdates.source.scope', 'Summary and charts describe this page of up to 50 updates in the selected range, not the complete fleet history.'),
           }}
-          footer={!source.available && !isLoading ? retryContent ?? <EmptyState message={unavailableMessage} /> : undefined}
+          footer={!source.available && !isLoading ? retryContent ?? unavailableContent : undefined}
         />
       </FadeIn>
 
@@ -249,13 +226,14 @@ export default function SoftwareUpdatesPage() {
 
           { id: 'software-status', size: 'half', content: (
           <LayoutCard title={t('softwareUpdates.breakdown.title', 'By status')}>
-            {source.retained && retryContent}
+            <VehicleSourceContent source={historySource} enabled={vehicleId != null}
+              label={t('softwareUpdates.breakdown.title', 'By status')}>
             {source.initialLoading ? (
               <Skeleton height={160} />
             ) : source.fatalError ? (
               <QueryError error={error} onRetry={handleRetry} />
             ) : !source.available ? (
-              <EmptyState message={unavailableMessage} />
+              unavailableContent
             ) : totalUpdates === 0 ? (
               <EmptyState
                 icon={<ListChecks className="h-8 w-8" />}
@@ -269,6 +247,7 @@ export default function SoftwareUpdatesPage() {
             ) : (
               <SoftwareUpdateStatusBreakdown counts={statusCounts} total={totalUpdates} />
             )}
+            </VehicleSourceContent>
           </LayoutCard>
           ) },
         ]} />
@@ -281,12 +260,9 @@ export default function SoftwareUpdatesPage() {
 
       {/* 4 — Update timeline (responsive card grid) ───────────────── */}
       <FadeIn delay={0.3}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-4 flex items-center gap-2">
-            <History className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-            {t('softwareUpdates.timeline.title', 'Update timeline')}
-          </PanelTitle>
-          {source.retained && retryContent}
+        <LayoutCard title={t('softwareUpdates.timeline.title', 'Update timeline')}>
+          <VehicleSourceContent source={historySource} enabled={vehicleId != null}
+            label={t('softwareUpdates.timeline.title', 'Update timeline')}>
           {source.initialLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
               {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
@@ -294,7 +270,7 @@ export default function SoftwareUpdatesPage() {
           ) : source.fatalError ? (
             <QueryError error={error} onRetry={handleRetry} />
           ) : !source.available ? (
-            <EmptyState message={unavailableMessage} />
+            unavailableContent
           ) : updates.length === 0 ? (
             <EmptyState
               icon={<Smartphone className="h-12 w-12" />}
@@ -372,7 +348,8 @@ export default function SoftwareUpdatesPage() {
               />
             </>
           )}
-        </GlassPanel>
+          </VehicleSourceContent>
+        </LayoutCard>
       </FadeIn>
     </PageLayout>
   );

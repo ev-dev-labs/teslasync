@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useBehavioralSentinel } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -38,14 +38,12 @@ export default function BehavioralSentinelPage() {
   usePageTitle(t('advancedIntelligence.sentinel.title', 'Behavioral sentinel'));
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.sentinel.title', 'Behavioral sentinel')}
       subtitle={t(
         'advancedIntelligence.sentinel.subtitle',
         'Explainable command, identity, and telemetry-integrity signals without personal attribution.',
       )}
-      loading={vehicleId != null && query.isLoading}
-      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="warning"
@@ -59,6 +57,7 @@ export default function BehavioralSentinelPage() {
 
       <FadeIn>
         <InsightPanel
+          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.sentinel.findings.title', 'Explainable findings')}
           empty={findings.length === 0}
           emptyMessage={vehicleId == null
@@ -138,6 +137,6 @@ export default function BehavioralSentinelPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

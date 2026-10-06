@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
-import { GlassPanel, Badge } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { Timeline } from '@/components/data-display';
 import type { TimelineItemData } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -25,7 +26,7 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
 
   if (clip.eventCandidates.length === 0) {
     return (
-      <GlassPanel padding="md">
+      <LayoutCard title={t('dashcam.events.title', 'Event evidence')}>
         {/* no-action: three disjoint recovery paths (import metadata, run motion analysis, or switch to Reconstruction tab) live outside this component with no single handler in scope here. */}
         <EmptyState
           icon={<AlertTriangle className="h-8 w-8" />}
@@ -35,13 +36,13 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
             'Import metadata (event.json / folder), run local motion analysis, or connect telemetry in the Reconstruction tab to derive event candidates.',
           )}
         />
-      </GlassPanel>
+      </LayoutCard>
     );
   }
 
   const items: TimelineItemData[] = clip.eventCandidates.map((candidate) => ({
     title: (
-      <span className="flex items-center gap-2">
+      <span className="flex min-w-0 flex-wrap items-center gap-2">
         {EVENT_TYPE_LABELS[candidate.type]}
         <Badge size="sm" variant={CONFIDENCE_BADGE_VARIANT[candidate.confidence]}>
           {t(`dashcam.events.confidence.${candidate.confidence}`, candidate.confidence)}
@@ -56,11 +57,8 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
   }));
 
   return (
-    <GlassPanel padding="md" className="space-y-2">
-      <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-        {t('dashcam.events.title', 'Event evidence')}
-      </h3>
+    <LayoutCard title={t('dashcam.events.title', 'Event evidence')}>
       <Timeline items={items} />
-    </GlassPanel>
+    </LayoutCard>
   );
 }

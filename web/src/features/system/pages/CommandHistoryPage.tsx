@@ -16,19 +16,20 @@
 import { useDeferredValue, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Input as ControlInput,
   TabNav, Pagination, PanelTitle, Text, Caption, Badge,
 } from '@/components/ui';
 import { MetricCard, MetricBar, Timeline } from '@/components/data-display';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend,
   ResponsiveContainer, ChartTooltip, CHART_COLORS, axisTickSm, EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
@@ -152,7 +153,9 @@ export default function CommandHistoryPage() {
   // Data — keep the full query so PageContainer can drive a freshness chip and
   // each panel can react to loading/error independently.
   const commandsQuery = useCommandReliabilityHistory(activeVehicleId, startInstant, endInstantExclusive);
-  const { data: commands, isLoading, error, refetch } = commandsQuery;
+  const { data: commands, isLoading, refetch } = commandsQuery;
+  const state = useDataState(commandsQuery, { provenance: 'historical' });
+  const error = state.fatalError;
   const allCommands = commands ?? [];
 
   // Filters
@@ -326,7 +329,7 @@ export default function CommandHistoryPage() {
         : t('commandHistory.noCommands', 'No commands have been sent yet');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('commandHistory.title', 'Command history')}
       subtitle={t('commandHistory.subtitle', 'Audit log of all vehicle commands')}
       query={commandsQuery}
@@ -342,6 +345,7 @@ export default function CommandHistoryPage() {
         </div>
       }
     >
+      <StaleRefreshWarning state={state} />
       {/* ── Section 1: KPI band ──────────────────────────────────────────── */}
       <FadeIn>
         <section
@@ -537,7 +541,11 @@ export default function CommandHistoryPage() {
               />
             ) : (
               <>
-                <Timeline items={timelineItems} />
+                <Timeline
+                  items={timelineItems}
+                  chronology="newest-first"
+                  label={t('commandHistory.timelineTitle', 'Command timeline')}
+                />
                 {filtered.length > PAGE_SIZE && (
                   <Pagination
                     page={currentPage}
@@ -601,7 +609,7 @@ export default function CommandHistoryPage() {
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }
 

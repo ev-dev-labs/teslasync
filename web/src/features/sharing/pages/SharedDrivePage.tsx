@@ -5,11 +5,11 @@ import {
   MapPin, Clock, Zap, Battery, Mountain, Gauge, TrendingUp,
 } from 'lucide-react';
 import { GlassPanel, Logo, Text } from '@/components/ui';
-import { Grid, PageHeader } from '@/components/layout';
+import { ChartCard, Grid, LayoutCard, PageHeader } from '@/components/layout';
 import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import {
-  ChartContainer, ChartGradient, chartGrid, axisTick,
+  ChartGradient, chartGrid, axisTick,
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
@@ -108,11 +108,11 @@ function SharedDriveLoading() {
       aria-label={t('share.loading', 'Loading shared drive report…')}
       className="min-h-screen bg-[var(--bg-primary)]"
     >
-      <div className="mx-auto max-w-4xl px-4 py-4">
+      <div className="w-full min-w-0 px-4 py-4">
         <PageHeader title={t('share.header', 'Shared drive report')} icon={<Logo />} />
       </div>
       <Skeleton className="h-[50vh] rounded-none" />
-      <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <div className="w-full min-w-0 space-y-6 px-4 py-8">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-24 rounded-xl" />
@@ -213,7 +213,7 @@ export default function SharedDrivePage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
-      <div className="mx-auto max-w-4xl px-4 py-4">
+      <div className="w-full min-w-0 px-4 py-4">
         <PageHeader
           title={data.title}
           icon={<Logo />}
@@ -267,7 +267,7 @@ export default function SharedDrivePage() {
       )}
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <div className="w-full min-w-0 px-4 py-8 space-y-6">
         {/* Stats grid */}
         <FadeIn delay={0.05}>
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
@@ -322,17 +322,9 @@ export default function SharedDrivePage() {
         {/* Vehicle badge */}
         {data.vehicle && (
           <FadeIn delay={0.1}>
-            <GlassPanel className="p-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/[0.05] flex items-center justify-center">
-                <Zap className="h-4 w-4 text-[var(--theme-primary)]" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Tesla {data.vehicle.model}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">{data.vehicle.color}</p>
-              </div>
-            </GlassPanel>
+            <LayoutCard title={`Tesla ${data.vehicle.model}`}>
+              <Text as="p" variant="caption">{data.vehicle.color}</Text>
+            </LayoutCard>
           </FadeIn>
         )}
 
@@ -340,7 +332,10 @@ export default function SharedDrivePage() {
         {elevationData.length > 0 && (
           <FadeIn delay={0.15}>
             {/* chart-a11y:no-table dense per-sample shared-drive trace */}
-            <ChartContainer
+            <ChartCard
+              size="standard"
+              toolbar
+              exportable
               title={t('share.elevation', 'Elevation profile')}
               ariaLabel={t('share.elevation.aria', 'Shared drive elevation profile area chart by distance')}
               height={200}
@@ -370,7 +365,7 @@ export default function SharedDrivePage() {
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </ChartContainer>
+            </ChartCard>
           </FadeIn>
         )}
 
@@ -378,7 +373,10 @@ export default function SharedDrivePage() {
         {speedData.length > 0 && (
           <FadeIn delay={0.2}>
             {/* chart-a11y:no-table dense per-sample shared-drive trace */}
-            <ChartContainer
+            <ChartCard
+              size="standard"
+              toolbar
+              exportable
               title={t('share.speed', 'Speed profile')}
               ariaLabel={t('share.speed.aria', 'Shared drive speed profile line chart by distance')}
               height={200}
@@ -404,7 +402,7 @@ export default function SharedDrivePage() {
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </ChartContainer>
+            </ChartCard>
           </FadeIn>
         )}
 
@@ -420,8 +418,8 @@ export default function SharedDrivePage() {
 
         {/* Footer */}
         <FadeIn delay={0.25}>
-          <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center text-[var(--text-muted)] text-xs space-y-1">
-            <p>{t('share.footer', 'Shared via TeslaSync — self-hosted Tesla fleet intelligence')}</p>
+          <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center space-y-1">
+            <Text as="p" variant="caption">{t('share.footer', 'Shared via TeslaSync — self-hosted Tesla fleet intelligence')}</Text>
             <a
               href="https://github.com/ev-dev-labs/teslasync"
               target="_blank"

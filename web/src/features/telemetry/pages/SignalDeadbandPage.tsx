@@ -10,11 +10,12 @@ import {
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import { chartTokens } from '@/lib/tokens';
@@ -33,6 +34,8 @@ export default function SignalDeadbandPage() {
   const [signal, setSignal] = useState('');
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalHistory(id, signal, HISTORY_HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyState = useDataState(historyQuery, { provenance: 'historical' });
   const signalChosen = signal !== '';
   const dataSources = useMemo(
     () => [
@@ -76,11 +79,11 @@ export default function SignalDeadbandPage() {
 
   const historyHasData = historyQuery.data !== undefined;
   const historyLoading = signalChosen && !historyHasData && historyQuery.isLoading;
-  const historyError = signalChosen && historyQuery.isError && !historyHasData;
+  const historyError = signalChosen && historyState.fatalError != null;
   const recommended = analysis?.recommended;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalDeadband.title', 'Signal deadband')}
       subtitle={t(
         'signalDeadband.subtitle',
@@ -95,8 +98,8 @@ export default function SignalDeadbandPage() {
             <RadioTower className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalDeadband.selection.title', 'Signal under test')}
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={96} />
           ) : options.length === 0 ? (
@@ -134,7 +137,7 @@ export default function SignalDeadbandPage() {
         >
           {historyError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
+              <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />
             </GlassPanel>
           ) : historyLoading ? (
             Array.from({ length: 4 }).map((_, index) => (
@@ -188,7 +191,7 @@ export default function SignalDeadbandPage() {
       <FadeIn delay={0.2}>
         {historyError ? (
           <GlassPanel className="p-4 sm:p-5">
-            <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
+            <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />
           </GlassPanel>
         ) : (
           <ChartContainer
@@ -241,7 +244,11 @@ export default function SignalDeadbandPage() {
             <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalDeadband.recommendation.title', 'Retention audit')}
           </PanelTitle>
-          {analysis == null ? (
+          {historyLoading ? (
+            <Skeleton height={80} />
+          ) : historyState.fatalError ? (
+            <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />
+          ) : analysis == null ? (
             <EmptyState /* no-action: the signal selector above is the relevant next action. */
               icon={<Filter className="h-8 w-8" />}
               message={signal
@@ -265,6 +272,6 @@ export default function SignalDeadbandPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

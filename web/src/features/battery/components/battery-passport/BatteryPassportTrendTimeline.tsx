@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AreaChartWrapper,
-  ChartContainer,
   type ChartDataColumn,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { formatDayKey } from '@/lib/dateFormat';
 
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
@@ -62,7 +62,7 @@ export function BatteryPassportTrendTimeline({
 
   return (
     <section data-testid="battery-passport-trend-timeline">
-      <ChartContainer
+      <ChartCard toolbar size="standard"
         title={t(
           'batteryPassport.trend.title',
           'Certificate-reported SoH timeline',
@@ -109,7 +109,7 @@ export function BatteryPassportTrendTimeline({
             },
           ]}
         />
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

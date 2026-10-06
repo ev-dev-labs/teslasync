@@ -66,7 +66,8 @@
       "deleteConfirm": {
         "title": "Delete this quiet-hours window?",
         "message": "Notifications will no longer be deferred during this window. This cannot be undone."
-      }
+      },
+      "unavailable": "Quiet-hours windows unavailable."
     },
     "tours": {
       "label": "Product tours",
@@ -192,7 +193,8 @@
         "body": "Subscribe leaves hostname and CA empty on purpose: TeslaSync sends FLEET_TELEMETRY_HOST (port 4443) and the Let’s Encrypt root. Override those only if your telemetry endpoint uses a different certificate.",
         "advancedTitle": "Partner key vs virtual key",
         "advancedBody": "The well-known PEM is for Tesla partner registration and virtual-key pairing. Telemetry streaming does not wait on a phone key pair. Pairing is only required if you want TeslaSync to send vehicle commands.",
-        "openDevTools": "Open Fleet API tools"
+        "openDevTools": "Open Fleet API tools",
+        "unavailable": "Partner public-key status unavailable."
       },
       "subscribe": {
         "title": "Subscribe telemetry",
@@ -225,7 +227,11 @@
         "advancedHint": "Leave blank to use FLEET_TELEMETRY_HOST, port 4443, and the Let’s Encrypt root CA.",
         "hostname": "Hostname",
         "port": "Port",
-        "ca": "CA certificate (PEM)"
+        "ca": "CA certificate (PEM)",
+        "vehiclesUnavailable": "Vehicle list unavailable.",
+        "configUnavailable": "Telemetry configuration unavailable.",
+        "errorsLabel": "Tesla telemetry errors",
+        "errorsUnavailable": "Tesla telemetry error status unavailable."
       },
       "stream": {
         "title": "Streaming",
@@ -238,8 +244,10 @@
         "staleMessage": "Telemetry was seen before, but nothing arrived in the last 24 hours. Wake the car or start a drive.",
         "waitingMessage": "No stream yet. After subscribe, Tesla delivers the first batch when the vehicle next wakes.",
         "openSignals": "Open live signals",
-        "note": "Virtual key pairing is not part of this step. Use it later if you want TeslaSync to send commands."
-      }
+        "note": "Virtual key pairing is not part of this step. Use it later if you want TeslaSync to send commands.",
+        "unavailable": "Telemetry status unavailable."
+      },
+      "tokenUnavailable": "Fleet access-token status unavailable."
     },
     "tab": {
       "heading": "Browser tab signals",
@@ -328,6 +336,9 @@
         "verified": "TOTP enabled. Save your backup codes!",
         "disabled": "TOTP disabled.",
         "backupRegenerated": "Backup codes regenerated."
+      },
+      "copy": {
+        "manualHint": "Clipboard unavailable. Select the displayed text and copy it manually."
       }
     },
     "electricityCost": "Electricity cost (per kWh)",
@@ -361,6 +372,9 @@
       "loopPending": "Loop calibrating…",
       "reset": "Reset to defaults",
       "openHud": "Open ambient HUD"
+    },
+    "tesla": {
+      "statusUnavailable": "Tesla account status unavailable."
     }
   }
 }

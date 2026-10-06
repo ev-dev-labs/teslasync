@@ -1,15 +1,8 @@
-import { ShieldQuestion, SlidersHorizontal } from 'lucide-react';
+import { ShieldQuestion } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
@@ -60,14 +53,7 @@ export function PreconditioningThresholdConfidence({
 
   return (
     <section data-testid="preconditioning-threshold-confidence">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.thresholds.title',
-            'Threshold and confidence matrix',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.thresholds.title', 'Threshold and confidence matrix')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.thresholds.subtitle',
@@ -123,7 +109,7 @@ export function PreconditioningThresholdConfidence({
             )}
           </Text>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

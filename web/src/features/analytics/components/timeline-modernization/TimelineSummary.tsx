@@ -46,7 +46,7 @@ export function TimelineSummary({
         rawValue: source.available ? idleSleepTime : null,
       },
     ];
-  return <StatStrip
+  return <section aria-label={t('timeline.kpis', 'Summary metrics')}><StatStrip
     id="timeline-summary"
     title={t('timeline.kpis', 'Summary metrics')}
     period={period}
@@ -66,5 +66,5 @@ export function TimelineSummary({
     secondary={source.available && source.paused
       ? t('timeline.source.pausedRetained', 'Refresh is paused; retained {{section}} remains available', { section: t('timeline.kpis', 'Summary metrics') })
       : undefined}
-  />;
+  /></section>;
 }

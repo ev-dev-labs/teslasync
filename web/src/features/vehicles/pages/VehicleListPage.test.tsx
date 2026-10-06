@@ -838,6 +838,28 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(syncMut.mutate).toHaveBeenCalled();
   });
 
+  it('keeps every empty fleet section with the existing shared sync recovery rather than duplicating mutations', () => {
+    mockVehicles.mockReturnValue(qr({ data: [] }));
+    mockFleetStates.mockReturnValue(qr({ data: [] }));
+    renderPage();
+
+    for (const section of ['Fleet posture', 'Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByText(`No fleet records for ${section}.`)).toBeInTheDocument();
+    }
+    for (const section of ['Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByRole('region', { name: section })).toBeInTheDocument();
+    }
+    expect(screen.queryByTestId('fleet-operational-brief')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total range (km)')).not.toBeInTheDocument();
+    const syncButtons = screen.getAllByRole('button', { name: 'Sync from Tesla' });
+    expect(syncButtons).toHaveLength(2);
+    fireEvent.click(syncButtons[1]!);
+    expect(syncMut.mutate).toHaveBeenCalledTimes(1);
+    expect(syncMut.mutate).toHaveBeenCalledWith(undefined, expect.objectContaining({
+      onSuccess: expect.any(Function),
+    }));
+  });
+
   it('shows fleet-states skeletons while keeping every card visible', () => {
     mockFleetStates.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderPage();

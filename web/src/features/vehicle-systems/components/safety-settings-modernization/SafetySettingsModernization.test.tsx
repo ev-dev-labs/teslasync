@@ -64,11 +64,14 @@ vi.mock('@/components/ui', () => {
       }, column.render(row)))))),
   };
 });
-vi.mock('@/components/layout', () => ({
+vi.mock('@/components/layout', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/layout')>(),
+  ...await import('@/components/layout/layout-reference'),
   PrefetchLink: ({ to, children }: { to: string; children: ReactNode }) =>
     createElement('a', { href: to }, children),
 }));
-vi.mock('@/components/layout/layout-reference', () => ({
+vi.mock('@/components/layout/layout-reference', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/layout/layout-reference')>(),
   PageLayout: ({ title, children, secondaryActions, dataSources }: {
     title: string; children: ReactNode; secondaryActions: ReactNode;
     dataSources: { id: string; query: { isError?: boolean }; enabled: boolean }[];
@@ -77,12 +80,14 @@ vi.mock('@/components/layout/layout-reference', () => ({
     dataSources.filter(source => source.enabled && source.query.isError).map(source =>
       createElement('div', { key: source.id, role: 'alert' }, `${source.id} refresh failed`)),
     children),
-  LayoutCard: ({ title, children }: { title: string; children: ReactNode }) =>
-    createElement('section', { 'aria-label': title }, createElement('h2', null, title), children),
+  LayoutCard: ({ title, description, children }: { title: string; description?: string; children: ReactNode }) =>
+    createElement('section', { 'aria-label': title }, createElement('h2', null, title),
+      description ? createElement('p', null, description) : null, children),
   CardGrid: ({ items }: { items: { id: string; content: ReactNode }[] }) =>
     createElement('div', null, items.map(item => createElement('div', { key: item.id }, item.content))),
 }));
-vi.mock('@/components/data-display/stat-reference', () => ({
+vi.mock('@/components/data-display/stat-reference', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/data-display/stat-reference')>(),
   StatStrip: ({ metrics, period, retained, footer }: StatStripProps) =>
     createElement('section', { 'aria-label': 'Summary metrics', 'data-retained': retained },
       createElement('div', null, period.label, period.kind === 'snapshot' ? period.provenance : ''),
@@ -91,7 +96,9 @@ vi.mock('@/components/data-display/stat-reference', () => ({
         createElement('span', null, metric.rawValue == null ? '—' : String(metric.rawValue)))),
       footer),
 }));
-vi.mock('@/components/data-display', () => ({
+vi.mock('@/components/data-display', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/data-display')>(),
+  ...await import('@/components/data-display/stat-reference'),
   MetricCard: ({ label, value, subtitle }: { label: string; value: ReactNode; subtitle?: string }) =>
     createElement('div', null, label, createElement('span', null, value), subtitle),
   TimeStamp: ({ value }: { value?: string }) => createElement('span', null, value ?? '—'),

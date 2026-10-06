@@ -1,15 +1,8 @@
 import { Flame, Snowflake } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
 
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import {
@@ -40,11 +33,7 @@ export function PreconditioningStrata({
 
   return (
     <section data-testid="preconditioning-strata">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Snowflake className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('preconditioningEffectiveness.strata.title', 'Hot and cold strata')}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.strata.title', 'Hot and cold strata')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.strata.subtitle',
@@ -124,7 +113,7 @@ export function PreconditioningStrata({
             })}
           </Grid>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

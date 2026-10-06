@@ -9,13 +9,14 @@
  * routinely forward.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 
 import { BipolarBar } from './BipolarBar';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 
-beforeAll(() => {
+beforeEach(() => {
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
 });
@@ -145,6 +146,20 @@ describe('BipolarBar — asymmetric scales', () => {
     const left = zeroRule(container).style.left;
     expect(Number.parseFloat(left)).toBeCloseTo(28.571, 2);
   });
+
+  it.each([
+    { value: 500, left: 400 / 1400 * 100, width: 500 / 1400 * 100 },
+    { value: -200, left: 200 / 1400 * 100, width: 200 / 1400 * 100 },
+    { value: 2000, left: 400 / 1400 * 100, width: 1000 / 1400 * 100 },
+    { value: -800, left: 0, width: 400 / 1400 * 100 },
+  ])('preserves asymmetric geometry for $value', ({ value, left, width }) => {
+    const { container } = render(
+      <BipolarBar value={value} max={1000} min={400} label="Torque" />,
+    );
+    expect(Number.parseFloat(zeroRule(container).style.left)).toBeCloseTo(400 / 1400 * 100);
+    expect(Number.parseFloat(fill(container).style.left)).toBeCloseTo(left);
+    expect(Number.parseFloat(fill(container).style.width)).toBeCloseTo(width);
+  });
 });
 
 describe('BipolarBar — clamping', () => {
@@ -166,15 +181,80 @@ describe('BipolarBar — clamping', () => {
 });
 
 describe('BipolarBar — non-finite / missing input (no NaN geometry)', () => {
-  it('coerces a NaN value to zero', () => {
+  it.each([
+    { name: 'null', value: null },
+    { name: 'undefined', value: undefined },
+    { name: 'NaN', value: Number.NaN },
+    { name: 'positive infinity', value: Number.POSITIVE_INFINITY },
+    { name: 'negative infinity', value: Number.NEGATIVE_INFINITY },
+  ])('renders $name as missing, never as a zero meter', ({ value }) => {
     const { container } = render(
-      <BipolarBar value={Number.NaN} max={100} label="Torque" />,
+      <BipolarBar
+        value={value}
+        max={1000}
+        min={400}
+        label="Torque"
+        unit=" Nm"
+        negativeLabel="Regen"
+        positiveLabel="Drive"
+      />,
     );
+    const group = screen.getByRole('group', { name: 'Torque' });
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    for (const attribute of ['aria-valuenow', 'aria-valuemin', 'aria-valuemax', 'aria-valuetext']) {
+      expect(group).not.toHaveAttribute(attribute);
+    }
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Nm')).not.toBeInTheDocument();
+    expect(screen.getByText('Regen')).toBeInTheDocument();
+    expect(screen.getByText('Drive')).toBeInTheDocument();
+    // Only the scale's zero rule remains; no zero-width reading is fabricated.
+    expect(group.children[1].children).toHaveLength(1);
+    expect(Number.parseFloat(zeroRule(container).style.left)).toBeCloseTo(400 / 1400 * 100);
+    expect(container.innerHTML).not.toMatch(/NaN|Infinity/);
+    expect(group).not.toHaveAttribute('tabindex');
+  });
+
+  it('accepts an omitted value without a numeric meter or fill', () => {
+    render(<BipolarBar max={100} label="Torque" />);
+    const group = screen.getByRole('group', { name: 'Torque' });
+    expect(group).not.toHaveAttribute('aria-valuenow');
+    expect(group.children[1].children).toHaveLength(1);
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it.each([0, -0])('retains real zero (%s) as a formatted meter with zero-width fill', (value) => {
+    const { container } = render(
+      <BipolarBar value={value} max={1000} min={400} label="Torque" unit=" Nm" />,
+    );
+    const meter = screen.getByRole('meter', { name: 'Torque' });
+    expect(meter).toHaveAttribute('aria-valuenow', '0');
+    expect(meter).toHaveAttribute('aria-valuemin', '-400');
+    expect(meter).toHaveAttribute('aria-valuemax', '1000');
+    expect(meter).toHaveAttribute('aria-valuetext', Object.is(value, -0) ? '-0.00 Nm' : '0.00 Nm');
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
     expect(fill(container)).toHaveStyle({ width: '0%' });
-    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute(
-      'aria-valuenow',
-      '0',
-    );
+    expect(Number.parseFloat(fill(container).style.left)).toBeCloseTo(400 / 1400 * 100);
+  });
+
+  it('updates from a signed reading through missing to real zero without stale fill or ARIA', () => {
+    const ref = createRef<HTMLDivElement>();
+    const props = { max: 100, label: 'Torque', className: 'caller-class', ref };
+    const { container, rerender } = render(<BipolarBar {...props} value={-50} />);
+    expect(fill(container)).toHaveStyle({ left: '25%', width: '25%' });
+
+    rerender(<BipolarBar {...props} value={null} />);
+    const group = screen.getByRole('group', { name: 'Torque' });
+    expect(group).not.toHaveAttribute('aria-valuenow');
+    expect(group.children[1].children).toHaveLength(1);
+    expect(group).toHaveClass('caller-class');
+    expect(ref.current).toBe(group);
+
+    rerender(<BipolarBar {...props} value={0} />);
+    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute('aria-valuetext', '0');
+    expect(fill(container)).toHaveStyle({ left: '50%', width: '0%' });
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
   });
 
   it('guards a zero max so the geometry stays finite', () => {
@@ -206,7 +286,7 @@ describe('BipolarBar — non-finite / missing input (no NaN geometry)', () => {
   it('stays finite when value and max are undefined at runtime', () => {
     const { container } = render(
       <BipolarBar
-        value={undefined as unknown as number}
+        value={undefined}
         max={undefined as unknown as number}
         label="Torque"
       />,
@@ -231,6 +311,38 @@ describe('BipolarBar — content', () => {
   it('honours an explicit decimals prop over the integer-zero default', () => {
     render(<BipolarBar value={12} max={100} label="Torque" decimals={2} />);
     expect(screen.getByText('12.00')).toBeInTheDocument();
+  });
+
+  it('honours caller precision and prepared unit text for negative fractions', () => {
+    render(
+      <BipolarBar value={-12.3456} max={100} label="Signed reading" decimals={3} unit=" custom" />,
+    );
+    expect(screen.getByRole('meter', { name: 'Signed reading' })).toHaveAttribute(
+      'aria-valuetext', '-12.346 custom',
+    );
+  });
+
+  it('honours the count kind even for a unit-bearing value', () => {
+    render(<BipolarBar value={1234} max={5000} label="Count" unit=" items" kind="count" />);
+    expect(screen.getByRole('meter', { name: 'Count' })).toHaveAttribute(
+      'aria-valuetext', '1,234 items',
+    );
+  });
+
+  it('honours the measurement kind without a unit', () => {
+    render(<BipolarBar value={12} max={100} label="Reading" kind="measurement" />);
+    expect(screen.getByRole('meter', { name: 'Reading' })).toHaveAttribute(
+      'aria-valuetext', '12.00',
+    );
+  });
+
+  it('uses configured locale and precision without interpreting the supplied units', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    render(<BipolarBar value={-1234.5} max={5000} label="Reading" unit=" caller-unit" />);
+    expect(screen.getByRole('meter', { name: 'Reading' })).toHaveAttribute(
+      'aria-valuetext', '-1.234,500 caller-unit',
+    );
   });
 
   it('renders the direction captions when supplied', () => {

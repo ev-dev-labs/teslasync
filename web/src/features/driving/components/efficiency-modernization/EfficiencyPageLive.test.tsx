@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
 import type { UseUnitsResult } from '@/hooks/useUnits';
 import { ToastProvider } from '@/components/feedback';
+import { getFormatterPreferences } from '@/lib/numberFormat';
 import { fakeDrive, fakeQuery, fakeStats, fakeUnits } from './fixtures';
 import EfficiencyPage from '../../pages/EfficiencyPage';
 
@@ -76,7 +77,9 @@ beforeEach(() => {
   H.drivesCall.mockClear();
   H.rangeCall.mockClear();
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
   it('retains every original section, 8+6 metrics, four charts, table, glossary and saved-view action', () => {
@@ -197,6 +200,10 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
       unobserve() {}
     });
     const { container, rerender } = render(<EfficiencyPage />, { wrapper: Providers });
+    expect(H.units?.unitPrefs).toMatchObject({
+      distance: 'km', speed: 'km/h', temperature: '°C', precision: 2, locale: 'en-US',
+    });
+    expect(getFormatterPreferences()).toMatchObject({ precision: 2, locale: 'en-US' });
     const frame = container.querySelector('[data-grid-frame]')!;
     act(() => observers.get(frame)?.([
       { target: frame, contentRect: { width: 390 } } as ResizeObserverEntry,
@@ -205,11 +212,18 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
     expect(container.querySelector('[data-card-primary]')).toHaveTextContent('150 Wh/km');
     fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
     const dialog = screen.getByRole('dialog');
-    for (const label of ['Temp range', 'Drives', 'Avg Wh/km', 'km/kWh', 'Total km', 'Avg speed'])
-      expect(within(dialog).getByText(label)).toBeInTheDocument();
-    expect(within(dialog).getByText('200')).toBeInTheDocument();
-    expect(within(dialog).getByText('72 km/h')).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    // Real allColumns details use integer intensity/count and the existing
+    // two-decimal number formatter for economy, distance and speed.
+    for (const [label, value] of [
+      ['Temp range', '20–30°C'], ['Drives', '4'], ['Avg Wh/km', '150'],
+      ['km/kWh', '6.67'], ['Total km', '200.00'], ['Avg speed', '72.00 km/h'],
+    ]) {
+      const field = within(dialog).getByText(label).parentElement!;
+      expect(within(field).getByText(value, { exact: true })).toBeVisible();
+    }
+    // The real modal has both a header Close and a footer Close.
+    const footer = dialog.querySelector<HTMLElement>('[data-modal-footer]')!;
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
     H.drives = { ...H.drives, error: new Error('retained mobile rows') };
     rerender(<EfficiencyPage />);
     expect(container.querySelector('[data-card-primary]')).toHaveTextContent('150 Wh/km');

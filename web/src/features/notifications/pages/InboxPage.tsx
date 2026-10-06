@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { Archive } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -43,7 +43,7 @@ export default function InboxPage() {
   const summaryQuery = useNotificationLogs(summaryFilters);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.inbox.title', 'Inbox')}
       subtitle={t('notifications.inbox.subtitle', 'All system, alert, automation, and scheduled notifications in one place.')}
       copyLink
@@ -74,6 +74,6 @@ export default function InboxPage() {
       <FadeIn delay={0.1}>
         <NotificationReportPanel fromInstant={startInstant} toExclusive={endInstantExclusive} timezone={timezone} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

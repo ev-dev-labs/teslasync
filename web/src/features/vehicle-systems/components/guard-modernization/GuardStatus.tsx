@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Clock, Lock, Unlock, Info, Eye, AlertTriangle, type LucideIcon } from 'lucide-react';
+import { Clock, Lock, Unlock, Info, Eye, AlertTriangle, type LucideIcon } from 'lucide-react';
 import { useCardPlacement } from '@/components/layout/layout-reference';
-import { GlassPanel, PanelTitle, Text, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text, HelperText } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -14,12 +15,8 @@ export function GuardStatus({ model: m }: { model: GuardPageModel }) {
   const placement = useCardPlacement();
   const LockIcon = m.isLocked == null ? Info : m.isLocked ? Lock : Unlock;
   return (
-    <GlassPanel data-guard-section="status"
-      className={cn('min-w-0 space-y-3 p-4 sm:p-5', placement?.className)}>
-      <PanelTitle className="flex items-center gap-2">
-        <Activity className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-        {t('guard.status', 'Status')}
-      </PanelTitle>
+    <div data-guard-section="status" className={cn('min-w-0', placement?.className)}>
+      <LayoutCard title={t('guard.status', 'Status')}>
       <HelperText>{t('guard.modernization.policyOnly', 'Saved policy only; not confirmation of active monitoring or successful arming.')}</HelperText>
       <StaleRefreshWarning state={m.vehicleState} label={t('guard.status', 'Status')} />
       {m.vehicleState.fatalError && <QueryError error={m.vehicleState.fatalError} onRetry={m.vehicleState.retry ?? undefined} />}
@@ -54,7 +51,8 @@ export function GuardStatus({ model: m }: { model: GuardPageModel }) {
           <TimeStamp value={new Date(m.stateResponse.observedAt).toISOString()} />
         </Text>
       )}
-    </GlassPanel>
+      </LayoutCard>
+    </div>
   );
 }
 

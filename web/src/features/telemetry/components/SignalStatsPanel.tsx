@@ -21,6 +21,7 @@ import { Activity } from 'lucide-react';
 import { GlassPanel, DataTable, Toggle, SectionTitle, type Column } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { SourceContent } from '@/components/layout';
 import { CHART_COLORS } from '@/lib/colors';
 
 import { cn } from '@/lib/cn';
@@ -36,6 +37,9 @@ export interface SignalStatsPanelProps {
    */
   selectedSignals?: string[];
   loading?: boolean;
+  /** Initial failure only; do not pass background-refresh errors here. */
+  error?: Error | null;
+  onRetry?: () => void;
   /** Override panel title. */
   title?: string;
   className?: string;
@@ -61,6 +65,8 @@ export function SignalStatsPanel({
   stats,
   selectedSignals,
   loading = false,
+  error,
+  onRetry,
   title,
   className,
   signalIndex,
@@ -160,11 +166,11 @@ export function SignalStatsPanel({
   ], [positionIndex, renderNumeric, signalIndex, t, fmtNumber, fmtInt]);
 
   return (
-    <FadeIn>
-      <GlassPanel className={cn('p-4 sm:p-5', className)}>
-        <div className="mb-3 flex items-center justify-between gap-2">
+    <FadeIn className="min-w-0 max-w-full">
+      <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <SectionTitle>{title ?? t('signalStats.title', 'Stats summary')}</SectionTitle>
-          {emptyCount > 0 && (
+          {emptyCount > 0 && !error && (
             <Toggle
               checked={hideEmpty}
               onChange={setHideEmpty}
@@ -175,6 +181,14 @@ export function SignalStatsPanel({
             />
           )}
         </div>
+        <SourceContent
+          state={error ? 'error' : 'ready'}
+          label={title ?? t('signalStats.title', 'Stats summary')}
+          error={error}
+          errorMessage={t('error.loadFailed', 'Failed to load data')}
+          emptyMessage={t('signalStats.emptyMessage', 'No aggregate statistics are available.')}
+          errorRecovery={{ onRetry }}
+        >
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20" />)}
@@ -203,6 +217,7 @@ export function SignalStatsPanel({
             className="py-8"
           />
         )}
+        </SourceContent>
       </GlassPanel>
     </FadeIn>
   );

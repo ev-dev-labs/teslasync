@@ -283,6 +283,19 @@ describe('SleepEfficiencyWidget states', () => {
 // ── Populated gauge + stats ─────────────────────────────────────────────────
 
 describe('SleepEfficiencyWidget populated', () => {
+  it('preserves the source percentage beyond its scale without losing any derived statistics', async () => {
+    const data = makeData({ sleep_efficiency_pct: 125 });
+    sleepRequest(data);
+    renderWidget({ vehicleId: 1 });
+    expect(await screen.findByText('125.00')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.getByRole('group', { name: 'Efficiency' })).not.toHaveAttribute('aria-valuenow');
+    expect(screen.getByText('12.00')).toBeInTheDocument();
+    expect(screen.getByText('60.00')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(data.sleep_efficiency_pct).toBe(125);
+  });
+
   it('reacts to precision and locale without rewriting measured history', async () => {
     const data = makeData();
     sleepRequest(data);

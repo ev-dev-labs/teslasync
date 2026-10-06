@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -75,7 +75,7 @@ export default function DestinationTransitionsPage() {
   const locale = i18n.language;
   const timeZone = model.timeZone;
   return (
-    <PageContainer
+    <PageLayout
       title={t('destinationTransitions.title', 'Destination Transitions')}
       subtitle={t(
         'destinationTransitions.subtitle',
@@ -174,6 +174,6 @@ export default function DestinationTransitionsPage() {
           timeZone={timeZone}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

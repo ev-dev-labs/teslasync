@@ -117,7 +117,9 @@ export default function LiveMotorStatus({ vehicleId, toTemperatureDisplay, tempU
       ) : state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={handleRetry} resourceName={t('dynamics.motorResource', 'Motor telemetry')} />
       ) : (
-        <EmptyState message={t('dynamics.noLiveMotor', 'Awaiting live motor data')} />
+        // no-action: Without a selected vehicle, the workspace picker owns selection.
+        <EmptyState message={t('dynamics.noLiveMotor', 'Awaiting live motor data')}
+          action={vehicleId ? { label: t('common.retry', 'Retry'), onClick: handleRetry } : undefined} />
       )}
     </LayoutCard>
   );

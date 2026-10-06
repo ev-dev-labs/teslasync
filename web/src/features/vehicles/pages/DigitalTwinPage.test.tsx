@@ -264,9 +264,9 @@ function expectKv(label: string, value: string) {
   expect(dt.parentElement).toHaveTextContent(value);
 }
 
-/** Assert the MetricCard identified by its (unique) subtitle shows `value`. */
+/** Assert the canonical metric identified by its unique context shows `value`. */
 function expectKpi(subtitle: string, value: string) {
-  const card = screen.getByText(subtitle).closest('div');
+  const card = screen.getByText(subtitle).closest('[data-stat]');
   expect(card).not.toBeNull();
   expect(within(card as HTMLElement).getByText(value)).toBeInTheDocument();
 }
@@ -439,6 +439,19 @@ describe('DigitalTwinPage', () => {
     // Security present but nothing that implies charging/driving.
     h.security = makeQuery({
       data: makeSecurity({ door_state: 'closed', fd_window: 'Closed' }),
+    });
+
+    it('retains all component details and the interactive twin during a security refresh failure', () => {
+      h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
+      renderPage();
+      expectKv('Driver front', 'Open');
+      expectKv('Front passenger', 'Closed');
+      expectKv('Headlights', 'On');
+      expectKv('Driver seat', 'Occupied');
+      expect(screen.getByText('Security & status may be out of date')).toBeInTheDocument();
+      expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
+      expect(h.security.refetch).not.toHaveBeenCalled();
     });
 
     renderPage();

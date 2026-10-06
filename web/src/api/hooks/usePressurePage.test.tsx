@@ -68,9 +68,9 @@ describe('pressure page query extraction contract', () => {
       expect(result.current.history.isSuccess).toBe(true);
     });
     expect(requestMock.mock.calls).toEqual([
-      ['/tire-pressure/latest?vehicle_id=42'],
-      ['/tire-pressure?vehicle_id=42&start=2026-09-28&end=2026-10-04'],
-    ]); // One argument only: default GET, no new signal/options forwarding.
+      ['/tire-pressure/latest?vehicle_id=42', { signal: expect.any(AbortSignal) }],
+      ['/tire-pressure?vehicle_id=42&start=2026-09-28&end=2026-10-04', { signal: expect.any(AbortSignal) }],
+    ]);
     expect(result.current.latest.data).toEqual(reading);
     expect(result.current.history.data).toEqual([reading]);
     expect(result.current.latest.data).not.toHaveProperty('rear_right');
@@ -120,8 +120,8 @@ describe('pressure page query extraction contract', () => {
       expect(result.current.history.isSuccess).toBe(true);
     });
     expect(requestMock.mock.calls).toEqual([
-      [`/tire-pressure/latest?vehicle_id=${vehicleId}`],
-      [`/tire-pressure?vehicle_id=${vehicleId}&start=${start}&end=${end}`],
+      [`/tire-pressure/latest?vehicle_id=${vehicleId}`, { signal: expect.any(AbortSignal) }],
+      [`/tire-pressure?vehicle_id=${vehicleId}&start=${start}&end=${end}`, { signal: expect.any(AbortSignal) }],
     ]);
     // isActive resolves enablement on the mounted query observers; the cache's
     // base QueryOptions type does not expose observer-only `enabled`.
@@ -161,10 +161,10 @@ describe('pressure page query extraction contract', () => {
     rerender({ from: '2026-09-27', to: '2026-10-05' });
     await waitFor(() => expect(result.current.history.isSuccess).toBe(true));
     expect(requestMock.mock.calls).toEqual([
-      ['/tire-pressure/latest?vehicle_id=42'],
-      [`/tire-pressure?vehicle_id=42&start=${start}&end=${end}`],
-      [`/tire-pressure?vehicle_id=42&start=2026-09-27&end=${end}`],
-      ['/tire-pressure?vehicle_id=42&start=2026-09-27&end=2026-10-05'],
+      ['/tire-pressure/latest?vehicle_id=42', { signal: expect.any(AbortSignal) }],
+      [`/tire-pressure?vehicle_id=42&start=${start}&end=${end}`, { signal: expect.any(AbortSignal) }],
+      [`/tire-pressure?vehicle_id=42&start=2026-09-27&end=${end}`, { signal: expect.any(AbortSignal) }],
+      ['/tire-pressure?vehicle_id=42&start=2026-09-27&end=2026-10-05', { signal: expect.any(AbortSignal) }],
     ]);
     expect(client.getQueryCache().getAll().map(query => query.queryKey)).toEqual([
       ['tire-pressure-latest', 42],
@@ -179,7 +179,7 @@ describe('pressure page query extraction contract', () => {
     const { client, wrapper } = setup();
     const { result } = renderHook(() => usePressurePageHistory(42, '', ''), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(requestMock).toHaveBeenCalledWith('/tire-pressure?vehicle_id=42&start=&end=');
+    expect(requestMock).toHaveBeenCalledWith('/tire-pressure?vehicle_id=42&start=&end=', { signal: expect.any(AbortSignal) });
     expect(client.getQueryCache().getAll()[0].queryKey).toEqual([
       'tire-pressure-history', 42, '', '',
     ]);
@@ -196,10 +196,10 @@ describe('pressure page query extraction contract', () => {
     rerender({ vehicleId: 7 });
     await waitFor(() => expect(result.current.history.isSuccess).toBe(true));
     expect(requestMock.mock.calls).toEqual([
-      ['/tire-pressure/latest?vehicle_id=42'],
-      [`/tire-pressure?vehicle_id=42&start=${start}&end=${end}`],
-      ['/tire-pressure/latest?vehicle_id=7'],
-      [`/tire-pressure?vehicle_id=7&start=${start}&end=${end}`],
+      ['/tire-pressure/latest?vehicle_id=42', { signal: expect.any(AbortSignal) }],
+      [`/tire-pressure?vehicle_id=42&start=${start}&end=${end}`, { signal: expect.any(AbortSignal) }],
+      ['/tire-pressure/latest?vehicle_id=7', { signal: expect.any(AbortSignal) }],
+      [`/tire-pressure?vehicle_id=7&start=${start}&end=${end}`, { signal: expect.any(AbortSignal) }],
     ]);
     expect(client.getQueryCache().getAll().map(query => query.queryKey)).toEqual([
       ['tire-pressure-latest', 42], ['tire-pressure-history', 42, start, end],
@@ -242,5 +242,26 @@ describe('pressure page query extraction contract', () => {
     expect(result.current.history.data).toBeUndefined();
     expect(result.current.latest.data).toEqual(reading);
     expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('aborts latest and history when their observers unmount', async () => {
+    const signals: AbortSignal[] = [];
+    requestMock.mockImplementation((_path: string, { signal }: { signal: AbortSignal }) => {
+      signals.push(signal);
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
+      });
+    });
+    const { client, wrapper } = setup();
+    const { unmount } = renderHook(() => ({
+      latest: usePressurePageLatest(42),
+      history: usePressurePageHistory(42, start, end),
+    }), { wrapper });
+    await waitFor(() => expect(signals).toHaveLength(2));
+    expect(signals.every(signal => !signal.aborted)).toBe(true);
+    unmount();
+    expect(signals.every(signal => signal.aborted)).toBe(true);
+    expect(client.getQueryData(['tire-pressure-latest', 42])).toBeUndefined();
+    expect(client.getQueryData(['tire-pressure-history', 42, start, end])).toBeUndefined();
   });
 });

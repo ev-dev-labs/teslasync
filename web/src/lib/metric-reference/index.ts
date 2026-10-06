@@ -1,3 +1,3 @@
 export { glossary, type MetricId } from './glossary';
 export { formatMetric } from './formatMetric';
-export type { MetricDefinition, MetricFormat, MetricRaw, MetricPreferences, FormattedMetric, StatPeriod } from './types';
+export type { MetricDefinition, MetricFormat, MetricRaw, MetricPreferences, MetricDisplayOptions, FormattedMetric, StatPeriod } from './types';

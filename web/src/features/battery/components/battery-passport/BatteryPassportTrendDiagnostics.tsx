@@ -13,7 +13,8 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 import type {
   BatteryPassportAnalysis,
@@ -135,23 +136,13 @@ export function BatteryPassportTrendDiagnostics({
 
   return (
     <section data-testid="battery-passport-trend-diagnostics">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Activity
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.diagnostics.title',
             'Trend diagnostics and exact accounting',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.diagnostics.subtitle',
             'Coverage, UTC cadence, recency to the frozen page clock, variability, quantiles, and gated linear description.',
-          )}
-        </Text>
+          )} actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
@@ -386,7 +377,7 @@ export function BatteryPassportTrendDiagnostics({
             </AlertBanner>
           ) : null}
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

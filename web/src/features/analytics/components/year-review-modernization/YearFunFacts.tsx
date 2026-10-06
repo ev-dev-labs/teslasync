@@ -10,6 +10,7 @@ export function YearFunFacts({ comparisons }: { comparisons: YearReviewCompariso
   const title = t('yearReview.funFacts', 'Fun facts about your year');
   if (items.length === 0) return (
     <LayoutCard title={title}>
+      {/* no-action: optional server-derived comparisons have no user creation action; existing year navigation can inspect another year's facts. */}
       <EmptyState message={t('yearReview.noFunFacts', 'No fun facts available for this year yet')} />
     </LayoutCard>
   );

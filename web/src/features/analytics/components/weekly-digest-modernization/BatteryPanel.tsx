@@ -44,6 +44,7 @@ export function BatteryPanel({
         <EmptyState
           icon={<Battery className="h-8 w-8" aria-hidden="true" />}
           message={t('analytics.weeklyDigest.noBatteryData', 'No battery data is available for this week.')}
+          actionTo={{ label: t('routes.charging', 'Charging'), to: '/charging' }}
           className="py-8"
         />
       ) : (

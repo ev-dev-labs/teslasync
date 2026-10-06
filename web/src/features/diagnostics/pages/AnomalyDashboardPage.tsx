@@ -4,7 +4,7 @@ import {
   Activity, AlertTriangle, Clock, HeartPulse, BarChart3, ShieldCheck,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StatGridSkeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useAnomalies } from '@/api/hooks/useAnomalies';
@@ -21,6 +21,7 @@ import { AIAnomalyExplanations } from '@/components/ai/AIAnomalyExplanations';
 import { AILearnedAnomalyBaselines } from '@/components/ai/AILearnedAnomalyBaselines';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 
 import { AnomalyTimelineCard, SystemHealthCard } from '../components/anomaly-dashboard';
 
@@ -33,7 +34,10 @@ export default function AnomalyDashboardPage() {
   const noVehicle = activeIdStr === null;
 
   const anomaliesQuery = useAnomalies(activeIdStr);
-  const { data, isLoading, error, refetch } = anomaliesQuery;
+  const { data, isLoading: queryLoading, refetch } = anomaliesQuery;
+  const state = useDataState(anomaliesQuery, { provenance: 'inferred' });
+  const error = state.fatalError;
+  const isLoading = queryLoading && !state.hasData;
 
   /* Stable retry handler shared by all three error panels (frequency, health,
      timeline) so we don't allocate three fresh closures on every render. */
@@ -69,11 +73,12 @@ export default function AnomalyDashboardPage() {
     : t('anomaly.noData', 'No data available yet.');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('anomaly.title', 'Anomaly detection')}
       subtitle={t('anomaly.subtitle', 'Automatic health monitoring and signal anomaly detection')}
       query={anomaliesQuery}
     >
+      <StaleRefreshWarning state={state} />
       {/* ── 1. KPI band — full-width responsive metric grid ─────────── */}
       <FadeIn>
         <section aria-label={t('anomaly.kpis', 'Summary metrics')}>
@@ -83,25 +88,25 @@ export default function AnomalyDashboardPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <MetricCard
                 label={t('anomaly.monitored', 'Signals monitored')}
-                value={data?.signals_monitored ?? 0}
+                value={data?.signals_monitored ?? '—'}
                 icon={<Activity className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('anomaly.last7d', 'Anomalies (7d)')}
-                value={data?.anomalies_last_7d ?? 0}
+                value={data?.anomalies_last_7d ?? '—'}
                 icon={<AlertTriangle className="h-5 w-5" />}
                 color="amber"
               />
               <MetricCard
                 label={t('anomaly.last24h', 'Anomalies (24h)')}
-                value={data?.anomalies_last_24h ?? 0}
+                value={data?.anomalies_last_24h ?? '—'}
                 icon={<Clock className="h-5 w-5" />}
                 color="red"
               />
               <MetricCard
                 label={t('anomaly.categories', 'Health categories')}
-                value={healthEntries.length}
+                value={data?.health_summary != null ? healthEntries.length : '—'}
                 icon={<HeartPulse className="h-5 w-5" />}
                 color="green"
               />
@@ -224,6 +229,6 @@ export default function AnomalyDashboardPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

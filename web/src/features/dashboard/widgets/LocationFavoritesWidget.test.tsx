@@ -294,6 +294,24 @@ describe('LocationFavoritesWidget compact layout', () => {
 // ── Component: vehicle-id resolution ────────────────────────────────────────
 
 describe('LocationFavoritesWidget vehicle selection', () => {
+  it('keeps visit ranking, stable ties and unknown counts distinct from measured zero', () => {
+    mockUseLocations.mockReturnValue(qr({ data: [
+      { id: 1, addressName: 'Unknown count', visitCount: null },
+      { id: 2, addressName: 'Measured zero', visitCount: 0 },
+      { id: 3, addressName: 'First tied favorite', visitCount: 4 },
+      { id: 4, addressName: 'Second tied favorite', visitCount: 4 },
+    ] }));
+    renderWidget(STANDARD);
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('First tied favorite');
+    expect(rows[1]).toHaveTextContent('Second tied favorite');
+    expect(rows[2]).toHaveTextContent('Measured zero');
+    expect(rows[2]).toHaveTextContent('0×');
+    expect(rows[3]).toHaveTextContent('Unknown count');
+    expect(rows[3].querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByText('Unknown count')).toHaveClass('whitespace-normal');
+  });
+
   it('uses the explicit vehicleId prop for both queries when provided', () => {
     renderWidget(STANDARD, { vehicleId: 7 });
     expect(mockUseSnapshot).toHaveBeenCalledWith(7);

@@ -2,8 +2,8 @@
  * Software update summary — installed firmware/software version history.
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge } from '@/components/ui';
-import { PanelTitle } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import type { SoftwareUpdateEvidence } from '../lib/types';
@@ -16,11 +16,8 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates }: SoftwareUpdateSu
   const { t } = useTranslation();
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.software.title', 'Software updates')}</PanelTitle>
-        {softwareUpdates?.latest_version && <Badge variant="info">{softwareUpdates.latest_version}</Badge>}
-      </div>
+    <LayoutCard title={t('resaleVault.software.title', 'Software updates')}
+      actions={softwareUpdates?.latest_version ? <Badge variant="info">{softwareUpdates.latest_version}</Badge> : undefined}>
 
       {!softwareUpdates ? (
         // no-action: mirrors this vehicle's software-update history as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.
@@ -36,7 +33,7 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates }: SoftwareUpdateSu
           {softwareUpdates.installed_versions.length > 0 && (
             <ul className="space-y-1 text-xs">
               {softwareUpdates.installed_versions.map((v, i) => (
-                <li key={`${v.version}-${i}`} className="flex justify-between text-[var(--text-secondary)]">
+                <li key={`${v.version}-${i}`} className="flex flex-wrap justify-between gap-2 text-[var(--text-secondary)]">
                   <span>{v.version}</span>
                   <span className="text-[var(--text-muted)]">{v.installed_at ?? '—'}</span>
                 </li>
@@ -45,6 +42,6 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates }: SoftwareUpdateSu
           )}
         </>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

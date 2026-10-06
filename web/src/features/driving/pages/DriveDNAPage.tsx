@@ -6,7 +6,7 @@ import {
   useDriveTelemetry,
 } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -146,7 +146,7 @@ export default function DriveDNAPage() {
       : t('driveDna.selector.empty', 'No drives available');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('driveDna.title', 'Drive DNA')}
       subtitle={t(
         'driveDna.subtitle',
@@ -202,6 +202,6 @@ export default function DriveDNAPage() {
       <FadeIn delay={0.3}>
         <DriveDnaMethodology state={state} historyLimit={DRIVE_HISTORY_LIMIT} historyReturned={drives.length} capReached={capReached} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

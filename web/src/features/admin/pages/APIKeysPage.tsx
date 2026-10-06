@@ -13,8 +13,8 @@ import {
   Plus, Key, KeyRound, ShieldCheck, XCircle, Crown, Info,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, ConfirmDialog, PanelTitle, Text, Caption } from '@/components/ui';
+import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
+import { Button, ConfirmDialog, Text, Caption } from '@/components/ui';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import {
   EmptyState,
@@ -24,6 +24,7 @@ import {
 } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useApiKeys, useDeleteApiKey, useRevokeApiKey } from '@/api/hooks/useAdmin';
 import type { NeonColor } from '@/lib/tokens';
@@ -41,7 +42,8 @@ export default function APIKeysPage() {
   usePageTitle(t('apiKeys.title', 'API keys'));
 
   const keysQuery = useApiKeys();
-  const { data, isLoading, isError, error, refetch } = keysQuery;
+  const { data, isLoading, refetch } = keysQuery;
+  const keysState = useDataState(keysQuery);
   const keys = data ?? [];
 
   const deleteMut = useDeleteApiKey();
@@ -58,6 +60,21 @@ export default function APIKeysPage() {
   }, [operationalMode.canWrite]);
 
   const summary = useMemo(() => summarizeKeys(keys), [keys]);
+  const sourceState = !keysState.hasData
+    ? 'loading' : keysState.status === 'stale' ? 'retained' : keys.length === 0 ? 'empty' : 'ready';
+  const emptyInventory = (
+    <EmptyState
+      icon={<Key className="h-10 w-10" aria-hidden="true" />}
+      title={t('apiKeys.empty.title', 'No API keys')}
+      message={t('apiKeys.empty.message', 'Create an API key to enable programmatic access to TeslaSync data and controls.')}
+    />
+  );
+  const emptyPermissions = (
+    <EmptyState
+      icon={<KeyRound className="h-8 w-8" aria-hidden="true" />}
+      message={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
+    />
+  );
 
   const kpis: { key: string; label: string; value: number; icon: React.ReactNode; color: NeonColor }[] = [
     { key: 'total', label: t('apiKeys.kpi.total', 'Total keys'), value: summary.total, icon: <Key className="h-5 w-5" />, color: 'cyan' },
@@ -73,7 +90,7 @@ export default function APIKeysPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('apiKeys.title', 'API keys')}
       subtitle={t('apiKeys.subtitle', 'Manage programmatic access to TeslaSync')}
       query={keysQuery}
@@ -105,13 +122,10 @@ export default function APIKeysPage() {
                 <Skeleton key={i} height={84} className="rounded-xl" />
               ))
             : kpis.map((k) => (
-                // On error the query holds no data — surface the em-dash
-                // placeholder instead of a fabricated "0" so the KPI band
-                // never reports counts that don't actually exist.
                 <MetricCard
                   key={k.key}
                   label={k.label}
-                  value={isError ? '—' : k.value}
+                  value={keysState.hasData ? k.value : '—'}
                   icon={k.icon}
                   color={k.color}
                 />
@@ -123,99 +137,105 @@ export default function APIKeysPage() {
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           {/* Hero — the key inventory */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <PanelTitle className="flex items-center gap-2">
-                <Key className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('apiKeys.keysPanel', 'Your API keys')}
-              </PanelTitle>
-              {!isLoading && !isError && summary.total > 0 && (
-                <Caption>{t('apiKeys.count', '{{count}} total', { count: summary.total })}</Caption>
+          <div className="min-w-0 xl:col-span-2">
+            <LayoutCard
+              title={t('apiKeys.keysPanel', 'Your API keys')}
+              actions={
+                <div className="flex items-center gap-2">
+                  <Key className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  {keysState.hasData && summary.total > 0 && (
+                    <Caption>{t('apiKeys.count', '{{count}} total', { count: summary.total })}</Caption>
+                  )}
+                </div>
+              }
+            >
+              {keysState.fatalError ? (
+                <QueryError
+                  error={keysState.fatalError}
+                  onRetry={() => refetch()}
+                  resourceName={t('apiKeys.resource', 'API key')}
+                />
+              ) : (
+                <SourceContent
+                  state={sourceState}
+                  label={t('apiKeys.keysPanel', 'Your API keys')}
+                  emptyMessage={t('apiKeys.empty.message', 'Create an API key to enable programmatic access to TeslaSync data and controls.')}
+                  errorMessage={t('error.loadFailed', 'Failed to load data')}
+                  errorRecovery={{ onRetry: () => { void refetch(); } }}
+                  emptyContent={emptyInventory}
+                  loadingContent={
+                    <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                      {[0, 1, 2, 3].map((i) => <Skeleton key={i} height={128} className="rounded-xl" />)}
+                    </div>
+                  }
+                >
+                  {keys.length === 0 ? emptyInventory : (
+                    <StaggerContainer className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                      {keys.map((k) => (
+                        <StaggerItem key={k.id}>
+                          <ApiKeyCard
+                            apiKey={k}
+                            onRevoke={(id) => revokeMut.mutate(id)}
+                            onDelete={setDeleteTarget}
+                            revoking={revokeMut.isPending && revokeMut.variables === k.id}
+                            actionsDisabled={!operationalMode.canWrite}
+                            actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
+                          />
+                        </StaggerItem>
+                      ))}
+                    </StaggerContainer>
+                  )}
+                </SourceContent>
               )}
-            </div>
-
-            {isLoading ? (
-              <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-                {[0, 1, 2, 3].map((i) => (
-                  <Skeleton key={i} height={128} className="rounded-xl" />
-                ))}
-              </div>
-            ) : isError ? (
-              <QueryError
-                error={error}
-                onRetry={() => refetch()}
-                resourceName={t('apiKeys.resource', 'API key')}
-              />
-            ) : keys.length === 0 ? (
-              <EmptyState /* no-action: transient empty state — the Create Key toolbar button is the recovery action */
-                icon={<Key className="h-10 w-10" aria-hidden="true" />}
-                title={t('apiKeys.empty.title', 'No API keys')}
-                message={t(
-                  'apiKeys.empty.message',
-                  'Create an API key to enable programmatic access to TeslaSync data and controls.',
-                )}
-              />
-            ) : (
-              <StaggerContainer className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-                {keys.map((k) => (
-                  <StaggerItem key={k.id}>
-                    <ApiKeyCard
-                      apiKey={k}
-                      onRevoke={(id) => revokeMut.mutate(id)}
-                      onDelete={setDeleteTarget}
-                      revoking={revokeMut.isPending && revokeMut.variables === k.id}
-                      actionsDisabled={!operationalMode.canWrite}
-                      actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
-                    />
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            )}
-          </GlassPanel>
+            </LayoutCard>
+          </div>
 
           {/* Supporting column — access levels + guidance */}
           <div className="space-y-4">
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <KeyRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('apiKeys.accessLevels', 'Access levels')}
-              </PanelTitle>
-              {isLoading ? (
-                <Skeleton height={160} />
-              ) : isError ? (
-                <QueryError error={error} onRetry={() => refetch()} />
-              ) : summary.total === 0 ? (
-                <EmptyState /* no-action: transient — populated once keys exist */
-                  icon={<KeyRound className="h-8 w-8" aria-hidden="true" />}
-                  message={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
-                />
+            <LayoutCard
+              title={t('apiKeys.accessLevels', 'Access levels')}
+              actions={<KeyRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            >
+              {keysState.fatalError ? (
+                <QueryError error={keysState.fatalError} onRetry={() => refetch()} />
               ) : (
-                <div className="space-y-4">
-                  {PERMISSION_ORDER.map((perm) => {
-                    const meta = permissionMeta(perm);
-                    const count = summary.byPermission[perm] ?? 0;
-                    return (
-                      <div key={perm} className="space-y-1">
-                        <MetricBar
-                          label={t(meta.labelKey, meta.labelFallback)}
-                          value={count}
-                          max={summary.total || 1}
-                          color={meta.barColor}
-                          sublabel={String(count)}
-                        />
-                        <Caption>{t(meta.descKey, meta.descFallback)}</Caption>
-                      </div>
-                    );
-                  })}
-                </div>
+                <SourceContent
+                  state={sourceState}
+                  label={t('apiKeys.accessLevels', 'Access levels')}
+                  emptyMessage={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
+                  errorMessage={t('error.loadFailed', 'Failed to load data')}
+                  errorRecovery={{ onRetry: () => { void refetch(); } }}
+                  loadingContent={<Skeleton height={160} />}
+                  emptyContent={emptyPermissions}
+                >
+                  {summary.total === 0 ? emptyPermissions : (
+                    <div className="space-y-4">
+                      {PERMISSION_ORDER.map((perm) => {
+                        const meta = permissionMeta(perm);
+                        const count = summary.byPermission[perm] ?? 0;
+                        return (
+                          <div key={perm} className="space-y-1">
+                            <MetricBar
+                              label={t(meta.labelKey, meta.labelFallback)}
+                              value={count}
+                              max={summary.total || 1}
+                              color={meta.barColor}
+                              sublabel={String(count)}
+                            />
+                            <Caption>{t(meta.descKey, meta.descFallback)}</Caption>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </SourceContent>
               )}
-            </GlassPanel>
+            </LayoutCard>
 
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('apiKeys.guidance.title', 'About API keys')}
-              </PanelTitle>
+            <LayoutCard
+              title={t('apiKeys.guidance.title', 'About API keys')}
+              actions={<Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            >
               <ul className="space-y-2">
                 {guidancePoints.map((point, i) => (
                   <li key={i} className="flex items-start gap-2">
@@ -224,7 +244,7 @@ export default function APIKeysPage() {
                   </li>
                 ))}
               </ul>
-            </GlassPanel>
+            </LayoutCard>
           </div>
         </section>
       </FadeIn>
@@ -248,6 +268,6 @@ export default function APIKeysPage() {
         }
         onCancel={() => setDeleteTarget(null)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

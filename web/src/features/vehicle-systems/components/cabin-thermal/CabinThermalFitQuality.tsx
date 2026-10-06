@@ -1,9 +1,9 @@
-import { BadgeCheck } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartTooltip,
   Legend,
   ResponsiveContainer,
@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
@@ -46,11 +46,7 @@ export function CabinThermalFitQuality({
 
   return (
     <section data-testid="cabin-thermal-fit-quality">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BadgeCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.fit.title', 'Accepted-fit quality')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.fit.title', 'Accepted-fit quality')}>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'cabinThermal.fit.subtitle',
@@ -58,7 +54,7 @@ export function CabinThermalFitQuality({
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="accepted">
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             className="border-0 bg-transparent p-0 shadow-none"
             title={t('cabinThermal.fit.plotTitle', 'R² by accepted event')}
             ariaLabel={t(
@@ -85,9 +81,9 @@ export function CabinThermalFitQuality({
                 <Scatter name={t('cabinThermal.direction.warming', 'Warming')} data={warming} fill={chartTokens.series[3]} />
               </ScatterChart>
             </ResponsiveContainer>
-          </ChartContainer>
+          </EmbeddedChart>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

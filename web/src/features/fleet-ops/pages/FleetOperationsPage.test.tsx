@@ -9,7 +9,11 @@ const operationalMode = vi.hoisted(() => ({
   canWrite: true,
   writeBlockReason: null as string | null,
 }));
-const fleetPageState = vi.hoisted(() => ({ total: 1 }));
+const fleetPageState = vi.hoisted(() => ({
+  total: 1,
+  driversError: null as Error | null,
+  driversUnavailable: false,
+}));
 
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => operationalMode,
@@ -30,14 +34,15 @@ const refetch = vi.fn();
 const reset = vi.fn();
 const mutate = vi.fn();
 
-function query<T>(data: T) {
+function query<T>(data: T, source?: 'drivers') {
+  const error = source === 'drivers' ? fleetPageState.driversError : null;
   return {
-    data,
+    data: source === 'drivers' && fleetPageState.driversUnavailable ? undefined : data,
     isLoading: false,
     isFetching: false,
-    isError: false,
+    isError: error != null,
     isStale: false,
-    error: null,
+    error,
     dataUpdatedAt: Date.now(),
     refetch,
   };
@@ -64,7 +69,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 3,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: fleetPageState.total, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }, 'drivers'),
   useFleetAssignments: () => query({ items: [{
     id: 1,
     vehicle_id: 7,
@@ -195,6 +200,8 @@ beforeEach(() => {
   mutate.mockReset();
   operationalMode.canWrite = true;
   fleetPageState.total = 1;
+  fleetPageState.driversError = null;
+  fleetPageState.driversUnavailable = false;
   operationalMode.writeBlockReason = null;
 });
 
@@ -247,6 +254,33 @@ describe('FleetOperationsPage', () => {
     expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
     fireEvent.click(reservation);
     expect(screen.getByRole('dialog', { name: 'Create reservation' })).toBeInTheDocument();
+  });
+
+  it('keeps retained roster rows and all independently usable operational panels on refresh failure', () => {
+    fleetPageState.driversError = new Error('driver refresh failed');
+    renderPage();
+    expect(screen.getAllByText('Driver A').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeInTheDocument();
+    expect(screen.getByText('Fleet drivers may be out of date')).toBeInTheDocument();
+    for (const title of ['Reservation calendar', 'Assignment roster', 'Cost-center allocation',
+      'Charging policy matrix', 'Maintenance work-order board', 'Utilization forecast']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    expect(document.querySelector('[data-stat-strip="fleet-operations-summary"]')).not.toBeNull();
+    expect(document.querySelector('[data-chart-key="fleet-ops-utilization"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('contains an initial driver failure without removing reservation or forecast actions', () => {
+    fleetPageState.driversError = new Error('drivers unavailable');
+    fleetPageState.driversUnavailable = true;
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New reservation' })).toBeEnabled();
+    expect(screen.getByRole('heading', { name: 'Assignment roster' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Utilization forecast' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit Driver A' })).not.toBeInTheDocument();
   });
 
   it('renders the read-only explanation outside the disabled reservation action', () => {

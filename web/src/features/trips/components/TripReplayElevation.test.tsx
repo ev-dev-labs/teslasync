@@ -22,6 +22,10 @@ vi.mock('@/hooks/useNumberFormatting', () => ({
 vi.mock('@/components/feedback', () => ({
   EmptyState: ({ message }: { message: string }) => <div>{message}</div>,
 }));
+vi.mock('@/components/layout', async () => ({
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
 vi.mock('@/components/charts', () => {
   const passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const inert = () => null;

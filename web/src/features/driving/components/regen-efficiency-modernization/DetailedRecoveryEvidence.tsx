@@ -24,13 +24,16 @@ export function DetailedRecoveryEvidence({ model, state }: {
       <div className="mt-4 min-h-56">
         {state.isLoading ? <Skeleton height={220} />
           : state.error != null ? <QueryError error={state.error} onRetry={state.onRetry} />
-          : !state.isResolved ? <EmptyState className="py-8"
+          : !state.isResolved ? (
+            // no-action: Query availability is unresolved; retry belongs to the resolved empty/error state.
+            <EmptyState className="py-8"
               message={t('regen.states.detailPending', 'Detailed data availability has not resolved.')} />
+            )
           : model.accounting.eligibleCount === 0 ? <EmptyState className="py-8" message={
               model.accounting.observedCount === 0
                 ? t('regen.overview.sampleEmpty', 'No detailed drives were returned for this window.')
                 : t('regen.overview.sampleIneligible', 'Returned drives lack an eligible regen and drive-energy pair.')
-            } />
+            } action={{ label: t('common.retry', 'Retry'), onClick: state.onRetry }} />
           : (
             <div className="space-y-4">
               <StatGroup

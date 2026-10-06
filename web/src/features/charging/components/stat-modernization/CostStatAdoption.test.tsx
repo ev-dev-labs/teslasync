@@ -234,6 +234,35 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(screen.getByText('of sessions between 10 PM–6 AM')).toBeInTheDocument();
     expect(JSON.parse(container.querySelector('[data-chart-rows]')?.getAttribute('data-chart-rows') ?? '[]')).toEqual(hourlyData);
   });
+  it('retries an empty savings comparison without resetting assumptions or inventing costs', () => {
+    const retry = vi.fn();
+    const price = vi.fn(); const mpg = vi.fn(); const rate = vi.fn();
+    const { container } = render(<SavingsCalculator {...savingsProps} gasComparison={null}
+      onRetry={retry} onGasPriceChange={price} onMpgChange={mpg} onElectricityRateChange={rate} />);
+    expect(screen.getByText('Not enough data for comparison')).toBeInTheDocument();
+    expect(screen.getAllByRole('spinbutton')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Reset Defaults' })).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(price).not.toHaveBeenCalled();
+    expect(mpg).not.toHaveBeenCalled();
+    expect(rate).not.toHaveBeenCalled();
+  });
+  it('retries empty hourly history and missing insights without dropping the loaded distribution', () => {
+    const retry = vi.fn();
+    const { container, rerender } = render(<TimeOfUseAnalysis hourlyData={[]}
+      touInsights={null} onRetry={retry} period={period} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getByText('Not enough data')).toBeInTheDocument();
+    rerender(<TimeOfUseAnalysis hourlyData={hourlyData} touInsights={null} onRetry={retry} period={period} />);
+    expect(screen.getByText('No insights available')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-stat]')).toHaveLength(0);
+    expect(JSON.parse(container.querySelector('[data-chart-rows]')?.getAttribute('data-chart-rows') ?? '[]')).toEqual(hourlyData);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(2);
+  });
   it('keeps five category facts, true unclamped share and the original visual clamp/accessible chart', () => {
     const entry = Object.freeze({ name: 'Synthetic home', cost: 20, energy: 40, sessions: 2, color: '#123456' });
     const { container } = render(<ChargerTypeBreakdown data={[entry]} totalCost={10} period={period} />);

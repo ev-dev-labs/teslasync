@@ -9,7 +9,7 @@ import {
   useUpsertRetentionPolicy,
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -435,14 +435,13 @@ export default function DataGovernancePage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('ownership.governance.title', 'Data retention & lifecycle governance')}
       subtitle={t(
         'ownership.governance.subtitle',
         'See exactly what every table costs you on disk, model a retention policy, and quantify the analytical fidelity you would trade away — before anything is deleted.',
       )}
-      loading={overviewQuery.isLoading}
-      error={overviewQuery.error as Error | null}
+      query={[overviewQuery, runsQuery]}
       primaryAction={
         <Button
           variant="primary"
@@ -466,7 +465,8 @@ export default function DataGovernancePage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.governance.summary.title', 'Storage posture')}>
+        <OwnershipPanel title={t('ownership.governance.summary.title', 'Storage posture')}
+          source={overviewQuery} empty={!overview}>
           <StatGrid
             stats={[
               {
@@ -509,6 +509,7 @@ export default function DataGovernancePage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.governance.inventory.title', 'Dataset inventory')}
+          source={overviewQuery}
           description={t(
             'ownership.governance.inventory.subtitle',
             'Live sizes read from the database catalog. Toggle datasets to scope the dry run.',
@@ -534,6 +535,8 @@ export default function DataGovernancePage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.governance.policies.title', 'Retention policies')}
+          source={overviewQuery}
+          editing={formOpen}
           description={t(
             'ownership.governance.policies.subtitle',
             'A policy declares intent. It becomes a plan only when you run the simulation.',
@@ -691,6 +694,7 @@ export default function DataGovernancePage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.governance.runs.title', 'Plan ledger')}
+          source={runsQuery}
           description={t(
             'ownership.governance.runs.subtitle',
             'An append-only history of every plan computed, so retention decisions are auditable after the fact.',
@@ -711,6 +715,7 @@ export default function DataGovernancePage() {
 
       <FadeIn delay={0.25}>
         <EvidencePanel
+          source={overviewQuery}
           quality={overview?.quality}
           evidence={overview?.evidence}
           unsupported={[
@@ -726,6 +731,6 @@ export default function DataGovernancePage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

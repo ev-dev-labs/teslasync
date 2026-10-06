@@ -50,9 +50,11 @@ describe('single StatStrip renderer contract', () => {
   it('retains source errors and old values while refreshing; skeletons preserve tile count', () => {
     const { container, rerender } = render(<StatStrip metrics={metrics} period={period} loading error="Refresh failed" />);
     expect(container.querySelectorAll('[data-state="loading"]')).toHaveLength(2);
+    expect(screen.getAllByText('Loading measurements')).toHaveLength(2);
     expect(screen.getByRole('alert')).toHaveTextContent('Refresh failed');
     rerender(<StatStrip metrics={metrics} period={period} loading retained error="Refresh failed" />);
     expect(container.querySelectorAll('[data-state="value"]')).toHaveLength(2);
+    expect(screen.queryByText('Loading measurements')).toBeNull();
     expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
   });
   it('composes identical StatGroup tiles and only inherits an explicit visible owning header', () => {

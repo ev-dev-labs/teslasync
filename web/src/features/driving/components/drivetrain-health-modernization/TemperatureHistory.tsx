@@ -9,7 +9,7 @@ import type { DriveHistoryChartProps } from './chartTypes';
 
 export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartProps) {
   const { t } = useTranslation();
-  const { formatTemperature } = useUnits();
+  const { formatTemperature, unitPrefs } = useUnits();
   const tempRows = rows.filter(row => row.outsideTemp != null);
   const table = tempRows.map(row => ({
     date: row.date,
@@ -28,7 +28,7 @@ export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartPr
       exportData={table}
       dataColumns={[
         { key: 'date', label: t('drivetrain.col.date', 'Date') },
-        { key: 'outsideTemp', label: t('drivetrain.col.outside', 'Outside') },
+        { key: 'outsideTemp', label: `${t('drivetrain.outsideTemp', 'Outside Temp')} (${unitPrefs.temperature})` },
       ]}
     >
       <ResponsiveContainer width="100%" height="100%">

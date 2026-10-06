@@ -9,8 +9,9 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, QueryError } from '@/components/feedback';
-import { MetricCard } from '@/components/data-display';
-import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { StatGroup, type StatMetric } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
+import { Badge, Button, Text } from '@/components/ui';
 
 
 import type { ChargeAdvisorComponentProps } from './types';
@@ -48,70 +49,56 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
     : analysis.current.freshness === 'stale'
       ? t('chargeAdvisor.kpis.currentStale', 'Displayed as stale; guidance is blocked')
       : t('chargeAdvisor.kpis.currentMissing', 'No valid observed state');
+  const metrics: StatMetric[] = [
+    {
+      metricId: 'text', occurrenceId: 'advisor-guidance',
+      label: t('chargeAdvisor.kpis.guidance', 'Guidance'),
+      rawValue: state.vehicleSelected ? guidanceLabel[analysis.guidance] : null,
+      context: <><PlugZap className="h-5 w-5" aria-hidden="true" /><Badge variant={analysis.guidance === 'charge_before_next_use' ? 'warning' : 'neutral'}>
+        {analysis.evidenceGatePassed
+          ? t('chargeAdvisor.kpis.gated', 'Evidence gate passed')
+          : t('chargeAdvisor.kpis.notGated', 'Descriptive evidence gate not met')}
+      </Badge></>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'advisor-current-soc',
+      label: t('chargeAdvisor.kpis.current', 'Current SoC'),
+      rawValue: state.vehicleSelected ? currentValue : null,
+      context: <><BatteryMedium className="h-5 w-5" aria-hidden="true" />{currentSubtitle}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'advisor-drive-evidence',
+      label: t('chargeAdvisor.kpis.history', 'Drive evidence'),
+      rawValue: state.driveAvailable ? fmtInt(analysis.evidence.includedRows) : null,
+      context: <><Database className="h-5 w-5" aria-hidden="true" />{t('chargeAdvisor.kpis.historyDetail', '{{days}} active local days · {{weeks}} active weeks', {
+        days: analysis.evidence.activeLocalDays, weeks: analysis.evidence.activeWeeks,
+      })}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'advisor-daily-drop',
+      label: t('chargeAdvisor.kpis.typicalUse', 'Daily SoC drop'),
+      rawValue: analysis.burnDistribution.medianPct == null ? null : fmtPercent(analysis.burnDistribution.medianPct),
+      context: <><Activity className="h-5 w-5" aria-hidden="true" />{t('chargeAdvisor.kpis.dailyUseDetail', 'Median across active local days')}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'advisor-charging-evidence',
+      label: t('chargeAdvisor.kpis.charging', 'Charging evidence'),
+      rawValue: state.chargingAvailable ? fmtInt(analysis.chargingProfile.sessions) : null,
+      context: <><ShieldCheck className="h-5 w-5" aria-hidden="true" />{state.chargingAvailable
+        ? t('chargeAdvisor.kpis.chargingDetail', 'Completed sessions in window')
+        : t('chargeAdvisor.kpis.chargingMissing', 'Charging history unavailable')}</>,
+    },
+  ];
 
   return (
     <section data-testid="charge-advisor-kpis" aria-label={t(
       'chargeAdvisor.kpis.aria',
       'Charge advisor guidance and evidence summary',
     )}>
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')}
-        </PanelTitle>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <MetricCard
-            label={t('chargeAdvisor.kpis.guidance', 'Guidance')}
-            value={state.vehicleSelected ? guidanceLabel[analysis.guidance] : '—'}
-            subtitle={analysis.evidenceGatePassed
-              ? t('chargeAdvisor.kpis.gated', 'Evidence gate passed')
-              : t('chargeAdvisor.kpis.notGated', 'Descriptive evidence gate not met')}
-            icon={<PlugZap className="h-5 w-5" />}
-            color={analysis.guidance === 'charge_before_next_use' ? 'amber' : 'cyan'}
-          />
-          <MetricCard
-            label={t('chargeAdvisor.kpis.current', 'Current SoC')}
-            value={state.vehicleSelected ? currentValue : '—'}
-            subtitle={currentSubtitle}
-            icon={<BatteryMedium className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('chargeAdvisor.kpis.history', 'Drive evidence')}
-            value={state.vehicleSelected ? fmtInt(analysis.evidence.includedRows) : '—'}
-            subtitle={t(
-              'chargeAdvisor.kpis.historyDetail',
-              '{{days}} active local days · {{weeks}} active weeks',
-              {
-                days: analysis.evidence.activeLocalDays,
-                weeks: analysis.evidence.activeWeeks,
-              },
-            )}
-            icon={<Database className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('chargeAdvisor.kpis.typicalUse', 'Daily SoC drop')}
-            value={analysis.burnDistribution.medianPct == null
-              ? '—'
-              : fmtPercent(analysis.burnDistribution.medianPct)}
-            subtitle={t(
-              'chargeAdvisor.kpis.dailyUseDetail',
-              'Median across active local days',
-            )}
-            icon={<Activity className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('chargeAdvisor.kpis.charging', 'Charging evidence')}
-            value={state.chargingAvailable ? fmtInt(analysis.chargingProfile.sessions) : '—'}
-            subtitle={state.chargingAvailable
-              ? t('chargeAdvisor.kpis.chargingDetail', 'Completed sessions in window')
-              : t('chargeAdvisor.kpis.chargingMissing', 'Charging history unavailable')}
-            icon={<ShieldCheck className="h-5 w-5" />}
-            color="green"
-          />
-        </div>
+      <LayoutCard title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')}>
+        <StatGroup metrics={metrics} retained={Boolean(state.refreshError)}
+          period={{ kind: 'unknown', label: t('chargeAdvisor.kpis.title', 'Observed charge planning evidence'),
+            reason: t('chargeAdvisor.summaryScope', 'History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.') }} />
 
         {!state.vehicleSelected ? (
           <Text as="p" variant="caption" className="mt-4">
@@ -167,7 +154,7 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
             </Text>
           </AlertBanner>
         ) : null}
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

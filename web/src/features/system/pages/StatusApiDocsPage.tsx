@@ -15,7 +15,7 @@ import {
   Activity, Boxes, Cpu, Clock, AlertTriangle, BarChart3, Home, HeartPulse,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { GlassPanel, Button, Badge, SectionTitle, PanelTitle, Text, Caption } from '@/components/ui'
 import { MetricCard, KVList } from '@/components/data-display'
 import { InlineCallout } from '@/components/feedback'
@@ -196,7 +196,7 @@ export default function StatusApiDocsPage() {
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('statusApi.title', 'Status API')}
       subtitle={t('statusApi.subtitle', 'Stable contract for external integrations')}
       secondaryActions={actions}
@@ -323,6 +323,6 @@ export default function StatusApiDocsPage() {
           </InlineCallout>
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

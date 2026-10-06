@@ -63,7 +63,10 @@ export default function PowertrainSummary({ vehicleId, historyQuery }: Powertrai
             ))}
           </div>
         ) : state.fatalError ? null : (
-          <EmptyState message={t('dynamics.powertrain.empty', 'No motor samples in this drive window. Trip totals remain available above; current readings are kept separate below.')} />
+          // no-action: Disabled history awaits a valid trip selection in the trip toolbar.
+          <EmptyState message={t('dynamics.powertrain.empty', 'No motor samples in this drive window. Trip totals remain available above; current readings are kept separate below.')}
+            action={vehicleId && historyQuery.enabled !== false
+              ? { label: t('common.retry', 'Retry'), onClick: () => void query.refetch() } : undefined} />
         )}
       </LayoutCard>
     </div>

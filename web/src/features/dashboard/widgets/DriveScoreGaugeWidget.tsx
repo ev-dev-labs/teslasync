@@ -51,7 +51,8 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   const hasScoredDrives = !!score && score.totalDrives !== 0;
 
   const gauge = useMemo<GaugeHeroConfig>(() => ({
-    value: overall ?? 0,
+    value: overall,
+    preserveReadingAndScale: true,
     max: 100,
     label: score?.grade ?? '—',
     unit: t('widget.driveScoreGauge.weekly', 'Weekly score'),

@@ -2,9 +2,9 @@ import { type ElementType, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, IconBox, SectionTitle, PanelTitle, Text } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { CompositionRail, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -436,34 +436,18 @@ function DeliveryProgress({
             // no-action: derived from the hardcoded roadmapItems array in this file — never empty without a source-code edit.
             <EmptyState message={t('roadmap.progress.empty', 'No roadmap items to display yet.')} />
           ) : (
-            <>
-              <div
-                className="flex h-3 w-full overflow-hidden rounded-full bg-white/[0.04] ring-1 ring-white/[0.06]"
-                role="img"
-                aria-label={t('roadmap.progress.barLabel', 'Roadmap initiatives by phase')}
-              >
-                {segments.map((s) => {
-                  const pct = total > 0 ? (s.count / total) * 100 : 0;
-                  if (pct <= 0) return null;
-                  return (
-                    <div
-                      key={s.phase}
-                      className={cn('h-full', neonColorMap[s.meta.neon].dot)}
-                      style={{ width: `${pct}%` }}
-                    />
-                  );
-                })}
-              </div>
-              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                {segments.map((s) => (
-                  <li key={s.phase} className="flex items-center gap-2">
-                    <span className={cn('h-2 w-2 rounded-full', neonColorMap[s.meta.neon].dot)} aria-hidden="true" />
-                    <Text as="span" variant="bodySm">{t(s.meta.labelKey, s.meta.labelFallback)}</Text>
-                    <Text as="span" variant="caption" className="tabular-nums">{s.count}</Text>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <CompositionRail
+              size="md"
+              summary={t('roadmap.progress.barLabel', 'Roadmap initiatives by phase')}
+              segments={segments.map((segment) => ({
+                id: segment.phase,
+                label: t(segment.meta.labelKey, segment.meta.labelFallback),
+                detail: segment.count,
+                widthPercent: (segment.count / total) * 100,
+                hideFromTrack: segment.count <= 0,
+                fillClassName: neonColorMap[segment.meta.neon].dot,
+              }))}
+            />
           )}
         </div>
       </div>
@@ -557,7 +541,7 @@ export default function RoadmapPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('roadmap.title', 'Roadmap')}
       subtitle={t('roadmap.subtitle', "What's been built, What's in progress, and What's coming next")}
     >
@@ -618,6 +602,6 @@ export default function RoadmapPage() {
       {PHASE_ORDER.map((phase, i) => (
         <PhaseSection key={phase} phase={phase} items={grouped[phase]} delay={0.15 + i * 0.05} />
       ))}
-    </PageContainer>
+    </PageLayout>
   );
 }

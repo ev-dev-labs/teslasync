@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { Grid, PageContainer } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
+import { Grid, PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -56,6 +58,7 @@ export default function MilestonesPage() {
     DEFAULT_HISTORY_LIMIT,
   );
   const drives = drivesQuery.data ?? [];
+  const source = deriveDataState(drivesQuery, { provenance: 'historical' });
   const milestoneUnitKm =
     convertDistanceToSI(1, unitPrefs.distance) / 1_000;
   const summary = useMemo(
@@ -93,15 +96,15 @@ export default function MilestonesPage() {
   }
 
   const sectionState: MilestoneSectionState = {
-    isLoading: drivesQuery.isLoading,
-    error: drivesQuery.isError ? drivesQuery.error : null,
+    isLoading: source.status === 'initial',
+    error: source.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('milestones.title', 'Odometer milestones')}
       subtitle={t(
         'milestones.subtitle',
@@ -116,6 +119,8 @@ export default function MilestonesPage() {
         />
       }
     >
+      <StaleRefreshWarning hasData={source.hasData} error={source.refreshError}
+        onRetry={source.retry ?? undefined} />
       <FadeIn>
         <MilestoneKpis summary={summary} {...sectionState} />
       </FadeIn>
@@ -166,6 +171,6 @@ export default function MilestonesPage() {
           state={sectionState}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

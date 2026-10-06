@@ -228,6 +228,32 @@ describe('AppearanceSettings — structure & delegation', () => {
       screen.getByRole('radiogroup', { name: 'Chart palette' }),
     ).toBeInTheDocument()
   })
+
+  it('uses separate native radio groups while retaining density previews and both palette swatch sets', () => {
+    const { container } = renderPanel()
+    openMoreOptions()
+    const groups = [
+      { label: 'Information density', name: 'settings-appearance-density', count: 3 },
+      { label: 'Default time format', name: 'settings-appearance-time-format', count: 2 },
+      { label: 'Chart palette', name: 'settings-appearance-chart-palette', count: 2 },
+    ]
+    for (const { label, name, count } of groups) {
+      const radios = within(screen.getByRole('radiogroup', { name: label })).getAllByRole('radio')
+      expect(radios).toHaveLength(count)
+      radios.forEach(radio => {
+        expect(radio.tagName).toBe('INPUT')
+        expect(radio).toHaveAttribute('type', 'radio')
+        expect(radio).toHaveAttribute('name', name)
+      })
+      expect(radios.filter(radio => (radio as HTMLInputElement).checked)).toHaveLength(1)
+    }
+    expect(screen.getByText('Tight rows — fits more on screen')).toBeInTheDocument()
+    expect(screen.getByText('Roomy — easier to read at distance')).toBeInTheDocument()
+    expect(container.querySelectorAll('span[style]')).toHaveLength(
+      CHART_COLORS_CB_SAFE.length + CHART_COLORS_NEON.length,
+    )
+    expect(findPutCall()).toBeUndefined()
+  })
 })
 
 describe('AppearanceSettings — information density', () => {

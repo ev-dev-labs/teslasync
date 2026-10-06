@@ -86,6 +86,18 @@ describe('AIThinkingIndicator — accessibility + geometry', () => {
 })
 
 describe('AIThinkingDots', () => {
+  it('lets long labels shrink and wrap while keeping decorative dots intact', () => {
+    const { container } = render(
+      <AIThinkingDots label="A complete long localized thinking label" />,
+    )
+    const label = screen.getByText('A complete long localized thinking label')
+    expect(label).toHaveClass('min-w-0', 'break-words')
+    expect(label.parentElement).toHaveClass('min-w-0', 'max-w-full')
+    expect(container.querySelector('[aria-hidden="true"]')).toHaveClass('shrink-0')
+    expect(container.querySelectorAll('.rounded-full')).toHaveLength(3)
+    expect(container.textContent).toBe('A complete long localized thinking label')
+  })
+
   it('renders the caller label followed by three decorative bouncing dots', () => {
     const { container } = render(<AIThinkingDots label="Generating coaching" />)
 

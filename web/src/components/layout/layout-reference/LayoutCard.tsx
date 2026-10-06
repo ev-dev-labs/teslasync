@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Heading, Text, Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -18,8 +18,10 @@ export function LayoutCard({ title, description, actions, children, footer, size
   const { t } = useTranslation();
   const placement = useCardPlacement();
   const id = useId();
+  const cardRef = useRef<HTMLDivElement>(null);
   return (
     <Card
+      ref={cardRef}
       padding="none"
       data-card
       data-card-size={placement?.size ?? size}
@@ -35,7 +37,7 @@ export function LayoutCard({ title, description, actions, children, footer, size
         <div className="min-w-0 flex-1 space-y-1">
           <Heading id={`${id}-title`} level="panel" data-card-title className="break-words">{title}</Heading>
           {description && (
-            <Tooltip content={description} multiline>
+            <Tooltip content={description} multiline boundaryRef={cardRef}>
               <Button
                 type="button"
                 variant="ghost"

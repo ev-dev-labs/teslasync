@@ -6,8 +6,8 @@
  * `useUnits()` converts them for the user's locale/preference.
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { Badge, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
@@ -24,11 +24,8 @@ export function BatterySummaryPanel({ battery }: BatterySummaryPanelProps) {
   const { formatEnergy } = useUnits();
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.battery.title', 'Battery health')}</PanelTitle>
-        {battery?.health_grade && <Badge variant="info">{battery.health_grade}</Badge>}
-      </div>
+    <LayoutCard title={t('resaleVault.battery.title', 'Battery health')}
+      actions={battery?.health_grade ? <Badge variant="info">{battery.health_grade}</Badge> : undefined}>
 
       {!battery ? (
         // no-action: mirrors the Battery Passport query result as a nullable prop; no refetch handler reaches this panel.
@@ -67,7 +64,7 @@ export function BatterySummaryPanel({ battery }: BatterySummaryPanelProps) {
           {battery.thermal_exposure && (
             <div>
               <HelperText className="mb-1">{t('resaleVault.battery.thermal', 'Thermal exposure')}</HelperText>
-              <div className="flex gap-2 text-xs">
+              <div className="flex flex-wrap gap-2">
                 <Badge variant="info">{t('resaleVault.battery.cold', 'Cold')}: {fmtNumber(battery.thermal_exposure.cold_pct)}%</Badge>
                 <Badge variant="success">{t('resaleVault.battery.nominal', 'Nominal')}: {fmtNumber(battery.thermal_exposure.nominal_pct)}%</Badge>
                 <Badge variant="warning">{t('resaleVault.battery.hot', 'Hot')}: {fmtNumber(battery.thermal_exposure.hot_pct)}%</Badge>
@@ -78,7 +75,7 @@ export function BatterySummaryPanel({ battery }: BatterySummaryPanelProps) {
           {battery.recommendations.length > 0 && (
             <div>
               <HelperText className="mb-1">{t('resaleVault.battery.recommendations', 'Recommendations')}</HelperText>
-              <ul className="list-disc pl-5 text-xs text-[var(--text-secondary)] space-y-0.5">
+              <ul className="list-disc ps-5 text-[var(--text-secondary)] space-y-0.5">
                 {battery.recommendations.map((r, i) => (
                   <li key={i}>{r}</li>
                 ))}
@@ -93,6 +90,6 @@ export function BatterySummaryPanel({ battery }: BatterySummaryPanelProps) {
           )}
         </>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

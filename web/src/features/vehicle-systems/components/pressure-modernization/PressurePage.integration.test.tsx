@@ -139,6 +139,27 @@ afterEach(() => {
 });
 
 describe('pressure page live composition — authored, execution owned by parent', () => {
+  it('refreshes empty current readings and history independently without creating pressure values', async () => {
+    H.latest = null;
+    H.history = [];
+    mount();
+    const currentMessage = await screen.findByText('No current readings available');
+    const historyMessage = await historyTable().findByText('No history data');
+    for (const [message, prefix, otherPrefix] of [
+      [currentMessage, '/tire-pressure/latest?', '/tire-pressure?'],
+      [historyMessage, '/tire-pressure?', '/tire-pressure/latest?'],
+    ] as const) {
+      const status = message.closest('[role="status"]');
+      if (!(status instanceof HTMLElement)) throw new Error('Missing pressure empty state');
+      const before = H.calls.filter(url => url.startsWith(prefix)).length;
+      const otherBefore = H.calls.filter(url => url.startsWith(otherPrefix)).length;
+      fireEvent.click(within(status).getByRole('button', { name: 'Refresh' }));
+      await waitFor(() => expect(H.calls.filter(url => url.startsWith(prefix))).toHaveLength(before + 1));
+      expect(H.calls.filter(url => url.startsWith(otherPrefix))).toHaveLength(otherBefore);
+    }
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+
   it('has all four persistent surfaces, one allocated observer and an unduplicated heading outline', async () => {
     const { container } = mount();
     await screen.findAllByText('Front left (bar)');
@@ -183,10 +204,17 @@ describe('pressure page live composition — authored, execution owned by parent
     await screen.findAllByText('Front left (bar)');
     H.failHistory = true;
     await act(async () => { await client.refetchQueries({ queryKey: ['tire-pressure-history', 42] }); });
+    await waitFor(() => expect(historyTable().getByText(
+      'Could not refresh Tire pressure history. Retained readings remain available.',
+    )).toBeInTheDocument());
+    expect(client.getQueryState(['tire-pressure-latest', 42])?.status).toBe('success');
+    expect(client.getQueryState(['tire-pressure-latest', 42])?.error).toBeNull();
+    expect(client.getQueryState(['tire-pressure-history', 42, '2026-06-01', '2026-06-30'])?.status).toBe('error');
     expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
     expect(historyTable().getByText('Front left (bar)')).toBeInTheDocument();
     expect(screen.getAllByRole('meter')).toHaveLength(4);
     expect(stat(container, 'pressure').getByText('2.88')).toBeInTheDocument();
+    expect(container.querySelector('[data-metric="pressure"]')).toHaveAttribute('data-state', 'value');
     expect(container.querySelector('[data-stat-strip]')).toHaveAttribute('data-retained', 'true');
     expect(screen.getAllByRole('button', { name: /^Retry$/ }).length).toBeGreaterThan(0);
   });

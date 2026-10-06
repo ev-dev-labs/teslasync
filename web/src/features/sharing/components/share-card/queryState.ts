@@ -1,4 +1,5 @@
 import type { ShareCardQueryState } from './types';
+import { deriveDataState } from '@/api/dataState';
 
 export interface ShareCardQueryLike {
   data: unknown;
@@ -16,7 +17,8 @@ export function shareCardQueryState(
   enabled: boolean,
   onRetry: () => void,
 ): ShareCardQueryState {
-  const hasData = query.data !== undefined;
+  const source = deriveDataState(query);
+  const hasData = source.hasData;
   return {
     enabled,
     hasData,
@@ -27,10 +29,10 @@ export function shareCardQueryState(
         || (query.isPending && query.fetchStatus === 'fetching')
       ),
     isInitialPaused: enabled && !hasData && query.fetchStatus === 'paused',
-    initialError: enabled && query.isError && !hasData ? query.error : null,
+    initialError: enabled ? source.fatalError : null,
     isResolved: enabled && (query.isSuccess || hasData),
     isRefreshing: enabled && hasData && query.isFetching,
-    cachedRefreshError: enabled && query.isError && hasData ? query.error : null,
+    cachedRefreshError: enabled ? source.refreshError : null,
     cachedRefreshPaused: enabled && hasData && query.fetchStatus === 'paused',
     onRetry,
   };

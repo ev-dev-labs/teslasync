@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
+import { deriveDataState } from '@/api/dataState';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -29,10 +30,11 @@ const COMPACT_HEATMAP_MAX_WEEKS = 16;
 function DriveCalendarContent() {
   const { t } = useTranslation();
   usePageTitle(t('driveCalendar.title', 'Drive calendar'));
-  const { start, end, startInstant, endInstantExclusive } = useRangeState();
+  const { start, end, startInstant, endInstantExclusive, timezone } = useRangeState();
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
+  const source = deriveDataState(drivesQuery, { provenance: 'historical' });
 
   const calendar = useMemo(
     () => buildDriveCalendar(drivesQuery.data ?? [], Date.now(), { start, end }),
@@ -45,20 +47,28 @@ function DriveCalendarContent() {
   }
 
   const sectionState: DriveCalendarSectionState = {
-    isLoading: drivesQuery.isLoading,
-    error: drivesQuery.isError ? drivesQuery.error : null,
+    isLoading: source.status === 'initial',
+    error: source.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('driveCalendar.title', 'Drive calendar')}
       subtitle={t('driveCalendar.subtitle', 'Driving activity and streaks in the selected period')}
     >
+      <StaleRefreshWarning hasData={source.hasData} error={source.refreshError}
+        onRetry={source.retry ?? undefined} />
       <FadeIn>
-        <CalendarSummaryCards calendar={calendar} rangeEnd={end} {...sectionState} />
+        <CalendarSummaryCards calendar={calendar} rangeEnd={end} {...sectionState}
+          period={{
+            kind: 'analysis', label: `${start} – ${end}`,
+            start: startInstant, endExclusive: endInstantExclusive,
+            timezone, completeness: 'unknown',
+            provenance: t('driveCalendar.sourcePeriod', 'Returned drives in the selected workspace range; continuous coverage is unknown.'),
+          }} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
@@ -109,7 +119,7 @@ function DriveCalendarContent() {
           </Grid>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }
 
@@ -126,7 +136,7 @@ export default function DriveCalendarPage() {
     const year = Number(rawYear);
     if (!/^\d{4}$/.test(rawYear) || year < 1900 || year > currentYear) {
       return (
-        <PageContainer title={t('driveCalendar.title', 'Drive calendar')}>
+        <PageLayout title={t('driveCalendar.title', 'Drive calendar')}>
           <EmptyState
             message={t('driveCalendar.invalidYear', 'Choose a year from 1900 through {{year}}.', { year: currentYear })}
             actionTo={{
@@ -134,7 +144,7 @@ export default function DriveCalendarPage() {
               to: '/drive-calendar',
             }}
           />
-        </PageContainer>
+        </PageLayout>
       );
     }
     const end = year === currentYear ? calendarDayKey(new Date()) : `${year}-12-31`;

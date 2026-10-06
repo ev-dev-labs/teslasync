@@ -771,6 +771,9 @@ describe('ApiLogsPage', () => {
     mockedLogs.mockResolvedValue(makeLogsResponse());
     renderPage();
     fireEvent.click(expansionButton(await requestRow('/vehicles')));
+    const body = screen.getByRole('group', { name: 'Response body' });
+    expect(body.querySelector('pre code')).toHaveTextContent('"ok": true');
+    expect(within(body).getByRole('button', { name: 'Copy Response body' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Copy Response body' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('{\n  "ok": true\n}'));
     fireEvent.click(screen.getByRole('button', { name: 'Copy Request headers' }));

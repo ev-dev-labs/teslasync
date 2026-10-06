@@ -65,9 +65,13 @@ export function RecoveryRatioDistribution({ model, state }: {
         {state.error ? <div className="flex h-full items-center justify-center">
             <QueryError error={state.error} onRetry={state.onRetry} />
           </div>
-          : !state.isResolved ? <EmptyState className="h-full"
+          : !state.isResolved ? (
+            // no-action: Query availability is unresolved; retry belongs to the resolved empty/error state.
+            <EmptyState className="h-full"
               message={t('regen.states.detailPending', 'Detailed data availability has not resolved.')} />
+            )
           : !hasData ? <EmptyState className="h-full"
+              action={{ label: t('common.retry', 'Retry'), onClick: state.onRetry }}
               message={t('regen.distribution.empty', 'No eligible per-drive ratios are available for a distribution.')} />
           : <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows} margin={{ top: 12, right: 8, left: -8, bottom: 0 }}>

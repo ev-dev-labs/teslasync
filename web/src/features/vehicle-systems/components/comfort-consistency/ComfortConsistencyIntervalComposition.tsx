@@ -1,13 +1,7 @@
-import { Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { LayoutCard, Grid } from '@/components/layout';
+import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
@@ -47,11 +41,7 @@ export function ComfortConsistencyIntervalComposition({
 
   return (
     <section data-testid="comfort-consistency-interval-composition">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Gauge className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.intervals.title', 'Active interval comfort composition')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.intervals.title', 'Active interval comfort composition')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.intervals.subtitle',
@@ -115,7 +105,7 @@ export function ComfortConsistencyIntervalComposition({
             />
           </Grid>
         </ComfortConsistencySectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

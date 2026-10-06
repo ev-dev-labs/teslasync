@@ -36,7 +36,7 @@
  *   - volume-axis clip bug fix: when the latest snapshot is missing, the Y-axis
  *     ceiling comes from the charted peak instead of the small fallback.
  *   - source-icon / status branches: FM radio, podcast, and aux sources render
- *     alongside an unknown status that maps to "Stopped".
+ *     alongside the unrecognized source status without inventing "Stopped".
  *   - interactions: the shared range is read without a local trigger; sorting
  *     the Track column reorders the table and toggles direction.
  */
@@ -250,10 +250,12 @@ function renderPage() {
 const statsRegion = () => screen.getByRole('region', { name: 'Listening stats' });
 const nowPlayingRegion = () => screen.getByRole('region', { name: 'Now playing' });
 
-/** Read a KPI MetricCard's value <p> given its label, scoped to the KPI band. */
+/** Read the shared stat tile's value, excluding its help and source context. */
 function kpiValue(label: string): string {
-  const span = within(statsRegion()).getByText(label);
-  return span.closest('p')?.nextElementSibling?.textContent ?? '';
+  const span = within(statsRegion()).getByText(label, { selector: '[data-stat-label]' });
+  const value = span.closest('[data-stat]')?.querySelector('[data-stat-value]');
+  if (!(value instanceof HTMLElement)) throw new Error(`Missing ${label} stat value`);
+  return value.textContent ?? '';
 }
 
 /** Non-spacer <tbody> rows of the playback-history table. */
@@ -284,15 +286,17 @@ describe('MediaPlayerPage — no vehicle selected', () => {
     mockHistory.mockReturnValue(makeQuery({ data: [] }));
     renderPage();
 
-    expect(screen.getByText(/Select a vehicle to see what.s playing/)).toBeInTheDocument();
+    const prompts = within(nowPlayingRegion()).getAllByText(/Select a vehicle to see what.s playing/);
+    expect(prompts).toHaveLength(2);
+    for (const prompt of prompts) expect(prompt).toBeInTheDocument();
     expect(screen.getByText('Select a vehicle to view volume history')).toBeInTheDocument();
     expect(screen.getByText('Select a vehicle to view sources')).toBeInTheDocument();
     expect(screen.getByText('Select a vehicle to view playback history')).toBeInTheDocument();
 
     // KPIs collapse to honest placeholders, not stale numbers.
-    expect(kpiValue('Unique tracks')).toBe('0');
+    expect(kpiValue('Unique tracks')).toBe('—');
     expect(kpiValue('Top source')).toBe('—');
-    expect(kpiValue('Avg volume')).toBe('0');
+    expect(kpiValue('Avg volume')).toBe('—');
 
     // Both queries are scoped to the empty vehicle (disabled upstream).
     expect(mockMedia).toHaveBeenCalledWith('');
@@ -314,7 +318,28 @@ describe('MediaPlayerPage — loading', () => {
     expect(screen.queryByText('No volume data for this period')).not.toBeInTheDocument();
     expect(screen.queryByText('No playback history for this period')).not.toBeInTheDocument();
     // Aggregates are withheld while the first load is in flight (no data yet).
-    expect(kpiValue('Unique tracks')).toBe('0');
+    expect(kpiValue('Unique tracks')).toBe('—');
+  });
+});
+
+describe('MediaPlayerPage — missing live snapshot', () => {
+  it('refreshes only the live media source from both empty live panels without inventing a reading', () => {
+    const refetch = vi.fn();
+    const historyRefetch = vi.fn();
+    mockMedia.mockReturnValue(makeQuery({ data: null, refetch }));
+    mockHistory.mockReturnValue(makeQuery({ data: HISTORY, refetch: historyRefetch }));
+    renderPage();
+    const empties = screen.getAllByText('No media snapshot available');
+    expect(empties).toHaveLength(2);
+    for (const message of empties) {
+      const status = message.closest('[role="status"]');
+      if (!(status instanceof HTMLElement)) throw new Error('Missing media empty state');
+      fireEvent.click(within(status).getByRole('button', { name: 'Refresh' }));
+    }
+    expect(refetch).toHaveBeenCalledTimes(2);
+    expect(historyRefetch).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
+    expect(screen.getByTestId('volume-chart')).toBeInTheDocument();
   });
 });
 
@@ -337,12 +362,14 @@ describe('MediaPlayerPage — error with no data', () => {
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThanOrEqual(4);
 
-    // First Retry belongs to the now-playing (media) panel; a later one to a
-    // history-backed panel — each re-invokes its own query's refetch.
-    fireEvent.click(retries[0]);
+    const mediaRetries = within(nowPlayingRegion()).getAllByRole('button', { name: 'Retry' });
+    expect(mediaRetries).toHaveLength(2);
+    fireEvent.click(mediaRetries[0]);
     expect(mediaRefetch).toHaveBeenCalledTimes(1);
-    fireEvent.click(retries[1]);
+    expect(historyRefetch).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('region', { name: 'Volume over time' })).getByRole('button', { name: 'Retry' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
+    expect(mediaRefetch).toHaveBeenCalledTimes(1);
 
     // Error wins over the empty copy — never both at once.
     expect(screen.queryByText('No playback history for this period')).not.toBeInTheDocument();
@@ -537,7 +564,7 @@ describe('MediaPlayerPage — volume axis ceiling (bug fix)', () => {
 });
 
 describe('MediaPlayerPage — source icon and status branches', () => {
-  it('renders FM radio, podcast, and aux rows alongside an unknown status that maps to Stopped', () => {
+  it('renders FM radio, podcast, and aux rows without inventing Stopped for an unknown source status', () => {
     mockMedia.mockReturnValue(makeQuery({ data: undefined }));
     mockHistory.mockReturnValue(
       makeQuery({
@@ -554,8 +581,8 @@ describe('MediaPlayerPage — source icon and status branches', () => {
     expect(within(table).getByText('FM Radio')).toBeInTheDocument();
     expect(within(table).getByText('Podcast App')).toBeInTheDocument();
     expect(within(table).getByText('AUX')).toBeInTheDocument();
-    // "buffering" is not playing/paused → statusLabel falls through to Stopped.
-    expect(within(table).getByText('Stopped')).toBeInTheDocument();
+    expect(within(table).getByText('buffering')).toBeInTheDocument();
+    expect(within(table).queryByText('Stopped')).not.toBeInTheDocument();
     expect(within(table).getByText('Paused')).toBeInTheDocument();
     expect(within(table).getByText('Playing')).toBeInTheDocument();
   });

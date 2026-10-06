@@ -3,13 +3,13 @@ import { BatteryCharging, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCreateResiliencePlan } from '@/api/hooks/useAdvancedIntelligence';
 import {
-  CartesianGrid, ChartContainer, CHART_COLORS, Line, LineChart,
+  CartesianGrid, CHART_COLORS, Line, LineChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { ChartCard, Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -53,7 +53,7 @@ export default function EmergencyResiliencePage() {
   })), [result, units.unitPrefs.duration, units.unitPrefs.energy]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('advancedIntelligence.resilience.title', 'Emergency resilience')}
       subtitle={t(
         'advancedIntelligence.resilience.subtitle',
@@ -190,7 +190,10 @@ export default function EmergencyResiliencePage() {
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <ChartContainer
+        <ChartCard
+          size="standard"
+          toolbar
+          exportable
           title={t('advancedIntelligence.resilience.timeline.title', 'Outage risk timeline')}
           ariaLabel={t(
             'advancedIntelligence.resilience.timeline.aria',
@@ -221,7 +224,7 @@ export default function EmergencyResiliencePage() {
               'At least two supported timeline points are required.',
             )} />
           )}
-        </ChartContainer>
+        </ChartCard>
       </FadeIn>
 
       <FadeIn delay={0.15}>
@@ -262,6 +265,6 @@ export default function EmergencyResiliencePage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

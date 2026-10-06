@@ -18,17 +18,38 @@
     "chartFigure": "Chart: {{title}}",
     "helpFor": "Help for {{field}}"
   },
-  "achievements": {
-    "dismiss": "Dismiss achievement notification",
-    "toastEyebrow": "Achievement unlocked",
-    "view": "View"
-  },
   "alerts": {
     "tabFlash": "(!) Alert — ",
     "toast": {
       "title": "Alert",
       "view": "View"
     }
+  },
+  "annotation": {
+    "add": "Add annotation",
+    "addTitle": "Add annotation",
+    "cat": {
+      "custom": "Custom",
+      "issue": "Issue",
+      "maintenance": "Maintenance",
+      "milestone": "Milestone",
+      "trip": "Trip",
+      "upgrade": "Upgrade"
+    },
+    "category": "Category",
+    "date": "Date",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "label": "Label",
+    "labelPlaceholder": "e.g., battery replaced",
+    "listTitle": "Annotations",
+    "removeNamed": "Remove annotation: {{label}}"
+  },
+  "annotations": {
+    "add": "Add annotation",
+    "hide": "Hide annotations",
+    "show": "Show annotations",
+    "markerRow": "Annotations on this chart"
   },
   "app": {
     "newVersion": {
@@ -76,6 +97,32 @@
       "empty": "No release notes available yet."
     }
   },
+  "chart": {
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "export": {
+      "copy": "Copy image to clipboard",
+      "copyFailed": "Failed to copy chart image",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copySuccess": "Chart image copied to clipboard",
+      "csv": "Download data as CSV",
+      "disabledTooltip": "Chart not ready to export",
+      "failed": "Could not prepare the {{format}} export.",
+      "menuLabel": "Export chart",
+      "png": "Save as PNG",
+      "preparing": "Preparing chart export…",
+      "svg": "Save as SVG"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet.",
+    "sampling": {
+      "a11yDisclosure": "Visual series is sampled: {{rendered}} of {{source}} observations are rendered.",
+      "disclosure": "Showing {{rendered}} of {{source}} observations for display."
+    }
+  },
   "combobox": {
     "clearAria": "Clear selection",
     "closeListAria": "Hide options",
@@ -97,6 +144,7 @@
     "emptyResultsForTitle": "No {{title}} found.",
     "loading": "Loading...",
     "noData": "No data available",
+    "noReading": "No reading",
     "noDataForPeriod": "No data available for this period",
     "noChargingRecords": "No charging records match the current selection.",
     "noChargingRecordsDescription": "Adjust the vehicle or date filters, or return after more charging history is recorded.",
@@ -128,6 +176,9 @@
       "copied": "Copied",
       "successToast": "Copied to clipboard",
       "errorToast": "Failed to copy"
+    },
+    "codeBlock": {
+      "aria": "{{language}} code snippet"
     },
     "online": "Online",
     "offline": "Offline",
@@ -337,15 +388,9 @@
       "message": "Some sources did not respond. Available results remain visible and are not treated as complete.",
       "title": "Partial data"
     },
-    "refreshBlocked": {
-      "message": "The device is offline, so this section is showing the last values it received."
-    },
     "stale": {
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible.",
       "title": "Data may be stale"
-    },
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     },
     "unavailable": {
       "message": "A required service is unavailable. This section will recover when the dependency returns.",
@@ -376,6 +421,20 @@
     "groupLabel": "List density"
   },
   "developerReference": {
+    "layout": {
+      "about": {
+        "title": "About this analysis"
+      },
+      "card": {
+        "descriptionHelp": "Read full description for {{title}}"
+      },
+      "locked": {
+        "unknownProgress": "Unlock progress is unknown; no threshold has been inferred."
+      },
+      "source": {
+        "loading": "Loading {{label}}"
+      }
+    },
     "mobileGrid": {
       "actions": {
         "clear": "Clear",
@@ -402,7 +461,6 @@
     }
   },
   "draft": {
-    "discardDraft": "Discard draft",
     "recovery": {
       "close": "Close",
       "discard": "Discard",
@@ -418,19 +476,6 @@
       "resume": "Resume",
       "review": "Review",
       "savedAt": "Saved {{when}}"
-    },
-    "restored": "Draft restored from {{when}}.",
-    "restoredItem": "{{noun}} draft restored from {{when}}.",
-    "unknownTime": "a moment ago",
-    "useDraft": "Use draft"
-  },
-  "editConflict": {
-    "banner": {
-      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "switchHint": "Or switch to your other tab to keep editing there.",
-      "takeOver": "Take over editing",
-      "title": "Another browser tab is editing this"
     }
   },
   "editableText": {
@@ -445,12 +490,6 @@
     "rename": {
       "geofence": "Rename geofence {{name}}",
       "alertRule": "Rename alert rule {{name}}"
-    }
-  },
-  "emptyState": {
-    "threshold": {
-      "defaultItem": "items",
-      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
     }
   },
   "error": {
@@ -490,49 +529,6 @@
       "chartTitle": "This chart failed to load",
       "tableTitle": "This table failed to render",
       "widgetTitle": "Widget failed to load"
-    }
-  },
-  "export": {
-    "jobDrawer": {
-      "activeCount": "{{count}} export running",
-      "activeCount_other": "{{count}} exports running",
-      "activeEmpty": "No active exports",
-      "activeHeading": "In progress",
-      "activePill": "{{count}} active",
-      "close": "Dismiss",
-      "completedLine": "{{size}} · {{relative}}",
-      "download": "Download",
-      "downloadLabel": "Download {{type}} export",
-      "expand": "Show export jobs ({{count}} active)",
-      "label": "Export job progress",
-      "loading": "Loading export jobs…",
-      "minimize": "Minimize",
-      "recentEmpty": "No recent exports",
-      "recentHeading": "Recent",
-      "recentLabel": "Exports",
-      "statusLine": "{{status}} · started {{relative}}",
-      "title": "Export jobs"
-    },
-    "status": {
-      "expired": "Expired",
-      "failed": "Failed",
-      "processing": "Processing",
-      "queued": "Queued",
-      "ready": "Ready"
-    },
-    "types": {
-      "account": "Account export",
-      "analytics": "Analytics",
-      "backup": "Backup",
-      "charging": "Charging",
-      "drives": "Drives",
-      "importCharging": "Import charging",
-      "importDrives": "Import drives"
-    }
-  },
-  "feedback": {
-    "statSkeleton": {
-      "loading": "Loading statistics"
     }
   },
   "filter": {
@@ -635,10 +631,6 @@
     "failed": "The install dialog could not open. In Chrome, open the menu and choose install app.",
     "dismiss": "Dismiss install prompt"
   },
-  "lifetime": {
-    "achievementBadge": "Achievement",
-    "unlocked": "✓ Unlocked"
-  },
   "lightbox": {
     "counter": "{{current}} / {{total}}",
     "close": "Close image viewer",
@@ -661,12 +653,6 @@
     "selectedWithCount": "Selected ({{count}})",
     "visible": "Visible",
     "visibleWithCount": "Visible ({{count}})"
-  },
-  "live": {
-    "staleBanner": {
-      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
-      "title": "Live data unavailable"
-    }
   },
   "mask": {
     "reveal": "Reveal value",
@@ -1223,10 +1209,6 @@
       "description": "Current data with live actions available.",
       "label": "Live",
       "shortLabel": "Live"
-    },
-    "writeBlocked": "Return to live mode before making operational changes.",
-    "writeNotice": {
-      "title": "Operational changes are read-only"
     }
   },
   "pagination": {
@@ -1340,11 +1322,19 @@
       "play": "Play",
       "progress": "Playback progress",
       "reset": "Reset",
+      "restart": "Restart",
       "speed": "Playback speed",
       "stop": "Stop"
     },
     "markers": {
       "atPercent": "at {{pct}}%"
+    },
+    "overview": {
+      "clusterCount": "{{count}} events",
+      "clusterCount_one": "{{count}} event",
+      "clusterCount_other": "{{count}} events",
+      "label": "Event overview",
+      "positionUnavailable": "Position unavailable"
     },
     "shortcuts": {
       "end": "⏭ end",
@@ -1365,9 +1355,6 @@
       "startEnd": "Jump to start / end",
       "title": "Trip replay shortcuts"
     }
-  },
-  "requiresAuth": {
-    "title": "{{feature}} requires authentication mode"
   },
   "routes": {
     "aPIKeys": "API keys",
@@ -1655,45 +1642,9 @@
       "title": "Session expired"
     }
   },
-  "settings": {
-    "typographyAgent": {
-      "baseSize": "Base text size ({{size}}px)",
-      "density": "Density",
-      "densityHint": "Density tunes type leading only; workspace spacing stays in display settings.",
-      "density_comfortable": "Comfortable",
-      "density_compact": "Compact",
-      "density_relaxed": "Relaxed",
-      "findings": "Loop findings ({{count}})",
-      "healing": "Self-healing engaged",
-      "hudLabel": "Typography agent controller",
-      "ratio": "Harmonic ratio",
-      "ratio_goldenRatio": "Golden ratio",
-      "ratio_majorSecond": "Major second",
-      "ratio_majorThird": "Major third",
-      "ratio_minorSecond": "Minor second",
-      "ratio_minorThird": "Minor third",
-      "ratio_perfectFourth": "Perfect fourth",
-      "reset": "Reset to defaults",
-      "score": "Score: {{score}}/100",
-      "specimen": "Live specimen",
-      "specimenBody": "Body copy follows the modular ratio across viewports.",
-      "specimenHeading": "Harmonized headings scale fluidly",
-      "subtitle": "Connected harmonic runtime",
-      "title": "Typography agent",
-      "verified": "Harmony verified"
-    }
-  },
   "shortcuts": {
     "close": "Close modal / cancel",
-    "empty": "No shortcuts match your search.",
-    "filter": {
-      "all": "All",
-      "global": "Global",
-      "label": "Filter shortcuts",
-      "page": "This page"
-    },
     "goto": "Go to {{label}}",
-    "gotoPrompt": "Go to…",
     "groups": {
       "actions": "Actions",
       "commands": "Commands",
@@ -1702,9 +1653,7 @@
     },
     "openPalette": "Open command palette",
     "openPaletteAlt": "Open command palette",
-    "openShortcuts": "Show keyboard shortcuts",
-    "search": "Search shortcuts…",
-    "title": "Keyboard shortcuts"
+    "openShortcuts": "Show keyboard shortcuts"
   },
   "slider": {
     "thumbMin": "{{label}} minimum",
@@ -1936,8 +1885,6 @@
   },
   "toast": {},
   "tour": {
-    "close": "Close tour",
-    "finish": "Get started!",
     "launcher": {
       "close": "Close",
       "completed": "Completed",
@@ -1951,9 +1898,6 @@
       "subtitle": "Guided walkthroughs for every major feature.",
       "title": "Take a tour"
     },
-    "next": "Next",
-    "prev": "Back",
-    "skip": "Skip tour",
     "tours": {
       "alerts": {
         "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
@@ -2029,17 +1973,17 @@
       "comparisonActive": "Comparison active: previous matching period"
     }
   },
-  "annotations": {
-    "add": "Add annotation",
-    "hide": "Hide annotations",
-    "show": "Show annotations",
-    "markerRow": "Annotations on this chart"
-  },
   "avatar": {
     "unknown": "Unknown user",
     "statusOnline": "Online",
     "statusIdle": "Idle",
     "statusOffline": "Offline"
+  },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    }
   },
   "filters": {
     "reset": "Reset filters",
@@ -2096,17 +2040,5 @@
   "vehicle": "vehicle",
   "vehicleSelect": {
     "aria": "Select vehicle"
-  },
-  "watch": {
-    "noVehicle": "No vehicle found",
-    "timeToFull": "{{minutes}}m to full",
-    "sentryOn": "Sentry mode on",
-    "sentryOff": "Sentry mode off",
-    "action": {
-      "lock": "Lock vehicle",
-      "unlock": "Unlock vehicle",
-      "climateOn": "Turn climate on",
-      "climateOff": "Turn climate off"
-    }
   }
 }

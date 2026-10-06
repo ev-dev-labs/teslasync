@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AIAutoTripNameSuggestion } from '@/components/ai/AIAutoTripNameSuggestion';
@@ -17,7 +18,11 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
 
   const tripQuery = useTrip(id ?? '');
-  const { data: trip, isLoading, isError, error, refetch } = tripQuery;
+  const { data: trip, refetch } = tripQuery;
+  const source = deriveDataState(tripQuery, { provenance: 'historical' });
+  const isLoading = tripQuery.isLoading && !source.hasData;
+  const isError = source.fatalError !== null;
+  const error = source.fatalError;
   const onRetry = useCallback(() => { void refetch(); }, [refetch]);
 
   const tripLabel = useMemo(
@@ -39,10 +44,11 @@ export default function TripDetailPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('trips.detail.title', 'Trip Detail')}
       metadataActions={trip ? <Text variant="bodySm" className="max-w-full [overflow-wrap:anywhere]">{tripLabel}</Text> : undefined}
       query={tripQuery}
+      dataSources={[{ id: 'trip', label: t('trips.detail.resourceName', 'Trip'), query: tripQuery }]}
       breadcrumbLabels={breadcrumbLabels}
     >
       <div className="space-y-6">
@@ -85,6 +91,6 @@ export default function TripDetailPage() {
           />
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

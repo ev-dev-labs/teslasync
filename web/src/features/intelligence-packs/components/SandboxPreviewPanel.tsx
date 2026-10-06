@@ -27,7 +27,8 @@ import {
   YAxis,
 } from '@/components/charts';
 import { MetricTile } from '@/components/data-display';
-import { Badge, Caption, GlassPanel, Select, Text } from '@/components/ui';
+import { Badge, Caption, Select, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, InlineCallout } from '@/components/feedback';
 
 import { useCatalog } from '../hooks/useCatalog';
@@ -107,19 +108,17 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
   const { t } = useTranslation();
   if (!result) {
     return (
-      <GlassPanel padding="sm" className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-[var(--text-primary)]">{title}</p>
-        <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.sandbox.formulaMissing', 'Referenced formula not found.')}</p>
-      </GlassPanel>
+      <LayoutCard title={title}>
+        <Text as="p" variant="caption">{t('intelPacks.sandbox.formulaMissing', 'Referenced formula not found.')}</Text>
+      </LayoutCard>
     );
   }
   const data = seriesToChartData(result.series);
 
   return (
-    <GlassPanel padding="sm" className="flex flex-col gap-2">
-      <p className="text-xs font-medium text-[var(--text-primary)]">{title}</p>
+    <LayoutCard title={title}>
       {data.length === 0 ? (
-        <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.sandbox.noData', 'No output rows.')}</p>
+        <Text as="p" variant="caption">{t('intelPacks.sandbox.noData', 'No output rows.')}</Text>
       ) : kind === 'line' || kind === 'area' || kind === 'bar' ? (
         <FormulaSeriesChart title={title} kind={kind} data={data} />
       ) : kind === 'sparkline' ? (
@@ -145,9 +144,9 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
       ) : (
         <div>
           <Text variant="metricValue">{result.latest != null ? fmtNumber(result.latest) : '—'}</Text>
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" variant="caption">
             {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
-          </p>
+          </Text>
         </div>
       )}
       {result.budgetError && <Caption className="block text-amber-300">{result.budgetError}</Caption>}
@@ -156,7 +155,7 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
           {t('intelPacks.sandbox.deniedFields', 'Fields evaluated as 0 (capability denied): {{fields}}', { fields: result.deniedFieldRefs.join(', ') })}
         </Caption>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }
 

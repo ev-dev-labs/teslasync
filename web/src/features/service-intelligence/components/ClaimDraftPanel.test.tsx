@@ -48,6 +48,26 @@ beforeEach(() => {
 });
 
 describe('ClaimDraftPanel', () => {
+  it('retains the complete draft and copy action while a background refresh is in flight', () => {
+    mockDraft.mockReturnValue(idle({ data: draft, isFetching: true }));
+    render(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByText(draft.subject)).toBeInTheDocument();
+    expect(screen.getByText('Copy ticket text')).toBeInTheDocument();
+    expect(screen.getByText(draft.disclaimer)).toBeInTheDocument();
+  });
+
+  it('retains a draft, provenance disclaimer and communications after refresh failure', () => {
+    const refetch = vi.fn();
+    mockDraft.mockReturnValue(idle({ data: draft, error: new Error('refresh failed'), refetch }));
+    render(<ClaimDraftPanel vehicleId={42} />);
+    expect(screen.getByText(draft.subject)).toBeInTheDocument();
+    expect(screen.getByText(draft.communications[0])).toBeInTheDocument();
+    expect(screen.getByText(draft.disclaimer)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
   it('prompts for an issue before any draft exists', () => {
     render(<ClaimDraftPanel vehicleId={42} />);
     expect(screen.getByText('Warranty claim draft')).toBeInTheDocument();

@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ReferenceLine, ChartContainer, ChartTooltip, chartGrid, axisTick, AREA_DEFAULTS,
+  ReferenceLine, ChartTooltip, chartGrid, axisTick, AREA_DEFAULTS,
   areaGradient,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface TripReplayElevationPoint {
@@ -45,13 +46,15 @@ export function TripReplayElevation({
 
   // chart-a11y:no-table dense route samples; summary and current altitude are readable above
   return (
-    <ChartContainer
+    <ChartCard
       title={t('replay.elevation.title', 'Elevation Profile')}
       subtitle={hasPair ? t('replay.elevation.gainLoss', '↑ {{gain}}m  ↓ {{loss}}m', {
         gain: fmtNumber(Math.round(gain)), loss: fmtNumber(Math.round(loss)),
       }) : undefined}
       ariaLabel={t('replay.elevation.aria', 'Elevation profile chart along the route, with total gain and loss in meters')}
       height={height}
+      size="standard"
+      exportable
     >
       {hasElevation ? (
         <ResponsiveContainer width="100%" height="100%">
@@ -99,6 +102,6 @@ export function TripReplayElevation({
           message={t('replay.elevation.noData', 'No elevation data available')}
         />
       )}
-    </ChartContainer>
+    </ChartCard>
   );
 }

@@ -8,9 +8,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { StatStrip, type StatMetric } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
@@ -40,6 +39,58 @@ export function HvacCyclingEvidenceKpiLedger({
         ? t('hvacCycling.kpis.error', 'Climate history is unavailable.')
         : t('hvacCycling.kpis.pending', 'Evidence availability is unresolved.');
 
+  const metrics: StatMetric[] = [
+    {
+      metricId: 'text', occurrenceId: 'returned-rows',
+      label: t('hvacCycling.kpis.returned', 'Returned rows'),
+      rawValue: resolved ? fmtInt(summary.rows.returnedRows) : null,
+      context: <><Database aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+        ? t('hvacCycling.kpis.returnedHint', 'raw endpoint rows') : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'known-state-samples',
+      label: t('hvacCycling.kpis.known', 'Known-state samples'),
+      rawValue: resolved ? fmtInt(summary.rows.validKnownStateRows) : null,
+      context: <><Activity aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
+        ? t('hvacCycling.kpis.knownHint', '{{count}} unique timestamps', {
+            count: summary.rows.uniqueTimestampRows,
+          }) : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'observed-intervals',
+      label: t('hvacCycling.kpis.intervals', 'Observed intervals'),
+      rawValue: resolved ? fmtInt(summary.intervals.observedIntervals) : null,
+      context: <><Binary aria-hidden="true" className="h-5 w-5 text-purple-300" />{resolved
+        ? t('hvacCycling.kpis.intervalsHint', '{{count}} candidate pairs', {
+            count: summary.intervals.candidateAdjacentPairs,
+          }) : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'observed-duration',
+      label: t('hvacCycling.kpis.observed', 'Observed duration'),
+      rawValue: resolved ? formatDuration(summary.observedS) : null,
+      context: <><Clock3 aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+        ? t('hvacCycling.kpis.observedHint', 'gap-qualified on + off time') : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'on-duty',
+      label: t('hvacCycling.kpis.duty', 'Observed on duty'),
+      rawValue: resolved && summary.dutyCycle != null ? fmtPercent(summary.dutyCycle * 100) : null,
+      context: <><Gauge aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
+        ? t('hvacCycling.kpis.dutyHint', 'duration-weighted denominator') : unavailable}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'short-cycle-rate',
+      label: t('hvacCycling.kpis.shortRate', 'Qualified short-cycle rate'),
+      rawValue: resolved && summary.qualifiedShortCycleRate != null
+        ? fmtPercent(summary.qualifiedShortCycleRate * 100) : null,
+      context: <><RotateCw aria-hidden="true" className="h-5 w-5 text-amber-300" />{resolved
+        ? t('hvacCycling.kpis.shortRateHint', '{{count}} complete active runs', {
+            count: summary.completeOnRunCount,
+          }) : unavailable}</>,
+    },
+  ];
+
   return (
     <section
       data-testid="hvac-cycling-kpis"
@@ -48,81 +99,13 @@ export function HvacCyclingEvidenceKpiLedger({
         'HVAC cycling evidence ledger',
       )}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.kpis.title', 'Evidence KPI ledger')}
-        </PanelTitle>
-        <Grid cols={{ default: 1, sm: 2, xl: 6 }} gap={3}>
-          <MetricCard
-            label={t('hvacCycling.kpis.returned', 'Returned rows')}
-            value={resolved ? fmtInt(summary.rows.returnedRows) : '—'}
-            subtitle={resolved
-              ? t('hvacCycling.kpis.returnedHint', 'raw endpoint rows')
-              : unavailable}
-            icon={<Database className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('hvacCycling.kpis.known', 'Known-state samples')}
-            value={resolved ? fmtInt(summary.rows.validKnownStateRows) : '—'}
-            subtitle={resolved
-              ? t('hvacCycling.kpis.knownHint', '{{count}} unique timestamps', {
-                  count: summary.rows.uniqueTimestampRows,
-                })
-              : unavailable}
-            icon={<Activity className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('hvacCycling.kpis.intervals', 'Observed intervals')}
-            value={resolved ? fmtInt(summary.intervals.observedIntervals) : '—'}
-            subtitle={resolved
-              ? t('hvacCycling.kpis.intervalsHint', '{{count}} candidate pairs', {
-                  count: summary.intervals.candidateAdjacentPairs,
-                })
-              : unavailable}
-            icon={<Binary className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('hvacCycling.kpis.observed', 'Observed duration')}
-            value={resolved
-              ? formatDuration(summary.observedS)
-              : '—'}
-            subtitle={resolved
-              ? t('hvacCycling.kpis.observedHint', 'gap-qualified on + off time')
-              : unavailable}
-            icon={<Clock3 className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('hvacCycling.kpis.duty', 'Observed on duty')}
-            value={resolved && summary.dutyCycle != null
-              ? fmtPercent(summary.dutyCycle * 100)
-              : '—'}
-            subtitle={resolved
-              ? t('hvacCycling.kpis.dutyHint', 'duration-weighted denominator')
-              : unavailable}
-            icon={<Gauge className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('hvacCycling.kpis.shortRate', 'Qualified short-cycle rate')}
-            value={resolved && summary.qualifiedShortCycleRate != null
-              ? fmtPercent(summary.qualifiedShortCycleRate * 100)
-              : '—'}
-            subtitle={resolved
-              ? t('hvacCycling.kpis.shortRateHint', '{{count}} complete active runs', {
-                  count: summary.completeOnRunCount,
-                })
-              : unavailable}
-            icon={<RotateCw className="h-5 w-5" />}
-            color="amber"
-          />
-        </Grid>
+      <LayoutCard title={t('hvacCycling.kpis.title', 'Evidence KPI ledger')}>
+        <StatStrip id="hvac-cycling-evidence" variant="embedded" metrics={metrics}
+          period={{ kind: 'unknown', label: t('hvacCycling.kpis.returnedHint', 'raw endpoint rows') }}
+          retained={Boolean(state.refreshError) || (resolved && Boolean(state.isPaused))}
+        />
         <HvacCyclingQueryStatus summary={summary} state={state} />
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

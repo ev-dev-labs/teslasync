@@ -119,6 +119,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
           timestamp: entry.triggered_at ?? '',
           color: mapped.color,
           severity: mapped.severity,
+          wrap: true,
         };
       }),
     [items, formatDurationMs],

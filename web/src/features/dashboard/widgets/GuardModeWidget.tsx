@@ -66,6 +66,7 @@ function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) =
     timestamp: ev.ts,
     color: mapped.color,
     severity: mapped.severity,
+    wrap: true,
   };
 }
 

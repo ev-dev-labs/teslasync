@@ -90,6 +90,7 @@ export function LiveSignalSourceBreakdown({
       </PanelTitle>
 
       <LiveSectionState
+        label={t('admin.liveSignals.panels.sources', 'Source layers')}
         status={status}
         error={error}
         onRetry={onRetry}

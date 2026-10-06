@@ -29,7 +29,7 @@ vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div>Vehicle select</div>,
 }));
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+  PageLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
 }));
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,

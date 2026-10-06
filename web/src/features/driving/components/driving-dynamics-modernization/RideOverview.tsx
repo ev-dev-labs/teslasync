@@ -92,6 +92,7 @@ export default function RideOverview({ drive }: { drive: Drive | null }) {
             </Text>
           </div>
         ) : (
+          // no-action: The trip selector immediately above this card already owns ride selection.
           <EmptyState message={t('dynamics.ride.empty', 'Choose a trip with recorded data to review its outcome.')} />
         )}
       </LayoutCard>

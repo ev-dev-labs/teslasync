@@ -34,7 +34,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -151,6 +151,38 @@ function getEditor(): HTMLTextAreaElement {
 }
 
 describe('GrafanaPanelPage', () => {
+  it('retains the complete manual panel after denial and retries exact trimmed JSON', async () => {
+    clipboardWriteText.mockRejectedValueOnce(new Error('denied'));
+    renderPage();
+    const draft = '  {"title":"Complete panel","targets":[{"rawSql":"SELECT 1"}]}  ';
+    fireEvent.change(getEditor(), { target: { value: draft } });
+    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
+    expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
+    getEditor().select();
+    expect(getEditor().selectionEnd).toBe(draft.length);
+    expect(getEditor().value).toBe(draft);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(draft);
+    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
+    expect(await screen.findByText(/Copied\. Paste the JSON/)).toBeInTheDocument();
+    expect(screen.queryByText(/Select the text manually/)).toBeNull();
+    expect(clipboardWriteText.mock.calls).toEqual([[draft.trim()], [draft.trim()]]);
+  });
+
+  it.each(['edit', 'clear', 'apply'] as const)('does not announce a stale pending panel copy after %s', async (change) => {
+    let resolveCopy: (() => void) | undefined;
+    clipboardWriteText.mockImplementation(() => new Promise<void>((resolve) => { resolveCopy = resolve; }));
+    renderPage();
+    fireEvent.change(getEditor(), { target: { value: '{"title":"old"}' } });
+    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
+    if (change === 'edit') fireEvent.change(getEditor(), { target: { value: '{"title":"new"}' } });
+    if (change === 'clear') fireEvent.click(screen.getByRole('button', { name: /Clear/i }));
+    if (change === 'apply') fireEvent.click(screen.getByTestId('mock-ai-apply'));
+    await act(async () => { resolveCopy?.(); });
+    expect(screen.queryByText(/Copied\. Paste the JSON/)).toBeNull();
+    if (change === 'edit') expect(getEditor().value).toBe('{"title":"new"}');
+    if (change === 'clear') expect(getEditor().value).toBe('');
+    if (change === 'apply') expect(getEditor().value).toBe(JSON.stringify(applyDraft.panel, null, 2));
+  });
   it('renders the page shell and the curated-catalog KPI band with derived counts', async () => {
     renderPage();
 

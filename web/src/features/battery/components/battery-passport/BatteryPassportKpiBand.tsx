@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { MetricCard } from '@/components/data-display';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { StatGroup, type StatMetric } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
 
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
@@ -40,6 +40,44 @@ export function BatteryPassportKpiBand({
           },
         )
       : '—';
+  const summary: StatMetric[] = [
+    {
+      metricId: 'text', occurrenceId: 'passport-soh',
+      label: t('batteryPassport.kpis.soh', 'Certificate-reported SoH'),
+      rawValue: metrics.sohPct != null ? fmtPercent(metrics.sohPct) : null,
+      context: <><Gauge className="h-5 w-5" aria-hidden="true" />{t('batteryPassport.kpis.sohHint', 'server-derived estimate')}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'passport-capacity',
+      label: t('batteryPassport.kpis.capacity', 'Reported / reference capacity'),
+      rawValue: capacityValue,
+      context: <><BatteryMedium className="h-5 w-5" aria-hidden="true" />{t('batteryPassport.kpis.capacityHint', 'capacity_kwh / original_capacity_kwh')}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'passport-efc',
+      label: t('batteryPassport.kpis.efc', 'EFC proxy'),
+      rawValue: metrics.equivalentFullCycles != null ? fmtNumber(metrics.equivalentFullCycles) : null,
+      context: <><Activity className="h-5 w-5" aria-hidden="true" />{t('batteryPassport.kpis.efcHint', 'server-derived throughput ratio')}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'passport-fast-share',
+      label: t('batteryPassport.kpis.fastShare', 'Fast-charge session share'),
+      rawValue: metrics.fastChargeRatio != null ? fmtPercent(metrics.fastChargeRatio * 100) : null,
+      context: <><Zap className="h-5 w-5" aria-hidden="true" />{t('batteryPassport.kpis.fastHint', 'share of counted charging sessions')}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'passport-end-soc',
+      label: t('batteryPassport.kpis.endSoc', 'Average charge-end SoC proxy'),
+      rawValue: metrics.avgChargeLimitPct != null ? fmtPercent(metrics.avgChargeLimitPct) : null,
+      context: <><Target className="h-5 w-5" aria-hidden="true" />{t('batteryPassport.kpis.endSocHint', 'average reported session end SoC')}</>,
+    },
+    {
+      metricId: 'text', occurrenceId: 'passport-grade',
+      label: t('batteryPassport.kpis.grade', 'Certificate-reported grade'),
+      rawValue: metrics.reportedGrade,
+      context: <><Award className="h-5 w-5" aria-hidden="true" />{t('batteryPassport.kpis.gradeHint', 'server scoring output')}</>,
+    },
+  ];
 
   return (
     <section
@@ -49,111 +87,20 @@ export function BatteryPassportKpiBand({
         'Certificate-reported battery metrics',
       )}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.kpis.title',
             'Certificate-reported KPI band',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.kpis.subtitle',
             'Direct certificate fields and server-derived proxies; no calibration, causality, or remaining-life claim.',
-          )}
-        </Text>
+          )}>
         <BatteryPassportSectionBody state={state}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <MetricCard
-              label={t(
-                'batteryPassport.kpis.soh',
-                'Certificate-reported SoH',
-              )}
-              value={metrics.sohPct != null
-                ? fmtPercent(metrics.sohPct)
-                : '—'}
-              subtitle={t(
-                'batteryPassport.kpis.sohHint',
-                'server-derived estimate',
-              )}
-              icon={<Gauge className="h-5 w-5" />}
-              color="green"
-            />
-            <MetricCard
-              label={t(
-                'batteryPassport.kpis.capacity',
-                'Reported / reference capacity',
-              )}
-              value={capacityValue}
-              subtitle={t(
-                'batteryPassport.kpis.capacityHint',
-                'capacity_kwh / original_capacity_kwh',
-              )}
-              icon={<BatteryMedium className="h-5 w-5" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t(
-                'batteryPassport.kpis.efc',
-                'EFC proxy',
-              )}
-              value={metrics.equivalentFullCycles != null
-                ? fmtNumber(metrics.equivalentFullCycles)
-                : '—'}
-              subtitle={t(
-                'batteryPassport.kpis.efcHint',
-                'server-derived throughput ratio',
-              )}
-              icon={<Activity className="h-5 w-5" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t(
-                'batteryPassport.kpis.fastShare',
-                'Fast-charge session share',
-              )}
-              value={metrics.fastChargeRatio != null
-                ? fmtPercent(metrics.fastChargeRatio * 100)
-                : '—'}
-              subtitle={t(
-                'batteryPassport.kpis.fastHint',
-                'share of counted charging sessions',
-              )}
-              icon={<Zap className="h-5 w-5" />}
-              color="amber"
-            />
-            <MetricCard
-              label={t(
-                'batteryPassport.kpis.endSoc',
-                'Average charge-end SoC proxy',
-              )}
-              value={metrics.avgChargeLimitPct != null
-                ? fmtPercent(metrics.avgChargeLimitPct)
-                : '—'}
-              subtitle={t(
-                'batteryPassport.kpis.endSocHint',
-                'average reported session end SoC',
-              )}
-              icon={<Target className="h-5 w-5" />}
-              color="blue"
-            />
-            <MetricCard
-              label={t(
-                'batteryPassport.kpis.grade',
-                'Certificate-reported grade',
-              )}
-              value={metrics.reportedGrade ?? '—'}
-              subtitle={t(
-                'batteryPassport.kpis.gradeHint',
-                'server scoring output',
-              )}
-              icon={<Award className="h-5 w-5" />}
-              color="red"
-            />
-          </div>
+          <StatGroup metrics={summary} retained={Boolean(state.refreshError)}
+            period={{ kind: 'snapshot', label: state.passport?.issued_at ?? '—',
+              observedAt: state.passport?.issued_at ?? null,
+              provenance: t('batteryPassport.kpis.subtitle', 'Direct certificate fields and server-derived proxies; no calibration, causality, or remaining-life claim.') }} />
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }
