@@ -1,0 +1,250 @@
+{
+  "item": "audit-page-205",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx",
+  "routes": ["/signal-diff"],
+  "purpose": "Compare server-provided signal values and provenance at two snapshot instants for a locally selected vehicle.",
+  "primaryGoal": "Identify changed signals, inspect numeric/non-numeric differences and source layers, filter, pin, export, save/share the comparison, and seed an alert rule.",
+  "dataSources": [
+    {
+      "hook": "useVehicles",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoints": ["GET /api/v1/vehicles"],
+      "owner": "Vehicle API and existing vehicle query/cache",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "behavior": "safeArray selection, FAST stale time, cancellation forwarded; first vehicle becomes URL default. Page discards vehicle query status/error."
+    },
+    {
+      "hook": "useSignals",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoints": ["GET /api/v1/signals/{vehicleID}/available"],
+      "owner": "Signal API; catalog is reduced to names by the hook",
+      "routeEvidence": "internal\\api\\router.go:4886,4911,4929",
+      "behavior": "Enabled only for positive vehicle ID, STANDARD stale time, cancellation; CSV names narrow the diff. Catalog unit metadata is not retained here."
+    },
+    {
+      "hook": "useSignalDiffServer",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 380,
+      "endpoints": ["GET /api/v1/signals/{vehicleID}/diff?at_a={ISO}&at_b={ISO}&signals={CSV}"],
+      "owner": "Signal API server comparison; exact backend snapshot selection and coverage not inspected",
+      "routeEvidence": "internal\\api\\router.go:4886,4910,4928",
+      "behavior": "URLSearchParams snake_case bounds, STANDARD stale time, cancellation, vehicle/instants/CSV query key, no polling. Optional signals omitted when empty. Page retains results on refresh failure and uses historical data trust."
+    },
+    {
+      "hook": "usePinned / useTogglePin / row PinButton",
+      "file": "web\\src\\api\\hooks\\usePinned.ts",
+      "line": 61,
+      "endpoints": ["GET /api/v1/pinned?type=widget&context={context}", "POST /api/v1/pinned", "DELETE /api/v1/pinned/{id}"],
+      "owner": "Current user's existing pin storage",
+      "routeEvidence": "internal\\api\\router.go:3718-3723",
+      "behavior": "Context signal-diff:vehicle:{id}, item signal:{name}, SLOW stale time; mutations invalidate/broadcast pinned queries and provide toast errors. No mutation exercised."
+    },
+    {
+      "hook": "SavedViewMenu -> useSavedViews and saved-view mutations",
+      "file": "web\\src\\api\\hooks\\useSavedViews.ts",
+      "line": 45,
+      "endpoints": ["GET /api/v1/saved-views?route=%2Ftelemetry%2Fsignal-diff", "POST /api/v1/saved-views", "PUT /api/v1/saved-views/{id}", "DELETE /api/v1/saved-views/{id}"],
+      "owner": "Current user's existing saved-view storage",
+      "routeEvidence": "internal\\api\\router.go:3731-3736",
+      "behavior": "Existing persisted route key differs from mounted path. Default application, save, rename, pin, default toggle and deletion belong to shared SavedViewMenu. No mutation exercised."
+    },
+    {
+      "hook": "useUrlNumber / useUrlString / useSavedViewUrl",
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx",
+      "line": 75,
+      "endpoints": [],
+      "owner": "Existing URL state integration",
+      "behavior": "vehicle,a,b,q,cat URL parameters; local browser datetime parsing becomes ISO. Separate point-in-time comparison is not a workspace range. /signal-diff intentionally disables workspace vehicle control and does not register a workspace range."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout", "role": "Title/subtitle, query-aware page shell and overflow actions", "evidence": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx:286-299", "implementationInspected": false},
+    {"name": "SignalCompareControls", "owner": "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx", "role": "Two instants, five presets, search, eight categories, vehicle top slot", "evidence": "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx:115-193", "implementationInspected": true},
+    {"name": "TelemetrySummaryBrief -> OperationalBrief / useOperationalMetrics", "owner": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "role": "Six typed count/duration metrics plus trust/scope/provenance", "evidence": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx:23-52", "implementationInspected": "Domain adapter only"},
+    {"name": "SignalDiffBreakdown / MetricBar", "owner": "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.tsx", "role": "Three panels: category distribution, current-window source layers, independent saved pins", "evidence": "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.tsx:116-220", "implementationInspected": "Domain component only"},
+    {"name": "SignalDiffTable / DataTable", "owner": "web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx", "role": "Seven columns, pinned-first ordering, virtualized multi-selection and provenance legend", "evidence": "web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx:93-259", "implementationInspected": "Domain table and relevant shared mobile branch"},
+    {"name": "BulkActionsToolbar", "owner": "web\\src\\components\\data-display\\BulkActionsToolbar.tsx", "role": "Sticky selected-row actions, per-action pending spinner and retained selection on failure", "evidence": "web\\src\\components\\data-display\\BulkActionsToolbar.tsx:126-185", "implementationInspected": "Lines 1-200"},
+    {"name": "SavedViewMenu", "owner": "web\\src\\components\\data-display\\SavedViewMenu.tsx", "role": "Existing saved-view CRUD and default integration", "evidence": "web\\src\\components\\data-display\\SavedViewMenu.tsx:88-174", "implementationInspected": "Lines 1-180"},
+    {"name": "GlassPanel, Select, CopyButton, PanelTitle, Text, Badge, Input, Button, HelpTooltip, PillFilterBar, FadeIn, Skeleton, EmptyState, QueryError, StaleRefreshWarning, SourceLayerBadge, PinButton", "owner": "Existing category barrels; no replacement library required", "role": "Current primitives, motion, controls and feedback", "evidence": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx:18-23; domain component imports", "implementationInspected": "Select lines 1-100; others identified from imports only"}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 47, "rule": "MDC-002", "detail": "toNum and SignalDiffTable.asNumber repeat finite numeric/string/boolean coercion. Category/source panels repeat source loading/error/empty scaffolding.", "fix": "If touched, reuse one domain-level coercion helper preserving empty-string, boolean, non-finite and percentage semantics. Reuse existing feedback primitives; no speculative universal component.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "observed": [
+      "Compare windows stack below md; controls and category filters wrap.",
+      "Breakdown uses one column, md two columns, xl three columns.",
+      "Table wrapper is min-w-0/max-w-full; values and signal names remain whitespace-nowrap.",
+      "Bulk toolbar measures height and disables stickiness when taller than viewport."
+    ],
+    "findings": [
+      {"file": "web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx", "line": 240, "rule": "MDC-023/MDC-043 preservation", "detail": "mobileColumns keeps only name, delta and value_b. DataTable:724-725 hides the other columns below md. This caller supplies neither mobilePresentation nor an expanded-detail renderer, hiding Window A, both provenance/age badges and the row pin control on narrow screens.", "fix": "Adopt existing DataTable mobile presentation/full-detail capability or a contained full-column strategy that keeps A/B values, provenance/ages and row pin actions reachable. Do not remove desktop virtualized selection.", "owner": "integration", "confidence": "high"}
+    ],
+    "runtime": "unverified at all ten contract viewport widths, container widths, zoom, RTL and long content"
+  },
+  "accessibility": {
+    "observed": [
+      "Datetime inputs have localized aria-labels; preset group uses useId and aria-labelledby.",
+      "Vehicle Select is wrapped in a native label, although the primitive introduces an internal div.",
+      "Table selection has explicit rowLabel; technical-column legend includes HelpTooltip names.",
+      "Breakdown section is named and decorative heading/empty-state icons are hidden from assistive technology."
+    ],
+    "findings": [
+      {"file": "web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx", "line": 253, "rule": "MDC-040", "detail": "Compact table fixes rowHeight at 36px; shared Select defaults to min-h-10 (Select.tsx:34). This is below the 44px stronger mobile target default, but actual hitboxes, spacing exceptions and table branch geometry were not measured.", "fix": "Measure composed mobile controls and touch targets; use existing density/mobile target policy without losing table rows or pin access. Do not declare a WCAG failure from row height alone.", "owner": "integration", "confidence": "medium"}
+    ],
+    "runtime": "keyboard, focus restoration, screen reader naming, reduced motion, forced colors and effective contrast unverified"
+  },
+  "states": {
+    "observed": [
+      "Diff fatal errors have retry in table and category/source panels; loading renders contextual skeletons.",
+      "Retained diff results survive refresh errors; StaleRefreshWarning and summary retained status are wired.",
+      "Diff metrics use null when initial/fatal or no response, preserving unknown versus measured zero.",
+      "Filtered empty table and breakdown clear-filter actions remain distinct from successful no-change result.",
+      "Independent pins and local snapshot-span metrics remain visible when diff is unavailable."
+    ],
+    "findings": [
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 377, "rule": "MDC-026 unknown is not empty", "detail": "No-change branch requires zero rows, no filters and valid dates, but not a resolved diff response or positive vehicle. A disabled diff with valid defaults and vehicleId=0 can reach 'No signals changed' without a comparison. With invalid dates, the fallback table/breakdown also presents empty differences rather than input validation.", "fix": "Require a successful available diff before asserting no changes; present existing unknown/unavailable and date validation states when comparison prerequisites are missing. Keep all panels and independent metrics.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 79, "rule": "MDC-026 independent source trust", "detail": "Only data is consumed from vehicle and available-signal queries (also line 127). Their loading/failure/refresh states and retry are not rendered. A failed vehicle source can leave an empty picker and disabled diff; an unresolved catalog produces an empty signals CSV without its own explanatory trust state.", "fix": "Retain each query object and expose source-specific loading/failure/retained/empty recovery using existing useDataState feedback. Preserve existing diff query behavior until empty-CSV backend semantics are verified.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.tsx", "line": 198, "rule": "MDC-026 independent pin source", "detail": "Pinned breakdown receives only a Set; pending/fatal pin query defaults to an empty Set and is displayed as 'No pinned signals'. The KPI preserves null pin count, but the panel cannot distinguish failed/unloaded pins or show retained pin trust.", "fix": "Extend the existing domain breakdown with pin DataState and retry, keeping successful empty pins separate from unavailable/loading and keeping retained pins visible. Do not make pin failure blank category/source neighbors.", "owner": "integration", "confidence": "high"}
+    ],
+    "runtime": "unverified; no query, offline, paused-fetch, retained-cache or mutation state exercised"
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.tsx", "line": 31, "rule": "MDC-010/MDC-034 restrained palette", "detail": "SOURCE_META owns five hardcoded hex colors rather than a centralized semantic source-layer palette. Category bars already use chartTokens.series; labels use restrained cyan/amber and change direction uses emerald/rose. No neon/glow or fixed-white/gray class was found in the five scoped presentation files.", "fix": "Reuse existing semantic/chart palette ownership for layer colors while preserving source names, counts, ordering and user chart preferences. Measure themes/contrast before selecting exact tokens.", "owner": "integration", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 108, "rule": "MDC-046 selection scope", "detail": "Selection state is never reconciled when vehicle/snapshot/filter scope changes. Bulk pin/unpin uses every selected name with the CURRENT vehicle context; CSV instead intersects selected names with current filtered rows. A carried selection can therefore affect pins for a different vehicle and disagree with exported selection scope.", "fix": "Define and preserve same-scope selection semantics, clear/reconcile on vehicle or snapshot identity changes, and make selected-versus-visible export/action scope explicit. Keep stable signal row keys.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx", "line": 46, "rule": "MDC-045 no invented evidence", "detail": "'Before vs after last charge' computes now minus four hours and now; 'Last drive start vs end' computes now minus 90 minutes and five minutes. Neither derives an actual event. Existing behavior is a relative preset, not verified last-event evidence.", "fix": "Preserve relative offsets and query behavior; relabel/localize truthfully or integrate an existing verified event source under separate authorization. Do not invent event-backed instants.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 293, "rule": "MDC-030/MDC-046 route identity preservation", "detail": "Mounted App route is /signal-diff (App.tsx:738), while SavedViewMenu stores /telemetry/signal-diff. The latter is a saved-view persistence key, not a confirmed mounted alias. Renaming it cosmetically would strand existing views; tests also reference the older pathname.", "fix": "Treat this exact persisted key as preservation-sensitive. Any canonicalization needs an explicit compatibility/migration plan in existing saved-view ownership; do not simply change the prop.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 219, "rule": "MDC-044 action accuracy", "detail": "Bulk action says 'Copy CSV', but its implementation calls downloadCSV at line 232 and never copies to clipboard.", "fix": "Align localized label with the existing selected CSV download; preserve filename and raw A/B/source columns.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx", "line": 48, "rule": "MDC-033/MDC-045 display boundary", "detail": "Raw A/B numeric formatting uses the module-level fmtNumber, while delta uses useNumberFormatting. Rows lack unit-kind metadata and display raw signal values without units; SI values must not be guessed or blindly converted. The snapshot duration uses a local hardcoded h/m/s formatter (SignalDiffPage.tsx:58).", "fix": "Keep raw wire/cache/export values and specialist coercion unchanged. Route numeric display through existing preference formatter; add SI-aware display only with verified catalog unit metadata, retaining raw evidence. Reuse an established duration formatter only if compact output equivalence is proved.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Prevent unavailable/disabled comparisons and unloaded pins from claiming successful empty evidence.",
+      "Preserve complete mobile provenance, A/B values and row pin access.",
+      "Make selected actions safe across vehicle/comparison scope changes.",
+      "Expose truthful relative presets and source-specific query recovery.",
+      "Consolidate source palette and preference-aware formatting without persistence or SI regressions."
+    ],
+    "runtimeAcceptance": "not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Pin trust contract on existing SignalDiffBreakdown",
+      "existingOwnerFile": "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.tsx",
+      "propsVariantsStates": "Optional pin DataState and pin retry; pending, initial failure, successful empty, retained stale/refresh failure, loaded pins independent of diff panels.",
+      "usedBy": ["SignalDiffPage", "Existing comparison workflow consumers; comments identify SignalsWorkspacePage for the related controls and caller search shows the same pin context there"],
+      "dependsOn": ["Existing useDataState", "Existing feedback components", "Caller contract verification before changing other consumers"],
+      "scope": "Domain integration; no speculative new shared library."
+    },
+    {
+      "name": "Existing DataTable full mobile evidence integration",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Reuse mobilePresentation/full-detail or contained complete-table strategy; retain name,A,B,delta,source_a/source_b/ages,pin,selection and empty state; preserve tableId and virtualization.",
+      "usedBy": ["web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx"],
+      "dependsOn": ["Existing DataTable mobile adapter contract", "Page-domain adapter and focused preservation verification"],
+      "scope": "Prefer caller adoption; no shared core change demonstrated as necessary by this bounded audit."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.tsx", "line": 31, "detail": "Local source color mapping competes with centralized palette ownership; category bars already use chartTokens.", "disposition": "Reuse current palette, no new theme engine."},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx", "line": 47, "detail": "Page toNum duplicates table asNumber; local formatSpan duplicates duration presentation ownership.", "disposition": "Bounded domain/shared-formatter reuse with exact semantics retained."},
+    {"file": "web\\src\\lib\\workspaceScope.ts", "line": 128, "detail": "/signal-diff intentionally hides header vehicle picker. Point-in-time A/B controls are distinct from workspace range; local vehicle selection is required here.", "disposition": "Not a competing workspace selector; preserve current ownership rather than adding header range wiring or deleting local controls."}
+  ],
+  "preservation": {
+    "sourceHash": "8F5818DEC3834E900F3F6BAAB04F5EA05BBCD0099E0B0F66958FF26C1ABEA233",
+    "hashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact root page bytes, not a dependency aggregate",
+    "currentLineCount": 398,
+    "pagePlusInspectedPresentationDependenciesLineCount": 1125,
+    "sections": [
+      {"name": "Compare controls", "count": 1, "line": 300},
+      {"name": "Diff summary", "count": 1, "line": 327},
+      {"name": "Change analysis", "count": 1, "line": 339, "subsections": ["Change by category", "Source layers", "Pinned signals"], "subsectionCount": 3},
+      {"name": "Selected bulk actions", "count": 1, "line": 356},
+      {"name": "Signal differences table", "count": 1, "line": 364}
+    ],
+    "sectionCount": 5,
+    "rootGlassPanelCount": 1,
+    "scopedGlassPanelCount": 5,
+    "scopedChartContainerCount": 0,
+    "metrics": ["Changed signals", "Visible after filter", "Numeric changes", "Categories affected", "Pinned", "Window span"],
+    "tableColumns": ["pin", "name", "value_a", "value_b", "delta", "source_a", "source_b"],
+    "actions": [
+      "URL-local vehicle selection and first-vehicle default",
+      "Edit A/B snapshot instants; apply all five existing presets",
+      "Search, toggle eight categories, clear category/filters",
+      "Save/apply/rename/delete/pin/default saved views; share actual-path permalink",
+      "Retry diff and preserve retained results on refresh failure",
+      "Multi-select/clear rows and row pin/unpin",
+      "Bulk pin, unpin, selected CSV download and alert-studio navigation"
+    ],
+    "dataBehavior": [
+      "Preserve vehicle,a,b,q,cat URL parameter names; initial A is one hour ago, B is now.",
+      "Preserve point-in-time ISO conversion, query keys, enablement, cancellation and current caching.",
+      "Keep raw SI/unknown values in API/cache/CSV; no backend unit semantics inferred by this audit.",
+      "Keep boolean/numeric string coercion and null/non-finite distinctions; zero baseline percentage remains absent.",
+      "Keep category regex membership including overlaps; category percentages are not asserted disjoint.",
+      "Keep source layers and age_ms badges, pinned-first then signal-name sorting.",
+      "Keep widget/signal:{name}/signal-diff:vehicle:{id} pin identity, signal-diff-table persistence ID and existing saved-view route key.",
+      "CSV retains signal,window_a,window_b,source_a,source_b and signal-diff-vehicle-{id}.csv filename.",
+      "Alert action remains /alert-studio?signals={encoded CSV}&from=signal-diff.",
+      "Local vehicle and two independent snapshot instants must survive: header scope intentionally disabled on this route."
+    ],
+    "scopedStaticScan": {
+      "presentationFiles": 5,
+      "inlineStyleOccurrences": 0,
+      "rawButtonInputTextareaSelectTableOccurrences": 0,
+      "directRechartsLeafletFramerMotionImports": 0,
+      "oldRelativeApiImports": 0,
+      "neonFixedWhiteFixedGrayOccurrences": 0,
+      "hardcodedHexPaletteOccurrences": 5,
+      "method": "Read-only PowerShell regex counts and targeted rg on the five inspected presentation files; not the full audit script."
+    }
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 source-only audit; only assigned JSON report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "testsTypeScriptLintBuild": "Not run: assignment prohibits full builds/lint and source mutations; full audit.sh also invokes project TypeScript, so bounded static equivalents were used.",
+    "backend": "Router path matching only; server sampling, source fallback, empty-CSV behavior, event identity and wire unit semantics not exercised or independently inferred.",
+    "shared": "Only listed page-specific shared slices inspected. Imported shared feedback/motion/chart primitives not fully audited.",
+    "route": "Mounted /signal-diff proven by source search; /telemetry/signal-diff is only observed as persistence/test identity, not claimed mounted.",
+    "failedProbe": "An initial combined PowerShell hash/count command returned exit 1 without output; corrected bounded command returned exit 0 and supplied the recorded hash/counts.",
+    "sourceSnapshot": "Concurrent writers may change dependencies after this read; no source lock or Git command used."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalCompareControls.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.tsx",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\usePinned.ts",
+    "web\\src\\api\\hooks\\useSavedViews.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\data-display\\SavedViewMenu.tsx",
+    "web\\src\\components\\data-display\\BulkActionsToolbar.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routePrefetch.ts",
+    "web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx",
+    "internal\\api\\router.go"
+  ]
+}
