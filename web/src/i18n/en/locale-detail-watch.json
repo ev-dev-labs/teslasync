@@ -25,6 +25,7 @@
       "asleep": "asleep",
       "online": "online",
       "offline": "offline"
-    }
+    },
+    "loading": "Loading watch summary…"
   }
 }

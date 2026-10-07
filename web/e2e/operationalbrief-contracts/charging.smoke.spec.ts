@@ -10,7 +10,9 @@ import {
 import {
   analysisWindow, autopilotPreview, autopilotProfile, autopilotSavings, billVariance, billingHistory,
   costForecast, fleetHistory, incompleteSession, invoicedSession,
-  measuredWindow, optimizer, powershareFields, zeroPowershareObservation, zeroSession,
+  measuredWindow, mixedCostWindow, missingHeaterTelemetry, optimizer, powershareFields,
+  thermalSession, thermalTelemetry, unknownCostSession, zeroHeaterTelemetry,
+  zeroPowershareObservation, zeroSession,
   optimizedCharge, ratePlans, unavailableChargeLedger, unavailableChargePhysics,
 } from './charging.fixtures';
 
@@ -51,7 +53,10 @@ async function value(section: Locator, key: string, expected: string, state = 'v
   await expect(metric.locator('[data-operational-value]')).toHaveText(expected);
 }
 
-async function review(page: Page, section: Locator, source: string, readings: readonly string[]) {
+async function review(
+  page: Page, section: Locator, source: string, readings: readonly string[],
+  readingCounts: Readonly<Record<string, number>> = {},
+) {
   const trigger = section.getByRole('button', { name: 'Review details', exact: true });
   await trigger.scrollIntoViewIfNeeded();
   await trigger.focus();
@@ -65,6 +70,9 @@ async function review(page: Page, section: Locator, source: string, readings: re
   await expect(drawer.getByText(source, { exact: true }).first()).toBeVisible();
   for (const reading of readings) {
     await expect(drawer.getByText(reading, { exact: true }).first()).toBeVisible();
+  }
+  for (const [reading, count] of Object.entries(readingCounts)) {
+    await expect(drawer.getByText(reading, { exact: true })).toHaveCount(count);
   }
   await expect.poll(() => drawer.evaluate(node => node.contains(document.activeElement))).toBe(true);
   for (const key of ['Tab', 'Shift+Tab', 'Tab']) {
@@ -88,6 +96,107 @@ async function finish(page: Page, run: Awaited<ReturnType<typeof open>>) {
   await expectNoHorizontalOverflow(page);
   await assertMockApiComplete(page, run.mocks);
   await expectNoRuntimeFailures(run.diagnostics);
+}
+
+interface SourceRequest {
+  method: string;
+  path: string;
+  requestKey: string;
+  status: number;
+}
+type SourceResponse = Parameters<typeof fulfillApiFixture>[2];
+const thermalKeys = [
+  'thermal-heater-energy', 'thermal-heater-share',
+  'thermal-heater-on-time', 'thermal-peak-heater',
+] as const;
+const thermalProvenance = 'Historical telemetry; heater energy and on-time are derived, not directly metered.';
+const returnedCostScope = 'Only returned charging sessions are summarized. The requested 1000-row limit does not prove completeness; these are not complete-window or lifetime totals.';
+
+async function strictSourceFixture(
+  page: Page, mocks: Mocks, path: string,
+  query: Readonly<Record<string, string>>,
+  response: () => SourceResponse,
+  ledger: SourceRequest[],
+) {
+  await page.route(url => url.pathname === `/api/v1${path}`, async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    expect(request.method(), `source method for ${path}`).toBe('GET');
+    expect([...url.searchParams.entries()].sort(), `exact source query for ${path}`)
+      .toEqual(Object.entries(query).sort());
+    const result = response();
+    ledger.push({
+      method: request.method(), path: url.pathname,
+      requestKey: `GET ${path}${url.search}`, status: result.status ?? 200,
+    });
+    await fulfillApiFixture(route, mocks, result);
+  });
+}
+
+function assertSourceLedger(mocks: Mocks, ledger: readonly SourceRequest[]) {
+  expect(mocks).not.toBeNull();
+  const isSource = (path: string) => /^\/api\/v1\/charging(?:\/|$)/.test(path)
+    || path === '/api/v1/analytics/cost-forecast';
+  const actual = (mocks?.requests ?? []).filter(request => isSource(request.path));
+  expect(actual.map(({ method, path, disposition }) => ({ method, path, disposition })))
+    .toEqual(ledger.map(({ method, path }) => ({ method, path, disposition: 'fulfilled' })));
+  const seen = [...(mocks?.seen ?? [])].filter(key => {
+    const path = key.slice(key.indexOf(' ') + 1).split('?')[0];
+    return isSource(`/api/v1${path}`);
+  });
+  expect(seen.sort()).toEqual([...new Set(ledger.map(request => request.requestKey))].sort());
+}
+
+async function selectedThermal(page: Page, run: Awaited<ReturnType<typeof open>>, ledger: SourceRequest[]) {
+  await page.goto('/charging-thermal-tax');
+  await waitForHarnessReady(page, run.mocks);
+  const section = brief(page, 'charging-thermal-tax-metrics');
+  for (const key of thermalKeys) await value(section, key, '—', 'missing');
+  expect(ledger.filter(request => request.path.endsWith('/telemetry'))).toEqual([]);
+  const selector = page.getByRole('combobox', { name: 'Inspect session', exact: true });
+  await expect(selector).toBeEnabled();
+  await expect(selector.locator('option[value="202"]')).toHaveCount(1);
+  await selector.selectOption('202');
+  await expect(selector).toHaveValue('202');
+  return section;
+}
+
+async function expectThermalNonzero(page: Page, section: Locator) {
+  await value(section, 'thermal-heater-energy', '0.03 kWh');
+  await value(section, 'thermal-heater-share', '2.50%');
+  await value(section, 'thermal-heater-on-time', '2m');
+  await value(section, 'thermal-peak-heater', '1.00 kW');
+  await expect(page.locator('#charging-thermal-tax-metrics')).toHaveAttribute('data-period-kind', 'event');
+  await expect(section).toContainText('Estimated from sampled heater power');
+  await expect(page.getByText('Metered running total', { exact: true })).toBeVisible();
+  const chart = page.getByRole('figure', { name: 'Heater vs. Charge Power', exact: true });
+  await expect(chart).toBeVisible();
+  const table = chart.getByRole('table', { name: 'Heater vs. Charge Power — data table', exact: true });
+  await expect(table.locator('tbody tr')).toHaveCount(3);
+  await expect(table.locator('tbody tr').nth(0).locator('td').nth(1)).toHaveText('1000');
+  await expect(table.locator('tbody tr').nth(0).locator('td').nth(2)).toHaveText('5000');
+  await expect(table.locator('tbody tr').nth(2).locator('td').nth(1)).toHaveText('0');
+  await expect(page.getByRole('heading', { name: 'Thermal Phases', exact: true })).toBeVisible();
+}
+
+async function finishExpectedTelemetryFailure(
+  page: Page, run: Awaited<ReturnType<typeof open>>, ledger: readonly SourceRequest[],
+) {
+  await expectNoHorizontalOverflow(page);
+  await assertMockApiComplete(page, run.mocks);
+  assertSourceLedger(run.mocks, ledger);
+  expect(run.diagnostics.pageErrors).toEqual([]);
+  expect(run.diagnostics.brokenResources).toEqual([]);
+  expect(run.diagnostics.failedDataRequests.length).toBeGreaterThan(0);
+  for (const request of run.diagnostics.failedDataRequests) {
+    expect(request).toMatch(/^503 (fetch|xhr) /);
+    const url = new URL(request.replace(/^503 (fetch|xhr) /, ''));
+    expect(url.pathname).toBe('/api/v1/charging/202/telemetry');
+    expect(url.search).toBe('');
+  }
+  for (const error of run.diagnostics.consoleErrors) {
+    expect(error).toBe('Failed to load resource: the server responded with a status of 503 (Service Unavailable)');
+  }
 }
 
 for (const theme of ['light', 'dark'] as const) {
@@ -182,9 +291,10 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 1000 });
       const route = `/charging-curve${analysisWindow}`;
       const run = await open(page, theme, route);
-      await fixture(page, run.mocks, '/charging', measuredWindow, {
+      const ledger: SourceRequest[] = [];
+      await strictSourceFixture(page, run.mocks, '/charging', {
         vehicle_id: '7', limit: '200', start: '2026-08-01', end: '2026-08-31',
-      });
+      }, () => ({ json: measuredWindow }), ledger);
       await page.goto(route);
       await waitForHarnessReady(page, run.mocks);
       const summary = brief(page, 'charging-curve-summary');
@@ -198,14 +308,21 @@ for (const theme of ['light', 'dark'] as const) {
       await review(page, summary, 'Up to 200 returned sessions; not a full-history aggregate.',
         ['33.00 kW', '44.00 kW', '75 min', '$10.80']);
       const threshold = page.getByRole('region', { name: /^Time-to-charge analysis$/i });
-      await value(threshold, 'avg10to80', '75.00 min');
+      await value(threshold, 'avg10to80', '90.00 min');
+      await value(threshold, 'avg20to80', '90.00 min');
       await value(threshold, 'fastest', '24.00 kWh/h');
-      await value(threshold, 'slowest', '18.00 kWh/h');
-      await expect(threshold).toContainText('Session #202');
+      await value(threshold, 'slowest', '24.00 kWh/h');
+      for (const key of ['fastest', 'slowest']) {
+        await expect(threshold.locator(`[data-operational-metric="${key}"]`)).toContainText('Session #202');
+      }
       await review(page, threshold,
         'Completed DC sessions from the returned history only. Threshold means exclude unfinished sessions; fastest and slowest use recorded energy divided by positive elapsed time.',
-        ['75.00 min', '24.00 kWh/h', '18.00 kWh/h']);
+        ['90.00 min', '24.00 kWh/h'], { '90.00 min': 2, '24.00 kWh/h': 2 });
       await finish(page, run);
+      assertSourceLedger(run.mocks, ledger);
+      expect(ledger.map(({ path, status }) => ({ path, status }))).toEqual([
+        { path: '/api/v1/charging', status: 200 },
+      ]);
     });
 
     test(`charging heatmap reports SI energy and positive-duration coverage at ${width}px ${theme}`, async ({ page }) => {
@@ -679,3 +796,202 @@ test('heatmap retains its published readings after a real failed refresh', async
     /^503 (fetch|xhr) /.test(request)
       && new URL(request.replace(/^503 (fetch|xhr) /, '')).pathname === '/api/v1/charging')).toBe(true);
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [320, 1440]) {
+    test(`thermal tax selects canonical numeric ID 202 and publishes nonzero SI evidence at ${width}px ${theme}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 1000 });
+      const run = await open(page, theme, '/charging-thermal-tax');
+      const ledger: SourceRequest[] = [];
+      await strictSourceFixture(page, run.mocks, '/charging', { vehicle_id: '7', limit: '1000' },
+        () => ({ json: [measuredWindow[0], thermalSession] }), ledger);
+      await strictSourceFixture(page, run.mocks, '/charging/202/telemetry', {},
+        () => ({ json: thermalTelemetry }), ledger);
+      const section = await selectedThermal(page, run, ledger);
+      await waitForHarnessReady(page, run.mocks);
+      await expectThermalNonzero(page, section);
+      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      await finish(page, run);
+      assertSourceLedger(run.mocks, ledger);
+      expect(ledger.map(({ path, status }) => ({ path, status }))).toEqual([
+        { path: '/api/v1/charging', status: 200 },
+        { path: '/api/v1/charging/202/telemetry', status: 200 },
+      ]);
+    });
+
+    test(`thermal numeric selection keeps fatal telemetry unknown and retries its own source at ${width}px ${theme}`, async ({ page }) => {
+      test.setTimeout(90000);
+      await page.setViewportSize({ width, height: 1000 });
+      const run = await open(page, theme, '/charging-thermal-tax');
+      const ledger: SourceRequest[] = [];
+      let unavailable = true;
+      await strictSourceFixture(page, run.mocks, '/charging', { vehicle_id: '7', limit: '1000' },
+        () => ({ json: [measuredWindow[0], thermalSession] }), ledger);
+      await strictSourceFixture(page, run.mocks, '/charging/202/telemetry', {}, () => unavailable
+        ? { status: 503, json: { error: 'Synthetic selected-session telemetry unavailable' } }
+        : { json: thermalTelemetry }, ledger);
+      const section = await selectedThermal(page, run, ledger);
+      const metrics = page.locator('#charging-thermal-tax-metrics');
+      const retry = metrics.getByRole('button', { name: 'Retry', exact: true });
+      await expect(retry).toBeVisible({ timeout: 30000 });
+      await expect(metrics).toContainText('Service unavailable');
+      await expect(metrics).not.toHaveAttribute('data-retained', 'true');
+      await expect(metrics).toHaveAttribute('data-period-kind', 'event');
+      for (const key of thermalKeys) await value(section, key, '—', 'missing');
+      await expect(page.getByRole('combobox', { name: 'Inspect session', exact: true })).toHaveValue('202');
+      await expect(page.getByRole('figure', { name: 'Heater vs. Charge Power', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Thermal Phases', exact: true })).toBeVisible();
+      await review(page, section, thermalProvenance, ['Not enough recorded heater readings for this metric.']);
+      const failedAttempts = ledger.filter(request => request.path.endsWith('/telemetry'));
+      // HTTP ApiErrors stop resilient retries: direct + fallback, then one QueryClient retry.
+      expect(failedAttempts.map(request => request.status)).toEqual([503, 503, 503, 503]);
+      unavailable = false;
+      await retry.focus();
+      await page.keyboard.press('Enter');
+      await waitForHarnessReady(page, run.mocks);
+      await expectThermalNonzero(page, section);
+      await expect(retry).toHaveCount(0);
+      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      await finishExpectedTelemetryFailure(page, run, ledger);
+      expect(ledger.filter(request => request.path.endsWith('/telemetry')).map(request => request.status))
+        .toEqual([503, 503, 503, 503, 200]);
+      expect(ledger.filter(request => request.path === '/api/v1/charging')).toHaveLength(1);
+    });
+
+    test(`thermal numeric selection retains nonzero readings after its actual failed refresh at ${width}px ${theme}`, async ({ page }) => {
+      test.setTimeout(120000);
+      await page.setViewportSize({ width, height: 1000 });
+      const run = await open(page, theme, '/charging-thermal-tax');
+      const ledger: SourceRequest[] = [];
+      let unavailable = false;
+      await strictSourceFixture(page, run.mocks, '/charging', { vehicle_id: '7', limit: '1000' },
+        () => ({ json: [measuredWindow[0], thermalSession] }), ledger);
+      await strictSourceFixture(page, run.mocks, '/charging/202/telemetry', {}, () => unavailable
+        ? { status: 503, json: { error: 'Synthetic selected-session refresh unavailable' } }
+        : { json: thermalTelemetry }, ledger);
+      const section = await selectedThermal(page, run, ledger);
+      await waitForHarnessReady(page, run.mocks);
+      await expectThermalNonzero(page, section);
+      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      // History goes stale at 15 s, telemetry at 60 s. The real page badge
+      // refreshes its worst query: refresh history first, then stale telemetry.
+      await page.waitForTimeout(61000);
+      const refresh = page.locator('[data-role="page-container"] > header')
+        .getByRole('button', { name: /^Refresh data ·/ });
+      await expect(refresh).toHaveCount(1);
+      const historyRefresh = page.waitForResponse(response =>
+        new URL(response.url()).pathname === '/api/v1/charging' && response.status() === 200);
+      await refresh.click();
+      await historyRefresh;
+      await waitForHarnessReady(page, run.mocks);
+      unavailable = true;
+      const telemetryRefresh = page.waitForResponse(response =>
+        new URL(response.url()).pathname === '/api/v1/charging/202/telemetry' && response.status() === 503);
+      await refresh.focus();
+      await page.keyboard.press('Enter');
+      await telemetryRefresh;
+      const metrics = page.locator('#charging-thermal-tax-metrics');
+      await expect(metrics).toHaveAttribute('data-retained', 'true', { timeout: 30000 });
+      await expect(section).toContainText('Retained source measurements');
+      await expect(metrics.getByTestId('stale-refresh-warning')).toContainText('Session telemetry may be out of date');
+      await expect(metrics.getByRole('button', { name: 'Refresh', exact: true })).toBeVisible();
+      await expect(page.getByRole('combobox', { name: 'Inspect session', exact: true })).toHaveValue('202');
+      await expectThermalNonzero(page, section);
+      await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW']);
+      await finishExpectedTelemetryFailure(page, run, ledger);
+      expect(ledger.filter(request => request.path === '/api/v1/charging').map(request => request.status))
+        .toEqual([200, 200]);
+      expect(ledger.filter(request => request.path.endsWith('/telemetry')).map(request => request.status))
+        .toEqual([200, 503, 503, 503, 503]);
+    });
+
+    for (const scenario of [
+      { name: 'recorded zero heater', samples: zeroHeaterTelemetry, missing: false },
+      { name: 'absent heater measurements', samples: missingHeaterTelemetry, missing: true },
+    ] as const) {
+      test(`selected thermal ${scenario.name} preserves zero versus unknown at ${width}px ${theme}`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 1000 });
+        const run = await open(page, theme, '/charging-thermal-tax');
+        const ledger: SourceRequest[] = [];
+        await strictSourceFixture(page, run.mocks, '/charging', { vehicle_id: '7', limit: '1000' },
+          () => ({ json: [measuredWindow[0], thermalSession] }), ledger);
+        await strictSourceFixture(page, run.mocks, '/charging/202/telemetry', {},
+          () => ({ json: scenario.samples }), ledger);
+        const section = await selectedThermal(page, run, ledger);
+        await waitForHarnessReady(page, run.mocks);
+        const readings = ['0.00 kWh', '0.00%', '0m', '0.00 kW'] as const;
+        for (const [key, reading] of [
+          ['thermal-heater-energy', readings[0]],
+          ['thermal-heater-share', readings[1]],
+          ['thermal-heater-on-time', readings[2]],
+          ['thermal-peak-heater', readings[3]],
+        ] as const) {
+          await value(section, key, scenario.missing ? '—' : reading, scenario.missing ? 'missing' : 'value');
+        }
+        await expect(page.locator('#charging-thermal-tax-metrics')).toHaveAttribute('data-period-kind', 'event');
+        const chart = page.getByRole('figure', { name: 'Heater vs. Charge Power', exact: true });
+        const table = chart.getByRole('table', { name: 'Heater vs. Charge Power — data table', exact: true });
+        await expect(table.locator('tbody tr')).toHaveCount(3);
+        for (const row of await table.locator('tbody tr').all()) {
+          await expect(row.locator('td').nth(1)).toHaveText(scenario.missing ? '—' : '0');
+          await expect(row.locator('td').nth(2)).toHaveText('5000');
+        }
+        await expect(page.getByText('Metered running total', { exact: true })).toBeVisible();
+        if (scenario.missing) {
+          await expect(section).toContainText('missing readings do not mean no heater draw.');
+          await expect(page.getByText('Heater state uncertain', { exact: true }).first()).toBeVisible();
+        }
+        await review(page, section, thermalProvenance, scenario.missing
+          ? ['Not enough recorded heater readings for this metric.']
+          : readings);
+        await finish(page, run);
+        assertSourceLedger(run.mocks, ledger);
+        expect(ledger.map(request => request.status)).toEqual([200, 200]);
+      });
+    }
+
+    for (const scenario of [
+      { name: 'mixed zero, null and paid costs', sessions: mixedCostWindow, count: '3', free: '1', freeEnergy: '(18.00 kWh)', energy: '63.00 kWh', cost: '$10.80' },
+      { name: 'only unknown cost', sessions: [unknownCostSession], count: '1', free: '0', freeEnergy: '(0.00 kWh)', energy: '36.00 kWh', cost: '$0.00' },
+      { name: 'recorded numeric zero cost', sessions: [measuredWindow[0]], count: '1', free: '1', freeEnergy: '(18.00 kWh)', energy: '18.00 kWh', cost: '$0.00' },
+    ] as const) {
+      test(`cost summary ${scenario.name} does not count null as free at ${width}px ${theme}`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 1000 });
+        const route = `/cost-analysis${analysisWindow}`;
+        const run = await open(page, theme, route);
+        const ledger: SourceRequest[] = [];
+        await strictSourceFixture(page, run.mocks, '/charging', {
+          vehicle_id: '7', limit: '1000', offset: '0', start: '2026-08-01', end: '2026-08-31',
+        }, () => ({ json: scenario.sessions }), ledger);
+        await strictSourceFixture(page, run.mocks, '/analytics/cost-forecast',
+          { vehicle_id: '7', months: '6' }, () => ({ json: costForecast }), ledger);
+        await strictSourceFixture(page, run.mocks, '/charging/bill-variance',
+          { vehicle_id: '7' }, () => ({ json: billVariance }), ledger);
+        await page.goto(route);
+        await waitForHarnessReady(page, run.mocks);
+        const lifetime = page.locator('[data-operational-brief]').filter({
+          has: page.getByRole('heading', { name: /Lifetime summary/i }),
+        });
+        await value(lifetime, 'currency:0', scenario.cost);
+        await value(lifetime, 'energy:1', scenario.energy);
+        await value(lifetime, 'count:2', scenario.count);
+        await value(lifetime, 'count:6', scenario.free);
+        await expect(lifetime.locator('[data-operational-metric="count:6"]')).toContainText(scenario.freeEnergy);
+        await review(page, lifetime, returnedCostScope, [scenario.cost, scenario.energy, scenario.freeEnergy]);
+        const forecast = page.locator('[data-operational-brief]').filter({
+          has: page.getByRole('heading', { name: /Gas vs EV savings/i }),
+        });
+        await value(forecast, 'currency:0', '$9.20');
+        await expect(page.getByText(returnedCostScope, { exact: true }).first()).toBeVisible();
+        await finish(page, run);
+        assertSourceLedger(run.mocks, ledger);
+        expect(ledger.map(({ path, status }) => ({ path, status })).sort((a, b) => a.path.localeCompare(b.path)))
+          .toEqual([
+            { path: '/api/v1/analytics/cost-forecast', status: 200 },
+            { path: '/api/v1/charging', status: 200 },
+            { path: '/api/v1/charging/bill-variance', status: 200 },
+          ]);
+      });
+    }
+  }
+}

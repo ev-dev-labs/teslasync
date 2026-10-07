@@ -11,6 +11,8 @@ import {
 } from './managementData'
 import { ManagementRawDetails } from './ManagementRawDetails'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { OperationalBrief, type StatMetric } from '@/components/data-display'
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
 
 interface WarrantyDataViewProps {
   data: unknown
@@ -128,6 +130,15 @@ export function WarrantyDataView({ data }: WarrantyDataViewProps) {
     ...warranty.upcoming,
     ...warranty.expired,
   ]
+  const sourceMetrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'active', label: t('vehicleManagement.warranty.active', 'Active'), rawValue: data == null ? null : warranty.active.length,
+      context: t('vehicleManagement.warranty.activeCount', '{{count}} active', { count: warranty.active.length }) },
+    { metricId: 'count', occurrenceId: 'upcoming', label: t('vehicleManagement.warranty.upcoming', 'Upcoming'), rawValue: data == null ? null : warranty.upcoming.length,
+      context: t('vehicleManagement.warranty.upcomingCount', '{{count}} upcoming', { count: warranty.upcoming.length }) },
+    { metricId: 'count', occurrenceId: 'expired', label: t('vehicleManagement.warranty.expired', 'Expired'), rawValue: data == null ? null : warranty.expired.length,
+      context: t('vehicleManagement.warranty.expiredCount', '{{count}} expired', { count: warranty.expired.length }) },
+  ]
+  const metrics = useOperationalMetrics(sourceMetrics)
 
   if (coverages.length === 0) {
     return (
@@ -150,25 +161,14 @@ export function WarrantyDataView({ data }: WarrantyDataViewProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="success">
-          {t('vehicleManagement.warranty.activeCount', '{{count}} active', {
-            count: warranty.active.length,
-          })}
-        </Badge>
-        <Badge variant="info">
-          {t(
-            'vehicleManagement.warranty.upcomingCount',
-            '{{count}} upcoming',
-            { count: warranty.upcoming.length },
-          )}
-        </Badge>
-        <Badge variant="neutral">
-          {t('vehicleManagement.warranty.expiredCount', '{{count}} expired', {
-            count: warranty.expired.length,
-          })}
-        </Badge>
-      </div>
+      <OperationalBrief compact testId="vehicle-warranty-counts"
+        eyebrow={t('vehicles.evidenceBrief.eyebrow', 'Vehicle evidence')}
+        title={t('vehicleManagement.warranty.summaryTitle', 'Returned warranty coverage')}
+        description={t('vehicleManagement.warranty.summaryDescription', 'Counts describe the returned coverage records, not a complete warranty history. Individual coverage terms and raw source details remain below.')}
+        statusLabel={t('vehicleManagement.warranty.summaryStatus', 'Warranty response returned')}
+        scope={t('vehicleManagement.warranty.summaryScope', 'Active, upcoming and expired groups as reported by Tesla; no response observation time supplied.')}
+        provenance={t('vehicleManagement.warranty.summarySource', 'Tesla warranty response')}
+        metrics={metrics} />
 
       <div className="space-y-2">
         {coverages.map((coverage, index) => (

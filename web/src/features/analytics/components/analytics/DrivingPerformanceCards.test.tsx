@@ -43,7 +43,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within, cleanup } from '@testing-library/react';
+import { render, screen, within, cleanup, fireEvent } from '@testing-library/react';
 import type { FleetAnalytics, StatsSummary } from '@/api/types';
 import type { FleetAnalyticsQuery } from './constants';
 
@@ -111,12 +111,13 @@ const FULL_STATS: Record<string, StatsSummary> = {
 /** Read the value + subtitle rendered inside the tile carrying `label`. */
 function readTile(label: string): { value: string; subtitle: string } {
   const labelNode = screen.getByText(label);
-  const column = labelNode.closest('div');
+  const column = labelNode.closest('[data-operational-metric]');
   if (!column) throw new Error(`no tile column for "${label}"`);
-  const paragraphs = Array.from(column.querySelectorAll('p'));
+  const text = column.querySelector('[data-operational-value]')?.textContent?.trim() ?? '';
+  const match = /^(.*?) (km\/h|mph|kW|km|mi)$/.exec(text);
   return {
-    value: paragraphs[1]?.textContent?.trim() ?? '',
-    subtitle: paragraphs[2]?.textContent?.trim() ?? '',
+    value: match?.[1] ?? text,
+    subtitle: match?.[2] ?? '',
   };
 }
 
@@ -130,16 +131,15 @@ afterEach(() => {
 });
 
 describe('DrivingPerformanceCards', () => {
-  it('renders a six-tile skeleton band while loading and withholds the metric group', () => {
+  it('keeps the six-metric group while loading without publishing values', () => {
     const query = { data: undefined, isLoading: true } as unknown as FleetAnalyticsQuery;
     const { container } = render(<DrivingPerformanceCards query={query} />);
 
-    // MetricBandSkeleton count={6} → 6 tiles × 2 skeleton bars each.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(12);
-    // No real tile content leaks while loading…
-    expect(screen.queryByText(LABELS.topSpeed)).not.toBeInTheDocument();
-    // …and the labelled data group only appears once data resolves.
-    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelector('[data-operational-value]')).toBeNull();
+    expect(screen.getByText(LABELS.topSpeed)).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Driving performance metrics' })).toBeInTheDocument();
   });
 
   it('renders all six tiles with metric values and unit subtitles', () => {
@@ -180,8 +180,8 @@ describe('DrivingPerformanceCards', () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     });
     // The subtitles still describe the (metric) units under the placeholders.
-    expect(readTile(LABELS.topSpeed)).toEqual({ value: EM_DASH, subtitle: 'km/h' });
-    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: EM_DASH, subtitle: 'km' });
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: EM_DASH, subtitle: '' });
+    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: EM_DASH, subtitle: '' });
   });
 
   it('degrades gracefully on an errored query with no data', () => {
@@ -213,20 +213,31 @@ describe('DrivingPerformanceCards', () => {
     expect(screen.getAllByText(EM_DASH)).toHaveLength(4);
   });
 
-  it('clamps a non-finite stat value to 0 via safe() instead of rendering NaN', () => {
+  it('distinguishes a non-finite stat from measured zero without rendering NaN', () => {
     render(
       <DrivingPerformanceCards
         query={queryWith({ speed_stats: stat({ max: Number.NaN, avg: 50 }) })}
       />,
     );
 
-    // safe(NaN) → 0; the sibling finite value in the same stat still converts.
-    expect(readTile(LABELS.topSpeed).value).toBe('0.00');
+    expect(readTile(LABELS.topSpeed).value).toBe(EM_DASH);
+    expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
     expect(readTile(LABELS.topSpeed).value).not.toContain('NaN');
     expect(readTile(LABELS.avgSpeed).value).toBe('50.00');
   });
 
-  it('exposes the band as a labelled group with one decorative icon per tile', () => {
+  it('retains measured zero and signed regeneration independently of unknown fields', () => {
+    render(<DrivingPerformanceCards query={queryWith({
+      speed_stats: stat({ max: 0, avg: 0 }),
+      regen_stats: stat({ max: -12.5 }),
+    })} />);
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: '0.00', subtitle: 'km/h' });
+    expect(readTile(LABELS.peakRegen)).toEqual({ value: '-12.50', subtitle: 'kW' });
+    expect(readTile(LABELS.peakPower).value).toBe(EM_DASH);
+    expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
+  });
+
+  it('exposes all six source metrics in a labelled group with working detail review', () => {
     const { container } = render(<DrivingPerformanceCards query={queryWith(FULL_STATS)} />);
 
     const group = screen.getByRole('group', { name: /driving performance metrics/i });
@@ -235,7 +246,9 @@ describe('DrivingPerformanceCards', () => {
     Object.values(LABELS).forEach((label) => {
       expect(within(group).getByText(label)).toBeInTheDocument();
     });
-    // …and each tile carries exactly one (lucide) icon.
-    expect(container.querySelectorAll('svg')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    fireEvent.click(within(group).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Returned speed and distance statistics; power and regeneration remain unknown when the response omits them.')).toBeInTheDocument();
   });
 });

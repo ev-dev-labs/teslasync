@@ -370,6 +370,9 @@ interface DataTableProps<T> {
    *  readable display text; JSON preserves matching data keys. Rich renderers
    *  without readable children should provide Column.exportValue. */
   exportRow?: (row: T) => Record<string, CsvCellValue>
+  /** Serialize original scoped rows without visible-column projection.
+   *  Caller-owned controls.exports takes precedence over this callback. */
+  onExport?: (format: 'csv' | 'json', rows: readonly T[], scope: ExportScope) => void | Promise<void>
   /** Optional async hook for paginated/server-side data: when provided the
    *  export awaits this fetcher to obtain the full row set instead of using
    *  whatever's currently visible. */
@@ -483,6 +486,7 @@ export function DataTable<T>({
   exportable,
   exportFilename,
   exportRow,
+  onExport,
   exportAll,
   virtualized = false,
   rowHeight,
@@ -867,6 +871,10 @@ export function DataTable<T>({
 
   const handleExport = useCallback(async (format: 'csv' | 'json', scope: ExportScope) => {
     const sourceRows = scope === 'selected' ? selectedRows : exportAll ? await exportAll() : filteredData
+    if (onExport) {
+      await onExport(format, sourceRows, scope)
+      return
+    }
     const rows = sourceRows.map(row => {
       const flattened = exportRow?.(row)
       const record: Record<string, CsvCellValue> = {}
@@ -895,7 +903,7 @@ export function DataTable<T>({
       }))
       downloadCSV(filename, toCSV(rows, csvColumns))
     }
-  }, [exportAll, filteredData, selectedRows, exportFilename, tableId, name, visibleColumns, exportRow])
+  }, [exportAll, filteredData, selectedRows, exportFilename, tableId, name, visibleColumns, exportRow, onExport])
   const exportControls = exportable === false ? undefined : controls?.exports
     ?? (exportable === true || exportAll || (!paginationControls && !toolbarActions) ? {
       onExportCsv: (scope: ExportScope) => handleExport('csv', scope),

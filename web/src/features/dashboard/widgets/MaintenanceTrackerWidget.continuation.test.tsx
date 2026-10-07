@@ -32,6 +32,21 @@ beforeEach(() => {
 });
 
 describe('maintenance independent source preservation', () => {
+  it('keeps forecast zero counts and signed distance pace separate from configured intervals and service records', () => {
+    hooks.forecast.mockReturnValue(queryResult({
+      vehicle_id: 7, overdue_count: 0, due_soon_count: 0, km_per_day: -2.5,
+      items: [],
+    }));
+    renderWidget(<MaintenanceTrackerWidget size={{ cols: 2, rows: 4 }} />);
+    const brief = screen.getByTestId('dashboard-maintenance-forecast-brief');
+    expect(brief).toHaveTextContent('Maintenance forecast summary');
+    expect(brief).toHaveTextContent('Forecast vehicle 7');
+    expect(brief).toHaveTextContent('-2.50 km/day');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+    expect(screen.getByText(items[1].name)).toBeVisible();
+    expect(screen.getByRole('list', { name: 'Recent service' })).toBeVisible();
+  });
+
   it('keeps the source-sorted three newest records and notes when configured intervals fail', () => {
     const retryItems = vi.fn();
     const retryRecords = vi.fn();

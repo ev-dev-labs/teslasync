@@ -21,45 +21,54 @@ export function ArrivalReliabilityAccountingMetrics({
   const metrics: ArrivalReliabilityEvidenceMetric[] = [
     {
       label: t('arrivalReliability.quality.returned', 'Rows returned'),
-      value: fmtInt(accounting.returnedRows),
+      metricId: 'count', rawValue: accounting.returnedRows,
+      displayValue: fmtInt(accounting.returnedRows),
     },
     {
       label: t('arrivalReliability.quality.included', 'Included drives'),
-      value: fmtInt(accounting.includedRows),
+      metricId: 'count', rawValue: accounting.includedRows,
+      displayValue: fmtInt(accounting.includedRows),
     },
     {
       label: t('arrivalReliability.quality.excluded', 'Excluded rows'),
-      value: fmtInt(accounting.excludedRows),
+      metricId: 'count', rawValue: accounting.excludedRows,
+      displayValue: fmtInt(accounting.excludedRows),
     },
     {
       label: t('arrivalReliability.quality.incomplete', 'Incomplete timestamps'),
-      value: fmtInt(accounting.incompleteRows),
+      metricId: 'count', rawValue: accounting.incompleteRows,
+      displayValue: fmtInt(accounting.incompleteRows),
     },
     {
       label: t(
         'arrivalReliability.quality.invalidOrder',
         'Invalid timestamps or end order',
       ),
-      value: fmtInt(accounting.invalidTimestampOrOrderRows),
+      metricId: 'count', rawValue: accounting.invalidTimestampOrOrderRows,
+      displayValue: fmtInt(accounting.invalidTimestampOrOrderRows),
     },
     {
       label: t('arrivalReliability.quality.future', 'Future rows'),
-      value: fmtInt(accounting.futureRows),
+      metricId: 'count', rawValue: accounting.futureRows,
+      displayValue: fmtInt(accounting.futureRows),
     },
     {
       label: t(
         'arrivalReliability.quality.invalidDuration',
         'Invalid or nonpositive duration',
       ),
-      value: fmtInt(accounting.invalidDurationRows),
+      metricId: 'count', rawValue: accounting.invalidDurationRows,
+      displayValue: fmtInt(accounting.invalidDurationRows),
     },
     {
       label: t('arrivalReliability.quality.unlocatable', 'Unlocatable rows'),
-      value: fmtInt(accounting.unlocatableRows),
+      metricId: 'count', rawValue: accounting.unlocatableRows,
+      displayValue: fmtInt(accounting.unlocatableRows),
     },
     {
       label: t('arrivalReliability.quality.historyCap', 'History cap state'),
-      value: accounting.historyCapReached
+      metricId: 'status',
+      rawValue: accounting.historyCapReached
         ? t('arrivalReliability.quality.capReachedValue', 'Reached')
         : t('arrivalReliability.quality.capBelowValue', 'Not reached'),
     },
@@ -72,6 +81,7 @@ export function ArrivalReliabilityAccountingMetrics({
         'Mutually exclusive returned-row accounting',
       )}
       metrics={metrics}
+      testId="arrival-row-accounting-brief"
     />
   );
 }

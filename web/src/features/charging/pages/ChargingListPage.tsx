@@ -942,13 +942,13 @@ export default function ChargingListPage() {
               </GlassPanel>
             ) : <MetricSwitcherChart
               title={t('charging.overTime', 'Charging over time')}
-              ariaLabel={t('charging.overTime.aria', 'Charging over time chart with metric switcher')}
+              ariaLabel={t('charging.overTimeAria', 'Charging over time chart with metric switcher')}
               series={trendSeries}
               metrics={trendMetricsConfig}
               activeMetric={trendMetric}
               onMetricChange={(k) => setTrendMetric(k as ChargingTrendMetric)}
               formatXTick={formatChartXTick}
-              emptyMessage={t('charging.overTime.empty', 'No data for this metric in the selected range')}
+              emptyMessage={t('charging.overTimeEmpty', 'No data for this metric in the selected range')}
               testId="charging-trend-chart"
             />}
             </section>
@@ -1117,7 +1117,7 @@ export default function ChargingListPage() {
                   }
                   message={
                     collection !== 'all'
-                      ? t('charging.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
+                      ? t('charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.')
                       : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
                   }
                   action={{

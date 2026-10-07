@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
-import { Plug, Zap, DollarSign, Gauge, Timer, TrendingUp, PieChart as PieChartIcon, Battery, Clock } from 'lucide-react';
-import { MetricCard } from '@/components/data-display';
+import { PieChart as PieChartIcon, Battery, Clock } from 'lucide-react';
+import type { StatMetric } from '@/components/data-display';
 import {
   ChartTooltip,
   ChartLegend,
-  chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
+  chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, CHART_COLORS,
   BarChart, Bar, ComposedChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
@@ -13,7 +13,7 @@ import {
 import { FadeIn } from '@/components/motion';
 
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
-import { MetricBandSkeleton } from './helpers';
+import { FleetSectionBrief } from '../operationalbrief-a-m/FleetSectionBrief';
 import { PIE_COLORS } from './constants';
 import { ChargingDetailSection } from './ChargingDetailSection';
 import type { FleetAnalyticsQuery } from './constants';
@@ -34,57 +34,34 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
   const powerStats = ca?.power_stats;
   const durStats = ca?.duration_stats;
   const effStats = ca?.efficiency_stats;
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'charging-sessions', rawValue: data?.total_charging_sessions,
+      label: t('analytics.charging.sessions', 'Sessions'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'energy', occurrenceId: 'charging-total-energy', rawValue: data?.total_energy_kwh != null ? data.total_energy_kwh * 1000 : null,
+      label: t('analytics.charging.totalEnergy', 'Total energy'),
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) } },
+    { metricId: 'currency', occurrenceId: 'charging-total-cost', rawValue: data?.total_cost,
+      label: t('analytics.charging.totalCost', 'Total cost'),
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'power', occurrenceId: 'charging-average-power', rawValue: powerStats?.avg != null ? powerStats.avg * 1000 : null,
+      label: t('analytics.charging.avgPower', 'Avg power'),
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) } },
+    { metricId: 'duration', occurrenceId: 'charging-average-duration', rawValue: durStats?.avg != null ? durStats.avg * 60 : null,
+      label: t('analytics.charging.avgDuration', 'Avg duration'),
+      display: { formatter: raw => ({ value: fmtNumber(raw / 60), unit: t('analytics.charging.min', 'min') }) } },
+    { metricId: 'percent', occurrenceId: 'charging-efficiency', rawValue: effStats?.avg,
+      label: t('analytics.charging.chargeEff', 'Charge efficiency'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+  ];
 
   return (
     <FadeIn className="mt-4 space-y-4 xl:space-y-5">
       {/* Summary Cards band */}
       <section aria-label={t('analytics.charging.summary', 'Charging summary metrics')}>
-        {isLoading ? (
-          <MetricBandSkeleton count={6} />
-        ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            <MetricCard
-              label={t('analytics.charging.sessions', 'Sessions')}
-              value={data ? fmtInt(data.total_charging_sessions ?? 0) : '—'}
-              icon={<Plug className="h-4 w-4" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('analytics.charging.totalEnergy', 'Total energy')}
-              value={data ? fmtNumber(data.total_energy_kwh ?? 0) : '—'}
-              subtitle="kWh"
-              icon={<Zap className="h-4 w-4" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('analytics.charging.totalCost', 'Total cost')}
-              value={data ? formatCurrency(data.total_cost ?? 0) : '—'}
-              icon={<DollarSign className="h-4 w-4" />}
-              color="amber"
-            />
-            <MetricCard
-              label={t('analytics.charging.avgPower', 'Avg power')}
-              value={powerStats ? fmtNumber(safe(powerStats.avg)) : '—'}
-              subtitle="kW"
-              icon={<Gauge className="h-4 w-4" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('analytics.charging.avgDuration', 'Avg duration')}
-              value={durStats ? fmtNumber(safe(durStats.avg)) : '—'}
-              subtitle={t('analytics.charging.min', 'min')}
-              icon={<Timer className="h-4 w-4" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('analytics.charging.chargeEff', 'Charge efficiency')}
-              value={effStats ? fmtNumber(safe(effStats.avg)) : '—'}
-              subtitle="%"
-              icon={<TrendingUp className="h-4 w-4" />}
-              color="green"
-            />
-          </div>
-        )}
+        <FleetSectionBrief query={query} metrics={metrics}
+          title={t('analytics.brief.chargingTitle', 'Returned charging measurements')}
+          description={t('analytics.brief.chargingDescription', 'Returned fleet totals and charging statistics retain their source denominations and selected-range coverage.')} />
       </section>
 
       <section

@@ -34,7 +34,7 @@
  * A `<MemoryRouter>` wraps every render because `EmptyState` renders a `<Link>`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { ClimateSnapshot } from '@/api/types';
@@ -63,7 +63,8 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (_key: string, fallback?: string) => fallback ?? _key,
+      t: (_key: string, fallback?: string, options?: Record<string, unknown>) =>
+        (fallback ?? _key).replace(/\{\{(\w+)\}\}/g, (match, key: string) => String(options?.[key] ?? match)),
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -76,6 +77,9 @@ vi.mock('@/hooks/useDateFormat', () => ({
 }));
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: false, durationMs: 250 }),
+}));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
 }));
 
 import ClimateControlPanelWidget from './ClimateControlPanelWidget';
@@ -125,6 +129,7 @@ function makeClimate(over: Partial<ClimateSnapshot> = {}): ClimateSnapshot {
 
 interface QueryOverrides {
   data?: ClimateSnapshot;
+  error?: unknown;
   isLoading?: boolean;
   isFetching?: boolean;
   isStale?: boolean;
@@ -180,6 +185,92 @@ beforeEach(() => {
   vehiclesMock.mockReturnValue({ data: [{ id: 7, display_name: 'Car' }] });
   setTempUnit('°C');
   setQuery({ data: makeClimate() });
+});
+
+describe('ClimateControlPanelWidget — source brief', () => {
+  it('renders four real cells with zero and negative Celsius, zero levels and all independent status chips in their original order', () => {
+    setQuery({ data: makeClimate({
+      inside_temp: 0, outside_temp: -10, fan_speed: 0, hvac_steering_wheel_heat_level: 0,
+      hvac_power: true, is_ac_on: false, defrost_mode: 'Front', battery_heater: true,
+      seat_heater_left: 3, seat_heater_right: 2, seat_heater_rear_left: 1,
+      seat_heater_rear_center: 2, seat_heater_rear_right: 3,
+    }) });
+    renderWidget(FULL, 7);
+
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    const cells = within(brief).getAllByRole('listitem');
+    expect(cells).toHaveLength(4);
+    expect(cells.map(cell => cell.getAttribute('data-operational-metric'))).toEqual([
+      'climate-panel-cabin', 'climate-panel-outside', 'climate-panel-fan-level', 'climate-panel-wheel-level',
+    ]);
+    expect(cells.map(cell => cell.getAttribute('data-value-state'))).toEqual(['value', 'value', 'value', 'value']);
+    expect(cells.map(cell => cell.querySelector('[data-operational-value]')?.textContent)).toEqual([
+      '0°C', '-10°C', '0', 'Off',
+    ]);
+    expect(brief).toHaveTextContent('Source available');
+    expect(brief).toHaveTextContent('Vehicle 7');
+    expect(brief).toHaveTextContent('continuous recording coverage is not established');
+    expect(brief).toHaveTextContent('not a velocity measurement');
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+    expect(screen.getByText('Defrost')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
+    expect(screen.getAllByText(/^(FL|FR|RL|RC|RR) [1-3]\/3$/).map(chip => chip.textContent?.trim())).toEqual([
+      'FL 3/3', 'FR 2/3', 'RL 1/3', 'RC 2/3', 'RR 3/3',
+    ]);
+  });
+
+  it('distinguishes missing operands from invalid source values without treating malformed HVAC strings as known status', () => {
+    const query = setQuery({ data: makeClimate() });
+    climateMock.mockReturnValue({
+      ...query,
+      data: { ...makeClimate(), inside_temp: null, outside_temp: Number.NaN, fan_speed: '0',
+        hvac_steering_wheel_heat_level: Number.POSITIVE_INFINITY, hvac_power: '—', is_ac_on: 'false' },
+    });
+    renderWidget(FULL);
+
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    const cells = within(brief).getAllByRole('listitem');
+    expect(cells).toHaveLength(4);
+    expect(cells.map(cell => cell.getAttribute('data-value-state'))).toEqual(['missing', 'invalid', 'invalid', 'invalid']);
+    expect(cells.map(cell => cell.querySelector('[data-operational-value]')?.textContent)).toEqual(['—', '—', '—', '—']);
+    expect(cells[0]).toHaveTextContent('No measurement supplied');
+    expect(cells[1]).toHaveTextContent('Expected a finite numeric measurement');
+    expect(screen.getByText('HVAC unknown')).toBeInTheDocument();
+    expect(screen.queryByText('HVAC off')).toBeNull();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(within(brief).queryByText('Off')).toBeNull();
+  });
+
+  it('keeps the parent retained-source state, four measurements and heater chips on refresh failure with the same retry action', () => {
+    const query = setQuery({ data: makeClimate({
+      inside_temp: 0, outside_temp: -5, fan_speed: 2, hvac_steering_wheel_heat_level: 1,
+      defrost_mode: 'Front', battery_heater: true,
+    }), isError: true, error: new Error('refresh failed') });
+    renderWidget(FULL);
+
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(brief).toHaveTextContent('Retained readings');
+    expect(brief.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
+    expect(screen.getByText('0°C')).toBeInTheDocument();
+    expect(screen.getByText('1/3')).toBeInTheDocument();
+    expect(screen.getByText('Defrost')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not manufacture a four-cell summary after initial source failure and retains the shell retry', () => {
+    const query = setQuery({ data: undefined, isError: true, error: new Error('source failed') });
+    renderWidget(FULL);
+
+    expect(screen.queryByTestId('dashboard-climate-panel-brief')).toBeNull();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ── Loading & empty states ──────────────────────────────────────────────────────

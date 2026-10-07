@@ -23,7 +23,12 @@
       "pushEvents": "In-tab events",
       "tabSignals": "Tab signals",
       "soundChannels": "Sound channels",
-      "activeOfTotal": "{{active}} of {{total}} on"
+      "activeOfTotal": "{{active}} of {{total}} on",
+      "brief": {
+        "provenance": "Permission and in-tab events belong to this browser; tab signals use saved settings and sounds use device preferences. These are configuration counts, not delivery success rates.",
+        "title": "Permission and enabled notification surfaces",
+        "scope": "This browser · saved tab settings"
+      }
     }
   }
 }

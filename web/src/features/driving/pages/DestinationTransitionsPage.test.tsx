@@ -216,6 +216,23 @@ beforeEach(() => {
 });
 
 describe('DestinationTransitionsPage', () => {
+  it('retains all four evidence populations and configuration readouts in real briefs', () => {
+    renderPage();
+    const expected = [
+      ['destination-row-accounting-brief', 11],
+      ['destination-continuity-accounting-brief', 10],
+      ['destination-coverage-recency-brief', 15],
+      ['destination-descriptive-support-brief', 11],
+    ] as const;
+    for (const [id, count] of expected) {
+      expect(screen.getByTestId(id).querySelectorAll('[data-operational-value]')).toHaveLength(count);
+    }
+    expect(screen.getByTestId('destination-continuity-accounting-brief')).toHaveTextContent('GPS continuity tolerance');
+    expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('Effective successor count');
+    expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('not a counted event population');
+    expectEverySection();
+  });
+
   it('retains the transition matrix, directory and temporal evidence through a paused refresh', () => {
     h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
     renderPage();

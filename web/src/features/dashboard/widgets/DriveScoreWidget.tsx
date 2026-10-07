@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { LinearGauge } from '@/components/charts';
+import type { StatMetric } from '@/components/data-display';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
@@ -10,7 +11,8 @@ import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
+import type { GaugeHeroConfig } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -94,13 +96,14 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
     color: scoreColor(score),
   }), [score, t]);
 
-  const stats = useMemo<GaugeHeroStat[]>(() => [
+  const stats = useMemo<StatMetric[]>(() => [
     {
       label: t('widget.efficiency', 'Efficiency'),
-      value: efficiency == null ? '—' : fmtNumber(toEfficiencyDisplay(efficiency, isMiles)),
-      unit: efficiencyUnit,
+      metricId: 'rate', occurrenceId: 'fleet-drive-consumption', rawValue: rawEfficiency,
+      description: t('widget.driveScoreGauge.consumptionSource', 'Returned fleet average consumption in Wh/km, converted only for display; not a vehicle speed or individual-drive measurement.'),
+      display: { formatter: raw => ({ value: fmtNumber(toEfficiencyDisplay(raw, isMiles)), unit: efficiencyUnit }) },
     },
-  ], [t, efficiency, isMiles, efficiencyUnit, fmtNumber, displayPrecision, displayLocale]);
+  ], [t, rawEfficiency, isMiles, efficiencyUnit, fmtNumber, displayPrecision, displayLocale]);
 
   return (
     <WidgetShell
@@ -131,7 +134,12 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
           className="py-4"
         />
       )}
-      {!isCompact && analytics != null && <WidgetStatGrid stats={stats} />}
+      {!isCompact && analytics != null && <DashboardSourceBrief metrics={stats} state={trust}
+        eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+        title={t('widget.driveScoreGauge.consumptionTitle', 'Returned fleet consumption')}
+        description={t('widget.driveScoreGauge.consumptionDescription', 'The measured fleet consumption remains distinct from the retained derived efficiency score and its qualifying-drive rule.')}
+        scope={t('widget.driveScoreGauge.consumptionScope', 'Fleet-wide · requested seven-day analytics window; the response does not establish complete recording.')}
+        testId="dashboard-drive-consumption-brief" />}
     </WidgetShell>
   );
 }

@@ -2,13 +2,15 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -44,8 +46,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
     return {
       hasData: rated != null || ideal != null,
       usesRated,
-      ratedConverted: rated != null ? convertDistanceFromSI(rated, distanceUnit) : null,
-      idealConverted: ideal != null ? convertDistanceFromSI(ideal, distanceUnit) : null,
+      comparisonRaw: usesRated ? state?.ideal_range : state?.rated_range,
       primaryConverted: primary != null ? convertDistanceFromSI(primary, distanceUnit) : null,
       // Percentage variance of ideal vs. rated. Unit-independent (a ratio), so
       // it is computed from the SI values. Null when either side is unknown to
@@ -53,6 +54,25 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       variancePct: rated != null && ideal != null && rated > 0 && ideal > 0 ? ((ideal - rated) / rated) * 100 : null,
     };
   }, [state, distanceUnit]);
+
+  const comparisonMetrics = useMemo<StatMetric[]>(() => [
+    {
+      metricId: 'distance',
+      occurrenceId: 'range-secondary-distance',
+      rawValue: range.comparisonRaw,
+      label: range.usesRated ? t('widget.idealRange', 'Ideal range') : t('widget.ratedRange', 'Rated range'),
+      description: t('widget.rangeBarBrief.distanceSource', 'Secondary vehicle range reading in source meters, distinct from the preferred primary range.'),
+      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+    },
+    ...(range.variancePct != null ? [{
+      metricId: 'percent' as const,
+      occurrenceId: 'range-epa-variance',
+      rawValue: range.variancePct,
+      label: t('widget.epaComparison', 'EPA variance'),
+      description: t('widget.rangeBarBrief.varianceSource', 'Ideal minus rated range, divided by rated range; shown only when both source readings are positive.'),
+      display: { formatter: (raw: number) => ({ value: `${raw >= 0 ? '+' : ''}${fmtNumber(raw)}`, unit: '%' }) },
+    }] : []),
+  ], [range, distanceUnit, fmtNumber, t]);
 
   return (
     <WidgetShell
@@ -73,18 +93,15 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
           label={range.usesRated || !range.hasData ? t('widget.ratedRange', 'Rated range') : t('widget.idealRange', 'Ideal range')}
           animated={false}
         />
-        {!isCompact && <WidgetStatGrid stats={[
-          {
-            label: range.usesRated ? t('widget.idealRange', 'Ideal range') : t('widget.ratedRange', 'Rated range'),
-            value: range.usesRated
-              ? range.idealConverted != null ? `${fmtNumber(range.idealConverted)} ${distanceUnit}` : null
-              : range.ratedConverted != null ? `${fmtNumber(range.ratedConverted)} ${distanceUnit}` : null,
-          },
-          ...(range.variancePct != null ? [{
-            label: t('widget.epaComparison', 'EPA variance'),
-            value: `${range.variancePct >= 0 ? '+' : ''}${fmtNumber(range.variancePct)}%`,
-          }] : []),
-        ]} />}
+        {!isCompact && <DashboardSourceBrief
+          metrics={comparisonMetrics}
+          state={trust}
+          eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+          title={t('widget.rangeBarBrief.title', 'Range comparison')}
+          description={t('widget.rangeBarBrief.description', 'The secondary range and optional EPA variance retain the vehicle snapshot source; the primary range preference is unchanged.')}
+          scope={t('widget.rangeBarBrief.scope', 'Vehicle {{id}} · range snapshot; exact observation bounds and recording completeness are not supplied.', { id })}
+          testId="dashboard-range-comparison-brief"
+        />}
         {!range.hasData && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Gauge className="h-6 w-6" />}

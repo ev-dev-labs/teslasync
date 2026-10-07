@@ -35,12 +35,14 @@
       "tires": "Tires",
       "motors": "Motors",
       "hvac": "Climate",
-      "charging": "Charging"
+      "charging": "Charging",
+      "unknown": "Unknown"
     },
     "status": {
       "normal": "Normal",
       "warning": "Warning",
-      "critical": "Critical"
+      "critical": "Critical",
+      "unknown": "Unknown"
     },
     "severity": {
       "critical": "Critical",
@@ -65,7 +67,28 @@
       "generateButton": "Train baseline",
       "badge": "Helix"
     },
-    "colSignal": "Signal"
+    "colSignal": "Signal",
+    "overview": "Anomaly overview"
+  },
+  "diagnostics": {
+    "brief": {
+      "provenance": "Evidence-ranked analysis of retrieved signal histories; not a diagnosis or proof of causation.",
+      "chooseSignal": "Choose a focal signal",
+      "partial": "Partial signal evidence",
+      "refreshing": "Refreshing signal evidence",
+      "available": "Signal evidence available",
+      "unavailable": "Signal evidence unavailable",
+      "scope": "{{signal}} · {{h}}h requested history window",
+      "noSignal": "No focal signal",
+      "sourceDetails": "Per-signal source states shown above",
+      "sourceUnknown": "Per-signal freshness unavailable",
+      "scoreBasis": "Existing evidence-quality score on a 0–1 scale, not a probability or causal confidence.",
+      "evidenceScore": "Overall evidence score",
+      "effectBasis": "Existing robust shift effect size; before and after medians retain their source scale.",
+      "focalUnavailable": "Focal history unavailable; no shift conclusion can be drawn.",
+      "analysisTitle": "Evidence quality and focal shift",
+      "packTitle": "Export evidence and readiness"
+    }
   },
   "rootCauseIntelligence": {
     "graph": {
@@ -116,7 +139,13 @@
       "focalPlaceholder": "Choose a signal",
       "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
       "title": "Choose a signal to Investigate",
-      "windowLabel": "Analysis window"
+      "windowLabel": "Analysis window",
+      "window": {
+        "h24": "Last 24 hours",
+        "h72": "Last 3 days",
+        "h168": "Last 7 days",
+        "h720": "Last 30 days"
+      }
     },
     "quality": {
       "insufficient": "Insufficient evidence",
@@ -150,7 +179,15 @@
       "title": "Next service due",
       "by": "projected by",
       "none": "No upcoming service projected — all components healthy.",
-      "error": "Unable to load service projection."
+      "error": "Unable to load service projection.",
+      "component": "Service component",
+      "source": "Existing next-service projection from the component health board.",
+      "assumption": "Projected service date, not a guaranteed failure date; component forecasts retain their own confidence and basis below.",
+      "unavailable": "Service projection unavailable.",
+      "chooseVehicle": "Choose a vehicle",
+      "available": "Component board available",
+      "scope": "Selected vehicle · component health board",
+      "freshness": "Board snapshot; no observation timestamp supplied"
     },
     "board": {
       "title": "Component health",
@@ -1079,6 +1116,10 @@
       "inputLabel": "Ask a question about the app",
       "placeholder": "e.g. How do I enable energy cost forecasting?",
       "title": "Ask the help assistant"
+    },
+    "rootCauseIntelligence": {
+      "hypotheses": "Ranked by robust shift strength, temporal lead/lag proximity, sample coverage, and evidence reliability. Every item is an evidence-ranked hypothesis, never a diagnosis or a claim of causal proof.",
+      "quality": "Combines focal sample coverage, corroborating-candidate ratio, and analysis window length into a single 0–1 score."
     }
   },
   "impersonation": {

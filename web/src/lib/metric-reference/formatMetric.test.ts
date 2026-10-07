@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fmtNumber, getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import {
@@ -18,6 +18,94 @@ const initial = getFormatterPreferences();
 afterEach(() => { setGlobalPrecision(initial.precision); setGlobalLocale(initial.locale); });
 
 describe('candidate formatMetric preserves measurements and preference policy', () => {
+  it('preserves exact safe numeric identifiers without locale grouping or precision changes', () => {
+    expect(formatMetric('identifier', 1234567, prefs, undefined, { identifierPrefix: '#' }))
+      .toMatchObject({ text: '#1234567', rawValue: 1234567, unit: '' });
+    expect(formatMetric('identifier', 0, prefs, undefined, { identifierPrefix: '#' }).text).toBe('#0');
+    expect(formatMetric('identifier', null, prefs).state).toBe('missing');
+    for (const raw of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1])
+      expect(formatMetric('identifier', raw, prefs).state).toBe('invalid');
+  });
+  it('keeps source notation unrounded for rates and explicit second-based durations', () => {
+    expect(formatMetric('rate', 1.23456789, prefs, undefined, { notation: 'source', unit: '/s' }))
+      .toMatchObject({ text: '1.23456789 /s', rawValue: 1.23456789 });
+    expect(formatMetric('rate', 1.23456789, prefs).text).toBe('1.23');
+    expect(formatMetric('duration', 0.123456789, prefs, undefined,
+      { notation: 'source', units: { duration: 's' } }).text).toBe('0.123456789 s');
+    expect(formatMetric('number', -0.000001, prefs, undefined, { notation: 'source' }).text).toBe('-0.000001');
+    expect(formatMetric('count', 1.5, prefs, undefined, { notation: 'source' }).state).toBe('invalid');
+    expect(formatMetric('duration', 172800, prefs, undefined, { units: { duration: 'd' } }).text).toBe('2.00 d');
+  });
+  it('calls specialist formatters only after raw validation and before default physical conversion', () => {
+    const formatter = vi.fn((raw: number, preferences: MetricPreferences) => ({
+      value: fmtNumber(raw / 86400, preferences.units.precision, preferences.units.locale), unit: 'd',
+    }));
+    expect(formatMetric('duration', 172800, prefs, undefined, { formatter }))
+      .toMatchObject({ text: '2.00 d', rawValue: 172800 });
+    expect(formatter).toHaveBeenCalledWith(172800, expect.objectContaining({ units: expect.objectContaining({ locale: 'en-US' }) }));
+    formatter.mockClear();
+    for (const raw of [null, undefined, NaN, Infinity, '172800'])
+      expect(formatMetric('duration', raw, prefs, undefined, { formatter }).state).not.toBe('value');
+    expect(formatMetric('count', 1.5, prefs, undefined, { formatter }).state).toBe('invalid');
+    expect(formatMetric('identifier', -1, prefs, undefined, { formatter }).state).toBe('invalid');
+    expect(formatter).not.toHaveBeenCalled();
+    expect(formatMetric('number', 1, prefs, undefined,
+      { formatter: () => ({ value: '', unit: '' }) }).state).toBe('invalid');
+  });
+  it('retains a numeric active-count numerator and total without turning it into a ratio or percentage', () => {
+    expect(formatMetric('count', 1, prefs, undefined, { countTotal: 1 }))
+      .toMatchObject({ text: '1/1', rawValue: 1, state: 'value' });
+    expect(formatMetric('count', 0, prefs, undefined, { countTotal: 0 }).text).toBe('0/0');
+    expect(formatMetric('count', 1200, prefs, undefined, { countTotal: 1500 }).text).toBe('1,200/1,500');
+    expect(formatMetric('count', 1, prefs).text).toBe('1');
+    for (const total of [-1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(formatMetric('count', 1, prefs, undefined, { countTotal: total }).state).toBe('invalid');
+    }
+    expect(formatMetric('count', null, prefs, undefined, { countTotal: 1 }).state).toBe('missing');
+  });
+  it('keeps mass and SLO burn multipliers numeric with their distinct display units', () => {
+    expect(formatMetric('mass', 123.4, prefs)).toMatchObject({ text: '123.40 kg', rawValue: 123.4 });
+    expect(formatMetric('mass', 0, prefs).text).toBe('0.00 kg');
+    expect(formatMetric('multiplier', 100, prefs)).toMatchObject({ text: '100.00×', rawValue: 100 });
+    expect(formatMetric('multiplier', 0, prefs).text).toBe('0.00×');
+    expect(formatMetric('multiplier', null, prefs).state).toBe('missing');
+    expect(formatMetric('ratio', 100, prefs).text).toBe('100.00');
+    expect(formatMetric('percent', 100, prefs).text).toBe('100.00%');
+  });
+  it.each([
+    [0, '0 B'], [1023, '1023 B'], [1024, '1.00 KB'],
+    [1048576, '1.00 MB'], [1073741824, '1.00 GB'],
+  ] as const)('formats %s bytes without discarding its numeric source', (raw, text) => {
+    expect(formatMetric('bytes', raw, prefs)).toMatchObject({ text, rawValue: raw, state: 'value' });
+  });
+  it('keeps byte-rate input in bytes per second and converts only the display interval', () => {
+    const raw = 1048576 / 86400;
+    expect(formatMetric('byteRate', raw, prefs, undefined, { byteRatePeriod: 'd' }))
+      .toMatchObject({ text: '1.00 MB/d', rawValue: raw });
+    expect(formatMetric('byteRate', 1024, prefs))
+      .toMatchObject({ text: '1.00 KB/s', rawValue: 1024 });
+    expect(formatMetric('byteRate', 0, prefs).text).toBe('0 B/s');
+    expect(formatMetric('byteRate', -10, prefs).rawValue).toBe(-10);
+    expect(formatMetric('byteRate', Number.MAX_VALUE, prefs, undefined, { byteRatePeriod: 'd' }).state)
+      .toBe('invalid');
+  });
+  it('preserves fixed-millisecond and adaptive latency contracts from canonical seconds', () => {
+    expect(formatMetric('latency', 0.05, prefs, undefined, { precision: 0 }))
+      .toMatchObject({ text: '50 ms', rawValue: 0.05 });
+    expect(formatMetric('latency', 2, prefs).text).toBe('2.00 s');
+    expect(formatMetric('latency', 2, prefs, undefined, { latencyStyle: 'milliseconds', precision: 0 }).text)
+      .toBe('2,000 ms');
+    expect(formatMetric('latency', 0, prefs).text).toBe('0.00 ms');
+    expect(formatMetric('latency', -1, prefs).state).toBe('invalid');
+    expect(formatMetric('bytes', -1, prefs).state).toBe('invalid');
+  });
+  it('uses locale and precision for operational formats without changing vehicle unit preferences', () => {
+    const local = { ...prefs, units: { ...prefs.units, locale: 'de-DE', precision: 3, duration: 'd' as const } };
+    expect(formatMetric('bytes', 1536, local).text).toBe('1,500 KB');
+    expect(formatMetric('latency', 0.05, local).text).toBe('50,000 ms');
+    expect(formatMetric('bytes', null, local).state).toBe('missing');
+    expect(local.units.duration).toBe('d');
+  });
   it.each(Object.keys(glossary).filter(id => !['text', 'status'].includes(glossary[id as MetricId].format)) as MetricId[])(
     '%s handles zero, -0, missing and nonfinite inputs explicitly', id => {
       expect(formatMetric(id, 0, prefs).state).toBe('value');

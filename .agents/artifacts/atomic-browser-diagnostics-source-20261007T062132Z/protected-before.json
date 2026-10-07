@@ -1,0 +1,38 @@
+[
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\specialized.smoke.spec.ts",
+    "sha256": "E01E2E97AFB745E71E74EE68A3625E1E88FF2D4FBD073DF1C26CD599101DF466"
+  },
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\specialized.fixtures.ts",
+    "sha256": "648E0CF4B17199BB6280FE240081E98C1ABCC0BC145211A77F6F4C473206AEE9"
+  },
+  {
+    "path": "web\\e2e\\mockApi.ts",
+    "sha256": "476E613BF23D5A1E3E341E6E83718CB9985CAB0956EB5A7205992DB8EB5156E6"
+  },
+  {
+    "path": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+    "sha256": "F215933EC78C1FBB2DF95D1C24FB0A97E4E1E7611AEF66974B011784A94B6155"
+  },
+  {
+    "path": "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.test.ts",
+    "sha256": "A69C208F9031199B4C1958FDEC810720E275814E079701B9A0264C5FA5515AB5"
+  },
+  {
+    "path": "web\\src\\api\\hooks\\useTelemetry.ts",
+    "sha256": "5D042611BB8CFCCC88904D1ACD2F29ED27B09CC29647E218809D88DF29850E50"
+  },
+  {
+    "path": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx",
+    "sha256": "E3908FBBE2C622D3A1E5E958F35D62948B1A9C8D7FA2FA4DB828D3E87A80859D"
+  },
+  {
+    "path": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+    "sha256": "0D9963F880BF6109FFAC75B608DF2A4004516BF8405206B20F940DE0F11329B0"
+  },
+  {
+    "path": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx",
+    "sha256": "4A09B83DC93E5FE2016FBC4824A13313676489D4088413FEDE661C8F977A10A3"
+  }
+]

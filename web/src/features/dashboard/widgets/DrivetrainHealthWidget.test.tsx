@@ -213,6 +213,20 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('DrivetrainHealthWidget', () => {
+  it('keeps five real drivetrain operands, source precedence and invalid telemetry without inventing an assessment', () => {
+    healthMock.mockReturnValue(makeQuery({ data: makeHealth({ frontMotorTempC: 0 }) }));
+    motorMock.mockReturnValue(makeQuery({ data: makeMotor({ di_stator_temp: Number.NaN }) }));
+    renderWidget();
+    const brief = screen.getByTestId('dashboard-drivetrain-readings-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(5);
+    expect(brief.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(1);
+    expect(brief).toHaveTextContent('0.00°C');
+    expect(brief).toHaveTextContent('independent sources');
+    expect(brief).toHaveTextContent('Drive');
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
+    expect(screen.getByText('Assessment from available telemetry; not a mechanical inspection.')).toBeInTheDocument();
+  });
+
   it('never infers health from a motor snapshot without an assessment', () => {
     healthMock.mockReturnValue(makeQuery({ data: null }));
     motorMock.mockReturnValue(makeQuery({ data: makeMotor({ di_stator_temp: null }) }));
@@ -221,7 +235,7 @@ describe('DrivetrainHealthWidget', () => {
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.getByText('Rear motor temp')).toBeInTheDocument();
-    expect(screen.getByText('52.00')).toBeInTheDocument();
+    expect(screen.getByText('52.00°C')).toBeInTheDocument();
   });
 
   it('keeps a retained categorical assessment visible after a failed refresh', () => {
@@ -246,16 +260,16 @@ describe('DrivetrainHealthWidget', () => {
 
     // Stats: health-primary temps + motor-sourced stator + drive state.
     expect(screen.getByText('Motor temp')).toBeInTheDocument();
-    expect(screen.getByText('55.00')).toBeInTheDocument();
+    expect(screen.getByText('55.00°C')).toBeInTheDocument();
     expect(screen.getByText('Stator temp')).toBeInTheDocument();
-    expect(screen.getByText('48.00')).toBeInTheDocument();
+    expect(screen.getByText('48.00°C')).toBeInTheDocument();
     expect(screen.getByText('Inverter')).toBeInTheDocument();
-    expect(screen.getByText('40.00')).toBeInTheDocument();
+    expect(screen.getByText('40.00°C')).toBeInTheDocument();
     expect(screen.getByText('Drive state')).toBeInTheDocument();
     expect(screen.getByText('Drive')).toBeInTheDocument();
 
     // The three temperature stats carry the °C unit.
-    expect(screen.getAllByText('°C')).toHaveLength(4);
+    expect(screen.getAllByText(/^-?\d+(?:\.\d+)?°C$/)).toHaveLength(4);
 
     // Good health → green arc.
   });
@@ -281,8 +295,8 @@ describe('DrivetrainHealthWidget', () => {
     renderWidget();
 
     // 55°C → 131°F; every temperature stat now reads in °F.
-    expect(screen.getByText('131.00')).toBeInTheDocument();
-    expect(screen.getAllByText('°F')).toHaveLength(4);
+    expect(screen.getByText('131.00°F')).toBeInTheDocument();
+    expect(screen.getAllByText(/^-?\d+(?:\.\d+)?°F$/)).toHaveLength(4);
 
     // The Celsius reading + unit must be gone once converted.
     expect(screen.queryByText('55.00')).not.toBeInTheDocument();
@@ -306,9 +320,9 @@ describe('DrivetrainHealthWidget', () => {
     renderWidget();
 
     // Motor Temp falls back to motor_temp_c_front, Inverter to inverter_temp_c.
-    expect(screen.getByText('30.00')).toBeInTheDocument();
-    expect(screen.getByText('44.00')).toBeInTheDocument();
-    expect(screen.getByText('33.00')).toBeInTheDocument();
+    expect(screen.getByText('30.00°C')).toBeInTheDocument();
+    expect(screen.getByText('44.00°C')).toBeInTheDocument();
+    expect(screen.getByText('33.00°C')).toBeInTheDocument();
     expect(screen.getByText('Park')).toBeInTheDocument();
   });
 
@@ -351,7 +365,7 @@ describe('DrivetrainHealthWidget', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(screen.getByText('48.00')).toBeInTheDocument();
+    expect(screen.getByText('48.00°C')).toBeInTheDocument();
     // No header/gauge while loading.
     expect(screen.queryByText('Drivetrain health')).toBeInTheDocument();
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
@@ -364,7 +378,7 @@ describe('DrivetrainHealthWidget', () => {
     renderWidget();
 
     expect(screen.getByRole('alert')).toHaveTextContent('The drivetrain assessment could not be loaded.');
-    expect(screen.getByText('48.00')).toBeInTheDocument();
+    expect(screen.getByText('48.00°C')).toBeInTheDocument();
 
     // Only the failed assessment is replaced; the motor evidence stays visible.
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();

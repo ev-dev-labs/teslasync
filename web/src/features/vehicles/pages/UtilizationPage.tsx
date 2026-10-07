@@ -190,6 +190,8 @@ export default function UtilizationPage() {
           summary={summary}
           historyLimit={UTILIZATION_DRIVE_LIMIT}
           state={sectionState}
+          sourceStatus={drivesState.status}
+          hasSource={drivesState.data != null}
         />
       </FadeIn>
     </PageLayout>

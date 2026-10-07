@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gauge, Zap, BatteryCharging, Plug } from 'lucide-react';
+import { Gauge, BatteryCharging, Plug } from 'lucide-react';
 import { Sparkline } from '@/components/charts';
 import { Badge, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
@@ -9,8 +9,10 @@ import { useChargingTelemetryLatest, useVehicles } from '@/api/hooks/useVehicles
 
 import { convertPowerFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -91,45 +93,43 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
     return Math.min(100, (power / theoreticalPowerW) * 100);
   }, [data, isCharging, voltage, phases, power]);
 
-  const coreStats = useMemo((): StatGridItem[] => {
+  const coreStats = useMemo((): StatMetric[] => {
     if (!isCharging) return [];
     return [
       {
         label: t('widget.chargingTelemetry.voltage', 'Voltage'),
-        value: voltage == null ? null : fmtNumber(voltage),
-        unit: 'V',
-        icon: <Zap className="h-3.5 w-3.5" />,
+        metricId: 'number', occurrenceId: 'charger-voltage', rawValue: data?.charger_voltage,
+        description: t('widget.chargingTelemetry.voltageSource', 'Returned charger voltage in volts.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'V' }) },
       },
       {
         label: t('widget.chargingTelemetry.current', 'Current'),
-        value: current == null ? null : fmtNumber(current),
-        unit: 'A',
-        icon: <Gauge className="h-3.5 w-3.5" />,
+        metricId: 'number', occurrenceId: 'charger-current', rawValue: data?.charger_actual_current,
+        description: t('widget.chargingTelemetry.currentSource', 'Returned charger current in amperes.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'A' }) },
       },
       {
         label: t('widget.chargingTelemetry.power', 'Power'),
-        value: power == null ? null : powerDisplay,
-        unit: unitPrefs.power,
-        icon: <BatteryCharging className="h-3.5 w-3.5" />,
-        valueColor: 'text-emerald-300',
+        metricId: 'power', occurrenceId: 'charger-power', rawValue: data?.charger_power_w,
+        display: { formatter: raw => ({ value: fmtNumber(convertPowerFromSI(raw, unitPrefs.power)), unit: unitPrefs.power }) },
       },
       {
         label: t('widget.chargingTelemetry.phases', 'Phases'),
-        value: phases == null ? null : fmtInt(phases),
-        icon: <Gauge className="h-3.5 w-3.5" />,
+        metricId: 'count', occurrenceId: 'charger-phases', rawValue: data?.charger_phases,
+        display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       },
     ];
-  }, [isCharging, voltage, current, power, powerDisplay, unitPrefs.power, phases, t, fmtNumber, fmtInt]);
+  }, [isCharging, data, unitPrefs.power, t, fmtNumber, fmtInt]);
 
   // Wide-only extra stats
-  const wideStats = useMemo((): StatGridItem[] => {
+  const wideStats = useMemo((): StatMetric[] => {
     if (!isCharging || !isWide) return [];
-    const items: StatGridItem[] = [];
+    const items: StatMetric[] = [];
       items.push({
         label: t('widget.chargingTelemetry.efficiency', 'Efficiency'),
-        value: efficiency == null ? null : fmtNumber(efficiency),
-        unit: '%',
-        icon: <Gauge className="h-3.5 w-3.5" />,
+        metricId: 'percent', occurrenceId: 'charger-efficiency', rawValue: efficiency,
+        description: t('widget.chargingTelemetry.efficiencySource', 'Existing ratio of actual power to pilot-current capacity, including the original phase fallback and upper clamp.'),
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
       });
     return items;
   }, [isCharging, isWide, efficiency, t, fmtNumber]);
@@ -188,7 +188,12 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
     >
       {isCharging ? (
         <div className="flex flex-col gap-3 h-full">
-          <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
+          <DashboardSourceBrief metrics={allStats} state={dataState}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.chargingTelemetry.summaryTitle', 'Returned charger measurements')}
+            description={t('widget.chargingTelemetry.summaryDescription', 'Voltage, current, SI power and phases describe the supplied charging snapshot. Wide layouts also retain the existing capacity ratio and session-local power history.')}
+            scope={t('widget.chargingTelemetry.summaryScope', 'Vehicle {{id}} · source timestamp {{timestamp}}; a returned snapshot does not establish continuous coverage.', { id, timestamp: data?.ts ?? '—' })}
+            loading={isLoading && !data} testId="dashboard-charging-telemetry-brief" />
 
           {/* Wide extras: charger type badge + sparkline */}
           {isWide && (

@@ -6,9 +6,11 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatusGrid, WidgetStatGrid } from './shared';
+import { WidgetStatusGrid } from './shared';
 import type { StatusCell } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -51,11 +53,6 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
 
   const cells = data?.cells ?? [];
   const avgV = knownNumber(data?.avg_voltage);
-  const reading = (value: number | null | undefined, precision = getGlobalPrecision(), unit: string, scale = 1) => {
-    const number = knownNumber(value);
-    return number == null ? '—' : `${fmtNumber(number * scale, precision)} ${unit}`;
-  };
-
   // Map cells → StatusCell items for the shared grid
   const statusCells = useMemo<StatusCell[]>(() => {
     return cells.map((c) => {
@@ -72,11 +69,35 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
   }, [cells, avgV, isWide, t, formatTemperature, fmtNumber, fmtScientificNumber]);
 
   // Summary stats
-  const voltageStats = [
-    { label: t('widget.batteryCells.minV', 'Min V'), value: reading(data?.min_voltage, Math.max(3, getGlobalPrecision()), 'V') },
-    { label: t('widget.batteryCells.maxV', 'Max V'), value: reading(data?.max_voltage, Math.max(3, getGlobalPrecision()), 'V') },
-    { label: t('widget.batteryCells.avgV', 'Avg V'), value: reading(avgV, Math.max(3, getGlobalPrecision()), 'V') },
-    { label: t('widget.batteryCells.spread', 'Spread'), value: reading(data?.voltage_spread, undefined, 'mV', 1000) },
+  const voltageMetrics: StatMetric[] = [
+    { metricId: 'number', occurrenceId: 'cells-min-voltage', rawValue: data?.min_voltage,
+      label: t('widget.batteryCells.minV', 'Min V'),
+      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
+    { metricId: 'number', occurrenceId: 'cells-max-voltage', rawValue: data?.max_voltage,
+      label: t('widget.batteryCells.maxV', 'Max V'),
+      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
+    { metricId: 'number', occurrenceId: 'cells-average-voltage', rawValue: data?.avg_voltage,
+      label: t('widget.batteryCells.avgV', 'Avg V'),
+      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
+    { metricId: 'number', occurrenceId: 'cells-voltage-spread', rawValue: data?.voltage_spread,
+      label: t('widget.batteryCells.spread', 'Spread'),
+      description: t('widget.batteryCells.spreadSource', 'Returned voltage spread in volts, displayed in millivolts.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'mV' }) } },
+  ];
+  const temperatureMetrics: StatMetric[] = [
+    { metricId: 'temperature', occurrenceId: 'cells-min-temperature', rawValue: data?.min_temperature, label: t('widget.batteryCells.minTemp', 'Min temp') },
+    { metricId: 'temperature', occurrenceId: 'cells-average-temperature', rawValue: data?.avg_temperature, label: t('widget.batteryCells.avgTemp', 'Avg temp') },
+    { metricId: 'temperature', occurrenceId: 'cells-max-temperature', rawValue: data?.max_temperature, label: t('widget.batteryCells.maxTemp', 'Max temp') },
+  ];
+  const metrics: StatMetric[] = [
+    ...voltageMetrics,
+    ...(isWide ? temperatureMetrics.map(metric => ({
+      ...metric,
+      display: { formatter: (raw: number) => ({ value: formatTemperature(raw), unit: '' }) },
+    })) : []),
   ];
 
   return (
@@ -104,16 +125,13 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
           </div>
 
           {/* Min / Max / Avg / Spread stats */}
-          <WidgetStatGrid stats={voltageStats} cols={2} />
-
-          {/* Wide layout: temperature summary row */}
-          {isWide && (
-            <WidgetStatGrid cols={3} stats={[
-              { label: t('widget.batteryCells.minTemp', 'Min temp'), value: formatTemperature(knownNumber(data?.min_temperature)) },
-              { label: t('widget.batteryCells.avgTemp', 'Avg temp'), value: formatTemperature(knownNumber(data?.avg_temperature)) },
-              { label: t('widget.batteryCells.maxTemp', 'Max temp'), value: formatTemperature(knownNumber(data?.max_temperature)) },
-            ]} />
-          )}
+          <DashboardSourceBrief metrics={metrics} state={trust}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.batteryCells.summaryTitle', 'Returned cell measurements')}
+            description={t('widget.batteryCells.summaryDescription', 'Voltage extremes, average and spread summarize the returned cells; wide layouts also retain the temperature summary.')}
+            scope={t('widget.batteryCells.summaryScope', 'Vehicle {{id}} · returned cell snapshot; recording coverage is unknown.', { id: vid ?? '—' })}
+            loading={isLoading && !data}
+            testId="dashboard-battery-cells-brief" />
         </div>
     </WidgetShell>
   );

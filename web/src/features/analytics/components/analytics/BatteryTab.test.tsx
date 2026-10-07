@@ -49,8 +49,11 @@ import type { FleetAnalyticsQuery } from './constants';
 
 // ── i18n: echo the English fallback (2nd arg) so assertions read on copy. ──
 vi.mock('react-i18next', () => {
-  const t = (key: string, fallback?: unknown): string =>
-    typeof fallback === 'string' ? fallback : key;
+  const t = (key: string, fallback?: unknown, options?: Record<string, unknown>): string => {
+    const template = typeof fallback === 'string' ? fallback : key;
+    return template.replace(/{{(\w+)}}/g, (match, name: string) =>
+      options?.[name] == null ? match : String(options[name]));
+  };
   return {
     useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -245,9 +248,10 @@ describe('BatteryTab — loading', () => {
   it('renders skeletons and withholds both the KPI values and the charts', () => {
     const { container } = renderTab(makeQuery({ isLoading: true }));
 
-    // The KPI band is a skeleton — no card labels or values leak through.
-    expect(screen.queryByText('Health score')).toBeNull();
-    expect(screen.queryByText('Est. range')).toBeNull();
+    expect(screen.getByText('Health score')).toBeInTheDocument();
+    expect(screen.getByText('Est. range')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('[data-operational-value]')).toBeNull();
     // Pulsing skeletons are on screen…
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     // …but no chart has been drawn yet.
@@ -315,10 +319,10 @@ describe('BatteryTab — populated', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
     // Values come from the second (latest) row, not the first.
-    expect(screen.getAllByText('92.40').length).toBeGreaterThan(0);    // health_score, Settings precision
+    expect(screen.getAllByText('92.40%').length).toBeGreaterThan(0);   // health_score, Settings precision
     expect(screen.getAllByText('75.00 kWh').length).toBeGreaterThan(0); // capacity_wh via formatEnergy
-    expect(screen.getAllByText('3.21').length).toBeGreaterThan(0);     // degradation_pct, 2dp
-    expect(screen.getAllByText('480.00').length).toBeGreaterThan(0);   // range_km → km
+    expect(screen.getAllByText('3.21%').length).toBeGreaterThan(0);    // degradation_pct, 2dp
+    expect(screen.getAllByText('480.00 km').length).toBeGreaterThan(0); // range_km → km
     expect(screen.getAllByText('312').length).toBeGreaterThan(0);      // cycle_count int
   });
 
@@ -375,7 +379,19 @@ describe('BatteryTab — populated', () => {
 // ── Null-safety ─────────────────────────────────────────────────────────────
 
 describe('BatteryTab — null safety', () => {
-  it('collapses a latest row full of nulls to safe zeros without crashing', () => {
+  it('keeps measured zero values and the returned row date in the real brief', () => {
+    const { container } = renderTab(makeQuery({ data: analytics([row({
+      date: '2026-03-02', health_score: 0, capacity_wh: 0,
+      degradation_pct: 0, range_km: 0, cycle_count: 0,
+    })]) }));
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(5);
+    expect(container.querySelector('[data-operational-metric="battery-capacity"] [data-operational-value]')).toHaveTextContent('0.00 kWh');
+    expect(screen.getByText(/Returned battery-trend date:/)).toHaveTextContent('2026-03-02');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('keeps a latest row full of nulls unknown without changing chart projection', () => {
     const nulled = row({
       date: '2026-03-01',
       health_score: null as unknown as number,
@@ -386,8 +402,8 @@ describe('BatteryTab — null safety', () => {
     });
     renderTab(makeQuery({ data: analytics([nulled]) }));
 
-    expect(screen.getAllByText('0.00')).toHaveLength(3);     // health, degradation, range → safe(0)
-    expect(screen.getByText('0.00 kWh')).toBeInTheDocument(); // capacity_wh → safe(0)
+    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.queryByText('0.00 kWh')).toBeNull();
 
     // Charts still render (the row exists) and the range projection is 0, not NaN.
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
@@ -406,8 +422,7 @@ describe('BatteryTab — miles preference', () => {
     renderTab(makeQuery({ data: analytics(trend) }));
 
     // 480 km → ~298 mi through the REAL convertDistanceFromSI.
-    expect(screen.getByText('298.26')).toBeInTheDocument();
-    expect(screen.getByText('mi')).toBeInTheDocument();
+    expect(screen.getByText('298.26 mi')).toBeInTheDocument();
 
     // The projected chart value is the converted distance, not the raw km.
     expect(rangeRows()[0].range).toBeCloseTo(298.26, 1);

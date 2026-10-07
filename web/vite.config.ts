@@ -122,6 +122,11 @@ const appVersion = buildIdentity.appVersion
 const gitSha = buildIdentity.gitSha
 
 export default defineConfig({
+  // Catalog consumers use default imports; namespace exports duplicate payloads.
+  json: {
+    namedExports: false,
+    stringify: true,
+  },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
     'import.meta.env.VITE_GIT_SHA': JSON.stringify(gitSha),
@@ -402,9 +407,12 @@ export default defineConfig({
         defaultHandler(warning)
       },
       output: {
+        // Dependency tables repeat chunk URLs; keep audit-significant names only.
+        chunkFileNames: ({ name }) =>
+          /^(vendor-|locale-)/.test(name) ? 'assets/[name]-[hash].js' : 'assets/[hash].js',
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-query': ['@tanstack/react-query'],
+          // Both are cold-shell dependencies; share compression and one request.
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
           'vendor-charts': ['recharts'],
           'vendor-map': ['leaflet', 'react-leaflet'],
           'vendor-motion': ['framer-motion'],

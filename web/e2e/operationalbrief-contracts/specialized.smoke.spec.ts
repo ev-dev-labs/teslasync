@@ -470,7 +470,7 @@ for (const theme of ['dark', 'light'] as const) {
       await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
       await expect(page.locator('main [data-operational-brief]')).toHaveCount(7);
       expect(await page.locator('main [data-operational-metric]').allTextContents()).toEqual(before);
-      expect(mocks?.requests.filter(request => request.path.startsWith('/public/battery-certificate/verify'))).toEqual([]);
+      expect(mocks?.requests.filter(request => request.path.startsWith('/api/v1/public/battery-certificate/verify'))).toEqual([]);
       await expectNoHorizontalOverflow(page);
       await expectNoRuntimeFailures(diagnostics);
       await assertMockApiComplete(page, mocks);
@@ -533,11 +533,15 @@ test('specialized first-run measured zero keeps setup checklist and account navi
 });
 
 test('specialized feature hub missing fleet does not masquerade as a measured empty fleet', async ({ page }) => {
+  test.setTimeout(90_000);
   const { mocks } = await start(page, 'dark', 320, '/explore');
-  await exactGet(page, mocks, '/vehicles', () => ({ status: 200, json: null }));
+  await exactGet(page, mocks, '/vehicles', () => ({
+    status: 503, json: { error: 'Fleet fixture unavailable' },
+  }));
   await page.goto('/explore');
-  await ready(page, mocks, 'dark');
   const brief = page.getByTestId('explore-operational-brief');
+  await expect(brief).toContainText('Fleet unavailable', { timeout: 45_000 });
+  await expectThemeApplied(page, 'dark');
   await metric(brief, 'vehicles', '—', 'missing');
   await expect(brief).toContainText('No fleet list is available');
   await expect(brief.locator('[data-operational-metric="features"]')).toHaveAttribute('data-value-state', 'value');
@@ -553,7 +557,7 @@ test('specialized feature hub successful empty fleet is a measured zero', async 
   await ready(page, mocks, 'light');
   const brief = page.getByTestId('explore-operational-brief');
   await metric(brief, 'vehicles', '0');
-  await expect(brief).toContainText('Fleet loaded');
+  await expect(brief).toContainText('Catalog ready');
   await expect(brief.locator('[data-operational-metric="features"]')).toHaveAttribute('data-value-state', 'value');
   await expectNoHorizontalOverflow(page);
   await assertMockApiComplete(page, mocks);

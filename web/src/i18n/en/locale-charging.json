@@ -26,7 +26,8 @@
     "capped": "Health cap: {{target}}% → {{effective}}%",
     "energyNeeded": "{{kwh}} kWh · ~{{hours}}h · {{tier}}",
     "realized": "Realized savings",
-    "realizedValue": "{{total}} across {{runs}} runs"
+    "realizedValue": "{{total}} across {{runs}} runs",
+    "runToPreview": "Save your settings, then preview the next automatic charge window."
   },
   "chargeDepartureAlignment": {
     "modernization": {
@@ -388,7 +389,11 @@
       "avgPower": "Avg power",
       "topCharger": "Top charger",
       "totalCost": "Total cost",
-      "avgCostPerKwh": "Avg $/kWh"
+      "avgCostPerKwh": "Avg $/kWh",
+      "energySplitAria": "Energy split: {{ac}}% AC, {{dc}}% DC",
+      "noEnergyData": "No energy recorded for these sessions yet.",
+      "freeSessions": "{{count}} sessions",
+      "noData": "No AC/DC charging data"
     },
     "deliveryRate": {
       "title": "Charging delivery rate",
@@ -450,7 +455,8 @@
     "chargerTypes": {
       "supercharger": "Supercharger",
       "dc": "DC fast",
-      "home": "Home / AC"
+      "home": "Home / AC",
+      "unknown": "Unknown"
     },
     "curve": {
       "chargerType": "Charge rate by charger type",
@@ -531,7 +537,13 @@
         "avg20to80": "20→80% avg min",
         "dcSessions": "DC sessions"
       },
-      "noCurve": "No curve data for this session."
+      "noCurve": "No curve data for this session.",
+      "timeToChargeDesc": "How long DC sessions take to reach key SOC thresholds",
+      "brief": {
+        "dcThresholdScope": "Completed DC sessions from the returned history only. Threshold means exclude unfinished sessions; fastest and slowest use recorded energy divided by positive elapsed time."
+      },
+      "summary": "Summary metrics",
+      "resource": "Charging sessions"
     },
     "optimizer": {
       "heatmap": "Charging cost heatmap",
@@ -659,7 +671,12 @@
       },
       "time": "Time",
       "ongoing": "now",
-      "fullResolutionTableOmitted": "Full-resolution data: {{samples}} samples from {{start}} to {{end}}. The screen-reader data table is omitted for very long sessions; every sample is drawn in the chart."
+      "fullResolutionTableOmitted": "Full-resolution data: {{samples}} samples from {{start}} to {{end}}. The screen-reader data table is omitted for very long sessions; every sample is drawn in the chart.",
+      "share": "Share",
+      "chargeCurveAria": "Charging power by battery state of charge",
+      "socOverTimeAria": "Battery level, energy, and range throughout the charging session",
+      "temperatureAria": "Battery, cabin, and ambient temperature throughout the charging session",
+      "voltageCurrentAria": "Charging voltage and current throughout the session"
     },
     "heatmap": {
       "title": "Charging patterns",
@@ -754,7 +771,93 @@
     "ledger": {
       "title": "Charge energy ledger",
       "openFull": "Open the full physics ledger"
-    }
+    },
+    "brief": {
+      "loadedSessions": "Loaded charging sessions",
+      "freeScope": "Recorded zero-cost sessions in the loaded AC/DC history; unknown costs are not counted as free.",
+      "deliveryScope": "Computed from the loaded history, independently of collection and search filters; only usable energy and positive completed-session duration contribute.",
+      "optimizerScope": "Independent optimizer source; its history bounds are not reported. Recommendations and savings are illustrative, not measured outcomes.",
+      "retained": "Retained source measurements",
+      "loading": "Loading source measurements",
+      "missing": "No source measurements",
+      "partial": "Some measurements unavailable",
+      "available": "Source measurements available",
+      "eyebrow": "Charging evidence",
+      "evidenceFor": "Evidence: {{title}}",
+      "sourceDescription": "Recorded measurements from the stated charging source and scope.",
+      "autopilotSavingsScope": "Independent autopilot savings source; its time bounds are not reported and it is not scoped by the planner departure date."
+    },
+    "totalSessions": "Sessions",
+    "totalEnergy": "Energy (kWh)",
+    "totalCost": "Cost",
+    "avgRate": "Avg rate (kW)",
+    "avgDuration": "Avg duration",
+    "avgPower": "Avg power (kW)",
+    "overview": "Overview",
+    "noStatsRange": "No charging sessions in this range",
+    "metric": {
+      "sessions": "Sessions",
+      "energy": "Energy",
+      "cost": "Cost",
+      "power": "Avg power"
+    },
+    "priorPeriod": "prior period: {{start}} – {{end}}",
+    "priorUnavailable": "Prior-period comparison unavailable: {{start}} – {{end}}",
+    "viewAnomalies": "View anomalies",
+    "anomalyCount": "{{count}} {{noun}} in this range",
+    "anomaly_one": "anomaly",
+    "anomaly_other": "anomalies",
+    "byType": "{{home}} home · {{sc}} SC · {{dc}} DC",
+    "freeCount": "{{count}} free",
+    "batteryScore": "Battery score",
+    "mostCommon": "Most common start: {{hour}}",
+    "coll": {
+      "all": "All",
+      "home": "Home",
+      "supercharger": "Supercharger",
+      "dc": "DC fast",
+      "free": "Free",
+      "anomalies": "Anomalies",
+      "notable": "Notable",
+      "tagged": "Tagged"
+    },
+    "results": "results",
+    "avgScore": "avg",
+    "sort": {
+      "date": "Date",
+      "energy": "Energy",
+      "cost": "Cost",
+      "duration": "Duration",
+      "power": "Power"
+    },
+    "stickyBar": {
+      "aria": "Charging summary"
+    },
+    "section": {
+      "filters": "Search and filters",
+      "overview": "Overview",
+      "trend": "Charging over time",
+      "sessions": "All charging sessions"
+    },
+    "filterLabel": {
+      "search": "Search",
+      "collection": "View"
+    },
+    "grid": {
+      "loadedWindow": "Search, collections, and exports cover up to {{count}} loaded sessions in this range."
+    },
+    "overTime": "Charging over time",
+    "allSessions": "All sessions",
+    "searchPlaceholder": "Search charging — try \"charger:home\", \"cost:>5\", \"kwh:>20\", \"Costco\"",
+    "emptyForCollection": "No charging sessions in this view",
+    "emptyTitle": "No charging sessions yet",
+    "emptyMessage": "Charging data will appear here once your vehicle records sessions.",
+    "empty": {
+      "cta": "Reset filters"
+    },
+    "overTimeAria": "Charging over time chart with metric switcher",
+    "overTimeEmpty": "No data for this metric in the selected range",
+    "emptyForCollectionMessage": "Try switching to a different collection or clearing your filters."
   },
   "chargingThermalTax": {
     "title": "Charging thermal tax",
@@ -885,7 +988,8 @@
       "month": "Month",
       "share": "Share (%)",
       "upperBound": "Upper bound",
-      "home": "Home"
+      "home": "Home",
+      "breakdownAria": "Home versus Supercharger charging share"
     },
     "stats": {
       "totalCost": "Total cost",
@@ -897,7 +1001,12 @@
       "gasSavings": "Gas savings $",
       "savingsPercent": "Savings %",
       "vsGasoline": "vs gasoline",
-      "resetRange": "Reset date range"
+      "resetRange": "Reset date range",
+      "per": "per",
+      "galEquiv": "gal equiv",
+      "vs": "vs",
+      "emptyTitle": "No cost data yet",
+      "emptyMessage": "No charging sessions in the selected range. Charge your vehicle or widen the date range to see cost metrics."
     },
     "environment": {
       "title": "Environmental impact",
@@ -908,7 +1017,9 @@
       "gallons": "gallons avoided",
       "metricTons": "metric tons CO₂",
       "dollarsSaved": "$ saved total",
-      "noData": "No data"
+      "noData": "No data",
+      "desc": "By driving electric instead of a gas car, you have avoided the equivalent of",
+      "treesAbsorbing": "trees absorbing carbon for a full year."
     },
     "lifetime": {
       "title": "Lifetime summary",
@@ -965,13 +1076,27 @@
       "noInsights": "No insights available",
       "hour": "Hour",
       "hourlyDistribution": "Hourly charging distribution",
-      "ratePeriod": "Rate period"
+      "ratePeriod": "Rate period",
+      "chartAria": "Charging sessions by hour of day with peak and off-peak coloring"
     },
     "title": "Cost analysis",
     "empty": {
       "title": "No charging data"
     },
-    "subtitle": "Electricity cost trends, gas savings, and charging economics"
+    "subtitle": "Electricity cost trends, gas savings, and charging economics",
+    "billVariance": {
+      "title": "Bill Truth: Measured vs Invoiced",
+      "noData": "No reconciliation data yet",
+      "reconciled": "Reconciled",
+      "review": "Needs review",
+      "missing": "Missing invoices",
+      "sessions": "{{measured}} measured · {{invoiced}} invoiced DC sessions",
+      "energyDelta": "Energy Δ",
+      "costDelta": "Cost Δ",
+      "cabinetLoss": "Cabinet loss",
+      "invoiced": "Invoiced total"
+    },
+    "kpis": "Cost summary metrics"
   },
   "ocpp": {
     "title": "OCPP charge points",
@@ -1038,7 +1163,13 @@
       "updated": "Updated",
       "noData": "No Powershare signals received yet."
     },
-    "time": "Time"
+    "time": "Time",
+    "output": {
+      "sectionLabel": "Powershare output and live session"
+    },
+    "detail": {
+      "sectionLabel": "Powershare runtime trend and stop reason"
+    }
   },
   "tesla_charging": {
     "title": "Tesla charging history",
@@ -1052,7 +1183,8 @@
       "rate": "Rate",
       "invoice": "Invoice",
       "month": "Month",
-      "total": "Total ($)"
+      "total": "Total ($)",
+      "cost_decimal": "Cost"
     },
     "downloadInvoice": "Download invoice",
     "subtitle": "Supercharger & DC fast charging billing records from Tesla",
@@ -1063,7 +1195,9 @@
       "sessions": "Total sessions",
       "energy": "Total energy",
       "spend": "Total spend",
-      "avgCost": "Avg cost/kWh"
+      "avgCost": "Avg cost/kWh",
+      "duration": "Total duration",
+      "sites": "Sites visited"
     },
     "monthlySpending": "Monthly spending",
     "noChartData": "No spending data yet. Click \"Refresh from Tesla\" to sync.",
@@ -1077,7 +1211,14 @@
     "month": "Month",
     "spending": "Spending",
     "summaryScope": "Tesla lifetime summary; duration and sites use all loaded records. The analysis window filters charts and the session table separately.",
-    "sourceUnavailable": "Tesla charging history has not loaded. Retry this source or reconnect to continue."
+    "sourceUnavailable": "Tesla charging history has not loaded. Retry this source or reconnect to continue.",
+    "selectVehicle": "Select vehicle",
+    "kpis": "Charging summary metrics",
+    "monthlySpendingAria": "Monthly Tesla charging spending bar chart",
+    "topLocations": "Top locations",
+    "noLocationData": "No charging locations in this range yet.",
+    "rowLabel": "{{site}}, {{date}}",
+    "unknownSite": "Unknown site"
   },
   "tesla_sessions": {
     "title": "Fleet charging sessions",
@@ -1131,7 +1272,15 @@
     "topLocations": "Top locations by cost",
     "noLocationData": "No location breakdown yet.",
     "summaryScope": "Tesla lifetime summary. The analysis window filters loaded sessions, charts, and operational totals separately.",
-    "sourceUnavailable": "Fleet charging sessions have not loaded. Retry this source or reconnect to continue."
+    "sourceUnavailable": "Fleet charging sessions have not loaded. Retry this source or reconnect to continue.",
+    "oracleSection": "Wait forecast",
+    "monthlyCostAria": "Monthly Tesla charging cost bar chart",
+    "monthlyCostLoading": "Loading monthly charging costs…",
+    "chargerTypeLoading": "Loading charger breakdown…",
+    "mapLoading": "Loading charging locations…",
+    "topLocationsLoading": "Loading top charging locations…",
+    "rowLabel": "{{site}}, {{date}}",
+    "unknownSite": "Unknown site"
   },
   "wait_oracle": {
     "title": "Supercharger wait oracle",
@@ -2014,14 +2163,28 @@
       "placeholder": "e.g. How do I enable energy cost forecasting?",
       "title": "Ask the help assistant"
     },
+    "chargeDepartureAlignment": {
+      "avgMargin": "The realized safety buffer: how much charge was still left when the paired drive finished. A low average does not itself mean anything went wrong — it only describes what happened, not what was intended.",
+      "misaligned": "Share of pairings that tripped at least one heuristic (a tight margin, a very long or already-full dwell, far more energy added than that trip used, or an inconsistent SoC reading). Each is circumstantial on its own."
+    },
+    "chargeInterruption": {
+      "highestRisk": "Ranked by the conservative (2.5th percentile) bound of the risk estimate, not the raw average — so a single unlucky session at a brand-new site can’t outrank a site with a real, well-evidenced pattern.",
+      "overallRisk": "A Beta-Bayesian estimate, not a count of confirmed failures. Every signal used (missing end SoC, a stalled charge rate, a power collapse, an early abort) is circumstantial — each has an innocent explanation too. This number is a probability, weighted by how much evidence exists, never a verdict."
+    },
     "chargerHealth": {
       "detail": "Sites are grouped by place name where one is known, and otherwise by a rounded coordinate cell, so the same physical stall is recognised across visits even when the reported address wobbles slightly. AC and DC are labelled separately because their expected power differs by an order of magnitude.",
       "iconLabel": "More info about site grouping",
       "sites": "Each location is judged only against itself. Comparing a home wall box to a Supercharger would be meaningless, so instead every site establishes its own demonstrated ceiling from its cleanest past sessions, and recent sessions are measured against that. Sessions that sat mostly above the taper threshold are excluded, because a slow charge from 80 % is physics, not a fault."
     },
+    "chargerResilience": {
+      "effectiveSites": "The reciprocal of the energy-weighted Herfindahl-Hirschman Index (1/HHI) — the number of equally-sized sites this portfolio behaves like. Usually smaller than a raw count of distinct locations, because a handful of those were only visited once.",
+      "score": "A composite of three things: how much energy is NOT concentrated in your top site (40%), how often an alternate site has actually been used rather than just being available on paper (30%), and how many effectively-equal sites your charging behaves like (30%)."
+    },
     "charging": {
       "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
-      "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper."
+      "chargeCurveAria": "More info about taper and derating",
+      "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.",
+      "socRangeAria": "More info about state-of-charge range"
     },
     "chargingThermalTax": {
       "detail": "Delivered energy is preferably read from the charger's own cumulative counters; if those are missing or reset mid-session, it falls back to integrating instantaneous power instead — the source used is always disclosed below.",
@@ -2208,6 +2371,9 @@
     "attention": "Attention",
     "charging": {
       "anomalyDescription": "Review the session evidence and charger conditions before the pattern repeats.",
+      "averageDuration": "Average duration",
+      "businessAccessDescription": "This import requires a Tesla business account with Fleet Charging access.",
+      "businessAccessTitle": "Tesla Fleet Charging access required",
       "chargingNow": "Charging",
       "checkingLiveState": "Checking",
       "costDetail": "Recorded charging spend in the active period.",
@@ -2229,11 +2395,14 @@
       "departureReady": "Battery state supports near-term departure; confirm route range before leaving.",
       "departureUnavailable": "Current battery state is required to assess near-term departure readiness.",
       "description": "Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.",
+      "durationDetail": "Mean charging duration for sessions with valid timing data.",
       "efficiency": "Charging efficiency",
       "efficiencyNotMeasured": "Not measured",
       "efficiencyNotMeasuredDetail": "Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.",
       "energyDetail": "Total energy added across the selected sessions.",
       "eyebrow": "Charging posture",
+      "feesDescription": "{{amount}} in idle or congestion fees was recorded in this window.",
+      "feesTitle": "Charging fees need review",
       "fleetNarrative": {
         "accountLimitation": "This source is available only to eligible Tesla business accounts.",
         "causeLimitation": "Session records show observed energy and fees but do not diagnose the cause of charging behavior.",
@@ -2278,12 +2447,20 @@
       },
       "noDataDescription": "Choose a wider analysis window or complete a charging session.",
       "noDataTitle": "No charging activity in this window",
+      "noSessionsDescription": "Adjust the vehicle or date scope, or refresh from Tesla to import recent history.",
+      "noSessionsTitle": "No sessions in this analysis window",
       "notCharging": "Not charging",
+      "partialCostDescription": "{{count}} sessions have no reported cost, so totals are partial.",
+      "partialCostTitle": "Cost coverage is incomplete",
       "provenance": "Derived from live vehicle state, charging-session telemetry, configured cost data, and vehicle-local day boundaries.",
       "reliability": "Charger reliability",
       "reliabilityDetail": "Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.",
       "reliabilityValue": "{{value}}% clear",
+      "returnedSessionsDescription": "The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.",
+      "returnedSessionsProvenance": "Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display.",
+      "returnedSessionsTitle": "Cost, energy, and session evidence in one operating view",
       "sessionsDetail": "Completed and active sessions in the selected period.",
+      "sessionsLoading": "Updating",
       "sessionsSource": "Charging sessions",
       "statusCharging": "Charging now",
       "title": "Cost, reliability, and battery-friendly behavior"
@@ -2318,8 +2495,9 @@
     "reviewDetails": "Review details",
     "status": {
       "awaitingData": "Awaiting data",
-      "loading": "Resolving live state",
-      "review": "Review recommended"
+      "prerequisite": "Prerequisite required",
+      "review": "Review recommended",
+      "unavailable": "Data unavailable"
     }
   },
   "physicsLedger": {
@@ -2330,6 +2508,8 @@
       "honesty": "Force, pack power, and speed before the window end, from signal_log only.",
       "title": "Black box: last 90 s"
     },
+    "briefSource": "Bounded physics ledger",
+    "briefWindow": "{{start}} → {{end}}",
     "charge": {
       "added": "Energy added",
       "dwell": "Complete dwell",
@@ -2393,6 +2573,7 @@
       "untrusted": "Park untrusted"
     },
     "range": {
+      "empty": "No range estimators were recorded in this window.",
       "energy": "Energy remaining",
       "est": "Typical",
       "ideal": "Ideal",
@@ -2647,6 +2828,10 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "teslaOnly": {
+    "estimatesDiffer": "Estimates differ",
+    "noDetectedDifference": "No detected difference in available estimates"
   },
   "tirePressure": {
     "aiTrendReasoning": {
@@ -2906,6 +3091,17 @@
       "description": "Ask Helix to draft a propose-only paint-color image prompt for this vehicle. Helix only sees the redacted vehicle context (model, trim, current exterior color) — never the display name, VIN, license plate, or location. The draft is never applied automatically; review the proposed image prompt here, then use the existing Color setting below to apply the new paint if you'd like to keep it.",
       "noVehicleHint": "Open a vehicle detail page to enable Helix.",
       "title": "Draft a Helix paint preview"
+    },
+    "evidenceBrief": {
+      "eyebrow": "Vehicle evidence",
+      "status": {
+        "initial": "Loading source",
+        "initialFailure": "Source unavailable",
+        "ok": "Source returned",
+        "partial": "Partial source coverage",
+        "stale": "Retained after refresh failure",
+        "unavailable": "No source data"
+      }
     }
   },
   "voiceMode": {

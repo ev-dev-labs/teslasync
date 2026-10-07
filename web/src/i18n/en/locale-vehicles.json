@@ -274,6 +274,28 @@
     "tireSeverity": {
       "hard": "Hard",
       "soft": "Soft"
+    },
+    "brief": {
+      "scope": "{{date}} · {{timezone}}",
+      "drivesBasis": "Recorded drive count for the selected vehicle day, before timeline filters.",
+      "chargesBasis": "Recorded charging-session count for the selected vehicle day, before timeline filters.",
+      "durationBasis": "Recorded driving duration in seconds, converted only for display; missing duration is not zero.",
+      "distanceBasis": "Recorded driving distance in meters, displayed using your saved unit and precision preferences.",
+      "energyAddedBasis": "Recorded charging energy in watt-hours; missing energy remains unknown.",
+      "energyUsedBasis": "Recorded driving energy in watt-hours; missing energy remains unknown.",
+      "status": {
+        "loading": "Loading recorded history",
+        "failed": "History request failed",
+        "stale": "Retained recorded history",
+        "unknown": "Day summary unavailable",
+        "partial": "Some sources unavailable",
+        "ready": "Recorded day summary"
+      },
+      "eyebrow": "Vehicle day history",
+      "description": "Recorded totals for this vehicle day, independent of timeline search and category filters. Missing measurements are not zero; source availability is listed below.",
+      "bounds": "[{{start}}, {{end}}) · end exclusive",
+      "boundsUnknown": "Recorded day bounds unavailable",
+      "provenance": "Recorded drives and charging sessions for the selected vehicle day. Signal transitions and per-source availability remain in Timeline and Sources."
     }
   },
   "digitalTwin": {
@@ -338,10 +360,35 @@
       "asleep": "Asleep",
       "sleeping": "Sleeping",
       "parked": "Parked",
-      "idle": "Idle"
+      "idle": "Idle",
+      "updating": "Updating"
     },
     "loadingSection": "Loading {{section}}",
-    "snapshot": "Latest vehicle signals"
+    "snapshot": "Latest vehicle signals",
+    "brief": {
+      "statusBasis": "Charging and driving take priority, then vehicle state and available streams; offline is the fallback when no source reports activity.",
+      "lockBasis": "Latest reported lock state; an unknown state is not unlocked.",
+      "doorsBasis": "Reported open doors, frunk and trunk. Unreported openings are not assumed closed.",
+      "openingsKnown": "{{count}} of 6 states known",
+      "windowsBasis": "Open and partially open windows are counted together; unreported windows remain unknown.",
+      "windowsKnown": "{{count}} of 4 states known",
+      "sentryBasis": "Latest reported sentry state; inactive differs from unknown.",
+      "portBasis": "Charging takes priority over the reported charge-port door state.",
+      "status": {
+        "loading": "Loading source snapshots",
+        "stale": "Retained source snapshots",
+        "failed": "Source request failed",
+        "unavailable": "No source snapshots",
+        "partial": "Mixed source availability",
+        "ready": "Source snapshots available"
+      },
+      "eyebrow": "Vehicle physical state",
+      "title": "Physical-state summary",
+      "description": "Latest polled security, vehicle-state and charging signals. Source snapshots may differ in time; unknown component states remain unknown.",
+      "timestamp": "Signal timestamp: {{time}}",
+      "timestampUnknown": "Signal timestamp unknown",
+      "provenance": "Security, vehicle-state and charging snapshots; retained values remain visible after a refresh failure."
+    }
   },
   "fleet": {
     "size": "Fleet size",
@@ -465,7 +512,8 @@
       "noTrailing": "No positive trailing stint was reconstructed; parking before the first usable drive remains unknown.",
       "quality": "{{excluded}} drive records and {{gaps}} non-positive gaps were excluded; {{missing}} of {{stints}} stints lack a destination address.",
       "capped": "The API returned the {{limit}}-drive request cap. Because results are newest-first, older drives inside the selected window may be omitted; all results are observed-window descriptions.",
-      "window": "This workspace uses {{count}} server-scoped drives from the selected window, up to the {{limit}}-drive request cap."
+      "window": "This workspace uses {{count}} server-scoped drives from the selected window, up to the {{limit}}-drive request cap.",
+      "briefWindow": "Requested UTC window: {{start}} → {{end}}"
     },
     "states": {
       "loading": "Loading parking analysis"
@@ -485,7 +533,10 @@
       "byWeekday": "By local weekday"
     },
     "startBarAria": "Bar chart of {{series}} patterns",
-    "startBarColTime": "Time"
+    "startBarColTime": "Time",
+    "briefDescription": "Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.",
+    "briefSource": "Drive-derived parking reconstruction",
+    "briefWindow": "{{sample}} · {{start}} → {{end}} · {{timezone}}"
   },
   "physicsLedger": {
     "title": "Physics ledger",
@@ -573,7 +624,8 @@
       "energy": "Energy remaining",
       "spread": "Spread",
       "implied": "Implied",
-      "whPerKm": "Wh/km"
+      "whPerKm": "Wh/km",
+      "empty": "No range estimators were recorded in this window."
     },
     "tires": {
       "title": "Tires",
@@ -604,7 +656,10 @@
     "markers": {
       "title": "Chapter markers",
       "empty": "No drive or charge boundaries in this window."
-    }
+    },
+    "briefTitle": "Returned ledger evidence",
+    "briefSource": "Bounded physics ledger",
+    "briefWindow": "{{start}} → {{end}}"
   },
   "telemetry": {
     "title": "Live telemetry",
@@ -1145,7 +1200,78 @@
     "filterKind": "Filter by finding",
     "allFindings": "All findings",
     "noMatchingFindings": "No findings match this filter.",
-    "returnedEvidence": "Returned evidence"
+    "returnedEvidence": "Returned evidence",
+    "blackBoxSpanLabel": "Selected window span",
+    "blackBoxSourceRowsLabel": "Bounded black-box source rows",
+    "blackBoxChangesLabel": "Observed state, latch or gear changes after the first frame",
+    "blackBoxKnownGearLabel": "Recorded gears",
+    "blackBoxKnownFirmwareLabel": "Recorded firmware",
+    "livingCaution": "Broker connectivity cannot reconstruct events never received; distinguish ingestion delay from missing vehicle history. Queue size is a snapshot, not a count of lost events.",
+    "livingClockOffsetLabel": "Absolute difference between returned last-event clocks",
+    "mqttLabel": "MQTT connection",
+    "replayLabel": "Replay event-time preservation",
+    "replayUnverified": "Replay event-time preservation not confirmed",
+    "historyRowsLabel": "Bounded history rows",
+    "portSamples": "Returned port samples",
+    "portUnknownCurrentLabel": "Samples without current",
+    "portChangesLabel": "Observed charge-state changes",
+    "portDisconnectsLabel": "Disconnected readings",
+    "clocksLagMin": "Smallest stored ingest lag",
+    "dictionarySamplesLabel": "Returned etiquette dwell observations",
+    "dictionarySamples": "Returned etiquette dwell observations: {{count}}",
+    "dictionaryMedianLabel": "Returned dwell median",
+    "dictionaryDifferenceLabel": "Median difference from dictionary",
+    "dictionaryLowerQuartile": "Approximate lower quartile",
+    "dictionaryUpperQuartile": "Approximate upper quartile",
+    "vaultEtiquette": "Supercharger etiquette dwells",
+    "epochCount": "Observed firmware epochs",
+    "epochsBoundsKnownLabel": "Epochs with both FSD counter bounds",
+    "epochsCounterDropsLabel": "Epochs with lower final FSD counter",
+    "epochsDwellKnownLabel": "Epochs with complete-to-unplug value",
+    "epochsLatestChangeLabel": "Latest bounded FSD counter change",
+    "segmentCountLabel": "Classified intervals",
+    "unclassifiedTimeLabel": "Unclassified time",
+    "historicalWords": "Recorded gear / charge-state entries",
+    "sessionWords": "Session-boundary entries",
+    "logbookUnlinkedLabel": "Session-like entries without a positive ID",
+    "metersQuantifiedLabel": "Quantifiable drops",
+    "metersLargestLabel": "Largest measured drop",
+    "metersRelativeLabel": "FSD counter / driving counter",
+    "modeNote": "Mode fields are returned observations. An unknown flag is not false, and a rule is an interpretation boundary, not proof of what the vehicle did between readings. Compare meter drops and firmware changes.",
+    "valet": "Valet",
+    "service": "Service",
+    "transport": "Transport",
+    "modesActiveLabel": "Observed active modes",
+    "modesUnknownLabel": "Unknown mode fields",
+    "modesDropsLabel": "Returned counter drops for comparison",
+    "allowed": "Allowed",
+    "forbidden": "Forbidden",
+    "modesUncertainDropsLabel": "Meter drops with unknown cause",
+    "aliveSignals": "Alive signals",
+    "conflictingSignals": "Contradicting signals",
+    "otherSignals": "Other or silent signals",
+    "nervousShareLabel": "Alive among returned fields",
+    "nervousMatchedLabel": "Non-alive fields with a same-named unknown OS budget",
+    "briefSourceFlags": "Available: {{available}} · row cap reached: {{capped}}",
+    "rangeKnownLabel": "Available estimates",
+    "rangeRelativeLabel": "Spread versus rated",
+    "rangeDisagreementLabel": "Estimator disagreement",
+    "rangeRecentEfficiency": "Recent Wh/km",
+    "unknownAcceptedLabel": "Accepted telemetry",
+    "unknownUncoveredLabel": "Uncovered window",
+    "unknownKindsLabel": "Reported signal budgets",
+    "unknownFlaggedLabel": "Unknown-flagged signal budgets",
+    "budgetBreakdown": "Per-signal coverage budget",
+    "sessionId": "ID",
+    "endRule": "End rule",
+    "vaultDrives": "Drive boundaries",
+    "vaultCharges": "Charge boundaries",
+    "briefSource": "Bounded exclusive physics report",
+    "hubSignalsLabel": "Non-alive returned signals",
+    "briefTitle": "{{title}} evidence summary",
+    "briefLimits": "Returned observations only; missing readings and row caps do not establish lifetime completeness.",
+    "briefCoverageUnknown": "Source coverage metadata unavailable; returned counts cannot establish completeness.",
+    "briefFetchedAt": "Report received {{at}}"
   },
   "utilization": {
     "title": "Utilization",
@@ -1275,7 +1401,9 @@
       "fieldCoverageTitle": "Metric field coverage",
       "fieldCoverageValue": "{{usable}} usable · {{excluded}} excluded",
       "capped": "The request returned {{limit}} rows. Results describe that capped ranged response; additional matching drives may exist.",
-      "uncapped": "The ranged response returned {{count}} rows below the {{limit}}-drive API limit."
+      "uncapped": "The ranged response returned {{count}} rows below the {{limit}}-drive API limit.",
+      "observedDaysUnit": "Source duration expressed in exact days; canonical raw operand is seconds.",
+      "stepsLabel": "Methodology notes"
     },
     "loading": "Loading utilization analysis",
     "trend": {
@@ -1300,7 +1428,11 @@
       "subtitle": "UTC weekday active-day rate and average distance on days with eligible drives.",
       "aria": "Active-day rate bars and average active-day distance by UTC weekday",
       "empty": "No eligible drives are available for a weekday profile."
-    }
+    },
+    "briefSource": "Returned drive history and configured energy price",
+    "briefDescription": "Drive-derived utilization over the observed window; energy-only cost is an estimate, not a billed total.",
+    "briefWindow": "Requested {{start}} → {{end}}; metrics use the observed window",
+    "costInput": "Source estimate is cost per kilometre before display-unit conversion."
   },
   "vehicleAccess": {
     "title": "Vehicle access",
@@ -1314,7 +1446,8 @@
       "empty": "No drivers found",
       "removeTitle": "Remove driver",
       "removeMessage": "Are you sure you want to remove this driver's access? This action cannot be undone.",
-      "removeConfirm": "Remove"
+      "removeConfirm": "Remove",
+      "resource": "Drivers"
     },
     "invitations": {
       "status": "Status",
@@ -1330,11 +1463,26 @@
       "empty": "No invitations found",
       "revokeTitle": "Revoke invitation",
       "revokeMessage": "Are you sure you want to revoke this invitation? The invite link will no longer work.",
-      "revokeConfirm": "Revoke"
+      "revokeConfirm": "Revoke",
+      "resource": "Invitations"
     },
     "subtitle": "Manage drivers and share invitations",
     "refresh": "Refresh",
-    "snapshot": "Latest access records"
+    "snapshot": "Latest access records",
+    "kpis": "Access summary",
+    "briefDescription": "Driver and invitation records are independent snapshots. Expiring soon means pending invitations expiring within the next seven days.",
+    "kpi": {
+      "drivers": "Drivers",
+      "invitations": "Invitations",
+      "pending": "Pending",
+      "expiringSoon": "Expiring soon"
+    },
+    "status": {
+      "pending": "pending",
+      "accepted": "accepted",
+      "revoked": "revoked",
+      "expired": "expired"
+    }
   },
   "vehicleManagement": {
     "pageTitle": "Vehicle management",
@@ -1451,7 +1599,12 @@
       "notProvided": "Not provided",
       "odometerNote": "Odometer limits are shown exactly as Tesla reports them because this response does not identify a unit.",
       "emptyTitle": "No warranty coverage returned",
-      "emptyDetail": "Tesla returned a response, but it did not include active, upcoming, or expired coverage records."
+      "emptyDetail": "Tesla returned a response, but it did not include active, upcoming, or expired coverage records.",
+      "summaryTitle": "Returned warranty coverage",
+      "summaryDescription": "Counts describe the returned coverage records, not a complete warranty history. Individual coverage terms and raw source details remain below.",
+      "summaryStatus": "Warranty response returned",
+      "summaryScope": "Active, upcoming and expired groups as reported by Tesla; no response observation time supplied.",
+      "summarySource": "Tesla warranty response"
     },
     "subscriptions": {
       "title": "Subscription eligibility",
@@ -1793,7 +1946,19 @@
       "quickStats": "Quick stats",
       "systems": "Vehicle systems",
       "summaryUnknown": "Source time unknown",
-      "summaryProvenance": "{{source}} snapshot"
+      "summaryProvenance": "{{source}} snapshot",
+      "batteryReadouts": "Returned battery readouts",
+      "batteryReadoutContext": "Battery and rated range from the supplied vehicle-state snapshot; the retained gauge and bar plot keep their original chart semantics.",
+      "batterySnapshotStatus": "Vehicle-state snapshot returned",
+      "batterySnapshotScope": "No per-reading timestamp is supplied for these two readouts.",
+      "batterySnapshotSource": "Supplied vehicle-state response",
+      "chargingSnapshotAt": "Reported at {{at}}",
+      "chargingSnapshotSource": "Source: {{source}} · session: {{session}}",
+      "chargingRangeRateContext": "Source is meters of range added per hour, not vehicle motion. Raw display operand is meters per second.",
+      "rangeAdded": "Range added",
+      "chargingSnapshotTitle": "Returned charging measurements",
+      "chargingSnapshotDescription": "Independent charging snapshot; source refresh warnings remain in the surrounding panel. Range-addition rate is not vehicle speed.",
+      "chargingSnapshotStatus": "Snapshot returned"
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",
@@ -1843,9 +2008,73 @@
       "noHeartbeat": "No trip-meter heartbeat has been reported.",
       "noPark": "No park evidence has been reported.",
       "parkError": "Park evidence could not be loaded.",
-      "snapshot": "Live cockpit readings"
+      "snapshot": "Live cockpit readings",
+      "title": "Tesla physics cockpit",
+      "gear": "Gear",
+      "charge": "Charge state",
+      "latch": "Charge port",
+      "portOpen": "Open",
+      "battery": "Battery",
+      "pack": "Pack",
+      "packContext": "Pack voltage (V) and current (A) are independently reported; either may be unknown.",
+      "packCurrent": "Pack current",
+      "energy": "Energy remaining",
+      "trip": "Trip meter",
+      "speed": "Speed",
+      "subtitle": "Live gear, charge state, port latch, BMS, and trip meters.",
+      "certificate": "Session certificate",
+      "briefDescription": "Independently reported cockpit measurements; a missing field is unknown, not zero.",
+      "scopeUnknown": "Latest returned fields; observation time is not supplied",
+      "heartbeatBrief": "Trip-meter evidence",
+      "valet": "Valet",
+      "service": "Service",
+      "fsdMeter": "FSD trip meter",
+      "fsdUnknown": "FSD trip meter unknown",
+      "tick": "Trip-meter tick",
+      "lastTick": "Last tick {{when}}",
+      "noTick": "No trip-meter tick in the recent window",
+      "firmware": "Firmware",
+      "park": "Park truth",
+      "parkBrief": "Park accounting evidence",
+      "parkScope": "Reported modes count only when the source confirms Park",
+      "confirmedPark": "Confirmed park",
+      "notPark": "Not confirmed park",
+      "neutral": "Neutral is rolling",
+      "sentry": "Sentry",
+      "sentryIgnored": "Sentry reported, not counted",
+      "overheat": "Cabin overheat",
+      "overheatIgnored": "Cabin overheat reported, not counted",
+      "precondition": "Preconditioning",
+      "preconditionIgnored": "Preconditioning reported, not counted"
     },
-    "summarySnapshot": "Current verified fleet readings"
+    "summarySnapshot": "Current verified fleet readings",
+    "evidenceBrief": {
+      "eyebrow": "Vehicle evidence",
+      "status": {
+        "initial": "Loading source",
+        "ok": "Source returned",
+        "stale": "Retained after refresh failure",
+        "partial": "Partial source coverage",
+        "unavailable": "No source data",
+        "initialFailure": "Source unavailable"
+      },
+      "unbounded": "Unbounded"
+    },
+    "briefSummaryDescription": "Registered vehicle count and independently verified battery, range, and charge-state readings. Missing coverage is not zero.",
+    "briefSummaryScope": "Current field coverage differs by measurement; no common observation timestamp is supplied",
+    "chargingLiveState": "Charging / live state",
+    "batteryUnknown": "Not reported",
+    "statusUnavailable": "Live state could not be retrieved for any vehicle.",
+    "statusPartialTitle": "Breakdown covers {{resolved}} of {{total}} vehicles",
+    "statusPartialFailed": "{{failed}} vehicle state request(s) failed. Unresolved vehicles are excluded from the breakdown rather than counted as offline.",
+    "statusPartialMissing": "{{missing}} vehicle(s) have not reported a snapshot yet and are excluded from the breakdown rather than counted as offline.",
+    "statusUnknown": "Unknown",
+    "layout": {
+      "noSectionRecords": "No fleet records for {{section}}."
+    },
+    "virtualizedFleetLabel": "Vehicle fleet",
+    "software": "Software",
+    "unlocked": "Unlocked"
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -2947,6 +3176,7 @@
     },
     "vehicles": {
       "batteryCoverageNote": "Based on {{covered}} of {{total}} vehicles with a current battery reading.",
+      "coverageNote": "Based on {{covered}} of {{total}} vehicles with a current reading.",
       "description": "Live connectivity, departure readiness, utilization, software consistency, and service attention are consolidated before vehicle-level detail.",
       "evidenceGapDescription": "Refresh vehicles without verified battery or software readings before making fleet-wide decisions.",
       "evidenceGapTitle": "Current fleet evidence is incomplete",
@@ -2999,6 +3229,7 @@
       "softwareMixedTitle": "{{count}} software versions are active",
       "softwarePosture": "Software posture",
       "softwareVersionCount": "{{count}} versions",
+      "stateRequestFailed": "Live state could not be retrieved for {{count}} vehicle(s).",
       "title": "Availability and readiness across the fleet",
       "totalDetail": "Vehicles currently registered in this TeslaSync workspace.",
       "utilization": "Live utilization",
@@ -3172,6 +3403,7 @@
     "ageHours": "{{value}}h",
     "ageMinutes": "{{value}}m",
     "ageSeconds": "{{value}}s",
+    "briefDescription": "Reconstructed signals belong to the resolved instant; tracked fields and history span come from the independent timeline source.",
     "category": {
       "battery": "Battery & charge",
       "climate": "Climate",

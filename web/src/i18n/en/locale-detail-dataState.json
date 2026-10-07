@@ -39,6 +39,9 @@
     "unsupported": {
       "title": "Feature not supported",
       "message": "This feature is not enabled by the current deployment configuration."
+    },
+    "offline": {
+      "title": "Offline"
     }
   }
 }

@@ -427,6 +427,44 @@
       }
     },
     "liveSignals": {
+      "refresh": "Refresh live snapshot",
+      "kpis": "Snapshot summary",
+      "breakdowns": "Signal breakdowns",
+      "kpi": {
+        "total": "Total signals",
+        "live": "Live · L1",
+        "liveHint": "Fresh in-process",
+        "stale": "Stale",
+        "staleHint": "Past 2-min window",
+        "legacy": "Legacy · L2",
+        "legacyHint": "Redis, unknown age",
+        "numeric": "Numeric fields",
+        "freshest": "Freshest",
+        "freshestHint": "Newest value age"
+      },
+      "brief": {
+        "totalContext": "Fields in the returned snapshot, before table filters",
+        "numericContext": "Fields classified as numeric in the returned snapshot",
+        "description": "Counts describe the returned live snapshot, not historical coverage. Source freshness and value age remain independent of poll success.",
+        "coverage": "Snapshot only; no historical query window or completeness guarantee is supplied.",
+        "title": "Snapshot metrics",
+        "noScope": "No vehicle selected",
+        "vehicleScope": "Vehicle {{id}} · returned snapshot",
+        "observedAt": "Snapshot assembled: {{time}}",
+        "timeUnknown": "Snapshot assembly time is not supplied",
+        "provenance": "Live signal endpoint · layered L1 / L2 / stale state",
+        "retainedContext": "The last returned snapshot remains visible while polling recovers.",
+        "status": {
+          "noVehicle": "Select a vehicle",
+          "loading": "Loading snapshot",
+          "error": "Snapshot unavailable",
+          "empty": "Empty snapshot",
+          "ready": "Snapshot loaded",
+          "retained": "Retained snapshot",
+          "retainedEmpty": "Retained empty snapshot",
+          "missing": "No snapshot supplied"
+        }
+      },
       "cols": {
         "name": "Signal",
         "value": "Value",
@@ -2688,6 +2726,16 @@
       "description": "Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.",
       "emptyHint": "Waiting for a valid log window…",
       "title": "Helix log/trace summary"
+    },
+    "brief": {
+      "connectionContext": "Current SSE connection and client pause state",
+      "counterReset": "Clear buffer also resets received and drop counters.",
+      "coverage": "The rolling buffer is capacity-limited; it is not durable replay or complete server history.",
+      "description": "Client stream counters, the current rolling buffer and server filter state. These are not server-wide totals or a complete historical log window.",
+      "freshness": "Connection state does not establish log-event freshness",
+      "provenance": "API server SSE log stream · client memory",
+      "scope": "Current buffer · received and drops since mount or last clear",
+      "title": "Log stream summary"
     },
     "controls": {
       "autoscroll": "Auto-scroll",

@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { Badge, DataTable, Select, Text } from '@/components/ui';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
+import { Badge, DataTable, Select } from '@/components/ui';
 
 import type { ClockReading } from '@/types/teslaPhysics';
 import { Evidence, RawRows } from './Evidence';
@@ -54,34 +53,27 @@ export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage
   ];
   return <>
     <Evidence title={physics.title} honesty={clock?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.eventTime', 'Event time')} value={preciseTime(latest?.event_time)} color="cyan" />
-        <MetricCard label={t('teslaOnly.ingestTime', 'Ingest time')} value={preciseTime(latest?.ingest_time)} color="amber" />
-        <MetricCard label={t('teslaOnly.displayTime', 'Display time')} value={preciseTime(latest?.display_time)} color="purple" />
-      </Grid>
-      <Grid cols={{ default: 1, md: 2, xl: 4 }} gap={3}>
-        <MetricCard label={t('teslaOnly.clocksLagMedian', 'Median stored ingest lag')} value={medianLag == null ? unknown(t) : `${fmtNumber(medianLag)} s`} color="cyan" />
-        <MetricCard label={t('teslaOnly.clocksLagMax', 'Largest stored ingest lag')} value={seconds(maximum(lag), t)} color="amber" />
-        <MetricCard label={t('teslaOnly.clocksGapMax', 'Largest returned event interval')} value={seconds(maximum(gaps), t)} color="purple" />
-        <MetricCard label={t('teslaOnly.clocksGapsFive', 'Intervals over five minutes')} value={gaps.length ? longGaps : unknown(t)} color="green" />
-      </Grid>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          [t('teslaOnly.clocksShortGaps', 'At most 60 s'), shortGaps],
-          [t('teslaOnly.clocksMediumGaps', 'Over 60 s through 5 min'), mediumGaps],
-          [t('teslaOnly.clocksLongGaps', 'Over 5 min'), longGaps],
-          [t('teslaOnly.clocksMissingGaps', 'Unknown interval'), rows.length - gaps.length],
-        ].map(([label, count]) => <div key={label} className="rounded-lg border border-[var(--glass-border)] p-3">
-          <Text as="p" variant="bodySm">{label}: {count}</Text>
-        </div>)}
-      </div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-clocks-summary" available={clock != null}
+        description={t('teslaOnly.clocksAnalysis', 'Lag is ingest minus event time for paired timestamps; negative values can reflect clock disagreement. Intervals are gaps between returned events, not proven outages. Display time is generated on read. Compare unknown OS and car kept living.')}
+        metrics={[
+          { metricId: 'text', occurrenceId: 'event', label: t('teslaOnly.eventTime', 'Event time'), rawValue: latest?.event_time == null ? null : preciseTime(latest.event_time), context: latest?.event_time },
+          { metricId: 'text', occurrenceId: 'ingest', label: t('teslaOnly.ingestTime', 'Ingest time'), rawValue: latest?.ingest_time == null ? null : preciseTime(latest.ingest_time), context: latest?.ingest_time },
+          { metricId: 'text', occurrenceId: 'display', label: t('teslaOnly.displayTime', 'Display time'), rawValue: latest?.display_time == null ? null : preciseTime(latest.display_time), context: latest?.display_time },
+          { metricId: 'duration', occurrenceId: 'median-lag', label: t('teslaOnly.clocksLagMedian', 'Median stored ingest lag'), rawValue: medianLag, display: { formatter: raw => ({ value: `${fmtNumber(raw)} s`, unit: '' }) } },
+          { metricId: 'duration', occurrenceId: 'max-lag', label: t('teslaOnly.clocksLagMax', 'Largest stored ingest lag'), rawValue: maximum(lag), display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'duration', occurrenceId: 'min-lag', label: t('teslaOnly.clocksLagMin', 'Smallest stored ingest lag'), rawValue: lag[0], display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) }, context: t('teslaOnly.clocksLagRange', 'Stored lag range: {{from}} → {{to}}', { from: seconds(lag[0], t), to: seconds(maximum(lag), t) }) },
+          { metricId: 'duration', occurrenceId: 'max-gap', label: t('teslaOnly.clocksGapMax', 'Largest returned event interval'), rawValue: maximum(gaps), display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'over-five', label: t('teslaOnly.clocksGapsFive', 'Intervals over five minutes'), rawValue: gaps.length ? longGaps : null },
+          { metricId: 'count', occurrenceId: 'short', label: t('teslaOnly.clocksShortGaps', 'At most 60 s'), rawValue: clock ? shortGaps : null, context: `${t('teslaOnly.clocksShortGaps', 'At most 60 s')}: ${clock ? shortGaps : unknown(t)}` },
+          { metricId: 'count', occurrenceId: 'medium', label: t('teslaOnly.clocksMediumGaps', 'Over 60 s through 5 min'), rawValue: clock ? mediumGaps : null, context: `${t('teslaOnly.clocksMediumGaps', 'Over 60 s through 5 min')}: ${clock ? mediumGaps : unknown(t)}` },
+          { metricId: 'count', occurrenceId: 'long', label: t('teslaOnly.clocksLongGaps', 'Over 5 min'), rawValue: clock ? longGaps : null, context: `${t('teslaOnly.clocksLongGaps', 'Over 5 min')}: ${clock ? longGaps : unknown(t)}` },
+          { metricId: 'count', occurrenceId: 'unknown', label: t('teslaOnly.clocksMissingGaps', 'Unknown interval'), rawValue: clock ? rows.length - gaps.length : null, context: `${t('teslaOnly.clocksMissingGaps', 'Unknown interval')}: ${clock ? rows.length - gaps.length : unknown(t)}` },
+          { metricId: 'count', occurrenceId: 'paired', label: t('teslaOnly.ingestTime', 'Ingest time'), rawValue: clock ? lag.length : null, display: { countTotal: rows.length }, context: t('teslaOnly.workbench.ingestCoverage', 'Stored ingest timestamps: {{known}} / {{total}}', { known: lag.length, total: rows.length }) },
+          { metricId: 'count', occurrenceId: 'known-gaps', label: t('teslaOnly.elapsedSinceEvent', 'Elapsed since prior event'), rawValue: clock ? gaps.length : null, display: { countTotal: rows.length }, context: t('teslaOnly.clocksKnownGaps', 'Known event intervals: {{count}} / {{total}}', { count: gaps.length, total: rows.length }) },
+        ]} />
       <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.workbench.ingestCoverage', 'Stored ingest timestamps: {{known}} / {{total}}', { known: lag.length, total: rows.length })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.clocksKnownGaps', 'Known event intervals: {{count}} / {{total}}', { count: gaps.length, total: rows.length })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.clocksLagRange', 'Stored lag range: {{from}} → {{to}}', { from: seconds(lag[0], t), to: seconds(maximum(lag), t) })}</Badge>
         {latest?.unknown && <Badge variant="warning" size="sm">{t('teslaOnly.workbench.latestFlag', 'Latest reading flagged unknown')}</Badge>}
       </div>
-      <Text as="p" variant="caption">{t('teslaOnly.clocksAnalysis', 'Lag is ingest minus event time for paired timestamps; negative values can reflect clock disagreement. Intervals are gaps between returned events, not proven outages. Display time is generated on read. Compare unknown OS and car kept living.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.clocksRecent', 'Latest six returned samples (second precision)')}>
       <DataTable tableId="physics:clocks-recent" data={rows.slice(-6).reverse()} columns={columns} pagination={pagination}

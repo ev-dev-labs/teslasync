@@ -1,0 +1,78 @@
+{
+  "status": "LIVE_SOURCE_APPLIED; SOURCE_QUIESCENT_RELEASE",
+  "scope": "Statistics lease only; not whole-app completion or runtime acceptance",
+  "baseline": {"pageLines":391,"pageSha256":"a0ee427cefdfabf55ae3159fcb62059ee37e853d440c72f68a7308271b9d0dfc"},
+  "ownedFiles": [
+    {"path":"web/src/features/analytics/pages/StatisticsPage.tsx","lines":276,"sha256":"bf92879fcaf3ded36f5dd22236f0988de4299e99430b7ccbf70c60f41eb4d57d"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/BatteryStatistics.tsx","lines":63,"sha256":"db1236b70bd7db67b13bf8c3a379ec5a4ac26dbb6afe553ec3b3b6c38931ae84"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/index.ts","lines":5,"sha256":"cc76e091558e069579c8dac990f95a92e545d987227feee7d8ed79f0a27237aa"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/MileageStatistics.tsx","lines":49,"sha256":"731238ffcd528c4bacbd98574c6f3beea2e66d76ba93f0f84cc8f0d38dfae9bd"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/PeriodStatistics.tsx","lines":87,"sha256":"9f74923057da35c6994d24252b96749b52a3392653534427f05951b1beea49b0"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/StatisticsChartPlacement.tsx","lines":13,"sha256":"5f0f48831abf54398bb5c0967d96fbdcc1fc471f047d91c3e63ad050b503ca04"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/StatisticsPreservation.test.ts","lines":66,"sha256":"539c2ad8012384ee7844a1f2d59b2dba7ab9f351c21e6a411e5ffdfe2064028d"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/StatisticsSource.test.tsx","lines":70,"sha256":"6c742e0ffe0bfe56148cd747c9732d5943a517e81279edfa0e78d5305aff93e2"},
+    {"path":"web/src/features/analytics/components/statistics-modernization/StatisticsSource.tsx","lines":37,"sha256":"3e75b3f0fd3afa15acdd6339a5099dcf43dcf3e0ace3411d6181099f0ad545f1"}
+  ],
+  "sourcePreservation": {
+    "fullMapping": "preservation-map.json",
+    "all16MetricCardsPlusGauge": "normalized JSX text equal to baseline; 17/17",
+    "bothChartSubtrees": "normalized PieChart and BarChart JSX text equal to baseline; 2/2",
+    "exactNormalizedBusinessInitializers": ["stateData","compData","fromKm","whPerKmToDisplay","statsQuery","avgDriveDistance","STATE_COLORS"],
+    "missingOriginalTranslationArguments": [],
+    "originalPageTestSha256": "b1b4c96b387d2e1658494613d8706d110b1167ae0de9d4eda83031597b6f66fb",
+    "originalPageTestChanged": false,
+    "shippingLinesBefore":391,
+    "shippingLinesAfter":530,
+    "testsExcluded":true,
+    "topLevelSectionsBefore":3,
+    "topLevelSectionsAfter":3,
+    "contentGroupsBeforeAndAfter":["totals","averages","battery","state","mileage","fleet"],
+    "afterPanelShells":{"LayoutCard":3,"ChartContainer":2}
+  },
+  "rawVerificationReceipts": [
+    "All 9 owned TS/TSX files: parseDiagnostics=0",
+    "EXACT metric/gauge AST text normalized: baseline=17 current=17 equal=true",
+    "EXACT chart subtrees normalized: baseline=2 current=2 equal=true",
+    "Missing original translation argument contracts: []",
+    "stateData exact normalized initializer preserved=true",
+    "compData exact normalized initializer preserved=true",
+    "fromKm exact normalized initializer preserved=true",
+    "whPerKmToDisplay exact normalized initializer preserved=true",
+    "statsQuery exact normalized initializer preserved=true",
+    "avgDriveDistance exact normalized initializer preserved=true",
+    "STATE_COLORS exact normalized initializer preserved=true",
+    "diff-check exit=0",
+    "grep -cE style=\\{\\{: all seven shipping files 0",
+    "grep -cE <button\\b|<input\\b|<textarea\\b|<select\\b|<table\\b: all seven shipping files 0",
+    "grep -cE direct recharts|react-leaflet|framer-motion imports: all seven shipping files 0",
+    "grep -cE vehicleId=: all seven shipping files 0",
+    "grep -cE GlassPanel|ChartContainer baseline: 14; after: page 5, placement wrapper comment 1, other shipping files 0",
+    "grep -cE LayoutCard|ChartContainer after: page 5, BatteryStatistics 3, MileageStatistics 3, PeriodStatistics 3, placement wrapper comment 1, other shipping files 0"
+  ],
+  "routeEvidence": [
+    "router.go:3851 r.Get(\"/analytics/fleet\", analyticsHandler.Fleet)",
+    "router.go:3876 r.Get(\"/analytics/battery-health\", batteryDegradationHandler.Health)",
+    "router.go:3892 r.Get(\"/analytics/period-stats\", periodStatsHandler.Get)",
+    "router.go:4199 r.Route(\"/mileage\") / :4202 r.Get(\"/stats\", mileageHandler.Stats)",
+    "router.go:4228 r.Route(\"/vehicle-states\") / :4231 r.Get(\"/summary\", vehicleStatesHandler.Summary)"
+  ],
+  "limitations": [
+    "NOTRUN npx tsc --noEmit: parent serialized semantic verification",
+    "NOTRUN existing or new tests: parent serialized semantic/runtime verification",
+    "NOTRUN lint/build/project-wide preservation guard",
+    "NOTRUN browser/visual/a11y/responsive/native checks",
+    "Syntax parse and normalized source comparison are not semantic/runtime proof",
+    "Retained specialist MetricCard/LinearGauge; generic formatter equivalence unproved",
+    "Existing inline period useQuery retained: no equivalent hook found; API/hook files outside lease",
+    "Inherited state hook deprecation comment is stale; current backend route exists",
+    "Legacy lifetime subtitle retained as source content, not asserted as provenance/completeness",
+    "Literal grep panel counts include imports/comments/alternative shells; AST/source map supplies actual content coverage"
+  ],
+  "correctedInspectionIssues": [
+    "First PowerShell audit had malformed quote syntax, then rerun successfully with real grep",
+    "First translation comparison treated a trailing argument comma as a difference; argument-AST comparison found no missing original contracts",
+    "Compact retained-error patch applied; subsequent unmatched no-op page hunk failed. Page inspected and corrected separately; final parse/readback performed."
+  ],
+  "englishAdditions": "english-additions.json; three exact keys/texts awaiting parent catalog integration",
+  "release": "No further owned source writes or running commands. Parent may acquire stable-source verification baton. No mutation/vehicle command, install, browser, commit, push or deploy executed."
+}

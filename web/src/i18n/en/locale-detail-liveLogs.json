@@ -1,5 +1,15 @@
 {
   "liveLogs": {
+    "brief": {
+      "connectionContext": "Current SSE connection and client pause state",
+      "counterReset": "Clear buffer also resets received and drop counters.",
+      "description": "Client stream counters, the current rolling buffer and server filter state. These are not server-wide totals or a complete historical log window.",
+      "scope": "Current buffer · received and drops since mount or last clear",
+      "title": "Log stream summary",
+      "freshness": "Connection state does not establish log-event freshness",
+      "provenance": "API server SSE log stream · client memory",
+      "coverage": "The rolling buffer is capacity-limited; it is not durable replay or complete server history."
+    },
     "title": "Live logs",
     "subtitle": "Stream the API server's structured log events in real time. Filter by severity and an optional regular expression. The connection is dropped when you navigate away.",
     "filters": {

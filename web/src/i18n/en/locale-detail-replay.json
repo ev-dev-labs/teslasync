@@ -56,7 +56,8 @@
     "backToDrive": "Back to drive",
     "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
     "map": {
-      "noPositions": "No position data available for this drive"
+      "noPositions": "No position data available for this drive",
+      "section": "Route map and live position"
     },
     "currentStats": "Current position stats",
     "stat": {
@@ -73,7 +74,8 @@
       "speed": "Speed",
       "power": "Power",
       "noData": "No telemetry data available",
-      "aria": "Trip replay speed and power timeline area chart"
+      "aria": "Trip replay speed and power timeline area chart",
+      "section": "Trip elevation and speed timelines"
     },
     "summary": {
       "title": "Drive summary",
@@ -85,6 +87,7 @@
       "maxSpeed": "Max speed",
       "avgSpeed": "Avg speed",
       "battery": "Battery"
-    }
+    },
+    "refresh": "Refresh replay data"
   }
 }

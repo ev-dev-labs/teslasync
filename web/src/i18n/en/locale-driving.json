@@ -160,7 +160,10 @@
       "unsupportedDrives": "Unsupported-route drives",
       "unsupportedRoutes": "Unsupported routes",
       "volumeIngredient": "Supported-drive volume ingredient",
-      "weekIngredient": "Active-week ingredient"
+      "weekIngredient": "Active-week ingredient",
+      "briefDescription": "Loaded-drive accounting and recurrence are descriptive evidence. Support indices are not confidence scores or proof of continuous recording.",
+      "briefScope": "Loaded completed-drive population; source timestamps and denominators are shown separately.",
+      "timestampSource": "Source epoch milliseconds, rendered in the selected display timezone."
     },
     "states": {
       "capReached": "Exactly 1,000 rows were returned. Findings cover the returned latest history and may not represent lifetime driving.",
@@ -204,7 +207,10 @@
       "windowValue": "{{start}}–{{end}}"
     },
     "colLabel": "Category",
-    "profileTitle": "Arrival reliability profile"
+    "profileTitle": "Arrival reliability profile",
+    "brief": {
+      "windowQuantities": "Route-window timing quantities"
+    }
   },
   "coldStart": {
     "title": "Cold start cost",
@@ -312,6 +318,10 @@
       "coverage": "{{unclassified}} usable drives could not be classified, including the first observed drive when its preceding park falls outside the window.",
       "capped": "The selected observed window reached the {{limit}}-drive API cap; older drives inside the range may not be represented.",
       "window": "This analysis uses {{count}} drives returned for the selected observed window (up to {{limit}}). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify."
+    },
+    "brief": {
+      "penalty": "Cold minus warm consumption",
+      "cohortTitle": "Distance-weighted cohort consumption"
     }
   },
   "departure": {
@@ -733,10 +743,14 @@
         "supportIndex": "Weighted origin support index",
         "title": "Descriptive shape and separate support ingredients",
         "volumeIngredient": "Outgoing-volume ingredient",
-        "weekIngredient": "Active-week ingredient"
+        "weekIngredient": "Active-week ingredient",
+        "effectiveSource": "Entropy-derived effective successors can be fractional; this is not a counted event population. The existing rounded display is retained."
       },
       "supportFormula": "Origin support index = 100 × (0.40 × outgoing volume + 0.25 × active days + 0.20 × active weeks + 0.15 × recurrence). The displayed aggregate is weighted by accepted outgoing transitions.",
-      "title": "Evidence quality, accounting, and continuity"
+      "title": "Evidence quality, accounting, and continuity",
+      "briefDescription": "Loaded visits and accepted adjacent pairs define this evidence. Entropy and weighted support are descriptive, not predicted destinations or continuous observation.",
+      "briefScope": "Loaded completed visits and accepted transition population; source timestamps, configuration and denominators are shown separately.",
+      "timestampSource": "Source epoch milliseconds, rendered in the selected display timezone."
     },
     "states": {
       "capReached": "Exactly 1,000 rows were returned. Findings cover only the latest returned history and may be capped.",
@@ -1179,6 +1193,15 @@
       "elevationMissing": "Grade and friction-brake estimates require recorded elevation; this telemetry source does not provide it.",
       "hvacMissing": "Tesla reports HVAC on/off state, not power in watts. Accessory energy and the complete unexplained residual cannot be calculated from that state.",
       "openFull": "Open the full physics ledger"
+    },
+    "heroGauges": "Drive summary",
+    "brief": {
+      "batteryEndpoints": "Recorded battery endpoints: {{start}}% → {{end}}%; an absent endpoint remains unknown.",
+      "odometerSource": "Odometer endpoints use {{source}} evidence; missing endpoints are not zero.",
+      "batteryRateBasis": "Recorded battery percentage-point change divided by positive measured distance, per 100 {{unit}}.",
+      "endBattery": "Recorded end battery",
+      "latestOdometer": "Latest observed odometer",
+      "endOdometer": "Recorded end odometer"
     }
   },
   "driveDna": {
@@ -1405,7 +1428,14 @@
     "socElevationAria": "State of charge and elevation over elapsed drive time",
     "socElevationTitle": "SoC & elevation",
     "speedPowerAria": "Speed and motor power over elapsed drive time",
-    "speedPowerTitle": "Speed & power"
+    "speedPowerTitle": "Speed & power",
+    "brief": {
+      "cadence": "Telemetry cadence",
+      "cadenceScope": "Returned drive telemetry; valid timestamps define the observed span and adjacent-emission intervals.",
+      "coverageDenominator": "Availability is measured against {{count}} valid timestamp rows, not expected emissions.",
+      "signalCoverage": "Signal coverage",
+      "coverageScope": "Per-signal availability in returned telemetry; missing readings are not zero measurements."
+    }
   },
   "drives": {
     "analysis": "Trends and highlights",
@@ -1566,7 +1596,14 @@
     "fsdMissing": {
       "title": "Per-drive FSD evidence is unavailable",
       "message": "This response has no per-drive FSD attribution. Drive history remains available; FSD filters and sorting stay disabled."
-    }
+    },
+    "brief": {
+      "overviewScope": "Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals.",
+      "measuredEnergyScope": "{{measured}} of {{total}} returned drives supply energy; cost uses the configured rate, not invoices."
+    },
+    "driveTime": "Drive time",
+    "overview": "Overview",
+    "noStatsRange": "No drives in this range"
   },
   "drivetrain": {
     "temperatures": "Temperature details",
@@ -1714,6 +1751,25 @@
       "statorRer": "Rear-right",
       "outside": "Outside",
       "torque": "Torque (Nm)"
+    },
+    "brief": {
+      "powerScope": "Loaded recent drives, not a complete selected-range power aggregate.",
+      "liveReadings": "Returned motor readings"
+    }
+  },
+  "driving": {
+    "brief": {
+      "loading": "Loading source",
+      "retained": "Retained source",
+      "unavailable": "Source unavailable",
+      "available": "Source available",
+      "eyebrow": "Driving evidence",
+      "observationUnknown": "Source observation time not provided",
+      "completeScope": "Complete analysis window",
+      "subsetScope": "Returned subset",
+      "unknownScope": "Coverage unknown",
+      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
+      "returned": "Returned evidence"
     }
   },
   "drivingSecondary": {
@@ -1963,7 +2019,32 @@
     },
     "brakeUnknown": "Brake unknown",
     "pedalLoading": "Loading pedal telemetry…",
-    "pedalResource": "Pedal telemetry"
+    "pedalResource": "Pedal telemetry",
+    "brief": {
+      "cruiseScope": "Current speed requires a trusted vehicle-state observation. Cruise set speed and follow distance are latest independent historical observations; their continuous freshness is not established.",
+      "followScope": "Reported follow-distance enum; its suffix is a bar setting, not a physical distance.",
+      "cruiseTitle": "Speed and cruise settings",
+      "coachConsumption": "Vehicle coaching consumption",
+      "liveQuantities": "Reported powertrain quantities",
+      "rideTotals": "Recorded ride totals",
+      "accelerationAxes": "Reported acceleration axes"
+    },
+    "autopilotNoData": "No cruise / autopilot telemetry received yet",
+    "grok": {
+      "drivePower": "Drive power",
+      "regenPower": "Regen harvest",
+      "torque": "Axle torque",
+      "combinedG": "Combined g",
+      "honesty": "Interpreted from live motor, pedal, and accelerometer signals. Not Autopilot, not the chassis controller, and not a 0–60 claim.",
+      "rearShare": "Rear axle share",
+      "rearShareValue": "{{value}}% of |torque|",
+      "rearShareUnknown": "AWD split unknown — both axles have not reported torque yet.",
+      "thermalUnknown": "Motor thermal envelope not reported yet.",
+      "cockpit": "Open Tesla physics cockpit",
+      "find": {
+        "cornering": "Lateral accelerometer {{g}} g. That is chassis load, not a grip percentage."
+      }
+    }
   },
   "effTarget": {
     "title": "Efficiency target",
@@ -2093,6 +2174,11 @@
       "weeks": "Completed weeks",
       "share": "Share (%)",
       "gap": "Target gap"
+    },
+    "brief": {
+      "completedTitle": "Completed-week consumption",
+      "completedScope": "Latest completed eligible week; target grading and streaks exclude the active week.",
+      "activeTitle": "Active-week observations"
     }
   },
   "efficiency": {
@@ -2327,6 +2413,15 @@
       "percentValue": "{{value}}%",
       "repeatShare": "Repeat-arrival share",
       "definition": "The first chronological arrival in each destination cluster is new; later arrivals to that same cluster are repeat."
+    },
+    "brief": {
+      "coverage": "Arrival coverage",
+      "coverageScope": "Returned drive endpoints; eligible arrivals and timestamp proxies are separate evidence.",
+      "coverageDenominator": "{{count}} returned rows define the eligible-arrival denominator.",
+      "cadenceTitle": "Observed discovery intervals",
+      "cadenceScope": "Intervals between first destination discoveries in returned history, not all vehicle travel.",
+      "behaviorTitle": "Destination arrival counts",
+      "behaviorScope": "Non-base destination arrivals in returned history; first arrivals are excluded from return-arrival counts."
     }
   },
   "fsd": {
@@ -2344,7 +2439,25 @@
         "unknown": "Unknown drives",
         "ambiguous": "Ambiguous drives"
       },
-      "chaptersHint": "One row per route and firmware chapter. Route drives is the route total; chapter drives is the count for that firmware chapter."
+      "chaptersHint": "One row per route and firmware chapter. Route drives is the route total; chapter drives is the count for that firmware chapter.",
+      "honesty": "Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed.",
+      "stitched": "Stitched reported FSD",
+      "stitchedUnavailable": "No high-confidence or estimated counter change in this period",
+      "stitchedHint": "High and estimated only; resets add no kilometres",
+      "ambiguous": "Ambiguous FSD",
+      "ambiguousHint": "Counter increased across overlapping drives",
+      "unknown": "Unknown drive distance",
+      "unknownHint": "{{count}} drives with no measured FSD",
+      "resets": "Counter resets",
+      "resetsHint": "Each reset is a break in the stitch, not travelled FSD",
+      "section": "FSD observatory",
+      "title": "FSD observatory",
+      "timeline": "Stitched journal",
+      "truncated": "Oldest drives were omitted so every counter reset still appears.",
+      "timelineEmpty": "No completed drives in this period to journal.",
+      "commute": "Commute stories",
+      "commuteHint": "Repeated routes told across firmware. Unknown chapters stay unknown.",
+      "commuteEmpty": "Not enough repeated routes yet for a commute story."
     },
     "title": "FSD insights",
     "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
@@ -2512,6 +2625,92 @@
       "shareUnavailable": "The two counters do not cover the same provable span in this period. Their standalone distances remain available, but dividing them would be misleading, so usage share is not reported.",
       "provenance": "Only signal-history rows carrying a proven canonical normalization version are used. Legacy rows with unknown unit provenance are excluded rather than guessed or silently rescaled.",
       "limits": "No intervention, disengagement, safety, or autonomy-quality metric is available from this telemetry, and a day’s distance cannot be tied to a specific drive."
+    },
+    "notMeasured": "Not measured",
+    "brief": {
+      "observatoryMetrics": "Reset-safe counter quantities",
+      "periodQuantities": "Current and previous period quantities"
+    },
+    "drive": {
+      "confidence": {
+        "high": "High",
+        "estimated": "Estimated",
+        "ambiguous": "Ambiguous",
+        "unknown": "Unknown"
+      }
+    },
+    "comparison": {
+      "distance": "Reported FSD distance",
+      "noDistanceBaseline": "Periods lack comparable trusted coverage",
+      "distanceDelta": "{{delta}} vs previous",
+      "share": "Share of observed driving",
+      "noShareBaseline": "Share periods lack comparable trusted coverage",
+      "shareDelta": "{{delta}} percentage points",
+      "previous": "Previous FSD distance",
+      "notLoaded": "Previous period not loaded",
+      "title": "Change from the previous period",
+      "subtitle": "The immediately preceding window uses the same duration and timezone."
+    },
+    "attribution": {
+      "attributed": "High-confidence attributed",
+      "estimated": "Estimated",
+      "ambiguous": "Ambiguous between drives",
+      "unattributed": "Outside a known drive",
+      "title": "Attribution and counter resets",
+      "subtitle": "Observed FSD counter distance is separated from drive distance that lacks synchronized evidence.",
+      "unknown": "Drive distance unknown"
+    },
+    "resets": {
+      "title": "Counter-reset timeline",
+      "changed": "Counter moved from {{previous}} to {{current}}.",
+      "none": "No trusted counter reset was observed in this period."
+    },
+    "drives": {
+      "date": "Drive",
+      "unknownStart": "Unknown start",
+      "unknownEnd": "Unknown end",
+      "distance": "Reported FSD",
+      "share": "Drive share",
+      "confidence": "Confidence",
+      "firmware": "Firmware",
+      "open": "Open drive {{id}}",
+      "title": "Contributing drives",
+      "subtitle": "Completed drives fully inside this period with positive reported supervised-driving distance.",
+      "exportCsv": "CSV",
+      "exportJson": "JSON",
+      "empty": "No drive has positive attributable FSD distance in this period."
+    },
+    "groups": {
+      "group": "Group",
+      "drives": "Drives",
+      "distance": "FSD distance",
+      "share": "Share",
+      "empty": "Not enough high-confidence drives for this comparison.",
+      "title": "Route, time, and firmware comparisons",
+      "subtitle": "Only high-confidence drives contribute; repeated routes require at least two drives.",
+      "routes": "Repeated routes",
+      "time": "Time of day",
+      "firmware": "Firmware version"
+    },
+    "efficiency": {
+      "route": "Route",
+      "heavy": "FSD-heavy",
+      "low": "Low-FSD",
+      "difference": "Difference",
+      "title": "Same-route efficiency comparison",
+      "disclaimer": "This is a same-route correlation, not proof that supervised driving caused an efficiency difference.",
+      "empty": "No repeated route has at least two FSD-heavy and two low-FSD high-confidence drives."
+    },
+    "commute": {
+      "route": "Commute",
+      "thisMonth": "This month",
+      "unknown": "Unknown",
+      "lastMonth": "Last month",
+      "change": "Change",
+      "unknownDays": "Unknown days",
+      "title": "Commute supervised identity",
+      "honesty": "Same route and time-of-day window. Month-over-month supervised share is a trip-meter correlation, not proof FSD improved.",
+      "empty": "No repeated commute window has enough high-confidence drives this month."
     }
   },
   "journeyFragmentation": {
@@ -2684,6 +2883,12 @@
       "note": "Charts and directories describe returned records at the selected continuity threshold.",
       "waiting": "No returned drive rows are available for this vehicle yet.",
       "title": "Report context"
+    },
+    "brief": {
+      "elapsedTitle": "Linked journey timing",
+      "intensityTitle": "Whole-journey intensity",
+      "structureTitle": "Observed chain quantities",
+      "shortDistance": "{{distance}} · {{share}} of observed distance"
     }
   },
   "logbook": {
@@ -2714,7 +2919,16 @@
     "applySuggestions": "Apply suggestions",
     "noDrives": "No drives in this period yet.",
     "browseDrives": "Browse drives",
-    "noneInFilter": "No drives in this category yet."
+    "noneInFilter": "No drives in this category yet.",
+    "brief": {
+      "categoryDistance": "Distance in this category within the selected period.",
+      "categoryAmount": "{{category}} amount",
+      "rateBasis": "Existing reimbursement rate × drive distance; rates remain stored per kilometre.",
+      "categoryCount": "{{category}} drives",
+      "countBasis": "Classified drives in the selected period, before the table category filter.",
+      "description": "Category distances, reimbursement amounts, and drive counts share the selected period; table filters do not change these totals.",
+      "provenance": "Returned vehicle drives, local classifications, and saved reimbursement rates; complete server-range coverage is not supplied."
+    }
   },
   "originConcentration": {
     "colOrigin": "Origin",
@@ -2938,7 +3152,11 @@
       "notice": "Use this page only to inspect returned historical arrival evidence; it does not predict whether a future trip will have enough range."
     },
     "colLabel": "Category",
-    "percentileTitle": "Range buffer percentile"
+    "percentileTitle": "Range buffer percentile",
+    "brief": {
+      "arrivalsDescription": "Observed arrivals in returned drive history; the planning threshold is descriptive, not a guarantee.",
+      "provenance": "Returned vehicle drives in the selected window, capped at 1,000 rows; vehicle-local time and frozen analysis clock."
+    }
   },
   "regen": {
     "title": "Regenerative braking",
@@ -3136,6 +3354,11 @@
       "month": "Month",
       "regenKwh": "Regen kWh",
       "drives": "Drives"
+    },
+    "brief": {
+      "allReturned": "Selected all-time scope; detailed rows remain capped.",
+      "provenance": "Complete recovery aggregate and independently returned capped drive detail.",
+      "partialSources": "Independent sources partly available"
     }
   },
   "rhythm": {
@@ -3264,6 +3487,12 @@
       "timezone": "24-hour departures grouped in {{timezone}}",
       "aria": "Drive starts by local weekday and hour; strongest slot {{slot}}",
       "cell": "{{day}} {{hour}}:00 · {{count}} drives"
+    },
+    "brief": {
+      "departureUnit": "Minutes after local midnight; circular 24-hour median, not elapsed duration.",
+      "coverage": "Observed-history coverage",
+      "coverageScope": "Included non-future starts define the observed span; the selected date scope may be wider.",
+      "calendarDenominator": "{{count}} selected local calendar days define the rate denominator."
     }
   },
   "routeEfficiency": {
@@ -3300,7 +3529,11 @@
     "selectVehicle": "Select a vehicle to see route efficiency",
     "kpisAria": "Route efficiency summary metrics",
     "analysisAria": "Route efficiency analysis",
-    "comparisonAria": "Per-route best, average, and worst efficiency comparison bar chart"
+    "comparisonAria": "Per-route best, average, and worst efficiency comparison bar chart",
+    "brief": {
+      "description": "All returned routes contribute to these totals; average consumption remains the unweighted mean of route averages.",
+      "provenance": "Returned route-efficiency aggregate before pagination; completeness is not declared by the source."
+    }
   },
   "seasonalEfficiency": {
     "title": "Seasonal efficiency",
@@ -3527,6 +3760,62 @@
       "scope": "The result describes the returned latest history in {{timeZone}}. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
       "disclosure": "R² is an in-sample descriptive fit statistic and is null for constant observations. Residual bands and support bands describe this returned sample only; they are not a promise about an unobserved interval.",
       "accounting": "Returned: {{returned}} · included: {{included}} · excluded: {{excluded}} · fit: {{fit}}"
+    },
+    "brief": {
+      "provenance": "Returned vehicle history; descriptive local-calendar fit, not a forecast.",
+      "coveragePending": "Returned-history coverage has not resolved."
+    }
+  },
+  "segments": {
+    "title": "Ghost Racing",
+    "ghost": {
+      "tie": "Dead heat",
+      "racerA": "Attempt A",
+      "racerB": "Attempt B",
+      "winner": "Winner",
+      "tieHelp": "Identical recorded times.",
+      "margin": "Won by {{margin}}",
+      "title": "Ghost Race",
+      "subtitle": "Pick two attempts above (A and B) to race them lap-over-lap on the same route.",
+      "pick": "Choose an A and a B attempt from the leaderboard to start the race.",
+      "elapsed": "Elapsed time along the route",
+      "elapsedAria": "Line chart of elapsed time versus distance for both attempts; the lower line is ahead",
+      "gap": "Time gap (A vs B)",
+      "gapAria": "Area chart of the A-versus-B time gap along the route; below the zero line means A is ahead",
+      "gapHelp": "Below the line, Attempt A is ahead; above it, Attempt B leads.",
+      "noData": "Not enough shared telemetry to align these two attempts."
+    },
+    "selectVehicle": "Select a vehicle to find its route segments.",
+    "subtitle": "Race your most-repeated routes against your own personal best",
+    "list": {
+      "title": "Route segments",
+      "empty": "No segments yet — drive the same start-to-end route twice and it becomes a raceable segment."
+    },
+    "board": {
+      "title": "Leaderboard",
+      "orderBy": "Order by",
+      "byTime": "By time",
+      "byEfficiency": "By efficiency",
+      "empty": "No ranked attempts on this segment yet."
+    },
+    "brief": {
+      "description": "Recorded attempt durations and the original winner result for the selected segment.",
+      "provenance": "Selected A/B ghost comparison response; charts retain independent telemetry samples and recorded margin."
+    },
+    "card": {
+      "aria": "Open leaderboard for {{name}}",
+      "attempts": "{{n}} runs",
+      "distance": "Distance",
+      "best": "Best",
+      "eff": "Best eff."
+    },
+    "table": {
+      "date": "Date",
+      "pr": "PR",
+      "time": "Time",
+      "eff": "Wh/km",
+      "delta": "Δ to best",
+      "race": "Race"
     }
   },
   "speedProfile": {
@@ -3562,7 +3851,12 @@
     "noBuckets": "No speed buckets recorded for this window",
     "noScatter": "Not enough drive data for the efficiency scatter yet",
     "noInsight": "Efficiency insight appears once optimal-speed data is available",
-    "browseDrives": "Browse drives"
+    "browseDrives": "Browse drives",
+    "brief": {
+      "driveCoverageUnknown": "Drive sample coverage is unavailable independently of the speed profile.",
+      "description": "Recorded speed statistics and distribution readings; drive evidence is a separately returned sample.",
+      "provenance": "Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage."
+    }
   },
   "speedSweetSpot": {
     "colBand": "Speed band",
@@ -3704,6 +3998,10 @@
       "qualification": "Qualification",
       "month": "Month and sample",
       "sample": "Sample"
+    },
+    "brief": {
+      "provenance": "Distance-weighted eligible returned drives; sample floor and row cap are unchanged.",
+      "methodDescription": "Returned, eligible, and excluded counts reconcile the same selected-window sample."
     }
   },
   "tripPlanner": {
@@ -3785,11 +4083,39 @@
       "drivingTime": "Driving",
       "chargingTime": "Charging",
       "energy": "Energy",
-      "cost": "Est. cost"
+      "cost": "Est. cost",
+      "title": "Trip summary"
     },
     "weather": {
       "title": "Weather impact",
       "factor": "Efficiency factor: {{factor}}×"
+    },
+    "brief": {
+      "noPlan": "No computed route yet",
+      "scopeUnknown": "Last computed plan; submitted route labels were not returned",
+      "description": "Route estimates from the current plan, not recorded travel or a billing quote.",
+      "provenance": "Deterministic trip-plan response using the submitted route, battery level, and preferences.",
+      "refreshing": "Recomputing; showing the last computed plan",
+      "costDescription": "Estimated EV cost and gasoline equivalent from the current trip-plan comparison; original price and vehicle-economy assumptions are retained."
+    },
+    "notFeasible": "This trip may not be feasible with the current battery level and available charging options. Consider starting with a higher SOC or adjusting your preferences.",
+    "insights": {
+      "title": "Trip Insights",
+      "empty": "Plan a trip to see feasibility, estimates, and weather impact.",
+      "feasible": "Trip is feasible",
+      "infeasible": "Trip may not be feasible",
+      "feasibleNote": "Reaches the destination above your minimum arrival SOC.",
+      "infeasibleNote": "Start with a higher SOC or add charging headroom.",
+      "noWeather": "No significant weather impact expected."
+    },
+    "disclaimer": "This is an estimate based on straight-line distance (×1.3 driving factor) and your vehicle's historical efficiency. Actual results may vary due to route geometry, traffic, elevation, and conditions.",
+    "cost": {
+      "detail": "{{gallons}} gal avoided · {{pct}} cheaper · @ ${{price}}/gal, {{mpg}} mpg",
+      "ev": "EV",
+      "gas": "Gas",
+      "saved": "Saved",
+      "title": "Trip Cost vs Gas",
+      "empty": "Plan a trip to compare EV charging cost against gasoline."
     }
   },
   "whatIf": {
@@ -3827,7 +4153,12 @@
     "compClimate": "Climate",
     "compOther": "Other",
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
-    "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery."
+    "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery.",
+    "brief": {
+      "description": "Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.",
+      "noDrive": "No selected recorded drive",
+      "provenance": "Selected drive and telemetry, recomputed locally with the current simulation knobs."
+    }
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -5162,9 +5493,11 @@
       "title": "Elevation profile"
     },
     "map": {
-      "noPositions": "No position data available for this drive"
+      "noPositions": "No position data available for this drive",
+      "section": "Route map and live position"
     },
     "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
+    "refresh": "Refresh replay data",
     "stat": {
       "battery": "Battery",
       "elevation": "Elevation",
@@ -5188,6 +5521,7 @@
       "aria": "Trip replay speed and power timeline area chart",
       "noData": "No telemetry data available",
       "power": "Power",
+      "section": "Trip elevation and speed timelines",
       "speed": "Speed",
       "subtitle": "Click to seek replay position",
       "title": "Speed & power timeline"
@@ -5587,6 +5921,27 @@
     "skip": "Skip tour"
   },
   "trips": {
+    "brief": {
+      "detail": {
+        "efficiencyReason": "Efficiency requires a positive trip distance."
+      },
+      "replay": {
+        "batteryContext": "Start {{start}}% → end {{end}}%",
+        "description": "Stored drive totals are independent of the GPS trail. Elevation gain and loss use only consecutive positions with measured elevation.",
+        "eyebrow": "Trip replay",
+        "missingScope": "Drive record unavailable; event bounds unknown.",
+        "provenance": "Stored drive summary and the loaded, telemetry-enriched GPS trail.",
+        "scope": "Drive #{{id}} · {{start}} – {{end}}"
+      },
+      "status": {
+        "initial": "Loading source",
+        "initialFailure": "Source failed",
+        "ok": "Source loaded",
+        "partial": "Partial source",
+        "stale": "Retained source",
+        "unavailable": "Source unavailable"
+      }
+    },
     "detail": {
       "aiSuggestName": {
         "badge": "Helix",

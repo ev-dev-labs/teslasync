@@ -34,6 +34,151 @@ function nested(object: unknown, key: string): unknown {
 }
 
 describe('catalog splitter helpers', () => {
+  it.each([
+    ['widget.forecast.summaryScope', 'Vehicle {{id}} · returned inferred forecast; the response does not establish continuous recording coverage.'],
+    ['widget.chargingTelemetry.summaryScope', 'Vehicle {{id}} · source timestamp {{timestamp}}; a returned snapshot does not establish continuous coverage.'],
+    ['widget.vampireDrain.averagePopulation', 'Aggregate event count: {{count}} · observed hours: {{hours}}. The separately loaded event feed is limited to 30 rows.'],
+    ['widget.chargingOptimizer.hourSource', 'Returned wall-clock hour, not an elapsed duration or timezone-shifted instant.'],
+    ['widget.driveScoreGauge.summaryScope', 'Vehicle {{id}} · weekly scoring response for {{count}} drives; recording completeness is not established.'],
+    ['widget.driveScoreGauge.consumptionScope', 'Fleet-wide · requested seven-day analytics window; the response does not establish complete recording.'],
+    ['widget.projectedRange.dailySource', 'Returned daily distance rate normalized from kilometers/day to meters/day, not a vehicle speed.'],
+    ['widget.odometer.summaryScope', 'Vehicle {{id}} · returned driving statistics; exact history bounds and completeness are not supplied.'],
+    ['widget.climateSummaryScope', 'Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.'],
+    ['widget.drivetrainHealth.summaryScope', 'Vehicle {{id}} · returned health and motor snapshots; these readings do not establish continuous recording or a mechanical diagnosis.'],
+  ])('retains the independent dashboard source qualifier %s', (key, fallback) => {
+    expect(nested(catalog, key)).toBe(fallback);
+  });
+
+  it.each([
+    ['geofences.aiSuggest.selectHint', 'Choose a visited location to propose a zone; review the draft before saving.', 'geofences.aiSuggest.pickHint'],
+    ['safetySettings.listing.cardsSubtitle', 'Each tile shows the current value on this install and links to its configuration documentation.', 'safetySettings.listing.subtitle'],
+    ['safetySettings.cardsPageSubtitle', 'Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to review its configuration documentation.', 'safetySettings.pageSubtitle'],
+    ['tour.openLauncher', 'Show tours', 'tour.restart'],
+    ['operations.charging.sessionsLoading', 'Updating', 'operations.status.loading'],
+    ['operations.charging.returnedSessionsTitle', 'Cost, energy, and session evidence in one operating view', 'operations.charging.title'],
+    ['operations.charging.returnedSessionsDescription', 'The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.', 'operations.charging.description'],
+    ['operations.charging.returnedSessionsProvenance', 'Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display.', 'operations.charging.provenance'],
+  ])('resolves source-specific copy %s without rewriting the existing caller label', (key, fallback, originalKey) => {
+    expect(nested(catalog, key)).toBe(fallback);
+    expect(nested(catalog, originalKey)).toEqual(expect.any(String));
+  });
+
+  it.each([
+    ['arrivalReliability.quality.briefDescription', 'Loaded-drive accounting and recurrence are descriptive evidence. Support indices are not confidence scores or proof of continuous recording.'],
+    ['destinationTransitions.quality.briefDescription', 'Loaded visits and accepted adjacent pairs define this evidence. Entropy and weighted support are descriptive, not predicted destinations or continuous observation.'],
+    ['destinationTransitions.quality.support.effectiveSource', 'Entropy-derived effective successors can be fractional; this is not a counted event population. The existing rounded display is retained.'],
+    ['widget.summaryEyebrow', 'Dashboard source summary'],
+    ['widget.batteryCells.summaryScope', 'Vehicle {{id}} · returned cell snapshot; recording coverage is unknown.'],
+    ['widget.batteryHealthAnalytics.cyclesSource', 'Returned cycle measurement; the existing whole-number display is retained.'],
+    ['widget.maintenance.paceSource', 'Source distance pace normalized to meters per day, not vehicle speed.'],
+    ['widget.safety.summaryScope', 'Vehicle {{id}} · returned snapshots in the last 30 days, compared with the preceding 30 days; loaded history is not complete event coverage.'],
+  ])('resolves parent source operands and scope qualifier %s', (key, fallback) => {
+    expect(nested(catalog, key)).toBe(fallback);
+  });
+
+  it.each([
+    ['kpis.observedSampleAria', 'kpis.observedSample'],
+    ['kpis.overnightSampleAria', 'kpis.overnightSample'],
+    ['kpis.longestSampleAria', 'kpis.longestSample'],
+    ['kpis.locationQualityAria', 'kpis.locationQuality'],
+  ])('retains parking literal scalar labels beside %s', (alias, original) => {
+    const parking: Json = catalog.parking;
+    expect(parking[alias]).toEqual(expect.any(String));
+    expect(parking[original]).toEqual(expect.any(String));
+    expect(parking.kpis).toBe('Parking summary metrics');
+  });
+
+  it.each([
+    ['analytics.brief.sectionScope', 'Returned aggregates for the selected fleet range; exact recording coverage is unknown.'],
+    ['analytics.brief.sectionProvenance', 'The fleet response does not supply an observation timestamp for these aggregates.'],
+    ['analytics.brief.temperatureSamples', 'Inside samples: {{inside}}; outside samples: {{outside}}. A zero sample count does not establish a measured temperature.'],
+    ['analytics.brief.batteryDescription', 'Measurements describe the last returned battery-trend row, not an inferred current vehicle state.'],
+    ['analytics.brief.costDescription', 'Minimum, average, median and maximum returned charging costs; missing prices are not free charging.'],
+    ['share.publicBrief.limitations', 'Only measurements included by the owner are shown. An omitted measurement is not a measured zero.'],
+    ['share.publicBrief.eventDate', 'The report date describes the event, not data freshness.'],
+    ['share.publicBrief.costDetail', 'Recorded cost uses the source cost_currency exactly as shared; no workspace currency or currency conversion is applied.'],
+    ['share.publicBrief.sessionEfficiencyDetail', 'Existing report calculation: (energy_added_wh / 1000) / (rounded SoC change / 100). SoC change is rounded to one decimal; the existing kWh/% label is retained.'],
+  ])('resolves reboot-intaked source and public privacy fallback %s', (key, fallback) => {
+    expect(nested(catalog, key)).toBe(fallback);
+  });
+
+  it.each([
+    ['automations.emptyCta', 'Create automation', 'automations.empty'],
+    ['automations.noMatchCta', 'Reset filters', 'automations.noMatch'],
+    ['help.charging.socRangeAria', 'More info about state-of-charge range', 'help.charging.socRange'],
+    ['help.charging.chargeCurveAria', 'More info about taper and derating', 'help.charging.chargeCurve'],
+    ['tesla_charging.monthlySpendingAria', 'Monthly Tesla charging spending bar chart', 'tesla_charging.monthlySpending'],
+    ['tesla_sessions.monthlyCostAria', 'Monthly Tesla charging cost bar chart', 'tesla_sessions.monthlyCost'],
+    ['tesla_sessions.monthlyCostLoading', 'Loading monthly charging costs…', 'tesla_sessions.monthlyCost'],
+    ['tesla_sessions.chargerTypeLoading', 'Loading charger breakdown…', 'tesla_sessions.chargerType'],
+    ['tesla_sessions.mapLoading', 'Loading charging locations…', 'tesla_sessions.map'],
+    ['tesla_sessions.topLocationsLoading', 'Loading top charging locations…', 'tesla_sessions.topLocations'],
+    ['locations.byVisitsAria', 'Bar chart of the most-visited locations', 'locations.byVisits'],
+    ['locations.byTimeAria', 'Bar chart of locations by hours spent', 'locations.byTime'],
+    ['alertFatigue.chartAria', 'Bar chart of notification rules ranked by their computed noise score', 'alertFatigue.chart'],
+    ['alertFatigue.hoursAria', 'Bar chart of notification volume by hour of day', 'alertFatigue.hours'],
+    ['energyLedger.chartAria', 'Stacked bar chart of monthly energy charged against energy driven and lost to standby, with the unexplained residual overlaid', 'energyLedger.chart'],
+    ['rangeSim.histogramAria', 'Histogram of simulated arrival battery percentages for the planned trip', 'rangeSim.histogram'],
+    ['charging.overTimeAria', 'Charging over time chart with metric switcher', 'charging.overTime'],
+    ['charging.overTimeEmpty', 'No data for this metric in the selected range', 'charging.overTime'],
+    ['charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.', 'charging.emptyForCollection'],
+    ['ownership.tariff.brief.submittedScope', 'Submitted replay: vehicle #{{vehicle}}, {{days}} days, shiftable {{shift}}%, switching fee {{fee}} minor units, tariff IDs {{plans}}', 'ownership.tariff.brief.scope'],
+    ['ownership.tariff.brief.currencyUnknown', 'Replay currency not supplied; the tariff editor currency is not a result denomination.', 'ownership.tariff.brief.scope'],
+    ['ownership.reconcile.invoices.exportScope', 'Exports include all loaded statements, not the server total, with original fields and ISO currency minor amounts, regardless of table search or visible columns.', 'ownership.reconcile.invoices.title'],
+    ['comparison.monthlyDistanceAria', 'Monthly distance comparison line chart between two vehicles', 'comparison.monthlyDistance'],
+    ['comparison.drivesPerMonthAria', 'Drives per month bar chart comparing two vehicles', 'comparison.drivesPerMonth'],
+    ['mileageBudget.chartAria', 'Cumulative driven distance against the pro-rata allowance, by month', 'mileageBudget.chart'],
+  ])('resolves %s without replacing its existing scalar label', (key, fallback, labelKey) => {
+    expect(nested(catalog, key)).toBe(fallback);
+    expect(nested(catalog, labelKey)).toEqual(expect.any(String));
+  });
+
+  it.each([
+    ['vehicleSystems.brief.coverage', 'Returned source only; completeness is not established.'],
+    ['vehicleSystems.brief.availabilityDenominator', 'Counts are evaluated against {{count}} unique timestamp-valid rows.'],
+    ['vehicleSystems.brief.notLive', 'Not a live-state observation'],
+    ['maintenance.itemProgress', '{{name}} service progress'],
+    ['media.title', 'Media player'],
+    ['media.status.paused', 'Paused'],
+    ['media.col.volume', 'Volume'],
+    ['safety.brief.counterSource', 'Counters from the reported safety snapshot; source field names and the existing distance display are retained without inferring units from identifiers.'],
+    ['softwareUpdates.cadence.aria', 'Software updates per calendar month'],
+    ['softwareUpdates.breakdown.noKnownStatus', 'No categorized update statuses to show'],
+    ['tireDifferentialDrift.brief.scope', 'Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings.'],
+    ['help.tireDifferentialDrift.iconLabel', 'More info about this inference'],
+  ])('resolves released vehicle-system fallback %s', (key, fallback) => {
+    expect(nested(catalog, key)).toBe(fallback);
+  });
+
+  it.each([
+    ['common.loading', 'Loading...'],
+    ['common.delete', 'Delete'],
+  ])('preserves the shared label %s when page fallbacks differ', (key, label) => {
+    expect(nested(catalog, key)).toBe(label);
+  });
+
+  it.each([
+    ['liveLogs.brief.scope', 'Current buffer · received and drops since mount or last clear'],
+    ['liveLogs.brief.provenance', 'API server SSE log stream · client memory'],
+    ['liveLogs.brief.counterReset', 'Clear buffer also resets received and drop counters.'],
+    ['liveLogs.brief.coverage', 'The rolling buffer is capacity-limited; it is not durable replay or complete server history.'],
+    ['admin.liveSignals.kpi.live', 'Live · L1'],
+    ['admin.liveSignals.kpi.legacy', 'Legacy · L2'],
+    ['admin.liveSignals.brief.vehicleScope', 'Vehicle {{id}} · returned snapshot'],
+    ['admin.liveSignals.brief.provenance', 'Live signal endpoint · layered L1 / L2 / stale state'],
+    ['admin.liveSignals.brief.status.retainedEmpty', 'Retained empty snapshot'],
+    ['admin.liveSignals.brief.timeUnknown', 'Snapshot assembly time is not supplied'],
+  ])('resolves released admin source fallback %s without handoff encoding artifacts', (key, fallback) => {
+    expect(nested(catalog, key)).toBe(fallback);
+  });
+
+  it.each([
+    ['liveLogs.status.connecting', 'Connecting…'],
+    ['admin.liveSignals.noVehicle.message', 'Pick a vehicle from the dropdown above to start streaming its live signal cache.'],
+  ])('preserves the existing canonical admin label %s', (key, label) => {
+    expect(nested(catalog, key)).toBe(label);
+  });
+
   it('expands plural siblings in both directions', () => {
     const fixture = {
       date: {

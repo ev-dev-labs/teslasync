@@ -1,0 +1,18 @@
+{
+  "actualStartUtc": "2026-10-07T06:16:46.9948135Z",
+  "hardStopUtc": "2026-10-07T06:36:46.9948135Z",
+  "ownedSource": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+  "newTest": "web\\src\\features\\maps\\pages\\GeofencesPage.catalogCopy.test.tsx",
+  "testPreimage": "absent; confirmed before write",
+  "preserved": [
+    {
+      "filename": "GeofencesPage.test.tsx",
+      "sha256": "4a74d779b624633c8f3855916455c24a2f1761a37868d7627e53414d72793e88"
+    },
+    {
+      "filename": "GeofencesPage.tsx",
+      "sha256": "cebfb91479f676cf8e3b04de74246b0012ebb4830cd4d8694bafd0c370bbdaf3"
+    }
+  ],
+  "validation": "None authorized or executed"
+}

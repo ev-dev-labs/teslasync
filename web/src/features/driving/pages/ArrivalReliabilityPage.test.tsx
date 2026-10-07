@@ -231,6 +231,21 @@ beforeEach(() => {
 });
 
 describe('ArrivalReliabilityPage', () => {
+  it('retains every row, coverage and support operand in the three real evidence briefs', () => {
+    renderPage();
+    const accounting = screen.getByTestId('arrival-row-accounting-brief');
+    const coverage = screen.getByTestId('arrival-coverage-recurrence-brief');
+    const support = screen.getByTestId('arrival-support-ingredients-brief');
+    expect(accounting.querySelectorAll('[data-operational-value]')).toHaveLength(9);
+    expect(coverage.querySelectorAll('[data-operational-value]')).toHaveLength(17);
+    expect(support.querySelectorAll('[data-operational-value]')).toHaveLength(6);
+    expect(accounting).toHaveTextContent('Rows returned');
+    expect(coverage).toHaveTextContent('First parseable returned start');
+    expect(coverage).toHaveTextContent('source timestamps and denominators are shown separately');
+    expect(support).toHaveTextContent('Support indices are not confidence scores');
+    expectEverySection();
+  });
+
   it('keeps all timing evidence while a cached history refresh is paused offline', () => {
     h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
     renderPage();

@@ -1,18 +1,19 @@
 import type { ChargingSession } from '@/api/types';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { getChargerCategory } from '@/lib/chargingAggregation';
 import type { CurvePoint } from './types';
 
 export function isDcSession(s: ChargingSession): boolean {
-  return !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 20_000));
+  const explicitAC = !!s.charger_type && getChargerCategory(s.charger_type) === 'home';
+  return !explicitAC && !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 20_000));
 }
 
 export function getChargerLabel(s: ChargingSession): string {
+  if (!isDcSession(s)) return 'Home / AC';
   if (s.charger_type === 'Tesla' || (s.charger_type ?? '').toLowerCase().includes('tesla'))
     return 'Supercharger';
-  if (s.charger_type) return 'DC Fast';
-  if (s.peak_power_w && s.peak_power_w > 20_000) return 'DC Fast';
-  return 'Home / AC';
+  return 'DC Fast';
 }
 
 export function durationMinutes(startedAt: string, endedAt: string | null): number {

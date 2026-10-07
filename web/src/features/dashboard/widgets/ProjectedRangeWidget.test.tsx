@@ -170,6 +170,22 @@ beforeEach(() => {
   useProjectedRangeMock.mockReturnValue(makeQuery());
 });
 
+it('keeps four real wide range-model operands without replacing the projected hero and comparison', () => {
+  useProjectedRangeMock.mockReturnValue(makeQuery({ data: makeData({
+    current_range_km: 350, new_range_km: 500, health_score: 95,
+    degradation_pct: 0, avg_daily_km: 0, current_capacity_pct: undefined,
+  }) }));
+  renderWidget({ cols: 3, rows: 4 });
+  const brief = screen.getByTestId('dashboard-projected-range-factors-brief');
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+  expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+  expect(brief).toHaveTextContent('0.00%');
+  expect(brief).toHaveTextContent('0.00 km');
+  expect(brief).toHaveTextContent('inferred range analysis');
+  expect(screen.getByText('350.00')).toBeInTheDocument();
+  expect(screen.getByText('70.00% of EPA rated')).toBeInTheDocument();
+});
+
 it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
   renderWidget({ cols, rows: 2 });
   expect(screen.getByRole('heading', { name: 'Projected range', level: 3 })).toBeVisible();

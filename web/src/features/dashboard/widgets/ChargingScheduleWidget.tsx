@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, Clock, BatteryFull, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Timeline } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
@@ -11,7 +12,8 @@ import { request } from '@/api/client';
 import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
@@ -180,11 +182,35 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
     return items;
   }, [schedule, t, formatScheduleTime]);
 
+  const vehicleMetrics: StatMetric[] = [
+    {
+      metricId: 'percent',
+      occurrenceId: 'charging-schedule-current-level',
+      rawValue: knownNumber(state?.battery_level),
+      label: t('widget.chargingSchedule.currentLevel', 'Current level'),
+      description: t('widget.chargingSchedule.currentLevelDescription', 'Returned battery percentage; a measured zero is not a missing reading.'),
+      display: { notation: 'source' },
+    },
+    {
+      metricId: 'status',
+      occurrenceId: 'charging-schedule-actual-status',
+      rawValue: state?.is_charging === true
+        ? t('widget.charging', 'Charging')
+        : state?.is_charging === false ? t('widget.notCharging', 'Not charging') : null,
+      label: t('widget.chargingSchedule.status', 'Status'),
+      description: t('widget.chargingSchedule.actualStatusDescription', 'Actual charging state from the vehicle snapshot, not the scheduled mode or pending flag; an absent boolean remains unknown.'),
+    },
+  ];
   const vehicleDetails = (
-    <WidgetStatGrid cols={2} stats={[
-      { label: t('widget.chargingSchedule.currentLevel', 'Current level'), value: knownNumber(state?.battery_level) == null ? null : `${state?.battery_level}%` },
-      { label: t('widget.chargingSchedule.status', 'Status'), value: state?.is_charging === true ? t('widget.charging', 'Charging') : state?.is_charging === false ? t('widget.notCharging', 'Not charging') : null },
-    ]} />
+    <DashboardSourceBrief
+      metrics={vehicleMetrics}
+      state={vehicleState}
+      eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+      title={t('widget.chargingSchedule.contextTitle', 'Returned vehicle charging context')}
+      description={t('widget.chargingSchedule.contextDescription', 'Battery level and actual charging state use the independently loaded vehicle snapshot; they do not establish schedule-source freshness.')}
+      scope={t('widget.chargingSchedule.contextScope', 'Vehicle {{id}} · returned state snapshot; scheduled times, mode, pending status and target limit belong to the separate live-schedule source.', { id })}
+      testId="dashboard-charging-schedule-context-brief"
+    />
   );
 
   if (isCompact) {

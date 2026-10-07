@@ -171,6 +171,8 @@ export default function ParkingAnalyticsPage() {
         <ParkingCoverageMethodology
           summary={summary}
           state={sectionState}
+          sourceStatus={drivesState.status}
+          hasSource={drivesState.data != null}
           rangeStart={start}
           rangeEnd={end}
         />

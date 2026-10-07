@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Navigation, Gauge } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 
-import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { isVehicleStateFieldCurrent, useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
@@ -62,8 +62,6 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   const { unitPrefs } = useUnits();
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
 
-  const speedUnit = unitPrefs.speed;
-
   const stateQuery = useVehicleState(vehicleId ?? 0, { refetchInterval: INTERVALS.REALTIME });
   const { data: stateData } = stateQuery;
   // Cruise set-speed and follow distance are cold signals — the vehicle only
@@ -101,8 +99,18 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   const hasAny =
     speedMps != null || cruiseSetMps != null || followDistance != null;
 
-  const currentSpeedDisplay = speedMps != null ? toSpeedDisplay(speedMps) : null;
-  const cruiseSetDisplay = cruiseSetMps != null ? toSpeedDisplay(cruiseSetMps) : null;
+  const source = t('dynamics.brief.cruiseScope', 'Current speed requires a trusted vehicle-state observation. Cruise set speed and follow distance are latest independent historical observations; their continuous freshness is not established.');
+  const metrics: StatMetric[] = [
+    { metricId: 'speed', occurrenceId: 'current-speed', rawValue: speedMps,
+      label: t('dynamics.currentSpeed', 'Current Speed'), description: source,
+      display: { formatter: raw => ({ value: fmtNumber(toSpeedDisplay(raw)), unit: unitPrefs.speed }) } },
+    { metricId: 'speed', occurrenceId: 'cruise-set-speed', rawValue: cruiseSetMps,
+      label: t('dynamics.cruiseSetSpeed', 'Cruise Set Speed'), description: source,
+      display: { formatter: raw => ({ value: fmtNumber(toSpeedDisplay(raw)), unit: unitPrefs.speed }) } },
+    { metricId: 'text', occurrenceId: 'follow-distance', rawValue: followDistance,
+      label: t('dynamics.followDistance', 'Follow Distance'), context: followDistanceRaw,
+      description: t('dynamics.brief.followScope', 'Reported follow-distance enum; its suffix is a bar setting, not a physical distance.') },
+  ];
 
   return (
     <GlassPanel className="h-full p-4 sm:p-5">
@@ -110,35 +118,11 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
         <Navigation className="h-4 w-4 text-indigo-300" aria-hidden="true" />
         {t('dynamics.autopilot', 'Autopilot & Cruise')}
       </PanelTitle>
-      {hasAny ? (
-        <Grid minItemWidth="standard" gap={4}>
-          <StatCard
-            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-            label={t('dynamics.currentSpeed', 'Current Speed')}
-            value={
-              currentSpeedDisplay != null
-                ? fmtNumber(currentSpeedDisplay)
-                : '—'
-            }
-            unit={speedUnit}
-          />
-          <StatCard
-            icon={<Navigation className="h-5 w-5" aria-hidden="true" />}
-            label={t('dynamics.cruiseSetSpeed', 'Cruise Set Speed')}
-            value={
-              cruiseSetDisplay != null
-                ? fmtNumber(cruiseSetDisplay)
-                : '—'
-            }
-            unit={speedUnit}
-          />
-          <StatCard
-            icon={<Navigation className="h-5 w-5" aria-hidden="true" />}
-            label={t('dynamics.followDistance', 'Follow Distance')}
-            value={followDistance ?? '—'}
-          />
-        </Grid>
-      ) : loading ? (
+      <NestedDrivingBrief metrics={metrics} title={t('dynamics.brief.cruiseTitle', 'Speed and cruise settings')}
+        description={source} loading={loading && !hasAny}
+        unavailable={!hasAny && !loading} retained={error != null && hasAny}
+        period={{ kind: 'unknown', label: t('dynamics.review.liveBadge', 'Current signals · not trip history'), reason: source }} />
+      {hasAny ? null : loading ? (
         <Skeleton className="h-32" />
       ) : error ? (
         <QueryError error={error} onRetry={() => {

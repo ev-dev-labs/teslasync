@@ -1,35 +1,22 @@
-import { Heading, MetricLabel, MetricValue } from '@/components/ui';
+import { useTranslation } from 'react-i18next';
+import { NestedDrivingBrief, type NestedDrivingMetric } from '../operationalbrief-a-m/NestedDrivingBrief';
 
-export interface ArrivalReliabilityEvidenceMetric {
-  label: string;
-  value: string;
-}
+export type ArrivalReliabilityEvidenceMetric = NestedDrivingMetric;
 
 interface ArrivalReliabilityEvidenceMetricGroupProps {
   title: string;
   metrics: ArrivalReliabilityEvidenceMetric[];
+  testId: string;
 }
 
 export function ArrivalReliabilityEvidenceMetricGroup({
   title,
   metrics,
+  testId,
 }: ArrivalReliabilityEvidenceMetricGroupProps) {
-  return (
-    <section>
-      <Heading level="sub" className="mb-3">
-        {title}
-      </Heading>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {metrics.map((metric) => (
-          <div
-            key={metric.label}
-            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-          >
-            <MetricLabel>{metric.label}</MetricLabel>
-            <MetricValue className="mt-1">{metric.value}</MetricValue>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+  const { t } = useTranslation();
+  const description = t('arrivalReliability.quality.briefDescription', 'Loaded-drive accounting and recurrence are descriptive evidence. Support indices are not confidence scores or proof of continuous recording.');
+  return <NestedDrivingBrief title={title} metrics={metrics} description={description}
+    period={{ kind: 'unknown', label: t('arrivalReliability.quality.briefScope', 'Loaded completed-drive population; source timestamps and denominators are shown separately.'), reason: description }}
+    testId={testId} />;
 }

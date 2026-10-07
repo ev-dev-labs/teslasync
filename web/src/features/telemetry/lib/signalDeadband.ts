@@ -9,12 +9,9 @@
  * Pure and React-free.
  */
 
-export interface DeadbandSample {
-  timestamp?: string;
-  ts?: string;
-  valueNum?: number | null;
-  value_numeric?: number | null;
-}
+import { toSignalHistoryMeasurements, type SignalHistorySample } from './signalHistorySamples';
+
+export type DeadbandSample = SignalHistorySample;
 
 export interface NumericDeadbandPoint {
   ms: number;
@@ -77,28 +74,11 @@ function quantile(values: readonly number[], probability: number): number {
   return sorted[lower]! + ((sorted[lower + 1] ?? sorted[lower]!) - sorted[lower]!) * fraction;
 }
 
-/** Sort, validate and timestamp-deduplicate the two supported history shapes. */
+/** Numeric history measurements, sorted and timestamp-deduplicated. */
 export function toNumericDeadbandSeries(
   samples: readonly DeadbandSample[],
 ): NumericDeadbandPoint[] {
-  const points: NumericDeadbandPoint[] = [];
-  for (const sample of samples) {
-    const timestamp = sample.timestamp ?? sample.ts;
-    const value = sample.valueNum ?? sample.value_numeric;
-    if (timestamp == null || typeof value !== 'number' || !Number.isFinite(value)) continue;
-    const ms = Date.parse(timestamp);
-    if (!Number.isFinite(ms)) continue;
-    points.push({ ms, value });
-  }
-  points.sort((a, b) => a.ms - b.ms);
-
-  const deduped: NumericDeadbandPoint[] = [];
-  for (const point of points) {
-    const previous = deduped[deduped.length - 1];
-    if (previous?.ms === point.ms) previous.value = point.value;
-    else deduped.push(point);
-  }
-  return deduped;
+  return toSignalHistoryMeasurements(samples);
 }
 
 /**

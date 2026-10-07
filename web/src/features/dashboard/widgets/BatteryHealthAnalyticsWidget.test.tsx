@@ -235,13 +235,26 @@ describe('BatteryHealthAnalyticsWidget — standard layout', () => {
 
     // … and their formatted values.
     expect(screen.getByText('512')).toBeInTheDocument();
-    expect(screen.getByText('71.00')).toBeInTheDocument();
-    expect(screen.getByText('43.00')).toBeInTheDocument();
-    expect(screen.getByText('18.00')).toBeInTheDocument();
-    expect(screen.getByText('88.00')).toBeInTheDocument();
-    expect(screen.getByText('76.00')).toBeInTheDocument();
+    expect(screen.getByText('71.00%')).toBeInTheDocument();
+    expect(screen.getByText('43.00%')).toBeInTheDocument();
+    expect(screen.getByText('18.00%')).toBeInTheDocument();
+    expect(screen.getByText('88.00/ 100')).toBeInTheDocument();
+    expect(screen.getByText('76.00/ 100')).toBeInTheDocument();
 
     // A healthy SoH paints the gauge arc green.
+    expect(gaugeArc(container, GREEN)).toBe(true);
+  });
+
+  it('retains all six source factors without substituting the health gauge for unknown values', () => {
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({
+      data: makeAnalytics({ current_soh: 92, total_cycles: 0, fast_charge_pct: Number.NaN }),
+    }));
+    const { container } = renderWidget();
+    const brief = screen.getByTestId('dashboard-battery-health-brief');
+    expect(brief).toHaveTextContent('Returned battery-health factors');
+    expect(brief).toHaveTextContent('continuous coverage is unknown');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(6);
+    expect(brief).not.toHaveTextContent('NaN');
     expect(gaugeArc(container, GREEN)).toBe(true);
   });
 

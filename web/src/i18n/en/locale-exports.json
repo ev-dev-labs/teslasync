@@ -56,7 +56,33 @@
     "source": {
       "paused": "The export-job query is paused; no empty result is inferred.",
       "unresolved": "Export-job availability has not resolved yet."
-    }
+    },
+    "brief": {
+      "description": "Queue counts and known artifact sizes from the loaded export-job list. Table filters and selection do not change these totals.",
+      "eyebrow": "Export operations",
+      "failed": "Export-job source failed",
+      "failedDetail": "Jobs marked failed in the returned list, not a failure rate or a date-bounded total.",
+      "freshnessUnknown": "Successful load time is unknown.",
+      "loading": "Loading export jobs",
+      "partial": "Partial export-job source",
+      "paused": "Export-job source paused",
+      "pausedRetained": "Retained jobs · refresh paused",
+      "progressDetail": "Queued and processing jobs combined; this is not a completion estimate.",
+      "provenance": "Derived from the export/jobs response snapshot; list coverage is not an all-time or date-range guarantee.",
+      "readyDetail": "Jobs marked ready in the returned list; their download actions remain in the jobs table.",
+      "refreshing": "Refreshing export jobs",
+      "retained": "Retained export jobs",
+      "scope": "Loaded jobs before table filters and pagination; no date window is applied.",
+      "snapshot": "Export-job list snapshot",
+      "storageDetail": "Sum of known positive finite file sizes in bytes across all returned jobs; missing or invalid sizes contribute nothing.",
+      "storageDisplay": "Binary byte units use saved precision and locale. A zero footprint displays as —, not as an unknown source.",
+      "totalDetail": "Every job in the returned list, including expired jobs and unrecognized statuses.",
+      "unavailable": "Export-job source unavailable",
+      "unresolved": "Export-job source unresolved",
+      "updated": "Last successful load: {{time}}"
+    },
+    "rowLabel": "{{type}} export, {{created}}",
+    "unknownType": "Unknown"
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",

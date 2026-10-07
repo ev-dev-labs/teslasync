@@ -2,11 +2,10 @@ import { Clock4 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import {
   Badge,
   GlassPanel,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Text,
 } from '@/components/ui';
@@ -99,34 +98,24 @@ export function DepartureConsistency({
                       )}
                     </Badge>
                   </div>
-                  <div className="mt-3">
-                    <MetricValue>
-                      {formatMinuteOfDay(profile.medianDepartureMinute)}
-                    </MetricValue>
-                    <MetricLabel>
-                      {t('rhythm.consistency.typical', 'Circular median')}
-                    </MetricLabel>
-                  </div>
-                  <div className="mt-3">
-                    <MetricValue>
-                      {profile.consistencyDeviationS != null
-                        ? `±${formatDuration(
-                            profile.consistencyDeviationS,
-                          )}`
-                        : '—'}
-                    </MetricValue>
-                    <MetricLabel>
-                      {profile.consistencySupported
-                        ? t(
-                            'rhythm.consistency.deviation',
-                            'Median deviation',
-                          )
-                        : t(
-                            'rhythm.consistency.moreNeeded',
-                            'Below sample floor',
-                          )}
-                    </MetricLabel>
-                  </div>
+                  <NestedDrivingBrief title={dayLabel(day)}
+                    description={t('rhythm.consistency.subtitle', 'Typical 24-hour departure and median circular deviation by local weekday in {{timezone}}.', { timezone: summary.timeZone })}
+                    loading={state.isLoading} unavailable={state.error != null}
+                    period={{ kind: 'unknown', label: dayLabel(day),
+                      reason: t('rhythm.consistency.sampleBadge', '{{count}}/{{minimum}}', { count: profile.drives, minimum: summary.minConsistencyDrives }) }}
+                    metrics={[
+                      { metricId: 'number', occurrenceId: `departure-${day}`,
+                        rawValue: profile.medianDepartureMinute,
+                        label: t('rhythm.consistency.typical', 'Circular median'),
+                        display: { formatter: raw => ({ value: formatMinuteOfDay(raw), unit: '' }) },
+                        context: t('rhythm.brief.departureUnit', 'Minutes after local midnight; circular 24-hour median, not elapsed duration.') },
+                      { metricId: 'duration', occurrenceId: `deviation-${day}`,
+                        rawValue: profile.consistencyDeviationS,
+                        label: profile.consistencySupported
+                          ? t('rhythm.consistency.deviation', 'Median deviation')
+                          : t('rhythm.consistency.moreNeeded', 'Below sample floor'),
+                        display: { formatter: raw => ({ value: `±${formatDuration(raw)}`, unit: '' }) } },
+                    ]} />
                 </div>
               );
             })}

@@ -1,0 +1,23 @@
+{
+  "releasedUtc": "2026-10-07T06:22:01.673004+00:00",
+  "ownershipReleased": [
+    "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+    "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.catalogCopy.test.tsx"
+  ],
+  "sourceReady": true,
+  "testsAuthoredOnly": true,
+  "noFurtherRepositoryWritesPlanned": true,
+  "pairCopies": [
+    "current\\TeslaChargingSessionsPage.tsx",
+    "current\\TeslaChargingSessionsPage.catalogCopy.test.tsx"
+  ],
+  "preimage": "preimages\\TeslaChargingSessionsPage.tsx",
+  "metadata": [
+    "manifest.json",
+    "key-requests.json",
+    "source-data-action-maps.json",
+    "source-change.patch",
+    "task-release.preimage.json"
+  ],
+  "status": "Four source copy collisions changed to approved siblings. Three unique real-canonical-English cases authored, not executed. Active-session population remains unproved. Parent owns catalog integration and consolidated acceptance."
+}

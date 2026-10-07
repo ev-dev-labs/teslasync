@@ -1,0 +1,31 @@
+[     126ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'join-ad-interest-group'. @ :0
+[     126ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'run-ad-auction'. @ :0
+[     443ms] [WARNING] Something has shimmed the React DevTools global hook (__REACT_DEVTOOLS_GLOBAL_HOOK__). Fast Refresh is not compatible with this shim and will be disabled. @ http://127.0.0.1:5219/@react-refresh:341
+[    1202ms] [INFO] 🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙 @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-RMV57XKV.js?v=4187ffe5:1802
+[    1208ms] [INFO] [rum] VITE_OTLP_HTTP_ENDPOINT not set; OpenTelemetry RUM disabled. @ http://127.0.0.1:5219/src/main.tsx?t=1791023830892:51
+[    1541ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/rbac/matrix:0
+[    1608ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[    1648ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[    1654ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5219/api/v1/push/public-key:0
+[    1747ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/rbac/matrix:0
+[    1885ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[    1920ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5219/api/v1/push/public-key:0
+[   13090ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/signals/observations?vehicle_id=1&field=CruiseSetSpeed&limit=1:0
+[   23193ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/signals/observations?vehicle_id=1&field=CruiseSetSpeed&limit=1:0
+[   31706ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[   31983ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[   32006ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[   61742ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[   61781ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/data-repair/cases/stats:0
+[   62030ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[   62051ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[   91790ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[   92085ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[   92106ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[   98797ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/motor/latest?vehicle_id=1:0
+[  103560ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/signals/observations?vehicle_id=1&field=CruiseSetSpeed&limit=1:0
+[  121872ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  122139ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  122159ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  147260ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/settings:0
+[  151954ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0

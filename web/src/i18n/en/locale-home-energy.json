@@ -42,7 +42,13 @@
       "unmetEnergyHint": "never fabricated as delivered",
       "vehiclesReady": "Vehicles ready",
       "vehiclesReadyHint": "meet their target by deadline",
-      "period": "Planning horizon: {{start}} — {{end}} (end exclusive)"
+      "period": "Planning horizon: {{start}} — {{end}} (end exclusive)",
+      "costDescription": "Projected net cost using editable tariff assumptions",
+      "peakImportDescription": "Modeled peak grid import; raw input in watts",
+      "scoreDescription": "Modeled recommendation score, not source confidence",
+      "selfConsumptionDescription": "Modeled solar self-consumption",
+      "unmetEnergyDescription": "Modeled energy shortfall; raw input in watt-hours",
+      "vehiclesReadyDescription": "Ready vehicles / all vehicles in this modeled plan"
     },
     "page": {
       "subtitle": "A local, deterministic recommendation across vehicles, solar, battery, and tariffs — never an autonomous command",
@@ -72,7 +78,14 @@
       "unnamedSite": "your Tesla energy site",
       "availableSiteInputs": "Source inputs when available: vehicle SoC and solar/load history from {{site}}.",
       "availableVehicleInputs": "Source inputs when available: vehicle state of charge — no Tesla energy site was found on this account.",
-      "missingSourceInputs": "Missing vehicle or home-battery SoC uses a 50% model assumption, not a measurement. Forecast confidence above describes the history actually available."
+      "missingSourceInputs": "Missing vehicle or home-battery SoC uses a 50% model assumption, not a measurement. Forecast confidence above describes the history actually available.",
+      "briefDescription": "Review the separate solar and household-load history behind this modeled recommendation. Confidence applies to forecasts only.",
+      "coverageUnknown": "Historical sample coverage is not established; solar and load evidence remain separate.",
+      "eyebrow": "Forecast evidence",
+      "historyProvenance": "Forecast-adapter confidence is derived from available energy history, not confidence in measured vehicle or battery state.",
+      "historyQuality": "History-derived forecast quality",
+      "latestSample": "Latest source history sample: {{time}}",
+      "noSampleTime": "No source history sample timestamp is available."
     },
     "readiness": {
       "addVehicle": "Add a vehicle",
@@ -153,6 +166,17 @@
       "history": "Energy history",
       "partial": "Some vehicle live readings are unavailable. The recommendation includes explicitly disclosed scenario assumptions.",
       "waitingConnection": "This source is waiting for a connection. Modeled recommendations remain visible with their assumptions."
+    },
+    "brief": {
+      "eyebrow": "Whole-home planning",
+      "interval": "{{minutes}}-minute modeled slots · UTC · source coverage not established",
+      "loading": "Loading source inputs",
+      "modeled": "Modeled recommendation",
+      "partial": "Incomplete source inputs",
+      "paused": "Source refresh paused",
+      "retained": "Retained source inputs",
+      "title": "Planning outcomes",
+      "unavailable": "Essential source unavailable"
     }
   },
   "achievements": {

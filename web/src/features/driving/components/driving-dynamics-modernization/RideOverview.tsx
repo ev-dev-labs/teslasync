@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LayoutCard } from '@/components/layout/layout-reference';
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
@@ -30,7 +31,7 @@ export default function RideOverview({ drive }: { drive: Drive | null }) {
   return (
     <div data-testid="dynamics-ride-overview" className="h-full min-w-0">
       <LayoutCard
-        title={t('dynamics.ride.title', 'Selected ride')}
+        title={t('dynamics.brief.rideTotals', 'Recorded ride totals')}
         actions={
           <Badge variant={drive && isOpenDrive(drive) ? 'info' : 'neutral'} size="sm">
             {!drive ? t('dynamics.ride.unselected', 'No trip selected') : isOpenDrive(drive)
@@ -60,8 +61,10 @@ export default function RideOverview({ drive }: { drive: Drive | null }) {
                 {t('dynamics.ride.details', 'Open trip details')}
               </Link>
             </div>
-            <StatGroup
-              id="dynamics-ride-metrics"
+            <NestedDrivingBrief
+              testId="dynamics-ride-metrics"
+              title={t('dynamics.ride.title', 'Selected ride')}
+              description={t('dynamics.modernization.rideSource', 'Recorded drive totals; missing measurements remain unknown.')}
               metrics={metrics}
               preferences={{ units: unitPrefs, currency: { kind: 'symbol', value: '' } }}
               period={{

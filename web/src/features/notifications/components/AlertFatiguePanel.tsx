@@ -179,7 +179,7 @@ export function AlertFatiguePanel() {
               'Anything past the line is firing more than it is earning',
             )}
             ariaLabel={t(
-              'alertFatigue.chart.aria',
+              'alertFatigue.chartAria',
               'Bar chart of notification rules ranked by their computed noise score',
             )}
             loading={isLoading}
@@ -248,7 +248,7 @@ export function AlertFatiguePanel() {
             'Firings by hour of day across every rule — the small hours are what really cost goodwill',
           )}
           ariaLabel={t(
-            'alertFatigue.hours.aria',
+            'alertFatigue.hoursAria',
             'Bar chart of notification volume by hour of day',
           )}
           loading={isLoading}

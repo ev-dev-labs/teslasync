@@ -9,8 +9,8 @@
  *
  *   - size.cols <= 1 → compact tile: heading + gear + torque.
  *   - otherwise      → full tile: titled header + a signed torque BipolarBar +
- *                      a 2×2 StatCard grid (stator temp / gear / lateral +
- *                      longitudinal G).
+ *                      a four-operand source Brief (stator temp / gear /
+ *                      lateral + longitudinal extension readings).
  *   - no motor data  → the accessible "No motor data" empty state.
  *   - isLoading / error → skeleton / QueryError chrome.
  *
@@ -35,6 +35,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
+
+const captured = vi.hoisted(() => ({
+  metrics: [] as OperationalBriefProps['metrics'],
+}));
+
+vi.mock('@/components/data-display', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/data-display')>();
+  return {
+    ...actual,
+    OperationalBrief: (props: OperationalBriefProps) => {
+      captured.metrics = props.metrics;
+      return <actual.OperationalBrief {...props} />;
+    },
+  };
+});
 
 // i18n passthrough: honour the English fallback so every copy assertion is real.
 vi.mock('react-i18next', () => ({
@@ -166,12 +182,9 @@ function renderWidget(size: WidgetSize, opts: RenderOpts = {}) {
   );
 }
 
-/** The StatCard root `<div>` that groups a label with its value/unit. */
+/** The actual Brief metric item grouping the original label and readout. */
 function statCardOf(label: string): HTMLElement {
-  // getByText(label) → the label span; its .closest('div') is the label row,
-  // whose parent is the StatCard root that also holds the value row.
-  const labelRow = screen.getByText(label).closest('div');
-  const card = labelRow?.parentElement;
+  const card = screen.getByText(label).closest<HTMLElement>('[data-operational-metric]');
   if (!card) throw new Error(`stat card "${label}" not found`);
   return card as HTMLElement;
 }
@@ -181,6 +194,7 @@ beforeEach(() => {
   MOCK_MOTOR = makeQuery();
   MOCK_TEMP_UNIT = '°C';
   mockUseMotorLatest.mockClear();
+  captured.metrics = [];
 });
 
 it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
@@ -215,6 +229,87 @@ describe('torqueColor', () => {
 // ── B. Component behaviour ──────────────────────────────────────────────────
 
 describe('MotorPerformanceWidget — full view', () => {
+  it('renders the actual four-operand Brief with raw Celsius zero, signed extensions and unknown categorical gear without guessing their units', () => {
+    const measured = renderWidget(FULL, {
+      tempUnit: '°F',
+      query: makeQuery({
+        data: makeMotor({
+          di_torque: 0,
+          di_stator_temp: 0,
+          motor_temp_c_front: 99,
+          lateral_accel: 0,
+          longitudinal_accel: -0.12,
+        }),
+      }),
+    });
+    const brief = screen.getByTestId('dashboard-motor-readouts-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([0, null, 0, -0.12]);
+    expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'missing', 'value', 'value']);
+    expect(within(statCardOf('Stator temp')).getByText('32.00°F')).toBeInTheDocument();
+    expect(within(statCardOf('Gear state')).getByText('—')).toBeInTheDocument();
+    expect(within(statCardOf('Gear state')).getByText(/absent source remains unknown/)).toBeInTheDocument();
+    expect(within(statCardOf('Lateral G')).getByText('0.00 g')).toBeInTheDocument();
+    expect(within(statCardOf('Longitudinal G')).getByText('-0.12 g')).toBeInTheDocument();
+    expect(within(statCardOf('Lateral G')).getByText(/not verified SI acceleration/)).toBeInTheDocument();
+    expect(brief).toHaveTextContent('continuous recording coverage and extension-field units are not established');
+    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute('aria-valuenow', '0');
+    measured.unmount();
+
+    renderWidget(FULL, {
+      query: makeQuery({
+        data: makeMotor({
+          di_torque: Number.NaN,
+          di_stator_temp: Number.NaN,
+          lateral_accel: Number.POSITIVE_INFINITY,
+          longitudinal_accel: Number.NaN,
+        }),
+      }),
+    });
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([Number.NaN, null, null, null]);
+    expect(captured.metrics.map(metric => metric.valueState)).toEqual(['invalid', 'missing', 'missing', 'missing']);
+    expect(within(screen.getByTestId('dashboard-motor-readouts-brief')).getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+
+  it('retains the out-of-scale torque branch alongside four raw readouts after a failed motor refresh', () => {
+    const { container } = renderWidget(FULL, {
+      query: makeQuery({
+        data: makeMotor({
+          di_torque: -300,
+          di_stator_temp: -10,
+          motor_temp_c_front: 45,
+          gear: null,
+          shift_state: 'R',
+          lateral_accel: -0.25,
+          longitudinal_accel: 0,
+        }),
+        isError: true,
+        error: new Error('refresh failed'),
+        dataUpdatedAt: NOW - 180_000,
+      }),
+    });
+    const brief = screen.getByTestId('dashboard-motor-readouts-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([-10, 'R', -0.25, 0]);
+    expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'value', 'value', 'value']);
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(within(statCardOf('Stator temp')).getByText('-10.00°C')).toBeInTheDocument();
+    expect(within(statCardOf('Gear state')).getByText('R')).toBeInTheDocument();
+    expect(within(statCardOf('Lateral G')).getByText('-0.25 g')).toBeInTheDocument();
+    expect(within(statCardOf('Longitudinal G')).getByText('0.00 g')).toBeInTheDocument();
+    expect(screen.getByText('-300.00')).toBeInTheDocument();
+    expect(screen.getByText('Nm')).toBeInTheDocument();
+    expect(screen.getByText(/Reading outside displayed scale/)).toBeInTheDocument();
+    expect(screen.getByText('Regen')).toBeInTheDocument();
+    expect(screen.getByText('Drive')).toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: 'Torque' })).not.toBeInTheDocument();
+    expect(screen.queryByText('-250.00')).not.toBeInTheDocument();
+  });
+
   it('renders the titled gauge + stat grid with converted, formatted values', () => {
     renderWidget(FULL, {
       query: makeQuery({
@@ -241,16 +336,14 @@ describe('MotorPerformanceWidget — full view', () => {
 
     // Stator temp: 30 °C stays 30 under a °C preference, tagged with the unit.
     const stator = within(statCardOf('Stator temp'));
-    expect(stator.getByText('30.00')).toBeInTheDocument();
-    expect(stator.getByText('°C')).toBeInTheDocument();
+    expect(stator.getByText('30.00°C')).toBeInTheDocument();
 
     // Gear state echoes the reported gear.
     expect(within(statCardOf('Gear state')).getByText('D')).toBeInTheDocument();
 
     // G-forces are formatted to two decimals and share the "g" unit.
-    expect(within(statCardOf('Lateral G')).getByText('0.35')).toBeInTheDocument();
-    expect(within(statCardOf('Longitudinal G')).getByText('-0.12')).toBeInTheDocument();
-    expect(screen.getAllByText('g')).toHaveLength(2);
+    expect(within(statCardOf('Lateral G')).getByText('0.35 g')).toBeInTheDocument();
+    expect(within(statCardOf('Longitudinal G')).getByText('-0.12 g')).toBeInTheDocument();
   });
 
   it('converts the SI-Celsius stator temp to °F when that is the preference', () => {
@@ -261,8 +354,7 @@ describe('MotorPerformanceWidget — full view', () => {
 
     // 30 °C → 86 °F, tagged with the Fahrenheit unit, never the Celsius one.
     const stator = within(statCardOf('Stator temp'));
-    expect(stator.getByText('86.00')).toBeInTheDocument();
-    expect(stator.getByText('°F')).toBeInTheDocument();
+    expect(stator.getByText('86.00°F')).toBeInTheDocument();
     expect(screen.queryByText('°C')).toBeNull();
   });
 
@@ -278,7 +370,7 @@ describe('MotorPerformanceWidget — full view', () => {
       }),
     });
 
-    expect(within(statCardOf('Stator temp')).getByText('45.00')).toBeInTheDocument();
+    expect(within(statCardOf('Stator temp')).getByText('45.00°C')).toBeInTheDocument();
     expect(within(statCardOf('Gear state')).getByText('R')).toBeInTheDocument();
   });
 
@@ -386,7 +478,7 @@ describe('MotorPerformanceWidget — lifecycle states', () => {
     });
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute('aria-valuenow', '0');
-    expect(within(statCardOf('Stator temp')).getByText('0.00')).toBeInTheDocument();
+    expect(within(statCardOf('Stator temp')).getByText('0.00°C')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
 

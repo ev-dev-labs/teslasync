@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -63,7 +63,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import TariffLabPage from './TariffLabPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
-import type { Tariff, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
+import type { Tariff, TariffSimulationRequest, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockTariffs = useTariffs as unknown as ReturnType<typeof vi.fn>;
@@ -140,14 +140,15 @@ function card(title: string): HTMLElement {
 }
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <MemoryRouter>
-      <QueryClientProvider client={client}>
-        <TariffLabPage />
-      </QueryClientProvider>
-    </MemoryRouter>,
-  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  function wrapper({ children }: { children: ReactNode }) {
+    return <MemoryRouter><QueryClientProvider client={client}>
+      {children}
+    </QueryClientProvider></MemoryRouter>;
+  }
+  return render(<TariffLabPage />, { wrapper });
 }
 
 /** The Remove button in the table row showing the given plan name. */
@@ -155,6 +156,190 @@ function removeButton(planName: string): HTMLElement {
   const row = screen.getByText(planName).closest('tr') as HTMLElement;
   return within(row).getByRole('button', { name: 'Remove' });
 }
+
+describe('TariffLabPage — publication retention', () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+    return { promise, resolve, reject };
+  }
+
+  function realReplay() {
+    const requests: Array<ReturnType<typeof deferred<TariffSimulationResponse>>> = [];
+    const submitted: TariffSimulationRequest[] = [];
+    function useReplayMutation() {
+      return useMutation({
+        mutationFn: (inputs: TariffSimulationRequest) => {
+          submitted.push(structuredClone(inputs));
+          const request = deferred<TariffSimulationResponse>();
+          requests.push(request);
+          return request.promise;
+        },
+      });
+    }
+    vi.mocked(useSimulateTariffs).mockImplementation(useReplayMutation);
+    return { requests, submitted };
+  }
+
+  function replayValues() {
+    return Array.from(card('Arbitrage summary').querySelectorAll('[data-operational-metric]'))
+      .map(metric => ({
+        id: metric.getAttribute('data-operational-metric'),
+        state: metric.getAttribute('data-value-state'),
+        value: metric.querySelector('[data-operational-value]')?.textContent,
+      }));
+  }
+
+  describe('real mutation transitions', () => {
+    it.each(['success', 'error'] as const)('retains SI economics, source bounds and submitted assumptions through pending and %s', async outcome => {
+      const replay = realReplay();
+      renderPage();
+      const run = screen.getByRole('button', { name: 'Replay load against plans' });
+      expect(card('Arbitrage summary')).toHaveTextContent('Not computed');
+      const selectedRow = screen.getByText('Flat Saver').closest('tr');
+      if (selectedRow == null) throw new Error('Missing selectable tariff row');
+      fireEvent.click(within(selectedRow).getByRole('switch'));
+      fireEvent.change(screen.getByRole('spinbutton', { name: 'Switching fee (minor units)' }), { target: { value: '123' } });
+      fireEvent.click(run);
+      await waitFor(() => expect(replay.requests).toHaveLength(1));
+      const original = makeSimulation({
+        max_saving_minor: 0,
+        quality: {
+          status: 'limited', sample_count: 8, coverage_pct: null,
+          window_start: '2026-01-01T00:00:00Z', window_end: '2026-03-01T00:00:00Z',
+          reasons: ['Only recorded vehicle charging load is included.'],
+        },
+        evidence: [{
+          source: 'Measured charging sessions', observed_at: '2026-03-01T00:00:00Z',
+          sample_count: 8, summary: 'Original replay provenance',
+        }],
+      });
+      act(() => replay.requests[0].resolve(original));
+      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      const values = replayValues();
+      const economics = card('Ranked plan economics').textContent;
+      const bands = card('Where your energy actually landed').textContent;
+      fireEvent.change(screen.getByLabelText('Analysis window'), { target: { value: '180' } });
+      fireEvent.change(screen.getByRole('spinbutton', { name: 'Shiftable load (%)' }), { target: { value: '55' } });
+      fireEvent.click(within(selectedRow).getByRole('switch'));
+      fireEvent.change(screen.getByRole('spinbutton', { name: 'Switching fee (minor units)' }), { target: { value: '456' } });
+      fireEvent.click(run);
+      await waitFor(() => expect(replay.requests).toHaveLength(2));
+      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Refreshing source'));
+      expect(run).toBeDisabled();
+      expect(replayValues()).toEqual(values);
+      expect(card('Ranked plan economics').textContent).toBe(economics);
+      expect(card('Where your energy actually landed').textContent).toBe(bands);
+      expect(card('Evidence, quality, and limitations')).toHaveTextContent('Original replay provenance');
+      expect(card('Evidence, quality, and limitations')).toHaveTextContent('Only recorded vehicle charging load is included.');
+      expect(card('Arbitrage summary')).toHaveTextContent('vehicle #7, 90 days, shiftable 35%');
+      expect(card('Arbitrage summary')).toHaveTextContent('switching fee 123 minor units, tariff IDs 2');
+      expect(card('Arbitrage summary')).not.toHaveTextContent('180 days, shiftable 55%');
+      fireEvent.click(within(card('Arbitrage summary')).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      expect(drawer).toHaveTextContent('Submitted replay: vehicle #7, 90 days, shiftable 35%');
+      expect(drawer).toHaveTextContent('switching fee 123 minor units, tariff IDs 2');
+      expect(drawer).toHaveTextContent('Recorded bounds');
+      expect(drawer).toHaveTextContent('Replay Nights');
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      if (outcome === 'error') {
+        act(() => replay.requests[1].reject(new Error('replay unavailable')));
+        await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Retained source'));
+        expect(screen.getByText('replay unavailable')).toBeVisible();
+        expect(replayValues()).toEqual(values);
+        expect(card('Ranked plan economics').textContent).toBe(economics);
+        expect(card('Evidence, quality, and limitations')).toHaveTextContent('Original replay provenance');
+        expect(run).toBeEnabled();
+        fireEvent.click(run);
+        await waitFor(() => expect(replay.requests).toHaveLength(3));
+      }
+      act(() => replay.requests[outcome === 'error' ? 2 : 1].resolve(makeSimulation({
+        max_saving_minor: null, observed_energy_wh: 42000, shiftable_pct: 55,
+        window: { from: '2026-04-01T00:00:00Z', to: '2026-10-01T00:00:00Z', days: 180 },
+        results: [makeResult({ name: 'Replacement Replay' })],
+      })));
+      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      expect(card('Arbitrage summary')).toHaveTextContent('vehicle #7, 180 days, shiftable 55%');
+      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveAttribute('data-value-state', 'missing');
+      expect(summaryMetric('Arbitrage summary', 'observed')).toHaveTextContent('42');
+      expect(card('Ranked plan economics')).toHaveTextContent('Replacement Replay');
+      expect(replay.submitted[0]).toEqual({
+        vehicle_id: 7, window_days: 90, tariff_ids: [2], shiftable_pct: 35,
+        switch_fee_minor: 123, confirmed: true,
+      });
+      expect(run).toBeEnabled();
+    });
+
+    it.each(['success', 'error'] as const)('clears prior vehicle values and ignores late %s after returning to that vehicle', async outcome => {
+      const replay = realReplay();
+      const view = renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+      await waitFor(() => expect(replay.requests).toHaveLength(1));
+      act(() => replay.requests[0].resolve(makeSimulation()));
+      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+      await waitFor(() => expect(replay.requests).toHaveLength(2));
+      fireEvent.click(within(card('Arbitrage summary')).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      const selection = { vehicleId: 8, vehicle: null, vehicles: [], setVehicleId: vi.fn() };
+      vi.mocked(useSelectedVehicle).mockReturnValue(selection);
+      view.rerender(<TariffLabPage />);
+      expect(card('Arbitrage summary')).toHaveTextContent('Not computed');
+      expect(replayValues().every(metric => metric.state === 'missing')).toBe(true);
+      expect(drawer).not.toHaveTextContent('Submitted replay: vehicle #7');
+      expect(drawer).not.toHaveTextContent('Replay Nights');
+      fireEvent.keyDown(document, { key: 'Escape' });
+      vi.mocked(useSelectedVehicle).mockReturnValue({ ...selection, vehicleId: 7 });
+      view.rerender(<TariffLabPage />);
+      await act(async () => {
+        if (outcome === 'success') replay.requests[1].resolve(makeSimulation());
+        else replay.requests[1].reject(new Error('old vehicle replay failed'));
+        await replay.requests[1].promise.catch(() => undefined);
+      });
+      expect(card('Arbitrage summary')).toHaveTextContent('Not computed');
+      expect(card('Ranked plan economics')).not.toHaveTextContent('Replay Nights');
+      expect(screen.queryByText('old vehicle replay failed')).not.toBeInTheDocument();
+      vi.mocked(useSelectedVehicle).mockReturnValue({ ...selection, vehicleId: null });
+      view.rerender(<TariffLabPage />);
+      expect(card('Arbitrage summary')).toHaveTextContent('Selection required');
+      expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeDisabled();
+    });
+
+    it('does not relabel retained source currency with an edited tariff draft', async () => {
+      const replay = realReplay();
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+      await waitFor(() => expect(replay.requests).toHaveLength(1));
+      act(() => replay.requests[0].resolve(makeSimulation({ max_saving_minor: 0, results: null })));
+      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'ISO currency code required' }), { target: { value: 'JPY' } });
+      expect(summaryMetric('Arbitrage summary', 'saving')).not.toHaveTextContent('$0.00');
+      expect(summaryMetric('Arbitrage summary', 'saving')).not.toHaveTextContent('¥');
+      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveTextContent('—');
+      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveAttribute('data-value-state', 'missing');
+      expect(screen.getByRole('textbox', { name: 'Plan name required' })).toBeVisible();
+    });
+
+    it('shows an initial replay failure without claiming a retained result or hiding the controls', async () => {
+      const replay = realReplay();
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+      await waitFor(() => expect(replay.requests).toHaveLength(1));
+      act(() => replay.requests[0].reject(new Error('initial replay unavailable')));
+      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source unavailable'));
+      expect(card('Arbitrage summary')).not.toHaveTextContent('Retained source');
+      expect(replayValues().every(metric => metric.state === 'missing')).toBe(true);
+      expect(screen.getByText('initial replay unavailable')).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Add plan' })).toBeEnabled();
+      expect(screen.getByRole('heading', { name: 'Annualised cost by plan' })).toBeVisible();
+      expect(screen.getByRole('heading', { name: 'Where your energy actually landed' })).toBeVisible();
+    });
+  });
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

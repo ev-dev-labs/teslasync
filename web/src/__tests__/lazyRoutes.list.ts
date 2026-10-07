@@ -9,7 +9,7 @@
  * dependency in tests; keeps the smoke test deterministic and the
  * failure messages grep-friendly. The `parity check` test in
  * `lazyRoutes.smoke.test.ts` keeps this list in sync with App.tsx by
- * counting `lazy(()` occurrences in the source file.
+ * parsing every lazy binding, including conditional and async loaders.
  *
  * Background: the production "L is not defined" crash on `/live` and
  * `/drives` slipped past tsc, eslint, and unit tests because the lazy
@@ -21,6 +21,17 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   name: string
   load: () => Promise<unknown>
 }> = [
+  {
+    name: 'TaskOnboardingHost',
+    load: async () => {
+      const module = await import('../features/onboarding/components/TaskOnboardingHost')
+      return { default: module.TaskOnboardingHost }
+    },
+  },
+  { name: 'MobileGridReference', load: () => import('../features/developer-reference/mobile-grid/MobileGridReferencePage') },
+  { name: 'LayoutReference', load: () => import('../features/developer-reference/layout/LayoutReferencePage') },
+  { name: 'StatReference', load: () => import('../features/developer-reference/stats/StatReferencePage') },
+  { name: 'SharedLibraryReference', load: () => import('../features/developer-reference/shared-library/SharedLibraryCompletionPage') },
   { name: 'ConnectPage', load: () => import('../features/server/ConnectPage') },
   // Dashboard
   { name: 'Dashboard', load: () => import('../features/dashboard/pages/DashboardPage') },

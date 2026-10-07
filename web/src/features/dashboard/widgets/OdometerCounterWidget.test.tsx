@@ -153,6 +153,16 @@ beforeEach(() => {
   drivingStatsMock.mockReturnValue(makeStatsQuery({ totalDistanceKm: TOTAL_DISTANCE_KM }));
 });
 
+it('keeps measured zero recorded distance in its own history brief without substituting it for the live odometer', () => {
+  drivingStatsMock.mockReturnValue(makeStatsQuery({ totalDistanceKm: 0 }));
+  renderWidget(<OdometerCounterWidget size={SIZE_WIDE} />);
+  const brief = screen.getByTestId('dashboard-odometer-history-brief');
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
+  expect(brief).toHaveTextContent('0.00 km');
+  expect(brief).toHaveTextContent('exact history bounds and completeness are not supplied');
+  expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
+});
+
 // ── toOdometerDisplay (pure) ─────────────────────────────────────────────────
 describe('toOdometerDisplay', () => {
   it('divides SI metres to km (passthrough scale) and to miles', () => {

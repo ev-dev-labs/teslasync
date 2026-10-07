@@ -9,6 +9,8 @@ import { useSystemHealth, useDBStats, useConnectionPool } from '@/api/hooks/useA
 import { combineDataStates, deriveDataState, knownNumber, type DataState } from '@/api/dataState';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { sourcePresentation } from '../components/continuation-dashboard-3/sourcePresentation';
@@ -153,12 +155,32 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
   const databaseStats = <WidgetStatGrid cols={2} stats={[
     { label: t('widget.systemHealth.dbSize', 'DB size'), value: dbSize },
   ]} />;
-  const poolStats = <WidgetStatGrid cols={2} stats={[
-    { label: t('widget.systemHealth.activeConns', 'Active conns'),
-      value: activeConns == null ? '—' : maxConns != null && maxConns > 0 ? `${fmtInt(activeConns)}/${fmtInt(maxConns)}` : fmtInt(activeConns) },
-    { label: t('widget.systemHealth.memory', 'Memory'), value: memory == null ? '—' : `${fmtInt(memory)} MB` },
-    { label: t('widget.systemHealth.goroutines', 'Goroutines'), value: goroutines == null ? '—' : fmtInt(goroutines) },
-  ]} />;
+  const poolTrust = sourceStates[2]!;
+  const poolMetrics: readonly StatMetric[] = [
+    { metricId: 'count', rawValue: activeConns, occurrenceId: 'active-connections',
+      label: t('widget.systemHealth.activeConns', 'Active conns'),
+      description: t('widget.systemHealth.activeConnsDescription', 'Connections in use in the returned pool snapshot; a maximum is shown only when the source supplies a positive value.'),
+      display: { countTotal: maxConns != null && maxConns > 0 ? maxConns : undefined } },
+    { metricId: 'count', rawValue: goroutines, occurrenceId: 'goroutines',
+      label: t('widget.systemHealth.goroutines', 'Goroutines'),
+      description: t('widget.systemHealth.goroutinesDescription', 'Goroutines in the returned runtime snapshot; an absent reading remains unknown.') },
+  ];
+  const poolStats = <>
+    <DashboardSourceBrief
+      metrics={poolMetrics}
+      state={poolTrust}
+      eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+      title={t('widget.systemHealth.poolSummaryTitle', 'Connection pool snapshot')}
+      description={t('widget.systemHealth.poolSummaryDescription', 'Pool and runtime counts retain their own source state independently of service health and database statistics. Memory and database size remain separate source references.')}
+      scope={t('widget.systemHealth.poolSummaryScope', 'Returned pool/runtime snapshot only; no historical window or verified-live coverage is inferred')}
+      loading={pool.isLoading && pool.data == null}
+      testId="system-health-pool-operational-brief"
+    />
+    {/* The source's MB denomination is unproven; retain its current display without inferring bytes. */}
+    <WidgetStatGrid cols={2} stats={[
+      { label: t('widget.systemHealth.memory', 'Memory'), value: memory == null ? '—' : `${fmtInt(memory)} MB` },
+    ]} />
+  </>;
 
   return (
     <WidgetShell
@@ -214,12 +236,12 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
             {databaseStats}
             </SourceContent>
             <SourceContent
-              state={sourcePresentation(sourceStates[2]!, pool.data != null)}
+              state={sourcePresentation(poolTrust, pool.data != null)}
               label={t('widget.systemHealth.activeConns', 'Active conns')}
               emptyMessage={t('widget.systemHealth.noPoolData', 'No connection pool data')}
               errorMessage={t('widget.systemHealth.poolError', 'Unable to load connection pool data')}
-              error={sourceStates[2]!.fatalError}
-              errorRecovery={{ onRetry: sourceStates[2]!.retry ?? undefined }}
+              error={poolTrust.fatalError}
+              errorRecovery={{ onRetry: poolTrust.retry ?? undefined }}
               emptyContent={poolStats}
             >
             {poolStats}

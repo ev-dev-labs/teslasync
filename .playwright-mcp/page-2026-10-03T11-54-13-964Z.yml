@@ -1,0 +1,67 @@
+- generic [active] [ref=f28e1]:
+  - generic [ref=f28e2]:
+    - generic [ref=f28e6]: TeslaSync
+    - generic [ref=f28e7]: Fleet Intelligence Platform
+  - generic [ref=f28e9]:
+    - status [ref=f28e10]
+    - link "Skip to main content" [ref=f28e11] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=f28e12]:
+      - status [ref=f28e13]
+      - alert [ref=f28e14]
+      - banner "Site header" [ref=f28e15]:
+        - button "Open sidebar" [ref=f28e16] [cursor=pointer]
+        - generic [ref=f28e18]: TeslaSync
+        - button "Notifications" [ref=f28e25] [cursor=pointer]
+        - button "Open theme picker" [ref=f28e30] [cursor=pointer]
+      - main [ref=f28e39]:
+        - generic [ref=f28e40]:
+          - navigation "Breadcrumb" [ref=f28e43]:
+            - link "Dashboard" [ref=f28e44] [cursor=pointer]:
+              - /url: /
+            - generic [ref=f28e50]: Driving
+            - generic [aria-hidden] [ref=f28e53]: …
+            - generic [ref=f28e56]: Drive detail
+          - status "Loading..." [ref=f28e58]
+      - navigation "Quick navigation" [ref=f28e88]:
+        - link "Home" [ref=f28e89] [cursor=pointer]:
+          - /url: /
+        - link "Drives" [ref=f28e96] [cursor=pointer]:
+          - /url: /drives
+        - link "Charging" [ref=f28e103] [cursor=pointer]:
+          - /url: /charging
+        - link "Battery" [ref=f28e109] [cursor=pointer]:
+          - /url: /battery
+        - link "Map" [ref=f28e114] [cursor=pointer]:
+          - /url: /live
+        - link "More" [ref=f28e123] [cursor=pointer]:
+          - /url: /explore
+      - contentinfo "Application status" [ref=f28e128]:
+        - generic [ref=f28e129]:
+          - generic [ref=f28e130]:
+            - 'link "API connection status: Online (132ms)" [ref=f28e131] [cursor=pointer]':
+              - /url: /system-status
+            - tooltip "API connection · Online · 132ms"
+          - generic [ref=f28e136]:
+            - 'link "Live telemetry status: Live" [ref=f28e137] [cursor=pointer]':
+              - /url: /signal-diff
+            - tooltip "Live telemetry stream · Last message — ago"
+          - generic [ref=f28e143]:
+            - link "Telemetry honesty meter" [ref=f28e144] [cursor=pointer]:
+              - /url: /
+            - tooltip "Live 0 · Stale 0 · Guessed 0 · Missing 0 · Stream live"
+          - generic [ref=f28e148]:
+            - button "Current data with live actions available." [ref=f28e149] [cursor=pointer]
+            - tooltip "Current data with live actions available."
+        - generic [ref=f28e154]:
+          - generic [ref=f28e155]:
+            - button "Open recently viewed pages, 10 saved" [ref=f28e156] [cursor=pointer]
+            - tooltip "Recently viewed pages - 10 pages"
+          - generic [ref=f28e161]:
+            - button "Open more status options. Update or release notes available" [ref=f28e162] [cursor=pointer]
+            - tooltip "Update or release notes available"
+          - generic [ref=f28e169]:
+            - button "Open Helix chat" [ref=f28e170] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=f28e174]: "Telemetry honesty: guessed"
+      - progressbar "Loading"

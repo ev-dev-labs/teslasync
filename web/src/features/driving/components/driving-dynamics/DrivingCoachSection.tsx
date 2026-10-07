@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, ShieldCheck, Lightbulb } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 
 import { GlassPanel, Badge, DataTable, PanelTitle, SectionTitle, Caption, Text, type Column } from '@/components/ui';
 import {
@@ -17,7 +17,8 @@ import {
   ResponsiveContainer,
   EmbeddedChart,
 } from '@/components/charts';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -90,6 +91,18 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
     ],
     [coachData, t],
   );
+  const intensityMetrics: StatMetric[] = [
+    { metricId: 'efficiency', occurrenceId: 'coach-average',
+      rawValue: coachData && coachData.total_drives_analyzed > 0 && coachData.efficiency_wh_km != null
+        ? coachData.efficiency_wh_km / 1000 : null,
+      label: t('dynamics.coach.avgEfficiency', 'Avg Efficiency'),
+      display: { formatter: raw => ({ value: efficiency(raw * 1000), unit: '' }) } },
+    { metricId: 'efficiency', occurrenceId: 'coach-best',
+      rawValue: coachData && coachData.total_drives_analyzed > 0 && coachData.best_efficiency_wh_km != null
+        ? coachData.best_efficiency_wh_km / 1000 : null,
+      label: t('dynamics.coach.bestEfficiency', 'Best Efficiency'),
+      display: { formatter: raw => ({ value: efficiency(raw * 1000), unit: '' }) } },
+  ];
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -179,16 +192,13 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
 
         <FadeIn delay={0.45} className="h-full">
           <GlassPanel className="h-full space-y-3 p-4 sm:p-5">
-            <StatCard
-              label={t('dynamics.coach.avgEfficiency', 'Avg Efficiency')}
-              value={efficiency(coachData && coachData.total_drives_analyzed > 0 ? coachData.efficiency_wh_km : null)}
-              icon={<Zap className="h-4 w-4" aria-hidden="true" />}
-            />
-            <StatCard
-              label={t('dynamics.coach.bestEfficiency', 'Best Efficiency')}
-              value={efficiency(coachData && coachData.total_drives_analyzed > 0 ? coachData.best_efficiency_wh_km : null)}
-              icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
-            />
+            <NestedDrivingBrief metrics={intensityMetrics}
+              title={t('dynamics.brief.coachConsumption', 'Vehicle coaching consumption')}
+              description={t('dynamics.coach.scopeDescription', 'Completed drives with positive recorded energy and available speed, power, and temperature over the last 30 days. Scores compare consumption with this vehicle’s best measured trip; power and speed profiles are heuristics, not observed braking technique or safety ratings.')}
+              loading={coachQuery.isLoading && !coachState.hasData}
+              unavailable={coachState.fatalError != null} retained={coachState.refreshError != null}
+              period={{ kind: 'unknown', label: t('dynamics.coach.vehicleTitle', 'Vehicle coaching · last 30 days'),
+                reason: t('dynamics.coach.drivesAnalyzed', '{{count}} drives analyzed', { count: coachData?.total_drives_analyzed ?? 0 }) }} />
           </GlassPanel>
         </FadeIn>
       </div>

@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { LayoutCard } from '@/components/layout';
-import { Badge, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 
 import { PhysicsInvestigation } from '../components/tesla-physics/PhysicsInvestigation';
 import { PhysicsInvestigationNav } from '../components/tesla-physics/PhysicsInvestigationNav';
@@ -40,11 +40,10 @@ export default function TeslaPhysicsPage() {
             rawValue: findings ? findings.length : null, missingReason: unknown(t) },
           { metricId: 'count', occurrenceId: 'meter-drops', label: t('teslaOnly.workbench.resetCount', 'Returned meter drops'),
             rawValue: drops ? drops.length : null, missingReason: unknown(t) },
+          { metricId: 'count', occurrenceId: 'attention', label: t('teslaOnly.hubSignalsLabel', 'Non-alive returned signals'),
+            rawValue: attention?.length, context: attention ? t('teslaOnly.hubSignals', 'Non-alive returned signals: {{count}}', { count: attention.length }) : undefined },
         ]}
       />
-      <div className="flex flex-wrap gap-2">
-        {attention && <Badge variant="warning" size="sm">{t('teslaOnly.hubSignals', 'Non-alive returned signals: {{count}}', { count: attention.length })}</Badge>}
-      </div>
     </LayoutCard>
     {slug && <PhysicsInvestigation slug={slug} physics={physics} />}
   </PhysicsPageShell>;

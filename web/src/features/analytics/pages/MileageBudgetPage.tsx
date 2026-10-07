@@ -249,7 +249,7 @@ export default function MileageBudgetPage() {
                     'Cumulative distance in the capped returned history against the pro-rata allowance, by month',
                   )
                 : t(
-                    'mileageBudget.chart.aria',
+                    'mileageBudget.chartAria',
                     'Cumulative driven distance against the pro-rata allowance, by month',
                   )
             }

@@ -670,7 +670,11 @@
         "nonpositive_soc_drop": "nonpositive SoC drop",
         "nonpositive_soc_gain": "nonpositive SoC gain",
         "implausible_soc_drop": "implausible SoC drop"
-      }
+      },
+      "summaryWindow": "Analysis window: {{start}} – {{end}} ({{timeZone}})",
+      "scope": "Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.",
+      "driveSummary": "Drive-row evidence summary",
+      "chargingSummary": "Charging-row evidence summary"
     },
     "method": {
       "title": "Methodology and limitations",
@@ -724,7 +728,8 @@
       "pausedSource": "{{source}} is paused while offline. Previously loaded evidence, if available, is retained.",
       "ranges": "Cycle depth and calendar trend",
       "sensitivity": "Sensitivity lenses",
-      "profiles": "Operating profiles"
+      "profiles": "Operating profiles",
+      "accountingSummary": "Drive and charging row summary"
     },
     "title": "Cycle stress",
     "subtitle": "Continuity-bounded SoC cycle reconstruction, sensitivity, source coverage, and accounting",
@@ -1072,7 +1077,11 @@
       "energyUsed": "Lifetime energy used",
       "energyUsedDesc": "Total energy consumed since vehicle delivery",
       "periodEnergyDesc": "Energy added during selected date range",
-      "periodEnergy": "Last {{days}} days"
+      "periodEnergy": "Last {{days}} days",
+      "brief": {
+        "scope": "Lifetime BMS reading and selected charging window",
+        "description": "The lifetime BMS counter is reported in kWh; charging energy uses the selected date range and may be a lower bound when returned sessions reach the cap."
+      }
     },
     "chart": {
       "energyCostDaily": "Energy & cost daily",
@@ -1173,8 +1182,28 @@
       "totalSites": "Energy sites",
       "withSolar": "With solar",
       "withBattery": "With battery",
-      "backupCapable": "Backup capable"
-    }
+      "backupCapable": "Backup capable",
+      "stormReady": "Storm-Ready",
+      "totalCapacity": "Total Capacity",
+      "summary": "Energy summary"
+    },
+    "chargerType": {
+      "supercharger": "Supercharger",
+      "dcFast": "DC fast",
+      "homeAc": "Home/AC",
+      "ac": "AC"
+    },
+    "kpis": "Key energy metrics",
+    "overview": "Energy overview",
+    "hero": {
+      "title": "Efficiency & cost overview"
+    },
+    "empty": {
+      "hero": "No energy data yet — connect your vehicle and complete a drive or charging session to see efficiency, cost, and CO₂ savings."
+    },
+    "savings": "Cost savings versus gas",
+    "dailyCharts": "Daily energy trends",
+    "patternCharts": "Charging patterns"
   },
   "energyFlow": {
     "state": {
@@ -1189,21 +1218,123 @@
     },
     "metrics": {
       "estimated": "Estimated",
-      "co2Estimate": "Estimated avoided CO₂, not a vehicle emissions measurement."
+      "co2Estimate": "Estimated avoided CO₂, not a vehicle emissions measurement.",
+      "avgPerDay": "Avg energy/day",
+      "perDay": "per day",
+      "title": "Efficiency metrics",
+      "noData": "No efficiency metrics available."
     },
     "dailyEfficiency": {
-      "aria": "Daily driving efficiency over time"
+      "aria": "Daily driving efficiency over time",
+      "title": "Daily efficiency",
+      "noData": "No efficiency data available."
     },
     "distance": {
-      "aria": "Daily driving distance over time"
+      "aria": "Daily driving distance over time",
+      "title": "Daily distance",
+      "noData": "No daily distance data available."
     },
     "usage": {
-      "aria": "Daily energy usage over time"
+      "aria": "Daily energy usage over time",
+      "title": "Daily energy usage",
+      "noData": "No daily energy data available."
+    },
+    "title": "Energy flow",
+    "units": {
+      "whPerKm": "Wh/km",
+      "whPerMi": "Wh/mi",
+      "kg": "kg",
+      "days": "days",
+      "kgCo2": "kg CO₂",
+      "kw": "kW",
+      "kwh": "kWh"
+    },
+    "efficiency": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "high": "High",
+      "noData": "No data"
+    },
+    "table": {
+      "date": "Date",
+      "energy": "Energy",
+      "distance": "Distance"
+    },
+    "noVehicle": "Select a vehicle to view its energy flow.",
+    "kpi": {
+      "totalEnergy": "Total energy",
+      "totalCharged": "Total charged",
+      "distance": "Distance",
+      "efficiency": "Efficiency",
+      "co2Saved": "CO₂ saved",
+      "period": "Period"
+    },
+    "subtitle": "Power distribution and energy analysis",
+    "kpis": "Energy summary metrics",
+    "diagram": {
+      "title": "Energy flow diagram",
+      "noData": "No live flow data available."
+    },
+    "node": {
+      "grid": "Grid",
+      "charging": "Charging",
+      "battery": "Battery",
+      "driving": "Driving",
+      "motor": "Motor",
+      "noLiveData": "No live data"
+    },
+    "na": "N/A",
+    "livePower": {
+      "title": "Live power",
+      "noData": "No live power data available.",
+      "dc": "DC power",
+      "ac": "AC power",
+      "hvac": "HVAC",
+      "accessories": "Accessories"
+    },
+    "history": {
+      "title": "Daily energy history",
+      "noData": "No energy history records available.",
+      "empty": "No energy records found."
     }
   },
   "energyLedger": {
     "summaryScope": "Months reconstructed from returned charging and drive history; exact complete-history bounds are not supplied.",
-    "sourceError": "Energy ledger evidence is unavailable."
+    "sourceError": "Energy ledger evidence is unavailable.",
+    "title": "Energy Ledger",
+    "closure": "Books Closure",
+    "closureHint": "of charged energy accounted for",
+    "driving": "Reached the Wheels",
+    "vampire": "Vampire Drain",
+    "standbyPower": "about {{p}} while parked",
+    "unexplained": "Unexplained",
+    "derivedPack": "derived pack {{v}}",
+    "noPack": "pack size not yet derivable",
+    "subtitle": "Double-entry accounting for electrons: every kilowatt-hour charged is matched against driving, standing still and the change in what is stored",
+    "kpis": "Energy ledger metrics",
+    "chart": "Monthly Balance",
+    "noMonths": "No complete month has been recorded yet.",
+    "noData": "Nothing to balance yet. The ledger needs both charge sessions and drives in the same month.",
+    "chartHint": "Charging above the line, consumption below; the line is what could not be explained",
+    "col": {
+      "month": "Month",
+      "charged": "Charged (kWh)",
+      "driven": "Driven (kWh)",
+      "standby": "Standby (kWh)",
+      "stored": "Δ stored (kWh)",
+      "residual": "Residual (kWh)"
+    },
+    "detail": "Month by Month",
+    "closed": "{{pct}}% closed",
+    "worst": "Weakest month",
+    "charged": "Charged",
+    "chargedValue": "{{e}} · {{n}} sessions",
+    "driven": "Driven",
+    "drivenValue": "{{e}} · {{d}}",
+    "standby": "Standby",
+    "standbyValue": "{{e}} over {{h}} h",
+    "residual": "Residual",
+    "chartAria": "Stacked bar chart of monthly energy charged against energy driven and lost to standby, with the unexplained residual overlaid"
   },
   "packCapacity": {
     "title": "Pack capacity",
@@ -1216,7 +1347,8 @@
       "profiles": "Monthly and SoC-window evidence",
       "sensitivity": "Model sensitivity",
       "influence": "Innovation and observation influence",
-      "coverage": "Coverage and evidence support"
+      "coverage": "Coverage and evidence support",
+      "accountingSummary": "Charging-row summary"
     },
     "states": {
       "noVehicle": "Select a vehicle to analyze its returned charging history.",
@@ -1564,7 +1696,35 @@
     }
   },
   "rangeSim": {
-    "summaryScope": "Simulation calibrated from returned drive history; no complete-history interval is supplied."
+    "summaryScope": "Simulation calibrated from returned drive history; no complete-history interval is supplied.",
+    "title": "Range Simulator",
+    "mi": "mi",
+    "km": "km",
+    "stranded": "empty",
+    "odds": "Arrival Odds",
+    "oddsHint": "arrive with ≥{{pct}}% battery",
+    "median": "Median Arrival",
+    "band": "P10 {{p10}}% · P90 {{p90}}%",
+    "pack": "Self-Measured Pack",
+    "packHint": "median implied usable capacity",
+    "trials": "Simulated Trips",
+    "fromDrives": "from {{count}} real drives",
+    "subtitle": "Monte Carlo trip odds from your own driving history",
+    "kpis": "Simulation summary metrics",
+    "plan": "Trip Plan",
+    "tripDistance": "Trip distance",
+    "startSoc": "Starting battery",
+    "takeaway": "A {{dist}} trip starting at {{soc}}% typically lands at {{p50}}% — and {{odds}}% of simulated runs keep at least the {{reserve}}% reserve.",
+    "needHistory": "The simulator needs 8+ drives with energy data plus SoC history to calibrate your pack.",
+    "histogram": "Arrival Battery Distribution",
+    "noData": "Not enough history yet — the simulator calibrates itself from your drives.",
+    "histogramHint": "2,000 simulated arrivals; the dashed line is the {{pct}}% reserve",
+    "col": {
+      "range": "Arrival range",
+      "trials": "Trials"
+    },
+    "trialsName": "Trials",
+    "histogramAria": "Histogram of simulated arrival battery percentages for the planned trip"
   },
   "sleep": {
     "modernization": {
@@ -1936,7 +2096,9 @@
       "splitPeriod": "Returned parked windows",
       "splitBounds": "Exact interval bounds are not supplied by this source.",
       "parkConfirmed": "Park confirmed",
-      "splitMissing": "No plugged or unplugged drain measurements are available."
+      "splitMissing": "No plugged or unplugged drain measurements are available.",
+      "splitSummary": "Observed drain split",
+      "culpritSummary": "Observed culprit evidence"
     },
     "aiNarrative": {
       "title": "Explain the recent vampire drain",
@@ -2030,6 +2192,13 @@
         "leak": "Unplugged parked drain remains after Sentry/HVAC. That is 12V upkeep or a genuine leak.",
         "unknown": "No confirmed park culprit yet. Missing is not zero watts."
       }
+    },
+    "brief": {
+      "title": "Observed parked-drain statistics"
+    },
+    "sections": {
+      "trend": "Drain rate trend and gauge",
+      "daily": "Daily drain and reduction tips"
     }
   },
   "achievements": {
@@ -2445,6 +2614,16 @@
       "cycles": "Charge cycles",
       "degradation": "Degradation"
     },
+    "bars": {
+      "title": "Capacity & Wear"
+    },
+    "brief": {
+      "available": "Available source readings",
+      "eyebrow": "Battery and energy evidence",
+      "loading": "Loading source evidence",
+      "retained": "Retained source evidence",
+      "unavailable": "Source readings unavailable"
+    },
     "cells": {
       "chart": {
         "noSpreadTrend": "Not enough history for spread trend",
@@ -2472,6 +2651,15 @@
         "watchTemp": "Module temperature variation",
         "watchTempDesc": "Some temperature variation is normal. Monitor during fast charging sessions."
       },
+      "kpi": {
+        "avgVoltage": "Avg voltage",
+        "imbalance": "Imbalance",
+        "maxCell": "Max cell",
+        "minCell": "Min cell",
+        "packVoltage": "Pack voltage",
+        "totalCells": "Total cells"
+      },
+      "kpis": "Summary metrics",
       "modernization": {
         "noCellSnapshot": "Cell voltage data is unavailable. Any pack and temperature values reported by the backend remain visible.",
         "signalAvailability": "Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.",
@@ -2489,6 +2677,13 @@
         "totalCells": "Total cells",
         "voltageSpread": "V spread"
       },
+      "status": {
+        "normal": "Normal",
+        "significant": "Significant deviation",
+        "slight": "Slight deviation",
+        "unknown": "Unknown"
+      },
+      "summary": "At a glance",
       "temp": {
         "avg": "Avg temperature",
         "empty": "No temperature data available",
@@ -2530,6 +2725,10 @@
       "avgDoD": "Avg depth of discharge",
       "avgDoDLabel": "Avg DoD",
       "batteryAge": "Battery age",
+      "brief": {
+        "prediction": "Degradation model evidence",
+        "summary": "Battery degradation evidence"
+      },
       "capacity": "Capacity",
       "chargeHabits": "Charge habits",
       "chargingImpact": "Charging habits impact",
@@ -2596,6 +2795,9 @@
       "degradation": "Degradation",
       "health": "Health score"
     },
+    "glossary": {
+      "lead": "Terms on this page:"
+    },
     "habit": {
       "avgEnd": "Avg end level",
       "avgStart": "Avg start level",
@@ -2603,11 +2805,17 @@
       "supercharger": "Supercharger sessions"
     },
     "health": {
+      "brief": {
+        "capacityScope": "Capacity and range model unavailable"
+      },
       "degraded": "Degraded",
       "excellent": "Excellent",
       "good": "Good",
       "missingMeasurement": "Capacity measurements are not available yet; battery health cannot be assessed.",
       "unavailable": "Not measured"
+    },
+    "hero": {
+      "title": "Health Overview"
     },
     "insight": {
       "concernDesc": "Battery health dropped to {{soh}}/100 — consider service check.",
@@ -2645,6 +2853,11 @@
     },
     "months": "months",
     "newVsNow": {
+      "brief": {
+        "description": "Capacity values are modeled estimates; range comparison uses the first and latest available history points, not a controlled capacity test.",
+        "scope": "Reference capacity and first / latest range snapshots",
+        "summary": "Capacity and range evidence"
+      },
       "capNew": "Capacity when new",
       "capNow": "Capacity now",
       "lost": "lost",
@@ -2660,13 +2873,19 @@
       "acdcFailed": "AC/DC energy breakdown failed to load",
       "capacityRangeFailed": "Capacity & range comparison failed to load",
       "chargeDistFailed": "Charge level distribution failed to load",
+      "chargingAnalysis": "Charging energy analysis",
       "heroFailed": "Health score panel failed to load",
       "insightsFailed": "Smart insights failed to load",
+      "kpis": "Battery health summary metrics",
+      "linksTips": "Related pages and recommendations",
       "metricBarsFailed": "Metric bars failed to load",
+      "overview": "Health score and capacity",
       "quickLinksFailed": "Quick links failed to load",
       "recommendationsFailed": "Recommendations failed to load",
       "summaryCardsFailed": "Summary metrics failed to load",
-      "thermalFailed": "Thermal monitoring failed to load"
+      "thermalCompare": "Thermal monitoring and capacity comparison",
+      "thermalFailed": "Thermal monitoring failed to load",
+      "trends": "Capacity and range trends"
     },
     "stats": {
       "acSessions": "AC sessions",
@@ -3146,6 +3365,13 @@
       "avgDoD": "Average Depth of Discharge per cycle — how deeply the pack is typically discharged before being recharged. Shallower cycles cause less wear.",
       "capacity": "Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.",
       "totalCycles": "Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time)."
+    },
+    "energyLedger": {
+      "closure": "Energy has to go somewhere. Everything charged either reached the wheels, was lost while standing still, or is still sitting in the pack — so charged minus driven minus standby minus the change in stored energy should come out near zero. Whatever is left over is the ledger residual, and it is the honest measure of how much your data is failing to explain.",
+      "iconLabel": "More info about the ledger method"
+    },
+    "rangeSimulator": {
+      "iconLabel": "More info about the simulation"
     }
   },
   "impersonation": {

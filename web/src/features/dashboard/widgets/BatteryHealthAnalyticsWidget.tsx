@@ -7,11 +7,12 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
@@ -30,42 +31,23 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
 
   const isCompact = size.cols <= 1;
   const healthScore = knownNumber(data?.current_soh);
-  const reading = (value: unknown, precision = getGlobalPrecision()) => {
-    const number = knownNumber(value);
-    return number == null ? null : fmtNumber(number, precision);
-  };
-
-  const stats = [
-    {
+  const sourceMetrics: StatMetric[] = [
+    { metricId: 'number', occurrenceId: 'battery-health-cycles', rawValue: data?.total_cycles,
       label: t('widget.batteryHealthAnalytics.totalCycles', 'Cycles'),
-      value: knownNumber(data?.total_cycles) != null ? fmtInt(data?.total_cycles) : null,
-    },
-    {
-      label: t('widget.batteryHealthAnalytics.avgChargeDepth', 'Charge depth'),
-      value: reading(data?.full_charge_pct),
-      unit: '%',
-    },
-    {
-      label: t('widget.batteryHealthAnalytics.avgDischargeDepth', 'Discharge'),
-      value: reading(data?.avg_depth_of_discharge_pct),
-      unit: '%',
-    },
-    {
-      label: t('widget.batteryHealthAnalytics.dcFastRatio', 'DC fast'),
-      value: reading(data?.fast_charge_pct),
-      unit: '%',
-    },
-    {
-      label: t('widget.batteryHealthAnalytics.tempExposure', 'Temp score'),
-      value: reading(data?.temp_exposure_score),
-      unit: `/ 100`,
-    },
-    {
-      label: t('widget.batteryHealthAnalytics.chargeHabits', 'Habits'),
-      value: reading(data?.charge_habits_score),
-      unit: `/ 100`,
-    },
+      description: t('widget.batteryHealthAnalytics.cyclesSource', 'Returned cycle measurement; the existing whole-number display is retained.'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'battery-health-charge-depth', rawValue: data?.full_charge_pct, label: t('widget.batteryHealthAnalytics.avgChargeDepth', 'Charge depth') },
+    { metricId: 'percent', occurrenceId: 'battery-health-discharge-depth', rawValue: data?.avg_depth_of_discharge_pct, label: t('widget.batteryHealthAnalytics.avgDischargeDepth', 'Discharge') },
+    { metricId: 'percent', occurrenceId: 'battery-health-fast-charge', rawValue: data?.fast_charge_pct, label: t('widget.batteryHealthAnalytics.dcFastRatio', 'DC fast') },
+    { metricId: 'score', occurrenceId: 'battery-health-temperature-score', rawValue: data?.temp_exposure_score, label: t('widget.batteryHealthAnalytics.tempExposure', 'Temp score') },
+    { metricId: 'score', occurrenceId: 'battery-health-habits-score', rawValue: data?.charge_habits_score, label: t('widget.batteryHealthAnalytics.chargeHabits', 'Habits') },
   ];
+  const metrics = sourceMetrics.map(metric => metric.display ? metric : ({
+    ...metric,
+    display: { formatter: (raw: number) => ({
+      value: fmtNumber(raw), unit: metric.metricId === 'score' ? '/ 100' : '%',
+    }) },
+  }));
 
   const shellProps = {
     loading: isLoading,
@@ -103,7 +85,12 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
             className="py-4"
           />
         )}
-        {!isCompact && <WidgetStatGrid stats={stats} cols={3} />}
+        {!isCompact && <DashboardSourceBrief metrics={metrics} state={trust}
+          eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+          title={t('widget.batteryHealthAnalytics.summaryTitle', 'Returned battery-health factors')}
+          description={t('widget.batteryHealthAnalytics.summaryDescription', 'Source cycle, charge-depth, fast-charge and habit measurements retain their independent meanings; the health gauge remains separate.')}
+          scope={t('widget.batteryHealthAnalytics.summaryScope', 'Vehicle {{id}} · returned inferred battery analytics; continuous coverage is unknown.', { id: vid ?? '—' })}
+          loading={isLoading && !data} testId="dashboard-battery-health-brief" />}
       </div>
     </WidgetShell>
   );

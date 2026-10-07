@@ -12,6 +12,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
 
 export type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 export const pagination = { defaultPageSize: 25, pageSizeOptions: [25, 50, 100] };
@@ -73,13 +74,17 @@ export function PhysicsPageShell({ physics, children, navigation }: {
     {navigation}
     {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} /> : report ? <div className="space-y-6">
       <LayoutCard title={t('teslaOnly.scopeTitle', 'Evidence boundaries')}>
+        <PhysicsEvidenceBrief physics={physics} id="physics-evidence-boundaries" available={evidence != null}
+          description={t('teslaOnly.scopeCaution', 'The exclusive report covers at most 14 days. Row caps, missing history, and partial session coverage limit conclusions; a zero finding is not lifetime proof.')}
+          metrics={[
+            { metricId: 'count', occurrenceId: 'history', label: t('teslaOnly.historyRowsLabel', 'Bounded history rows'), rawValue: evidence?.history_rows, context: <>{t('teslaOnly.historyRows', 'History rows: {{count}}', { count: evidence?.history_rows ?? unknown(t) })}<div>{t('teslaOnly.briefSourceFlags', 'Available: {{available}} · row cap reached: {{capped}}', { available: yesNo(evidence?.history_available, t), capped: yesNo(evidence?.history_truncated, t) })}</div></> },
+            { metricId: 'count', occurrenceId: 'black-box', label: t('teslaOnly.blackBoxSourceRowsLabel', 'Bounded black-box source rows'), rawValue: evidence?.black_box_rows, context: <>{t('teslaOnly.blackBoxRows', 'Black-box rows: {{count}}', { count: evidence?.black_box_rows ?? unknown(t) })}<div>{t('teslaOnly.briefSourceFlags', 'Available: {{available}} · row cap reached: {{capped}}', { available: yesNo(evidence?.black_box_available, t), capped: yesNo(evidence?.black_box_truncated, t) })}</div></> },
+          ]} />
         {limited && <Badge variant="warning" size="sm">{t('teslaOnly.partialEvidence', 'Partial or unavailable evidence — do not interpret counts as complete')}</Badge>}
         {evidence ? <>
           <Text as="p" variant="bodySm">{t('teslaOnly.scopeRequested', 'Requested: {{from}} → {{to}}', { from: time(evidence.requested_from, t), to: time(evidence.requested_to, t) })}</Text>
           <Text as="p" variant="bodySm">{t('teslaOnly.scopeObserved', 'Recorded: {{from}} → {{to}}', { from: time(evidence.first_recorded_at, t), to: time(evidence.last_recorded_at, t) })}</Text>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="neutral" size="sm">{t('teslaOnly.historyRows', 'History rows: {{count}}', { count: evidence.history_rows })}</Badge>
-            <Badge variant="neutral" size="sm">{t('teslaOnly.blackBoxRows', 'Black-box rows: {{count}}', { count: evidence.black_box_rows })}</Badge>
             {!evidence.history_available && <Badge variant="warning" size="sm">{t('teslaOnly.historyUnavailable', 'History unavailable')}</Badge>}
             {!evidence.black_box_available && <Badge variant="warning" size="sm">{t('teslaOnly.blackBoxUnavailable', 'Black-box evidence unavailable')}</Badge>}
             {evidence.history_truncated && <Badge variant="warning" size="sm">{t('teslaOnly.historyCapped', 'History row cap reached')}</Badge>}
@@ -88,7 +93,6 @@ export function PhysicsPageShell({ physics, children, navigation }: {
             {evidence.charge_sessions_truncated && <Badge variant="warning" size="sm">{t('teslaOnly.chargesCapped', 'Charge session cap reached')}</Badge>}
           </div>
         </> : <Text as="p" variant="bodySm">{t('teslaOnly.scopeUnavailable', 'Evidence coverage metadata was not returned; counts cannot establish completeness.')}</Text>}
-        <Text as="p" variant="caption">{t('teslaOnly.scopeCaution', 'The exclusive report covers at most 14 days. Row caps, missing history, and partial session coverage limit conclusions; a zero finding is not lifetime proof.')}</Text>
       </LayoutCard>
       {slice && !report[slice] ? <GlassPanel className="p-4 sm:p-5">
         {/* no-action: missing evidence cannot be restored from a display-only page. */}

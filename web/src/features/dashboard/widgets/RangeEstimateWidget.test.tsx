@@ -32,7 +32,7 @@
  * only the two hooks the widget reads are overridden) so no network is touched.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -51,6 +51,10 @@ vi.mock('react-i18next', () => ({
 let MOCK_DISTANCE_UNIT: DistanceUnitPref;
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { distance: MOCK_DISTANCE_UNIT } }),
+}));
+
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
 }));
 
 // The fleet list + state query result are injected per-test through these
@@ -193,6 +197,57 @@ describe('formatRange', () => {
 // ── B. Component behaviour ──────────────────────────────────────────────────
 
 describe('RangeEstimateWidget — populated', () => {
+  it('keeps one actual ideal-reference cell with known zero versus absent readings and the rated hero', () => {
+    for (const idealRange of [0, null, undefined]) {
+      renderWidget({
+        vehicleId: 7,
+        size: { cols: 1, rows: 1 },
+        query: makeQuery({
+          data: { state: makeState({ rated_range: 500_000, ideal_range: idealRange }), live: true },
+        }),
+      });
+
+      const brief = screen.getByTestId('dashboard-range-estimate-ideal-brief');
+      expect(brief).toHaveAttribute('data-operational-brief');
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
+      expect(brief.querySelector('[data-operational-metric]')).toHaveAttribute(
+        'data-value-state', idealRange === 0 ? 'value' : 'missing',
+      );
+      expect(within(brief).getByText(idealRange === 0 ? '0.00 km' : '—')).toBeInTheDocument();
+      expect(within(brief).getByText('Ideal range')).toBeInTheDocument();
+      expect(brief).toHaveTextContent('returned state snapshot');
+      expect(brief).toHaveTextContent('neither estimate measures achievable driving distance or a fleet aggregate');
+      expect(brief).toHaveTextContent('recording completeness are not supplied');
+      expect(screen.getByText('Rated range')).toBeInTheDocument();
+      expect(screen.getByText('500.00 km')).toBeInTheDocument();
+      expect(screen.queryByText('No range data')).toBeNull();
+      cleanup();
+    }
+  });
+
+  it('marks malformed ideal sources invalid without losing the rated hero or inventing zero', () => {
+    for (const idealRange of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      renderWidget({
+        vehicleId: 7,
+        distanceUnit: 'mi',
+        query: makeQuery({
+          data: { state: makeState({ rated_range: 482_803.2, ideal_range: idealRange }), live: true },
+        }),
+      });
+
+      const brief = screen.getByTestId('dashboard-range-estimate-ideal-brief');
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
+      expect(brief.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
+      expect(within(brief).getByText('—')).toBeInTheDocument();
+      expect(within(brief).queryByText('0.00 mi')).toBeNull();
+      expect(screen.getByText('300.00 mi')).toBeInTheDocument();
+      expect(screen.getByText('Rated range')).toBeInTheDocument();
+      expect(screen.queryByText('No range data')).toBeNull();
+      cleanup();
+    }
+  });
+
   it('renders both labels and the SI→km-converted rated + ideal ranges', () => {
     renderWidget({
       vehicleId: 7,

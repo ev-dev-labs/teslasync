@@ -14,7 +14,9 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { STATUS_COLORS } from '@/lib/colors';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 
 /**
@@ -168,6 +170,16 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
     ?? (sparklineData.length > 0
       ? sparklineData.reduce((sum, value) => sum + value, 0) / sparklineData.length
       : NaN);
+  const averageMetrics: StatMetric[] = [{
+    metricId: 'rate', occurrenceId: 'vampire-average-drain', rawValue: measuredAverage,
+    label: t('widget.vampireDrain.avgDrain', 'Avg drain'),
+    description: t('widget.vampireDrain.averageSource', 'Observed battery percentage-point loss per day; a positive event population is required before the average is treated as measured.'),
+    display: { formatter: raw => ({ value: `${fmtNumber(raw)}%/day`, unit: '' }) },
+    context: t('widget.vampireDrain.averagePopulation', 'Aggregate event count: {{count}} · observed hours: {{hours}}. The separately loaded event feed is limited to 30 rows.', {
+      count: knownNumber(stats?.event_count) == null ? '—' : fmtInt(stats?.event_count),
+      hours: knownNumber(stats?.total_observed_hours) == null ? '—' : fmtNumber(stats?.total_observed_hours),
+    }),
+  }];
 
   return (
     <WidgetShell
@@ -199,11 +211,12 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
           /* ── Standard / Wide ── */
           <div className="h-full flex flex-col gap-3 min-h-0">
             {/* Stat card row */}
-            <WidgetStatGrid stats={[{
-              label: t('widget.vampireDrain.avgDrain', 'Avg drain'),
-              value: hasMeasuredAverage ? `${fmtNumber(measuredAverage)}%/day` : '—',
-              icon: <BatteryWarning className="h-4 w-4" style={{ color: drainColor(sparklineColorRate) }} />,
-            }]} />
+            <DashboardSourceBrief metrics={averageMetrics} state={statsState}
+              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+              title={t('widget.vampireDrain.summaryTitle', 'Observed parked-drain average')}
+              description={t('widget.vampireDrain.summaryDescription', 'The statistical average, event history and inferred watchdog are independent sources; the retained chart and event feed do not prove complete recording.')}
+              scope={t('widget.vampireDrain.summaryScope', 'Vehicle {{id}} · returned parked-window statistics; exact aggregate recording bounds are not supplied.', { id: id ?? '—' })}
+              testId="dashboard-vampire-drain-brief" />
             <p className={dashboardTokens.metricLabel}>
               {
                 stats

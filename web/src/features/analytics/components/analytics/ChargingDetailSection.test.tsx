@@ -296,6 +296,17 @@ describe('ChargingDetailSection — empty states', () => {
 });
 
 describe('ChargingDetailSection — null safety', () => {
+  it('keeps zero and signed recorded costs distinct from missing cost fields', () => {
+    const { container } = renderSection(makeQuery({ data: {
+      ...FULL,
+      charging_analytics: { ...CA, cost_stats: { ...STATS, min: -2.5, avg: 0, median: 0, max: 5 } },
+    } }));
+    expect(container.querySelector('[data-operational-metric="charging-min-cost"] [data-operational-value]')).toHaveTextContent('$-2.50');
+    expect(container.querySelector('[data-operational-metric="charging-average-cost"] [data-operational-value]')).toHaveTextContent('$0.00');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('renders placeholder labels and zeroed counts without crashing on missing fields', () => {
     renderSection(makeQuery({ data: MALFORMED }));
 

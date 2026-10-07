@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { MetricBar } from '@/components/data-display';
+import { MetricBar, type StatMetric } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useDriveScore } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -9,7 +9,8 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetGaugeHero, WidgetStatGrid, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
+import { WidgetBigNumber, WidgetGaugeHero, type GaugeHeroConfig } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 
 const SCORE_COLORS = {
@@ -59,12 +60,15 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
     color,
   }), [overall, score?.grade, color, t]);
 
-  const stats = useMemo<GaugeHeroStat[]>(() => {
+  const stats = useMemo<StatMetric[]>(() => {
     if (!score) return [];
     return [
-      { label: t('widget.driveScoreGauge.efficiency', 'Efficiency'), value: knownNumber(score.efficiency) == null ? '—' : fmtNumber(score.efficiency) },
-      { label: t('widget.driveScoreGauge.smoothness', 'Smoothness'), value: knownNumber(score.smoothness) == null ? '—' : fmtNumber(score.smoothness) },
-      { label: t('widget.driveScoreGauge.speed', 'Speed discipline'), value: knownNumber(score.speedDiscipline) == null ? '—' : fmtNumber(score.speedDiscipline) },
+      { metricId: 'score', occurrenceId: 'drive-efficiency-score', label: t('widget.driveScoreGauge.efficiency', 'Efficiency'),
+        rawValue: score.efficiency, display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
+      { metricId: 'score', occurrenceId: 'drive-smoothness-score', label: t('widget.driveScoreGauge.smoothness', 'Smoothness'),
+        rawValue: score.smoothness, display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
+      { metricId: 'score', occurrenceId: 'drive-speed-score', label: t('widget.driveScoreGauge.speed', 'Speed discipline'),
+        rawValue: score.speedDiscipline, display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
     ];
   }, [score, t, fmtNumber]);
 
@@ -94,7 +98,14 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
           {overall != null ? <WidgetGaugeHero gauge={gauge} compact={isCompact} /> : (
             <WidgetBigNumber value={null} label={t('widget.driveScoreGauge.weekly', 'Weekly score')} />
           )}
-          {!isCompact && <WidgetStatGrid stats={stats} cols={3} />}
+          {!isCompact && <DashboardSourceBrief metrics={stats} state={trust}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.driveScoreGauge.summaryTitle', 'Returned driving score factors')}
+            description={t('widget.driveScoreGauge.summaryDescription', 'Each factor retains its returned score independently of the overall gauge, grade and detailed factor bars.')}
+            scope={t('widget.driveScoreGauge.summaryScope', 'Vehicle {{id}} · weekly scoring response for {{count}} drives; recording completeness is not established.', {
+              id: vid ?? '—', count: knownNumber(score?.totalDrives) ?? '—',
+            })}
+            testId="dashboard-drive-score-factors-brief" />}
           {isTall && (
             <div className="flex flex-col gap-2 w-full">
               {subScores.map((s) => knownNumber(s.value) != null ? (

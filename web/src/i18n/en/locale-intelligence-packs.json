@@ -122,7 +122,24 @@
       "usingInstalledGrant": "Using installed capability grant",
       "row": "Sample",
       "value": "Value",
-      "installedGrantUnavailable": "Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available."
+      "installedGrantUnavailable": "Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available.",
+      "brief": {
+        "rows": "Sample rows",
+        "rowsDetail": "Bundled synthetic rows used by this evaluation, not recorded vehicle observations.",
+        "steps": "Evaluation steps",
+        "stepsDetail": "Interpreter steps consumed by the selected pack, not a configured execution ceiling.",
+        "elapsed": "Evaluation time",
+        "elapsedDetail": "Measured wall-clock time for this synthetic evaluation; this is not a live-data freshness timestamp.",
+        "eyebrow": "Synthetic sandbox",
+        "title": "Selected pack evaluation",
+        "description": "These measurements describe the bundled sample run only. Pack installation and capability grants are local configuration, not a subscription or evidence of model accuracy on real vehicle data.",
+        "partial": "Budget-limited results",
+        "complete": "Sample evaluation complete",
+        "freshness": "Selected run; no vehicle-data timestamp",
+        "provenance": "Local bounded interpreter over bundled synthetic sample data; no network or real telemetry.",
+        "partialDetail": "Retained widget outputs may be partial. Review each formula’s budget and capability-denial notices; no analytical accuracy or confidence is inferred."
+      },
+      "chartAria": "Synthetic sandbox output for {{title}}"
     },
     "security": {
       "browserNote": "Ed25519 in Web Crypto requires a secure context (HTTPS or localhost) and a modern browser (roughly Chrome/Edge 137+, Firefox 130+, Safari 17+ — exact floors vary by OS). Older or locked-down browsers cannot install signed packs; this is by design, not a bug.",

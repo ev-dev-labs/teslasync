@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Lightbulb, ShieldCheck, Activity, type LucideIcon } from 'lucide-react';
 
-import { MetricBar, MetricCard } from '@/components/data-display';
+import { MetricBar } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Grid } from '@/components/layout';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { CHART_COLORS } from '@/components/charts';
 import { useDriveDynamicsLatest, useMotorLatest } from '@/api/hooks/useVehicles';
@@ -67,6 +68,20 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
   const hasBothAxles = Number.isFinite(motorQuery.data?.torque_nm_front)
     && Number.isFinite(motorQuery.data?.torque_nm_rear);
   const findings = read.findings.filter((finding) => hasBothAxles || !finding.id.startsWith('awd_'));
+  const metrics: StatMetric[] = [
+    { metricId: 'power', occurrenceId: 'drive-power', rawValue: read.drivePowerW,
+      label: t('dynamics.grok.drivePower', 'Drive power'),
+      display: { formatter: raw => ({ value: formatPower(raw), unit: '' }) } },
+    { metricId: 'power', occurrenceId: 'regen-power', rawValue: read.regenPowerW,
+      label: t('dynamics.grok.regenPower', 'Regen harvest'),
+      display: { formatter: raw => ({ value: formatPower(raw), unit: '' }) } },
+    { metricId: 'number', occurrenceId: 'axle-torque', rawValue: read.torqueTotalNm,
+      label: t('dynamics.grok.torque', 'Axle torque'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'Nm' }) } },
+    { metricId: 'number', occurrenceId: 'combined-g', rawValue: read.combinedG,
+      label: t('dynamics.grok.combinedG', 'Combined g'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'g' }) } },
+  ];
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="grok-dynamics-briefing">
@@ -114,32 +129,13 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
             </Text>
           </div>
 
-          <Grid cols={{ default: 1, sm: 2, xl: 4 }} gap={4}>
-            <MetricCard
-              wrapLabel
-              color="cyan"
-              label={t('dynamics.grok.drivePower', 'Drive power')}
-              value={read.drivePowerW == null ? '—' : formatPower(read.drivePowerW)}
-            />
-            <MetricCard
-              wrapLabel
-              color="green"
-              label={t('dynamics.grok.regenPower', 'Regen harvest')}
-              value={read.regenPowerW == null ? '—' : formatPower(read.regenPowerW)}
-            />
-            <MetricCard
-              wrapLabel
-              color="purple"
-              label={t('dynamics.grok.torque', 'Axle torque')}
-              value={read.torqueTotalNm == null ? '—' : `${fmtNumber(read.torqueTotalNm)} Nm`}
-            />
-            <MetricCard
-              wrapLabel
-              color="amber"
-              label={t('dynamics.grok.combinedG', 'Combined g')}
-              value={read.combinedG == null ? '—' : `${fmtNumber(read.combinedG)} g`}
-            />
-          </Grid>
+          <NestedDrivingBrief metrics={metrics}
+            title={t('dynamics.brief.liveQuantities', 'Reported powertrain quantities')}
+            description={t('dynamics.grok.honesty', 'Interpreted from live motor, pedal, and accelerometer signals. Not Autopilot, not the chassis controller, and not a 0–60 claim.')}
+            retained={motorQuery.isError || dynamicsQuery.isError}
+            period={{ kind: 'unknown',
+              label: t('dynamics.liveInterpretation.scope', 'Latest vehicle signals'),
+              reason: t('dynamics.liveInterpretation.limits', 'Observed values only — not a launch, grip, thermal-health, or selected-trip assessment.') }} />
 
           {hasBothAxles && read.rearTorqueSharePct != null ? (
             <MetricBar

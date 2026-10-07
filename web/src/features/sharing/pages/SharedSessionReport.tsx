@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, Clock, Battery, Gauge, DollarSign, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { GlassPanel, Logo, Text } from '@/components/ui';
-import { ChartCard, Grid, LayoutCard, PageHeader } from '@/components/layout';
-import { StatCard } from '@/components/data-display';
+import { ChartCard, LayoutCard, PageHeader } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import {
   ChartGradient, chartGrid, axisTick,
@@ -12,8 +11,8 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';
+import { PublicSessionBrief } from '../components/operationalbrief-public';
 
 import type { SharedSessionData } from '@/types/sharing';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -24,14 +23,14 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Renders a `charging_session` share payload. Mirrors SharedDrivePage's
- * structure (compact branded header → stat grid → vehicle badge → curve
+ * structure (compact branded header → measurement brief → vehicle badge → curve
  * chart → footer) so both link kinds read as one product. All quantities
  * convert to display units at this render boundary.
  */
 export function SharedSessionReport({ data }: { data: SharedSessionData }) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatEnergy, formatPower } = useUnits();
+  const { unitPrefs, formatEnergy, formatPower } = useUnits();
   const session = data.session;
 
   /* ---- Curve data: wire is already kW/kWh; x in minutes ---- */
@@ -44,11 +43,6 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
       })),
     [session.curve],
   );
-
-  const socDelta =
-    session.start_soc_pct != null && session.end_soc_pct != null
-      ? Math.round((session.end_soc_pct - session.start_soc_pct) * 10) / 10
-      : null;
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -72,50 +66,15 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
           )}
         </div>
 
-        {/* Stats grid */}
+        {/* Owner-shared measurements */}
         <FadeIn delay={0.05}>
-          <Grid cols={{ default: 2, md: 4 }} gap={4}>
-            {session.energy_added_wh != null && (
-              <StatCard
-                label={t('share.energyAdded', 'Energy added')}
-                value={formatEnergy(session.energy_added_wh)}
-                icon={<Zap className="h-4 w-4" />}
-              />
-            )}
-            <StatCard
-              label={t('share.duration', 'Duration')}
-              value={formatDurationSecondsAsMinutes(session.duration_s)}
-              icon={<Clock className="h-4 w-4" />}
-            />
-            {session.start_soc_pct != null && session.end_soc_pct != null && (
-              <StatCard
-                label={t('share.battery', 'Battery')}
-                value={`${Math.round(session.start_soc_pct)}% → ${Math.round(session.end_soc_pct)}%`}
-                icon={<Battery className="h-4 w-4" />}
-              />
-            )}
-            {session.peak_power_w != null && (
-              <StatCard
-                label={t('share.peakPower', 'Peak power')}
-                value={formatPower(session.peak_power_w)}
-                icon={<Gauge className="h-4 w-4" />}
-              />
-            )}
-            {socDelta != null && socDelta > 0 && session.energy_added_wh != null && (
-              <StatCard
-                label={t('share.efficiency', 'Efficiency')}
-                value={`${fmtNumber(session.energy_added_wh / 1000 / (socDelta / 100))} kWh/%`}
-                icon={<Zap className="h-4 w-4" />}
-              />
-            )}
-            {session.cost != null && (
-              <StatCard
-                label={t('share.cost', 'Cost')}
-                value={`${session.cost_currency ?? ''} ${fmtNumber(session.cost)}`.trim()}
-                icon={<DollarSign className="h-4 w-4" />}
-              />
-            )}
-          </Grid>
+          <PublicSessionBrief
+            session={session}
+            preferences={{ units: unitPrefs, currency: { kind: 'symbol', value: session.cost_currency ?? '' } }}
+            formatEnergy={formatEnergy}
+            formatPower={formatPower}
+            fmtNumber={fmtNumber}
+          />
         </FadeIn>
 
         {/* Vehicle badge */}

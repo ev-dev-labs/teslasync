@@ -209,6 +209,17 @@ describe('formatDuration (utility)', () => {
 });
 
 describe('VampireDrainWidget — standard layout (2 col)', () => {
+  it('keeps a measured zero average and the independent aggregate/feed populations in a real brief', () => {
+    mockStats.mockReturnValue(makeQuery({ data: makeStats({ avg_drain_pct_per_day: 0 }) }));
+    renderWidget();
+    const brief = screen.getByTestId('dashboard-vampire-drain-brief');
+    expect(brief).toHaveTextContent('0.00%/day');
+    expect(brief).toHaveTextContent('Aggregate event count: 12');
+    expect(brief).toHaveTextContent('event feed is limited to 30 rows');
+    expect(brief).toHaveTextContent('exact aggregate recording bounds are not supplied');
+    expect(screen.getByText(`8.00% ${DOT} 40.00h`)).toBeInTheDocument();
+  });
+
   it('keeps a missing event count unknown while retaining the observed hours and feed', () => {
     mockStats.mockReturnValue(makeQuery({ data: makeStats({ event_count: null as unknown as number }) }));
     renderWidget();

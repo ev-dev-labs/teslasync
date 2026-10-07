@@ -10,7 +10,50 @@
         "fatiguing": "Fatiguing rules detected",
         "available": "Rules scored"
       }
-    }
+    },
+    "fatiguing": "Fatiguing rules",
+    "ofTotal": "of {{n}} rules",
+    "perDay": "Notifications per day",
+    "overDays": "across {{n}} days",
+    "untracked": "Not tracked",
+    "ignored": "Never read",
+    "ignoredHint": "of notifications with read tracking",
+    "burst": "Arrived in bursts",
+    "burstHint": "firings that piled onto another",
+    "title": "Alert fatigue",
+    "subtitle": "Which of your notification rules have stopped being useful — scored on volume, burstiness and how often you actually read them",
+    "kpis": "Alert fatigue metrics",
+    "noData": "No notifications have been delivered yet, so there is nothing to score.",
+    "chart": "Noise score by rule",
+    "chartHint": "Anything past the line is firing more than it is earning",
+    "col": {
+      "rule": "Rule",
+      "score": "Noise score",
+      "perDay": "Per day",
+      "ignored": "Ignored (%)",
+      "verdict": "Verdict",
+      "hour": "Hour",
+      "count": "Notifications"
+    },
+    "hours": "When notifications arrive",
+    "hoursHint": "Firings by hour of day across every rule — the small hours are what really cost goodwill",
+    "detail": "Rule breakdown",
+    "noRules": "No notification rules have fired yet.",
+    "firings": "Firings",
+    "firingsValue": "{{n}} · {{perDay}}/day",
+    "burstRate": "In bursts",
+    "burstValue": "{{pct}}% · max {{max}}",
+    "ignoredRate": "Never read",
+    "delivery": "Delivery",
+    "deliveryValue": "{{ok}} sent · {{bad}} failed",
+    "verdict": {
+      "healthy": "Healthy",
+      "chatty": "Chatty",
+      "noisy": "Noisy",
+      "fatiguing": "Fatiguing"
+    },
+    "chartAria": "Bar chart of notification rules ranked by their computed noise score",
+    "hoursAria": "Bar chart of notification volume by hour of day"
   },
   "alertPacks": {
     "severityColumn": "Severity",
@@ -538,7 +581,8 @@
       "topSignals": "Top monitored subjects",
       "noSignals": "No monitored subjects yet",
       "ruleCount": "Rules",
-      "severityLabel": "Severity"
+      "severityLabel": "Severity",
+      "severityAria": "Alert rules by severity"
     },
     "kind": {
       "signal": "Signal",
@@ -581,7 +625,19 @@
     "error": {
       "nameTooLong": "Max 120 characters"
     },
-    "openStudio": "Create rule"
+    "openStudio": "Create rule",
+    "editTitle": "Edit notification rule",
+    "brief": {
+      "provenance": "Counts cover the loaded rule set before search and channel filtering. Snoozed rules can overlap enabled or disabled rules; snooze status uses the current browser time.",
+      "title": "Rule configuration and current snoozes",
+      "unavailable": "Rules unavailable",
+      "available": "Rule set loaded",
+      "scope": "All loaded rules · before filters"
+    },
+    "editNamed": "Edit {{name}}",
+    "backToRules": "Back to rules",
+    "editMissing": "Rule not found",
+    "editMissingDetail": "This rule may have been deleted. Return to the list to choose another."
   },
   "audit": {
     "title": "Audit log",
@@ -646,6 +702,12 @@
         "empty": "No eligible delivery outcomes",
         "available": "Delivery outcomes recorded"
       }
+    },
+    "status": {
+      "healthy": "Healthy",
+      "warning": "Burning fast",
+      "critical": "SLO breach",
+      "no_data": "No outcomes"
     }
   },
   "notificationHealth": {
@@ -703,6 +765,13 @@
       "meta": "{{severity}} · {{status}} · {{date}}",
       "measured": "Measured",
       "derived": "Derived"
+    },
+    "brief": {
+      "provenance": "Percentiles use recorded delivery latency or created-to-sent timestamps for attempts with usable measurements. The recorded sample is not a guaranteed complete analysis window.",
+      "title": "Delivery speed, tail latency, and Apdex",
+      "empty": "No usable latency measurements",
+      "available": "Latency measurements recorded",
+      "scope": "Recorded delivery attempts · usable latency sample"
     }
   },
   "notificationSounds": {
@@ -975,6 +1044,11 @@
     "hint": "Notifications only fire when the app tab is in the background.",
     "kpi": {
       "activeOfTotal": "{{active}} of {{total}} on",
+      "brief": {
+        "provenance": "Permission and in-tab events belong to this browser; tab signals use saved settings and sounds use device preferences. These are configuration counts, not delivery success rates.",
+        "scope": "This browser · saved tab settings",
+        "title": "Permission and enabled notification surfaces"
+      },
       "permission": "Browser permission",
       "pushEvents": "In-tab events",
       "soundChannels": "Sound channels",
@@ -1101,6 +1175,9 @@
     }
   },
   "dataState": {
+    "offline": {
+      "title": "Offline"
+    },
     "refreshBlocked": {
       "message": "The device is offline, so this section is showing the last values it received."
     },
@@ -1477,7 +1554,9 @@
       "title": "Ask the help assistant"
     },
     "alertFatigue": {
-      "fatiguingIconLabel": "More info about fatiguing rules"
+      "fatiguing": "The noise score blends three things that make a rule tiring rather than helpful: how many times a day it fires, what share of those firings arrive in bursts on the heels of another, and how often a delivered notification is never read. A rule can be low-volume and still fatiguing if every firing comes in a cluster of six.",
+      "fatiguingIconLabel": "More info about fatiguing rules",
+      "iconLabel": "More info about rule grouping"
     },
     "fields": {
       "alertStudio": {
@@ -1796,6 +1875,17 @@
       },
       "title": "Alert studio"
     },
+    "archived": {
+      "summary": {
+        "cta": "Go to inbox",
+        "empty": "No archived notifications yet",
+        "label": "Archived summary",
+        "lastArchived": "Last archived",
+        "recentScope": "Latest 50 archived entries · all time",
+        "resource": "archived notifications",
+        "total": "Total archived"
+      }
+    },
     "browser": {
       "controlsAria": "Notification delivery controls",
       "inTabHelp": "These controls affect notifications and indicators in this browser tab. Browser push above delivers even when TeslaSync is closed.",
@@ -2011,8 +2101,25 @@
       },
       "subtitle": "All system, alert, automation, and scheduled notifications in one place.",
       "summary": {
+        "brief": {
+          "available": "Sample loaded",
+          "provenance": "Counts describe this bounded unfiltered sample, not the workspace period or the server total. Missing read timestamps count as unread.",
+          "title": "Backlog severity and read status",
+          "unknown": "Unknown severity"
+        },
+        "critical": "Critical",
+        "cta": "Manage alert rules",
+        "empty": "No notifications yet",
+        "info": "Info",
+        "label": "Inbox summary",
+        "lastReceived": "Last received",
         "recentScope": "Latest 50 active entries · all time",
-        "total": "Recent notifications"
+        "resource": "notifications",
+        "total": "Recent notifications",
+        "unknownSeverity": "{{count}} with unknown severity",
+        "unread": "Unread",
+        "unreadOf": "{{unread}} of {{total}}",
+        "warnings": "Warnings"
       },
       "threadCountLabel": "{{count}} threads",
       "threadCountLabel_one": "{{count}} thread",
@@ -2080,7 +2187,15 @@
       "title": "Quiet hours"
     },
     "report": {
+      "brief": {
+        "available": "Report loaded",
+        "scope": "{{from}} to {{to}} (exclusive) · {{timezone}}",
+        "title": "Triggers, linked deliveries, and outbound calls",
+        "unavailable": "Report unavailable"
+      },
+      "category": "Category",
       "channels": "Delivery channels",
+      "count": "Count",
       "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
       "deliveries": "Channel deliveries",
       "description": "Explore triggers and delivery outcomes across every notification source. Historical periods remain available.",

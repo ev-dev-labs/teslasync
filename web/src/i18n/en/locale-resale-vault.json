@@ -187,7 +187,67 @@
     },
     "certificate": {
       "loadError": "The battery certificate could not be loaded.",
-      "retryVerify": "Retry verification"
+      "retryVerify": "Retry verification",
+      "soh": "State of health",
+      "capacity": "Current capacity",
+      "cycles": "Total cycles",
+      "habits": "Charge habits score",
+      "title": "Battery certificate",
+      "verified": "Signature verified",
+      "body": "A server-signed battery health attestation. Share the certificate and signature with a buyer — they can verify authenticity without an account.",
+      "empty": "No certificate available for this vehicle.",
+      "expires": "Valid until",
+      "signature": "Signature: {{sig}}",
+      "copyCert": "Copy certificate",
+      "copySig": "Copy signature",
+      "verifyError": "Self-verification failed — the signature may be stale."
+    },
+    "brief": {
+      "certificate": {
+        "description": "Server-issued battery snapshot; signature verification is shown separately and applies only to this exact payload.",
+        "title": "Certificate measurements",
+        "scope": "Issued {{issued}}; expires {{expires}}"
+      },
+      "battery": {
+        "description": "Battery Passport measurements; missing readings are not inferred.",
+        "title": "Battery measurements"
+      },
+      "window": "Observed evidence: {{start}} → {{end}}",
+      "usage": {
+        "description": "Recent observed records; aggregates and returned record counts may cover different windows."
+      },
+      "cost": {
+        "description": "Recorded cost; the source does not supply a currency denomination. No currency conversion is applied."
+      },
+      "incidents": {
+        "description": "Observed Guard events and acknowledgements; no incident severity or legal conclusion is inferred.",
+        "title": "Observed security history"
+      },
+      "maintenance": {
+        "description": "Account-wide scheduled items and service records, not verified per-vehicle attribution.",
+        "title": "Maintenance record counts",
+        "scope": "Account-wide source; observation bounds unavailable"
+      },
+      "sourceLoad": "{{source}} loaded: {{at}}",
+      "status": {
+        "loading": "Loading evidence",
+        "retained": "Retained evidence",
+        "partial": "Some sources unavailable",
+        "available": "Evidence available",
+        "missing": "No evidence supplied",
+        "refreshing": "Refreshing retained evidence"
+      },
+      "eyebrow": "Vehicle-history evidence",
+      "loadTimes": "Load times are shown per source in details",
+      "loadTimeUnknown": "Source load time unavailable",
+      "software": {
+        "description": "Installed updates observed in the returned history, not a complete lifetime count.",
+        "title": "Observed software history"
+      },
+      "boundsUnknown": "Complete source coverage and observation bounds are not established"
+    },
+    "section": {
+      "vehicleIdentity": "Vehicle identity"
     }
   },
   "achievements": {

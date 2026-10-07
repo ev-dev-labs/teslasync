@@ -1,5 +1,29 @@
 {
   "analytics": {
+    "brief": {
+      "loading": "Loading evidence",
+      "unavailable": "Evidence unavailable",
+      "retained": "Retained evidence",
+      "returned": "Returned evidence",
+      "refreshing": "Updating evidence",
+      "overview": "Fleet performance summary",
+      "overviewDescription": "Returned fleet aggregates; gasoline savings and CO₂ saved retain the existing distance-based estimates.",
+      "coverage": "Returned fleet aggregates for the selected range; continuous recording coverage is unknown.",
+      "sectionScope": "Returned aggregates for the selected fleet range; exact recording coverage is unknown.",
+      "sectionProvenance": "The fleet response does not supply an observation timestamp for these aggregates.",
+      "drivingDescription": "Returned speed and distance statistics; power and regeneration remain unknown when the response omits them.",
+      "temperatureTitle": "Observed temperature measurements",
+      "temperatureDescription": "Inside and outside temperatures have independent observed sample populations.",
+      "temperatureSamples": "Inside samples: {{inside}}; outside samples: {{outside}}. A zero sample count does not establish a measured temperature.",
+      "chargingTitle": "Returned charging measurements",
+      "chargingDescription": "Returned fleet totals and charging statistics retain their source denominations and selected-range coverage.",
+      "batteryTitle": "Latest returned battery measurements",
+      "batteryDescription": "Measurements describe the last returned battery-trend row, not an inferred current vehicle state.",
+      "batteryScope": "Returned battery-trend date: {{date}}. Continuous recording coverage is unknown.",
+      "batteryNoRow": "No battery-trend row was returned for the selected range.",
+      "costTitle": "Returned charging cost distribution",
+      "costDescription": "Minimum, average, median and maximum returned charging costs; missing prices are not free charging."
+    },
     "battery": {
       "noData": "No battery trend data available",
       "healthScore": "Health score",
@@ -529,6 +553,10 @@
     }
   },
   "carbon": {
+    "brief": {
+      "intensityUnit": "Source intensity in grams of CO₂ per kilowatt-hour.",
+      "coverage": "Selected-period summary; continuous source coverage is unknown."
+    },
     "title": "Carbon intelligence",
     "subtitle": "Dense evidence for selected-period charging emissions, model coverage, lifetime context, and bounded scenarios",
     "selectVehicle": "Select a vehicle to see its carbon footprint.",
@@ -886,6 +914,18 @@
     "unchanged": "unchanged"
   },
   "comparison": {
+    "vehicleState": "Vehicle state",
+    "batteryLevel": "Battery level",
+    "versus": "{{valueA}} vs {{valueB}}",
+    "selectVehicles": "Select vehicles to compare",
+    "lifetimeStats": "Lifetime statistics",
+    "swap": "Swap vehicles",
+    "trends": "Trends over time",
+    "monthlyDistanceAria": "Monthly distance comparison line chart between two vehicles",
+    "drivesPerMonthAria": "Drives per month bar chart comparing two vehicles",
+    "brief": {
+      "partial": "Some comparison values unavailable"
+    },
     "selectVehicle": "Select a vehicle",
     "highlightContext": {
       "provenance": "Battery readings are snapshots; efficiency, charging cost and CO₂ saved are lifetime statistics.",
@@ -939,6 +979,13 @@
     "month": "Month"
   },
   "driveCalendar": {
+    "brief": {
+      "loading": "Loading drive history",
+      "unavailable": "Drive history unavailable",
+      "retained": "Retained drive history",
+      "returned": "Returned drive history",
+      "description": "Activity, streaks, distance, and the busiest day from returned drives in the selected workspace range."
+    },
     "title": "Drive calendar",
     "subtitle": "Driving activity and streaks in the selected period",
     "invalidYear": "Choose a year from 1900 through {{year}}.",
@@ -1039,6 +1086,14 @@
     "sourcePeriod": "Returned drives in the selected workspace range; continuous coverage is unknown."
   },
   "firmwareImpact": {
+    "title": "Firmware impact",
+    "kpis": "Firmware impact metrics",
+    "tested": "Updates tested",
+    "skipped": "{{n}} skipped for thin data",
+    "significantHint": "p < 0.05 with a non-trivial effect",
+    "best": "Biggest gain",
+    "none": "None detected",
+    "worst": "Biggest regression",
     "modernization": {
       "testedHelp": "Each install splits returned drives into before and after windows clipped at neighboring installs. Welch’s t-test compares consumption samples without assuming equal variance. This observational comparison does not isolate a firmware effect.",
       "significant": "Significant comparisons",
@@ -1061,6 +1116,10 @@
     }
   },
   "lifetime": {
+    "brief": {
+      "title": "Lifetime driving and charging summary",
+      "description": "Server lifetime aggregates with recorded driving hours, charging sessions, and savings versus gasoline."
+    },
     "achievementBadge": "Achievement",
     "unlocked": "✓ Unlocked",
     "title": "Lifetime stats",
@@ -1122,6 +1181,9 @@
     "moreInfoAbout": "More info about {{label}}"
   },
   "mileage": {
+    "brief": {
+      "title": "Recorded mileage summary"
+    },
     "title": "Mileage",
     "subtitle": "Daily and monthly distance tracking",
     "summary": {
@@ -1190,6 +1252,11 @@
     "odometerOverTimeAria": "Odometer readings over time"
   },
   "mileageBudget": {
+    "chartAria": "Cumulative driven distance against the pro-rata allowance, by month",
+    "brief": {
+      "description": "Observed term distance, budget pace, and bounded projections from returned drive history.",
+      "capped": "History capped"
+    },
     "title": "Mileage budget",
     "subtitle": "Lease and warranty allowance pacing with overage forecast",
     "kpis": "Mileage budget summary metrics",
@@ -1238,6 +1305,9 @@
     "termProvenance": "Configured term; observed drive-history coverage may be incomplete."
   },
   "milestones": {
+    "brief": {
+      "paceUnit": "Observed distance pace in meters per day, converted to the saved distance preference."
+    },
     "title": "Odometer milestones",
     "subtitle": "Observed progress, unit-round milestones, and evidence-based forecasts",
     "loading": "Loading odometer milestone workspace",

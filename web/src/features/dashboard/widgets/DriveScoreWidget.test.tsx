@@ -135,6 +135,17 @@ afterEach(() => {
   setGlobalLocale('en-US');
 });
 
+it('keeps measured zero fleet consumption separate from the unavailable derived score', () => {
+  fleetAnalyticsMock.mockReturnValue(makeQuery({ avg_efficiency_wh_km: 0 }));
+  renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
+  const brief = screen.getByTestId('dashboard-drive-consumption-brief');
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
+  expect(brief).toHaveTextContent('0.00 Wh/km');
+  expect(brief).toHaveTextContent('Fleet-wide');
+  expect(brief).toHaveTextContent('requested seven-day analytics window');
+  expect(screen.getByText('No drive score yet')).toBeInTheDocument();
+});
+
 it.each([1, 2, 3])('keeps an accessible heading and score at %s columns', cols => {
   renderWidget(<DriveScoreWidget size={{ cols, rows: 2 }} />);
   expect(screen.getByRole('heading', { name: 'Drive score', level: 3 })).toBeVisible();
@@ -146,14 +157,14 @@ it.each([SIZE_COMPACT, SIZE_STANDARD])('keeps score and efficiency reactive with
   fleetAnalyticsMock.mockReturnValue(makeQuery(analytics));
   renderWidget(<DriveScoreWidget size={size} />);
   expect(screen.getByText('78.00')).toBeInTheDocument();
-  if (size.rows > 1) expect(screen.getByText('320.13')).toBeInTheDocument();
+  if (size.rows > 1) expect(screen.getByText('320.13 Wh/km')).toBeInTheDocument();
   act(() => {
     const preferences = inputPreferences({ decimal_precision: 3, locale: 'de-DE' });
     setGlobalPrecision(preferences.decimal_precision ?? 2);
     setGlobalLocale(preferences.locale ?? 'en-US');
   });
   expect(screen.getByText('78,000')).toBeInTheDocument();
-  if (size.rows > 1) expect(screen.getByText('320,125')).toBeInTheDocument();
+  if (size.rows > 1) expect(screen.getByText('320,125 Wh/km')).toBeInTheDocument();
   expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '78');
   expect(analytics.avg_efficiency_wh_km).toBe(320.125);
 });
@@ -213,8 +224,7 @@ describe('DriveScoreWidget', () => {
     expect(screen.getByText('Score')).toBeInTheDocument();
     // Efficiency stat: label, km-passthrough value, and the Wh/km unit.
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('320.00')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('320.00 Wh/km')).toBeInTheDocument();
     // Not the empty state.
     expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
@@ -255,7 +265,7 @@ describe('DriveScoreWidget', () => {
 
     expect(screen.getByText('No drive score yet')).toBeInTheDocument();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
   });
 
   it('treats a non-finite efficiency payload as no score', () => {

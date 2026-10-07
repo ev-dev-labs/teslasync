@@ -230,7 +230,8 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "pickLocation": "Pick a visited location to draft a geofence around",
-      "pickHint": "Paste a visited-location ID from the locations page to draft a zone around it."
+      "pickHint": "Paste a visited-location ID from the locations page to draft a zone around it.",
+      "selectHint": "Choose a visited location to propose a zone; review the draft before saving."
     },
     "toggleGeofence": "Toggle geofence {{name}}",
     "editGeofence": "Edit geofence {{name}}",
@@ -261,14 +262,24 @@
     "toastCreateError": "Failed to create geofence",
     "toastUpdateError": "Failed to update geofence",
     "toastDeleteError": "Failed to delete geofence",
-    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "brief": {
+      "scope": "Saved geofences and visited candidates are independent sources; not limited to the selected vehicle.",
+      "reviewed": "Saved places not flagged as needing review.",
+      "pending": "Saved places flagged as needing review.",
+      "candidates": "Returned visited-place candidates; separate from saved geofence totals.",
+      "description": "Review saved boundaries and the independent visited-place queue before changing a zone."
+    },
+    "geolocationUnsupported": "Geolocation is not supported by this browser"
   },
   "locations": {
     "filterLabel": {
       "search": "Search"
     },
     "empty": {
-      "cta": "View drives"
+      "cta": "View drives",
+      "title": "No locations",
+      "message": "No visited locations recorded yet"
     },
     "resetDateRange": "Reset date range",
     "inspect": "Inspect {{location}}",
@@ -288,7 +299,39 @@
       "suggestButton": "Suggest name",
       "applyButton": "Apply to form",
       "applied": "Suggested name ready to save:"
-    }
+    },
+    "title": "Visited locations",
+    "brief": {
+      "scope": "Selected vehicle · {{from}} to {{to}} (exclusive) · loaded page {{page}}, up to {{limit}} places; not server-wide totals.",
+      "cities": "Distinct final address segments on the loaded page; unnamed and coordinate-only labels excluded.",
+      "top": "First returned location in the visit-ranked loaded page; search does not recalculate the summary.",
+      "average": "Loaded-page total duration divided by loaded-page visits; zero when the successful page contains no visits.",
+      "description": "Visit frequency and dwell time describe the returned page, while the leaderboards and place actions remain below."
+    },
+    "uniquePlaces": "Unique places",
+    "uniqueCities": "Unique cities",
+    "totalVisits": "Total visits",
+    "totalTime": "Total time",
+    "mostVisited": "Most visited",
+    "avgVisit": "Avg visit",
+    "subtitle": "Places you've been — ranked by frequency",
+    "kpis": "Location summary",
+    "leaderboards": "Top locations",
+    "byVisits": "Top locations by visits",
+    "visits": "visits",
+    "noVisitData": "No visited location data",
+    "byTime": "Top locations by time spent (hours)",
+    "hours": "Hours",
+    "noTimeData": "No time-spent data available",
+    "all": "All locations",
+    "searchPlaceholder": "Search by address…",
+    "noMatch": "No locations match your search",
+    "clearSearch": "Clear search",
+    "total": "total",
+    "avg": "avg",
+    "last": "Last",
+    "byVisitsAria": "Bar chart of the most-visited locations",
+    "byTimeAria": "Bar chart of locations by hours spent"
   },
   "mapOverview": {
     "pageTitle": "Map overview",
@@ -330,7 +373,25 @@
     "subtitle": "Live vehicle location and recent history",
     "kpis": "Vehicle status",
     "noPlayback": "Not enough GPS points to replay a route yet.",
-    "mapRegion": "Live location map"
+    "mapRegion": "Live location map",
+    "brief": {
+      "scope": "Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.",
+      "heading": "Reported heading in degrees.",
+      "description": "Reported motion and coordinates from the latest position; missing GPS is not a measured zero."
+    }
+  },
+  "mapsBrief": {
+    "status": {
+      "retained": "Retained source data",
+      "unavailable": "Source data unavailable",
+      "partial": "Independent sources incomplete",
+      "available": "Source data available",
+      "loading": "Loading source data"
+    },
+    "eyebrow": "Location evidence",
+    "freshness": {
+      "unknown": "Receipt time unknown"
+    }
   },
   "navigation": {
     "noRoute": "No active route selected"
@@ -367,8 +428,46 @@
     "monthlyAria": "Monthly drive count bars and average temperature line",
     "scatterAria": "Scatter plot of energy efficiency against outdoor temperature per drive",
     "detective": {
-      "loadFailed": "Efficiency diagnosis could not be loaded."
-    }
+      "loadFailed": "Efficiency diagnosis could not be loaded.",
+      "stable": "Stable",
+      "colder": "Colder weather",
+      "warmer": "Warmer weather",
+      "pattern": "Driving pattern",
+      "insufficient": "Need more data",
+      "brief": {
+        "scope": "Selected vehicle · {{latest}} versus {{prior}} · independent server diagnosis.",
+        "delta": "Efficiency change",
+        "attributed": "Temperature attribution",
+        "temperature": "Temperature shift",
+        "temperatureDescription": "Temperature difference in source degrees Celsius, not an absolute temperature conversion.",
+        "title": "Month-over-month diagnosis"
+      },
+      "detail": "{{delta}}% vs prior month · {{attributed}}% temperature-attributed · {{temp}}°C shift",
+      "title": "Efficiency detective",
+      "noData": "Select a vehicle to diagnose efficiency shifts."
+    },
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "driveDate": "Date",
+    "distance": "Distance",
+    "selectVehicle": "Select a vehicle to view temperature impact",
+    "noData": "No drive data available yet",
+    "brief": {
+      "scope": "Selected vehicle · returned drive points; source window unspecified. Monthly trend and efficiency detective use independent periods.",
+      "best": "Lowest average consumption among populated temperature buckets.",
+      "worst": "Highest average consumption among populated temperature buckets.",
+      "bestEfficiency": "Best-range efficiency",
+      "worstEfficiency": "Worst-range efficiency",
+      "description": "Observed consumption and populated temperature buckets, with their original efficiency captions retained."
+    },
+    "kpis": "Summary metrics",
+    "regionScatter": "Temperature vs efficiency analysis",
+    "regionTrends": "Efficiency and seasonal trends",
+    "monthlyTitle": "Monthly seasonal trend",
+    "driveCount": "Drives",
+    "avgTemp": "Avg temp",
+    "regionRecs": "Recommendations and recent drives",
+    "recentDrivesTitle": "Recent drives"
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",

@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { MetricCard } from '@/components/data-display';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
 import { Select } from '@/components/ui';
-import { Grid } from '@/components/layout';
-import { Badge, DataTable, Text } from '@/components/ui';
+import { DataTable, Text } from '@/components/ui';
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, pagination, time, yesNo } from './PhysicsPageShell';
 
@@ -25,18 +24,17 @@ export default function PhysicsContradictionsSection({ physics }: { physics: Phy
     .sort((a, b) => Math.abs(Date.parse(a.at) - eventTime) - Math.abs(Date.parse(b.at) - eventTime))[0];
   return <>
     <Evidence title={physics.title} honesty={report?.contradictions?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.contradictionEpisodes', 'Returned episodes')} value={findings.length} color="amber" />
-        <MetricCard label={t('teslaOnly.workbench.observations', 'Reported observations')} value={observations} color="cyan" />
-        <MetricCard label={t('teslaOnly.contradictionUncertain', 'Unknown-flagged episodes')} value={unknownCount} color="purple" />
-      </Grid>
-      <Text as="p" variant="caption">{t('teslaOnly.contradictionAnalysis', 'The backend groups consecutive matching findings into episodes. Observations count repeated readings, not separate faults. The first and last times bound observed repetitions, not the precise onset or resolution. Missing history and source caps can hide episodes.')}</Text>
-      <div className="flex flex-wrap gap-2">{kinds.map((kind) => <Badge key={kind} variant="neutral" size="sm">
-        {t('teslaOnly.contradictionByKind', '{{kind}}: {{episodes}} episodes / {{readings}} readings', {
-          kind, episodes: findings.filter((r) => r.kind === kind).length,
-          readings: findings.filter((r) => r.kind === kind).reduce((sum, r) => sum + (r.observations ?? 1), 0),
-        })}
-      </Badge>)}</div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-contradictions-summary" available={report?.contradictions != null}
+        description={t('teslaOnly.contradictionAnalysis', 'The backend groups consecutive matching findings into episodes. Observations count repeated readings, not separate faults. The first and last times bound observed repetitions, not the precise onset or resolution. Missing history and source caps can hide episodes.')}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'episodes', label: t('teslaOnly.contradictionEpisodes', 'Returned episodes'), rawValue: report?.contradictions ? findings.length : null },
+          { metricId: 'count', occurrenceId: 'observations', label: t('teslaOnly.workbench.observations', 'Reported observations'), rawValue: report?.contradictions ? observations : null },
+          { metricId: 'count', occurrenceId: 'unknown', label: t('teslaOnly.contradictionUncertain', 'Unknown-flagged episodes'), rawValue: report?.contradictions ? unknownCount : null },
+          ...kinds.flatMap((kind): import('@/components/data-display').StatMetric[] => [
+            { metricId: 'count', occurrenceId: `episodes-${kind}`, label: kind, rawValue: findings.filter(row => row.kind === kind).length, context: t('teslaOnly.contradictionByKind', '{{kind}}: {{episodes}} episodes / {{readings}} readings', { kind, episodes: findings.filter(row => row.kind === kind).length, readings: findings.filter(row => row.kind === kind).reduce((sum, row) => sum + (row.observations ?? 1), 0) }) },
+            { metricId: 'count', occurrenceId: `readings-${kind}`, label: `${kind} · ${t('teslaOnly.workbench.observations', 'Reported observations')}`, rawValue: findings.filter(row => row.kind === kind).reduce((sum, row) => sum + (row.observations ?? 1), 0) },
+          ]),
+        ]} />
     </Evidence>
     <Evidence title={t('teslaOnly.contradictionRecent', 'Latest eight episodes; open raw evidence for the full returned set.')}>
       <Select label={t('teslaOnly.filterKind', 'Filter by finding')} value={selected} onChange={(event) => setFilter(event.target.value)}

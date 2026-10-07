@@ -19,12 +19,16 @@ import {
   DRAFT_EXPECTATION,
   failLocalTrustReads,
   INSTALLED_GRANT,
+  INSTALLED_GRANT_EXPECTATIONS,
+  localPackTables,
   localTrustReadAttempts,
   MARKETPLACE_PATH,
   SANDBOX_BRIEF_ID,
   SIMULATED_GRANT,
   STARTER_EXPECTATION,
+  STARTER_CAPABILITIES,
   restoreLocalTrustReads,
+  seedInstalledCapabilityGrant,
   type SandboxExpectation,
 } from './intelligence-packs.fixtures';
 
@@ -36,6 +40,88 @@ function card(page: Page, title: string, occurrence = 0): Locator {
     .filter({ hasText: new RegExp(`^${escaped}$`) })
     .nth(occurrence)
     .locator('xpath=ancestor::*[@data-card][1]');
+}
+
+for (const width of [320, 1440]) {
+  for (const theme of ['light', 'dark'] as const) {
+    for (const fixture of INSTALLED_GRANT_EXPECTATIONS) {
+      test(`installed ${fixture.id} capability grant preserves real policy outputs and disclosure at ${width}px ${theme}`, async ({ page }) => {
+        test.setTimeout(90_000);
+        const diagnostics = monitorPage(page);
+        const persisted = await seedInstalledCapabilityGrant(page, fixture);
+        const api = await openMarketplace(page, width, theme);
+        const starter = fixture.sandbox.envelope;
+        await expect(card(page, starter.manifest.name)
+          .getByRole('button', { name: 'Up to date (v1.0.0)', exact: true })).toBeVisible();
+
+        await selectTab(page, 'Installed');
+        await page.getByRole('button', { name: 'Expand row', exact: true }).click();
+        await expect(page.getByText('Trust decision: trusted-signed-recognized', { exact: true })).toBeVisible();
+        await expect(page.getByRole('switch', { name: `Enable ${starter.manifest.name}`, exact: true })).toBeChecked();
+        const capabilityList = page.getByText('Capability grant on record', { exact: true })
+          .locator('..').getByRole('list');
+        await expect(capabilityList.getByRole('listitem')).toHaveCount(starter.manifest.capabilities.length);
+        for (const capability of STARTER_CAPABILITIES) {
+          const item = capabilityList.getByRole('listitem')
+            .filter({ has: page.getByText(capability.label, { exact: true }) });
+          await expect(item).toHaveCount(1);
+          await expect(item.getByText(capability.description, { exact: true })).toBeVisible();
+          const approved = fixture.approvedCapabilities.includes(capability.id);
+          await expect(item.getByText(approved ? 'Granted' : 'Denied', { exact: true })).toBeVisible();
+          await expect(item.getByText(approved ? 'Denied' : 'Granted', { exact: true })).toHaveCount(0);
+        }
+
+        await selectTab(page, 'Sandbox preview');
+        await expect(page.getByText(INSTALLED_GRANT, { exact: true })).toBeVisible();
+        await expect(page.getByText(/simulating full requested-capability grant/)).toHaveCount(0);
+        const runStats = await expectRun(page, fixture.sandbox);
+        await expect(card(page, 'Sandbox preview').locator('[data-card-content] [data-card-title]')).toHaveText(
+          starter.manifest.dashboards.flatMap(dashboard => dashboard.widgets.map(widget => widget.title)));
+        for (const notice of fixture.notices) {
+          const widget = card(page, notice.title, notice.occurrence);
+          if (notice.field) {
+            await expect(widget.getByText(
+              `Fields evaluated as 0 (capability denied): ${notice.field}`, { exact: true },
+            )).toBeVisible();
+          } else {
+            await expect(widget.getByText(/Fields evaluated as 0 \(capability denied\):/)).toHaveCount(0);
+          }
+          await expect(widget.getByText('No output rows.', { exact: true })).toHaveCount(0);
+          await expect(widget.getByText('Referenced formula not found.', { exact: true })).toHaveCount(0);
+        }
+        const flag = card(page, 'Currently Below Target');
+        await expect(flag.getByText('0.00 flag', { exact: true })).toBeVisible();
+        await expect(flag.getByText(fixture.flagAverage, { exact: true })).toBeVisible();
+        await expect(flag.getByText('—', { exact: true })).toHaveCount(0);
+        await expect(flag.getByText('0.00%', { exact: true })).toHaveCount(0);
+        const observedRange = card(page, 'Battery Headroom', 1);
+        await expect(observedRange).toContainText(fixture.headroomLatest);
+        await expect(observedRange).toContainText(fixture.headroomRange);
+        await expect(observedRange.locator('[role="progressbar"]')).toHaveCount(0);
+        await reviewRun(page, fixture.sandbox, INSTALLED_GRANT, runStats);
+        expect(await localPackTables(page)).toEqual(persisted);
+
+        // A fresh page/provider must read the persisted restricted grant,
+        // rather than silently upgrading it to the full catalog request.
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await waitForHarnessReady(page, api);
+        await expectThemeApplied(page, theme);
+        await selectTab(page, 'Sandbox preview');
+        await expect(page.getByText(INSTALLED_GRANT, { exact: true })).toBeVisible();
+        await expect(page.getByText(/simulating full requested-capability grant/)).toHaveCount(0);
+        const reloadedStats = await expectRun(page, fixture.sandbox);
+        for (const notice of fixture.notices.filter(entry => entry.field != null)) {
+          await expect(card(page, notice.title, notice.occurrence).getByText(
+            `Fields evaluated as 0 (capability denied): ${notice.field}`, { exact: true },
+          )).toBeVisible();
+        }
+        await reviewRun(page, fixture.sandbox, INSTALLED_GRANT, reloadedStats);
+        expect(await localPackTables(page)).toEqual(persisted);
+        await complete(page, api);
+        await expectNoRuntimeFailures(diagnostics);
+      });
+    }
+  }
 }
 
 async function openMarketplace(page: Page, width: number, theme: Theme): Promise<MockApiController> {

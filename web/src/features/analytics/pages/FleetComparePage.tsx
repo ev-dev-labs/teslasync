@@ -754,7 +754,7 @@ export default function FleetComparePage() {
                   onRetry={retryMonthly}
                   emptyMessage={t('comparison.noMonthlyData', 'No monthly data available yet')}
                   title={t('comparison.monthlyDistance', 'Monthly distance')}
-                  ariaLabel={t('comparison.monthlyDistance.aria', 'Monthly distance comparison line chart between two vehicles')}
+                  ariaLabel={t('comparison.monthlyDistanceAria', 'Monthly distance comparison line chart between two vehicles')}
                   data={monthlyChartData}
                   dataColumns={[
                     { key: 'month', label: t('comparison.month', 'Month') },
@@ -801,7 +801,7 @@ export default function FleetComparePage() {
                   onRetry={retryMonthly}
                   emptyMessage={t('comparison.noDrivesData', 'No drive data available yet')}
                   title={t('comparison.drivesPerMonth', 'Drives per month')}
-                  ariaLabel={t('comparison.drivesPerMonth.aria', 'Drives per month bar chart comparing two vehicles')}
+                  ariaLabel={t('comparison.drivesPerMonthAria', 'Drives per month bar chart comparing two vehicles')}
                   data={drivesChartData}
                   dataColumns={[
                     { key: 'month', label: t('comparison.month', 'Month') },

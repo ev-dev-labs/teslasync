@@ -144,6 +144,18 @@ beforeEach(() => {
 });
 
 describe('ChargingTelemetryWidget — power unit conversion (1000× regression guard)', () => {
+  it('keeps all five wide raw operands and source timestamp in the real charging brief', () => {
+    mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ charger_power_w: 0, charger_actual_current: 0 }) }));
+    renderWidget({ size: { cols: 4, rows: 4 } });
+    const brief = screen.getByTestId('dashboard-charging-telemetry-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(5);
+    expect(brief).toHaveTextContent('source timestamp 2026-01-01T00:00:00Z');
+    expect(brief).toHaveTextContent('0.00 kW');
+    expect(brief).toHaveTextContent('0.00 A');
+    expect(brief).toHaveTextContent('0.00%');
+    expect(screen.getByText('AC charger')).toBeInTheDocument();
+  });
+
   it.each([
     { cols: 1, rows: 1 },
     { cols: 2, rows: 2 },
@@ -158,17 +170,17 @@ describe('ChargingTelemetryWidget — power unit conversion (1000× regression g
     renderWidget({ size });
 
     const compact = size.cols === 1;
-    expect(screen.getByText(compact ? '11.23 kW' : '11.23')).toBeInTheDocument();
+    expect(screen.getByText('11.23 kW')).toBeInTheDocument();
     act(() => { applyPreferences({ decimal_precision: 3, locale: 'de-DE' }); });
-    expect(screen.getByText(compact ? '11,235 kW' : '11,235')).toBeInTheDocument();
+    expect(screen.getByText('11,235 kW')).toBeInTheDocument();
     if (compact) {
       expect(screen.getByText('240,125V · 32,125A')).toBeInTheDocument();
     } else {
-      expect(screen.getByText('240,125')).toBeInTheDocument();
+      expect(screen.getByText('240,125 V')).toBeInTheDocument();
       expect(screen.getByText('3')).toBeInTheDocument();
     }
     act(() => { applyPreferences({ decimal_precision: 0, locale: 'en-US' }); });
-    expect(screen.getByText(compact ? '11 kW' : '11')).toBeInTheDocument();
+    expect(screen.getByText('11 kW')).toBeInTheDocument();
     expect(telemetry.charger_power_w).toBe(11234.567);
     expect(telemetry.charger_voltage).toBe(240.125);
     expect(telemetry.charger_actual_current).toBe(32.125);
@@ -179,9 +191,7 @@ describe('ChargingTelemetryWidget — power unit conversion (1000× regression g
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ charger_power_w: 11000 }) }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    // 11000 W → 11.0 kW (value + separate unit chip).
-    expect(screen.getByText('11.00')).toBeInTheDocument();
-    expect(screen.getAllByText('kW').length).toBeGreaterThan(0);
+    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
     // The raw watt magnitude with a kW suffix (the bug) must never appear.
     expect(screen.queryByText('11,000.00')).not.toBeInTheDocument();
   });
@@ -224,9 +234,9 @@ describe('ChargingTelemetryWidget — standard layout stats', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('Voltage')).toBeInTheDocument();
-    expect(screen.getByText('240.00')).toBeInTheDocument();
+    expect(screen.getByText('240.00 V')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
-    expect(screen.getByText('32.00')).toBeInTheDocument();
+    expect(screen.getByText('32.00 A')).toBeInTheDocument();
     expect(screen.getByText('Power')).toBeInTheDocument();
     expect(screen.getByText('Phases')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
@@ -265,8 +275,8 @@ describe('ChargingTelemetryWidget — wide layout (efficiency, badge, sparkline)
     renderWidget({ size: { cols: 4, rows: 2 } });
 
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('91.15')).toBeInTheDocument();
-    expect(screen.queryByText('100.00')).not.toBeInTheDocument();
+    expect(screen.getByText('91.15%')).toBeInTheDocument();
+    expect(screen.queryByText('100.00%')).not.toBeInTheDocument();
   });
 
   it('keeps the efficiency stat visible as unknown when pilot current is unavailable', () => {
@@ -378,7 +388,7 @@ describe('ChargingTelemetryWidget — loading / error states', () => {
 
     // Data present → the error is a subtle freshness signal, not a full panel.
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    expect(screen.getByText('11.00')).toBeInTheDocument();
+    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
   });
 });
 
@@ -398,7 +408,7 @@ describe('ChargingTelemetryWidget — refresh + vehicle resolution', () => {
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ ts: 't3', charger_power_w: 6000 }) }));
     rerender(tree(2));
     expect(container.querySelector('svg[role="img"]')).toBeNull();
-    expect(screen.getByText('6.00')).toBeInTheDocument();
+    expect(screen.getByText('6.00 kW')).toBeInTheDocument();
   });
   it('refetches charging telemetry when the refresh control is activated', () => {
     const refetch = vi.fn();

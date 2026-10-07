@@ -4,6 +4,7 @@ import { Zap } from 'lucide-react';
 import { BipolarBar } from '@/components/charts';
 import { Caption, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -11,7 +12,8 @@ import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -62,11 +64,37 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
   const isCompact = size.cols <= 1;
   const torque = knownNumber(data?.di_torque);
   const statorTemp = data?.di_stator_temp ?? data?.motor_temp_c_front ?? null;
-  const gear = data?.gear ?? data?.shift_state ?? '—';
+  const gear = data?.gear ?? data?.shift_state ?? null;
   // These extension fields are not declared by MotorSnapshot; narrow the
   // actual response rather than asserting that telemetry must be numeric.
   const lateralG = data && 'lateral_accel' in data ? knownNumber(data.lateral_accel) : null;
   const longitudinalG = data && 'longitudinal_accel' in data ? knownNumber(data.longitudinal_accel) : null;
+
+  const readoutMetrics: StatMetric[] = [
+    {
+      metricId: 'temperature', occurrenceId: 'motor-stator-temperature', rawValue: statorTemp,
+      label: t('widget.motorPerformance.statorTemp', 'Stator temp'),
+      description: t('widget.motorPerformance.statorSource', 'Returned stator temperature in °C, falling back to the front motor temperature only when absent.'),
+      display: { formatter: raw => ({ value: fmtNumber(toTemperatureDisplay(raw)), unit: tempUnit }) },
+    },
+    {
+      metricId: 'status', occurrenceId: 'motor-gear-state', rawValue: gear,
+      label: t('widget.motorPerformance.gearState', 'Gear state'),
+      description: t('widget.motorPerformance.gearSource', 'Reported gear, falling back to shift state; an absent source remains unknown.'),
+    },
+    {
+      metricId: 'number', occurrenceId: 'motor-lateral-readout', rawValue: lateralG,
+      label: t('widget.motorPerformance.lateralG', 'Lateral G'),
+      description: t('widget.motorPerformance.extensionUnitLimitation', 'Extension-field units are not established by the source contract. The existing g presentation is retained without rescaling; it is not verified SI acceleration.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'g' }) },
+    },
+    {
+      metricId: 'number', occurrenceId: 'motor-longitudinal-readout', rawValue: longitudinalG,
+      label: t('widget.motorPerformance.longitudinalG', 'Longitudinal G'),
+      description: t('widget.motorPerformance.extensionUnitLimitation', 'Extension-field units are not established by the source contract. The existing g presentation is retained without rescaling; it is not verified SI acceleration.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'g' }) },
+    },
+  ];
 
   const gaugeColor = useMemo(() => torqueColor(Math.abs(torque ?? 0)), [torque]);
   const torqueOutsideScale = torque != null && (torque < -TORQUE_REGEN_MAX || torque > TORQUE_MAX);
@@ -91,7 +119,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
               <Caption>
                 {t('widget.motorPerformance.gear', 'Gear')}
               </Caption>
-              <Text variant="metricValue" className="[overflow-wrap:anywhere]">{gear}</Text>
+              <Text variant="metricValue" className="[overflow-wrap:anywhere]">{gear ?? '—'}</Text>
               <Caption>
                 {t('widget.motorPerformance.torque', 'Torque')}
               </Caption>
@@ -141,27 +169,12 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
             negativeLabel={t('widget.motorPerformance.regen', 'Regen')}
             positiveLabel={t('widget.motorPerformance.drive', 'Drive')}
           />}
-          <WidgetStatGrid cols={2} stats={[
-            {
-              label: t('widget.motorPerformance.statorTemp', 'Stator temp'),
-              value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp)) : null,
-              unit: statorTemp != null ? tempUnit : undefined,
-            },
-            {
-              label: t('widget.motorPerformance.gearState', 'Gear state'),
-              value: gear,
-            },
-            {
-              label: t('widget.motorPerformance.lateralG', 'Lateral G'),
-              value: lateralG != null ? fmtNumber(lateralG) : null,
-              unit: lateralG != null ? 'g' : undefined,
-            },
-            {
-              label: t('widget.motorPerformance.longitudinalG', 'Longitudinal G'),
-              value: longitudinalG != null ? fmtNumber(longitudinalG) : null,
-              unit: longitudinalG != null ? 'g' : undefined,
-            },
-          ]} />
+          <DashboardSourceBrief metrics={readoutMetrics} state={trust}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.motorPerformance.summaryTitle', 'Returned motor readouts')}
+            description={t('widget.motorPerformance.summaryDescription', 'Temperature, categorical gear and two extension readings retain independent raw operands. Signed torque and its asymmetric regen/drive scale remain above.')}
+            scope={t('widget.motorPerformance.summaryScope', 'Vehicle {{id}} · returned motor snapshot; continuous recording coverage and extension-field units are not established.', { id: vid ?? '—' })}
+            testId="dashboard-motor-readouts-brief" />
           {!data && <Caption>{t('widget.motorPerformance.noData', 'No motor data')}</Caption>}
         </div>
     </WidgetShell>

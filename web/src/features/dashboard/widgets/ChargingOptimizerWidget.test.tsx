@@ -229,6 +229,22 @@ afterEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('ChargingOptimizerWidget', () => {
+  it('keeps three real optimizer operands and midnight, zero target and zero savings without dropping the specialist timeline', () => {
+    optimizerMock.mockReturnValue(makeQuery({ data: makeData({
+      current_schedule: { ...SCHED, most_common_start_hour: 0, avg_charge_to_pct: 0 },
+      cost_analysis: { ...COST, potential_monthly_savings: 0 },
+    }) }));
+    renderWidget({ cols: 4, rows: 4 });
+    const brief = screen.getByTestId('dashboard-charging-optimizer-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+    expect(brief).toHaveTextContent('12 AM');
+    expect(brief).toHaveTextContent('0.00%');
+    expect(brief).toHaveTextContent('$0.00');
+    expect(brief).toHaveTextContent('exact source recording bounds and completeness are not supplied');
+    expect(screen.getByRole('img', { name: '24h rate timeline' }).children).toHaveLength(24);
+    expect(screen.getByText('Shift to off-peak')).toBeInTheDocument();
+  });
+
   it('preserves all 24 specialist rate cells and the wall-clock start marker after typography adoption', () => {
     renderWidget({ cols: 4, rows: 2 });
     const timeline = screen.getByRole('img', { name: '24h rate timeline' });

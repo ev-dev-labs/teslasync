@@ -136,7 +136,21 @@
       "loadFailed": "Arrival advice could not be loaded."
     },
     "report": {
-      "loadFailed": "The trip report could not be loaded."
+      "loadFailed": "The trip report could not be loaded.",
+      "distance": "Distance",
+      "duration": "Trip time",
+      "detour": "Detour",
+      "times": "{{ratio}}×",
+      "fixes": "Fixes",
+      "replans": "Replans",
+      "replanCount": "{{replans}} of {{plans}} plans",
+      "usually": "Usually",
+      "usuallyTimes": "{{ratio}}× over {{count}} trips",
+      "checklist": "Ready at check",
+      "readyCount": "{{ready}} of {{total}}",
+      "title": "Trip report",
+      "empty": "No report yet.",
+      "loading": "Loading trip report…"
     }
   },
   "trips": {
@@ -247,6 +261,48 @@
       "distance": "Distance",
       "energy": "Energy",
       "cost": "Cost"
+    },
+    "brief": {
+      "status": {
+        "initial": "Loading source",
+        "initialFailure": "Source failed",
+        "ok": "Source loaded",
+        "stale": "Retained source",
+        "partial": "Partial source",
+        "unavailable": "Source unavailable"
+      },
+      "replay": {
+        "scope": "Drive #{{id}} · {{start}} – {{end}}",
+        "missingScope": "Drive record unavailable; event bounds unknown.",
+        "description": "Stored drive totals are independent of the GPS trail. Elevation gain and loss use only consecutive positions with measured elevation.",
+        "batteryContext": "Start {{start}}% → end {{end}}%",
+        "eyebrow": "Trip replay",
+        "provenance": "Stored drive summary and the loaded, telemetry-enriched GPS trail."
+      },
+      "detail": {
+        "efficiencyReason": "Efficiency requires a positive trip distance.",
+        "scope": "Trip #{{id}} · {{start}} – {{end}}",
+        "missingScope": "Trip record unavailable; event bounds unknown.",
+        "eyebrow": "Trip record",
+        "title": "Trip totals",
+        "description": "Recorded trip totals, with distance-based efficiency and the original drive and charging counts.",
+        "provenance": "Stored trip detail; malformed non-negative totals retain the existing zero-clamp display policy."
+      },
+      "report": {
+        "scope": "Journey #{{id}} · {{start}} – {{end}}",
+        "eyebrow": "Journey debrief",
+        "title": "Journey report summary",
+        "description": "Recorded journey measurements, plan counts, route-history context and readiness recap.",
+        "provenance": "Journey report refreshed by transitions, check-ins and replans; route-history trips have a separate denominator."
+      },
+      "list": {
+        "scope": "Loaded page only · {{start}} – {{end}} · vehicle {{vehicle}}",
+        "eyebrow": "Trip reports",
+        "title": "Loaded trip summary",
+        "description": "Distance, energy and recorded cost for the trips on this page; not fleet-wide or full-range totals.",
+        "provenance": "Stored trip records returned by the selected vehicle, date window and pagination."
+      },
+      "allVehicles": "All vehicles"
     }
   },
   "achievements": {
@@ -1389,9 +1445,11 @@
       "title": "Elevation profile"
     },
     "map": {
-      "noPositions": "No position data available for this drive"
+      "noPositions": "No position data available for this drive",
+      "section": "Route map and live position"
     },
     "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
+    "refresh": "Refresh replay data",
     "stat": {
       "battery": "Battery",
       "elevation": "Elevation",
@@ -1415,6 +1473,7 @@
       "aria": "Trip replay speed and power timeline area chart",
       "noData": "No telemetry data available",
       "power": "Power",
+      "section": "Trip elevation and speed timelines",
       "speed": "Speed",
       "subtitle": "Click to seek replay position",
       "title": "Speed & power timeline"

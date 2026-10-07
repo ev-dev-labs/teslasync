@@ -10,7 +10,8 @@ const fixtures = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi', hideDistance
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { distance: fixtures.distance } }),
 }));
-vi.mock('@/components/data-display', () => ({
+vi.mock('@/components/data-display', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/data-display')>(),
   AnimatedNumber: ({ value, suffix }: { value: number; suffix?: string }) => <span>{value}{suffix}</span>,
 }));
 interface ChartFixtureProps {

@@ -187,7 +187,7 @@ export default function RangeSimulatorPage() {
             <ChartCard toolbar exportable size="standard"
               title={t('rangeSim.histogram', 'Arrival Battery Distribution')}
               subtitle={t('rangeSim.histogramHint', '2,000 simulated arrivals; the dashed line is the {{pct}}% reserve', { pct: SIM_RESERVE_PCT })}
-              ariaLabel={t('rangeSim.histogram.aria', 'Histogram of simulated arrival battery percentages for the planned trip')}
+              ariaLabel={t('rangeSim.histogramAria', 'Histogram of simulated arrival battery percentages for the planned trip')}
               loading={isLoading}
               error={drivesState.fatalError}
               onRetry={() => { void drivesQuery.refetch(); }}

@@ -1,8 +1,9 @@
-import { Clock3, ParkingCircle } from 'lucide-react';
+import { Clock3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import { GlassPanel, MetricValue, Text } from '@/components/ui';
+import { GlassPanel, Text } from '@/components/ui';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { useUnits } from '@/hooks/useUnits';
 
 import { JourneyFragmentationSectionProps } from './_types';
@@ -19,23 +20,22 @@ export function ElapsedComposition({ result, loading = false }: JourneyFragmenta
       {result.journeyCount === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<Clock3 className="h-7 w-7" />} message={t('journeyFragmentation.elapsed.empty', 'Elapsed composition will appear when included drives are returned.')} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <Clock3 className="mb-2 h-5 w-5 text-cyan-300" aria-hidden="true" />
-            <Text as="p" variant="label">{t('journeyFragmentation.elapsed.driving', 'Driving time')}</Text>
-            <MetricValue>{loading ? '—' : formatDuration(result.drivingSeconds)}</MetricValue>
-          </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <ParkingCircle className="mb-2 h-5 w-5 text-amber-300" aria-hidden="true" />
-            <Text as="p" variant="label">{t('journeyFragmentation.elapsed.parking', 'Observed parking time')}</Text>
-            <MetricValue>{loading ? '—' : formatDuration(result.observedParkingSeconds)}</MetricValue>
-          </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <Text as="p" variant="label">{t('journeyFragmentation.elapsed.pairs', 'Linked stopovers')}</Text>
-            <MetricValue>{loading ? '—' : result.linkedPairs}</MetricValue>
-            <Text as="p" variant="caption">{t('journeyFragmentation.elapsed.pairsHint', 'Parking intervals retained inside observed chains')}</Text>
-          </div>
-        </div>
+        <NestedDrivingBrief title={t('journeyFragmentation.brief.elapsedTitle', 'Linked journey timing')}
+          description={t('journeyFragmentation.elapsed.subtitle', 'Driving time and observed parking time allocated only across linked journey pairs.')}
+          loading={loading}
+          period={{ kind: 'unknown', label: t('journeyFragmentation.elapsed.title', 'Elapsed composition'),
+            reason: t('journeyFragmentation.elapsed.pairsHint', 'Parking intervals retained inside observed chains') }}
+          metrics={[
+            { metricId: 'duration', occurrenceId: 'driving-time', rawValue: result.drivingSeconds,
+              label: t('journeyFragmentation.elapsed.driving', 'Driving time'),
+              display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) } },
+            { metricId: 'duration', occurrenceId: 'parking-time', rawValue: result.observedParkingSeconds,
+              label: t('journeyFragmentation.elapsed.parking', 'Observed parking time'),
+              display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) } },
+            { metricId: 'count', occurrenceId: 'linked-stopovers', rawValue: result.linkedPairs,
+              label: t('journeyFragmentation.elapsed.pairs', 'Linked stopovers'),
+              context: t('journeyFragmentation.elapsed.pairsHint', 'Parking intervals retained inside observed chains') },
+          ]} />
       )}
     </GlassPanel>
   );

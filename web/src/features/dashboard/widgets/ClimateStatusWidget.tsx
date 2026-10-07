@@ -1,13 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { Thermometer, Snowflake, Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
 import { deriveDataState } from '@/api/dataState';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { resolveHvacActive } from '@/lib/climateState';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, WidgetStatusGrid } from './shared';
+import { WidgetStatusGrid } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -35,6 +37,14 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
     dataUpdatedAt,
     refetch,
   });
+  const temperatureMetrics: StatMetric[] = [
+    { metricId: 'temperature', occurrenceId: 'climate-cabin-temperature', rawValue: climateData?.inside_temp,
+      label: t('widget.cabin', 'Cabin'),
+      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
+    { metricId: 'temperature', occurrenceId: 'climate-outside-temperature', rawValue: climateData?.outside_temp,
+      label: t('widget.outside', 'Outside'),
+      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
+  ];
 
   return (
     <WidgetShell
@@ -50,10 +60,12 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
     >
       {climateData ? (
         <div className="space-y-3">
-          <WidgetStatGrid cols={2} stats={[
-            { label: t('widget.cabin', 'Cabin'), value: climateData.inside_temp != null ? `${fmtInt(toTemperatureDisplay(climateData.inside_temp))}${tempUnit}` : '—' },
-            { label: t('widget.outside', 'Outside'), value: climateData.outside_temp != null ? `${fmtInt(toTemperatureDisplay(climateData.outside_temp))}${tempUnit}` : '—' },
-          ]} />
+          <DashboardSourceBrief metrics={temperatureMetrics} state={dataState}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.climateSummaryTitle', 'Returned climate temperatures')}
+            description={t('widget.climateSummaryDescription', 'Cabin and outside temperatures remain separate SI measurements, converted only for display; HVAC, defrost and heater states remain below.')}
+            scope={t('widget.climateSummaryScope', 'Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.', { id })}
+            testId="dashboard-climate-temperatures-brief" />
           <WidgetStatusGrid cells={[
             { id: 'hvac', label: t('widget.hvac', 'HVAC'), status: hvacState == null ? 'unknown' : hvacState ? 'ok' : 'inactive', statusLabel: hvacState == null ? t('hero.unknownStatus', 'Unknown') : hvacState ? t('widget.hvacOn', 'On') : t('widget.hvacOff', 'Off') },
             ...(climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? [{

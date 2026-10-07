@@ -185,6 +185,8 @@ export default function RootCauseIntelligencePage() {
             windowHours={workspace.windowHours}
             hasChosenSignal={workspace.hasChosenSignal}
             sources={workspace.evidenceBundle.sources}
+            summary={focalAvailable ? analysis.summary : null}
+            limitations={analysis.limitations}
           />
         </section>
       </FadeIn>

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { LayoutCard } from '@/components/layout/layout-reference';
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
@@ -72,8 +73,11 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives }: SpeedGearP
           {t('dynamics.shiftState', 'Shift State')}
         </Badge>
       </div>
-      <StatGroup
-        id="dynamics-current-motor-power"
+      <NestedDrivingBrief
+        testId="dynamics-current-motor-power"
+        title={t('dynamics.power', 'Motor Power')}
+        description={t('dynamics.modernization.motorSource', 'Latest reported motor signals; not selected-trip history.')}
+        unavailable={state.fatalError != null}
         metrics={[{
           metricId: 'power', occurrenceId: 'current-motor-power',
           rawValue: motorLatest?.power_kw != null ? motorLatest.power_kw * 1000 : null,
@@ -90,8 +94,10 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives }: SpeedGearP
           provenance: t('dynamics.modernization.motorSource', 'Latest reported motor signals; not selected-trip history.'),
         }}
       />
-      <StatGroup
-        id="dynamics-range-speeds"
+      <NestedDrivingBrief
+        testId="dynamics-range-speeds"
+        title={t('dynamics.review.rangeAnalytics', 'Date-range trip context')}
+        description={t('dynamics.modernization.loadedSpeeds', 'Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.')}
         metrics={speeds}
         preferences={preferences}
         period={{

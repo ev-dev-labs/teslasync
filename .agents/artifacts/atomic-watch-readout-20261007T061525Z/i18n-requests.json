@@ -1,0 +1,102 @@
+[
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchState.online",
+    "fallback": "Online"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchState.asleep",
+    "fallback": "Asleep"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchState.offline",
+    "fallback": "Offline"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.range",
+    "fallback": "Range"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.cabinTemp",
+    "fallback": "Cabin"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchSummary",
+    "fallback": "Watch summary"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.battery",
+    "fallback": "Battery"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.charging",
+    "fallback": "Charging"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.noWatchData",
+    "fallback": "No watch data"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.summaryEyebrow",
+    "fallback": "Dashboard source summary"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchMeasurementsTitle",
+    "fallback": "Returned watch measurements"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchMeasurementsDescription",
+    "fallback": "Range and cabin temperature come only from the watch summary; battery, vehicle state, lock and charging indicators remain separate."
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchMeasurementsScope",
+    "fallback": "Requested vehicle {{id}} · returned watch summary snapshot; complication freshness does not establish measurement freshness or continuous recording coverage."
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.watchDefaultVehicle",
+    "fallback": "default"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.lockStatus",
+    "fallback": "Lock"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.locked",
+    "fallback": "Locked"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.unlocked",
+    "fallback": "Unlocked"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.status.unknown",
+    "fallback": "Unknown"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.status.inactive",
+    "fallback": "Inactive"
+  },
+  {
+    "namespace": "dashboard",
+    "key": "widget.lastSeen",
+    "fallback": "Last seen"
+  }
+]

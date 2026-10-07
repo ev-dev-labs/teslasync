@@ -2,12 +2,12 @@ import { History, Repeat2, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { MetricBar } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState } from '@/components/feedback';
 import {
   Badge,
   GlassPanel,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Text,
 } from '@/components/ui';
@@ -31,11 +31,20 @@ export function NewRepeatBehavior({
   state,
   className,
 }: NewRepeatBehaviorProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const behavior = summary.repeatBehavior;
   const newPercent = (behavior.newShare ?? 0) * 100;
   const repeatPercent = (behavior.repeatShare ?? 0) * 100;
+  const definition = t('explorer.behavior.definition', 'The first chronological arrival in each destination cluster is new; later arrivals to that same cluster are repeat.');
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'destination-arrivals', rawValue: behavior.destinationArrivals,
+      label: t('explorer.behavior.destinationArrivals', 'Destination arrivals'), context: definition },
+    { metricId: 'count', occurrenceId: 'first-arrivals', rawValue: behavior.newArrivals,
+      label: t('explorer.behavior.firstArrivals', 'First arrivals'), context: definition },
+    { metricId: 'count', occurrenceId: 'return-arrivals', rawValue: behavior.repeatArrivals,
+      label: t('explorer.behavior.returnArrivals', 'Return arrivals'), context: definition },
+  ];
 
   return (
     <section
@@ -82,29 +91,11 @@ export function NewRepeatBehavior({
             />
           ) : (
             <div className="flex min-h-72 flex-col justify-between gap-5">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                  <MetricValue>{fmtInt(behavior.destinationArrivals)}</MetricValue>
-                  <MetricLabel>
-                    {t(
-                      'explorer.behavior.destinationArrivals',
-                      'Destination arrivals',
-                    )}
-                  </MetricLabel>
-                </div>
-                <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                  <MetricValue>{fmtInt(behavior.newArrivals)}</MetricValue>
-                  <MetricLabel>
-                    {t('explorer.behavior.firstArrivals', 'First arrivals')}
-                  </MetricLabel>
-                </div>
-                <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                  <MetricValue>{fmtInt(behavior.repeatArrivals)}</MetricValue>
-                  <MetricLabel>
-                    {t('explorer.behavior.returnArrivals', 'Return arrivals')}
-                  </MetricLabel>
-                </div>
-              </div>
+              <NestedDrivingBrief metrics={metrics}
+                title={t('explorer.brief.behaviorTitle', 'Destination arrival counts')}
+                description={definition} loading={state.isLoading} unavailable={state.error != null}
+                period={{ kind: 'unknown', label: t('explorer.behavior.title', 'New vs repeat behavior'),
+                  reason: t('explorer.brief.behaviorScope', 'Non-base destination arrivals in returned history; first arrivals are excluded from return-arrival counts.') }} />
 
               <div className="space-y-4">
                 <MetricBar

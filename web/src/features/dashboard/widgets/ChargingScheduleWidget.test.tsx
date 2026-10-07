@@ -22,7 +22,7 @@
  *   - the populated full-size body — the mode badge, the pending badge, the
  *     visual timeline (start / departure / target-limit rows with formatted
  *     times), the "no scheduled times" fallback, and the tall detail row
- *     (current level + charging status, incl. the missing-level → 0 guard);
+ *     (current level + charging status, keeping missing readings unknown);
  *   - the compact (1×1) variant — the charge-limit hero, the "—" unknown-limit
  *     guard, and its own empty state;
  *   - a11y — the decorative icons are hidden from the a11y tree and the refresh
@@ -39,10 +39,11 @@
  * components it composes may reach for router context.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { VehicleState } from '@/api/types';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 import ChargingScheduleWidget, {
   parseScheduleSignals,
   modeLabel,
@@ -80,6 +81,21 @@ const { useVehiclesMock, useVehicleStateMock, useQueryMock, requestMock, formatT
     requestMock: vi.fn(),
     formatTimeMock: vi.fn(),
   }));
+
+const capturedBrief = vi.hoisted(() => ({
+  metrics: [] as OperationalBriefProps['metrics'],
+}));
+
+vi.mock('@/components/data-display', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/data-display')>();
+  return {
+    ...actual,
+    OperationalBrief: (props: OperationalBriefProps) => {
+      capturedBrief.metrics = props.metrics;
+      return <actual.OperationalBrief {...props} />;
+    },
+  };
+});
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
@@ -189,6 +205,7 @@ function lastQueryOptions(): CapturedQuery {
 }
 
 beforeEach(() => {
+  capturedBrief.metrics = [];
   useVehiclesMock.mockReset();
   useVehicleStateMock.mockReset();
   useQueryMock.mockReset();
@@ -409,6 +426,84 @@ describe('ChargingScheduleWidget — states', () => {
 // ── Populated full-size body ─────────────────────────────────────────────────
 
 describe('ChargingScheduleWidget — populated (full size)', () => {
+  it('keeps raw zero and false-category context distinct from missing readings in the actual brief', () => {
+    useVehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
+    useVehicleStateMock.mockReturnValue(makeStateResult({
+      data: { state: makeState({ battery_level: 0, is_charging: false }), live: true },
+    }));
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: { ScheduledChargingMode: sig('DepartBy'), ScheduledChargingPending: sig(true) },
+    }));
+    const { rerender } = renderWidget({ cols: 2, rows: 2 });
+    const brief = screen.getByTestId('dashboard-charging-schedule-context-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(capturedBrief.metrics.map(metric => metric.rawValue)).toEqual([0, 'Not charging']);
+    expect(capturedBrief.metrics.map(metric => metric.valueState)).toEqual(['value', 'value']);
+    expect(within(brief).getByText('0%')).toBeInTheDocument();
+    expect(within(brief).getByText('Status')).toBeInTheDocument();
+    expect(within(brief).getByText('Not charging')).toBeInTheDocument();
+    expect(brief).toHaveTextContent('Vehicle 42 · returned state snapshot');
+    expect(screen.getByText('Depart by')).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+
+    const missing = makeState();
+    Reflect.deleteProperty(missing, 'battery_level');
+    Reflect.deleteProperty(missing, 'is_charging');
+    useVehicleStateMock.mockReturnValue(makeStateResult({ data: { state: missing, live: true } }));
+    rerender(<MemoryRouter><ChargingScheduleWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
+    expect(capturedBrief.metrics.map(metric => metric.rawValue)).toEqual([null, null]);
+    expect(capturedBrief.metrics.map(metric => metric.valueState)).toEqual(['missing', 'missing']);
+    expect(within(brief).getAllByText('—')).toHaveLength(2);
+    expect(within(brief).getByText('Status')).toBeInTheDocument();
+    expect(within(brief).queryByText('Not charging')).toBeNull();
+    expect(within(brief).queryByText('0%')).toBeNull();
+  });
+
+  it('keeps context trust independent from schedule failures and preserves source-specific retries', () => {
+    const retryVehicle = vi.fn();
+    const retrySchedule = vi.fn();
+    useVehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
+    useVehicleStateMock.mockReturnValue({
+      ...makeStateResult({ data: { state: makeState({ battery_level: 0, is_charging: true }), live: true } }),
+      isError: true, error: new Error('vehicle refresh failed'), refetch: retryVehicle,
+      dataUpdatedAt: 1_800_000_000_000,
+    });
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: { ScheduledChargingMode: sig('StartAt'), ScheduledChargingStartTime: sig('08:00'), ChargeLimitSoc: sig(80) },
+      refetch: retrySchedule,
+    }));
+    const { container, rerender } = renderWidget({ cols: 2, rows: 2 });
+    const brief = screen.getByTestId('dashboard-charging-schedule-context-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    expect(within(brief).getByText('0%')).toBeInTheDocument();
+    expect(within(brief).getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByText('Start at')).toBeInTheDocument();
+    expect(screen.getByText('time:08:00')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.queryByText('Charging schedule unavailable')).toBeNull();
+    expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retryVehicle).toHaveBeenCalledTimes(1);
+    expect(retrySchedule).not.toHaveBeenCalled();
+    retryVehicle.mockClear();
+
+    useVehicleStateMock.mockReturnValue({
+      ...makeStateResult(), dataUpdatedAt: 1_800_000_000_000, refetch: retryVehicle,
+    });
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: undefined, isError: true, dataUpdatedAt: 0, refetch: retrySchedule,
+    }));
+    rerender(<MemoryRouter><ChargingScheduleWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
+    const recoveredBrief = screen.getByTestId('dashboard-charging-schedule-context-brief');
+    expect(within(recoveredBrief).getByText('Source available')).toBeInTheDocument();
+    expect(within(recoveredBrief).getByText('64%')).toBeInTheDocument();
+    expect(within(recoveredBrief).getByText('Not charging')).toBeInTheDocument();
+    expect(screen.getByText('Charging schedule unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retrySchedule).toHaveBeenCalledTimes(1);
+    expect(retryVehicle).not.toHaveBeenCalled();
+  });
+
   it('renders the mode badge label and hides the pending badge when not pending', () => {
     useQueryMock.mockReturnValue(
       makeSignalsResult({ data: { ScheduledChargingMode: sig('StartAt') } }),

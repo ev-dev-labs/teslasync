@@ -134,6 +134,18 @@ beforeEach(() => {
   mockUseDriveScore.mockReturnValue(qr({ data: undefined }));
 });
 
+it('keeps three real weekly score operands and their drive population alongside the gauge and detailed bars', () => {
+  mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ efficiency: 0, smoothness: undefined }) }));
+  const { container } = renderWidget(TALL);
+  const brief = screen.getByTestId('dashboard-drive-score-factors-brief');
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+  expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+  expect(brief).toHaveTextContent('0.00');
+  expect(brief).toHaveTextContent('weekly scoring response for 12 drives');
+  expect(container.querySelector('[role="meter"]')).not.toBeNull();
+  expect(screen.getAllByText('Efficiency')).toHaveLength(2);
+});
+
 // ── Pure helper: scoreColor ────────────────────────────────────────────────
 
 describe('scoreColor', () => {

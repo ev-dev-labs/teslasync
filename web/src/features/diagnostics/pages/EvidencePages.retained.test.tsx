@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { analyzeRootCause } from '../lib/rootCauseIntelligence';
+import { analyzeRootCause, type RootCauseAnalysisResult } from '../lib/rootCauseIntelligence';
 import { deriveDataState } from '@/api/dataState';
 import { fmtNumber, getFormatterPreferences } from '@/lib/numberFormat';
 import type { UnitPref } from '@/lib/unitConversion';
@@ -132,6 +132,146 @@ describe('diagnostic evidence source preservation', () => {
       expect(drawer).toHaveTextContent('Drives the export gate below');
       expect(drawer).toHaveTextContent('Needs stronger evidence first');
     }
+  });
+
+  it.each(['analysis', 'pack'] as const)('preserves a measured-zero report narrative and limitations in the real %s details', (page) => {
+    const input = workspace();
+    const history: SignalHistoryResponse = {
+      vehicleId: 7, signal: 'Soc', from: points[0]!.timestamp,
+      to: points[points.length - 1]!.timestamp, count: points.length,
+      data: points.map((point) => ({ ...point, valueNum: 0 })),
+    };
+    const report: RootCauseAnalysisResult = analyzeRootCause({
+      focalSignal: history.signal, catalog: ['Soc'],
+      focalPoints: history.data, relatedSeries: [],
+    });
+    sources.workspace.mockReturnValue({
+      ...input,
+      analysis: report,
+      evidenceBundle: {
+        ...input.evidenceBundle, data: [{ signal: history.signal, response: history }],
+        sources: [{ signal: history.signal, state: deriveDataState({ data: history }, { provenance: 'historical' }) }],
+      },
+    });
+    renderPage(page);
+    const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
+    expect(within(brief).getByText('Signal evidence available')).toBeInTheDocument();
+    const hypotheses = brief.querySelector(`[data-operational-metric="${page === 'analysis' ? 'root-cause-hypotheses' : 'service-evidence-hypotheses'}"]`);
+    expect(hypotheses).toHaveAttribute('data-value-state', 'value');
+    expect(hypotheses?.querySelector('[data-operational-value]')).toHaveTextContent(/^0$/);
+    if (page === 'pack') expect(screen.getByRole('button', { name: 'Generate pack' })).toBeDisabled();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const narrative = within(drawer).getByTestId('operational-narrative');
+    expect(narrative).toHaveTextContent(report.summary);
+    expect(narrative).not.toHaveTextContent(analysis.summary);
+    expect(report.limitations.length).toBeGreaterThan(0);
+    for (const limitation of report.limitations) expect(narrative).toHaveTextContent(limitation);
+    expect(within(narrative).getByText('Not scored')).toBeInTheDocument();
+    expect(within(narrative).queryByText('No additional limitations were supplied.')).toBeNull();
+  });
+
+  describe.each(['analysis', 'pack'] as const)('%s narrative source guard', (page) => {
+    it.each(['pending', 'failed', 'empty'] as const)('withholds an unsupported focal conclusion when its source is %s but a neighbor is ready', (outcome) => {
+      const input = workspace();
+      const neighbor: SignalHistoryResponse = {
+        vehicleId: 7, signal: 'PackVoltage', from: '', to: '',
+        count: points.length, data: points,
+      };
+      const focalState = outcome === 'pending'
+        ? deriveDataState<SignalHistoryResponse>({ isPending: true })
+        : outcome === 'failed'
+          ? deriveDataState<SignalHistoryResponse>({ error: new Error('focal history unavailable') })
+          : deriveDataState({
+            data: { ...neighbor, signal: 'Soc', count: 0, data: [] },
+          }, { provenance: 'historical', unavailable: true });
+      sources.workspace.mockReturnValue({
+        ...input,
+        evidenceBundle: {
+          ...input.evidenceBundle, data: [{ signal: neighbor.signal, response: neighbor }],
+          sources: [
+            { signal: 'Soc', state: focalState },
+            { signal: neighbor.signal, state: deriveDataState({ data: neighbor }, { provenance: 'historical' }) },
+          ],
+          isLoading: outcome === 'pending',
+          isError: outcome === 'failed',
+          error: outcome === 'failed' ? new Error('focal history unavailable') : null,
+        },
+      });
+      renderPage(page);
+      const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
+      expect(within(brief).getByText('Partial signal evidence')).toBeInTheDocument();
+      expect(brief.querySelector(`[data-operational-metric="${page === 'analysis' ? 'root-cause-hypotheses' : 'service-evidence-hypotheses'}"]`))
+        .toHaveAttribute('data-value-state', 'missing');
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      const narrative = within(drawer).getByTestId('operational-narrative');
+      expect(narrative).not.toHaveTextContent(input.analysis.summary);
+      expect(narrative).toHaveTextContent(page === 'analysis'
+        ? "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift"
+        : 'A canonical, offline-verifiable JSON export of this evidence-ranked analysis');
+      for (const limitation of input.analysis.limitations) expect(narrative).toHaveTextContent(limitation);
+      expect(within(narrative).getByText('Not scored')).toBeInTheDocument();
+      expect(within(drawer).getByText('Partial signal evidence')).toBeInTheDocument();
+    });
+  });
+
+  it.each(['analysis', 'pack'] as const)('does not publish a stale report narrative before a focal signal is chosen on the %s page', (page) => {
+    const input = workspace();
+    sources.workspace.mockReturnValue({ ...input, focalSignal: '', hasChosenSignal: false });
+    renderPage(page);
+    const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
+    expect(within(brief).getByText('Choose a focal signal')).toBeInTheDocument();
+    expect(within(brief).getByText('No focal signal · 72h requested history window')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const narrative = within(drawer).getByTestId('operational-narrative');
+    expect(narrative).not.toHaveTextContent(input.analysis.summary);
+    for (const limitation of input.analysis.limitations) expect(narrative).toHaveTextContent(limitation);
+    expect(within(drawer).getByText('Choose a focal signal')).toBeInTheDocument();
+  });
+
+  it.each(['analysis', 'pack'] as const)('updates the real %s drawer from a retained report to newly published source narrative', (page) => {
+    const retained = workspace(new Error('history refresh'));
+    sources.workspace.mockReturnValue(retained);
+    const view = renderPage(page);
+    const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const initialNarrative = within(screen.getByRole('dialog')).getByTestId('operational-narrative');
+    expect(initialNarrative).toHaveTextContent(retained.analysis.summary);
+    expect(within(screen.getByRole('dialog')).getByText('Showing retained measurements')).toBeInTheDocument();
+
+    const history: SignalHistoryResponse = {
+      vehicleId: 7, signal: 'Soc', from: '', to: '', count: points.length,
+      data: points.map((point) => ({ ...point, valueNum: 20 })),
+    };
+    const published: RootCauseAnalysisResult = analyzeRootCause({
+      focalSignal: history.signal, catalog: ['Soc'],
+      focalPoints: history.data, relatedSeries: [],
+    });
+    sources.workspace.mockReturnValue({
+      ...retained,
+      analysis: published,
+      evidenceBundle: {
+        ...query([{ signal: history.signal, response: history }]),
+        sources: [{ signal: history.signal, state: deriveDataState({ data: history }, { provenance: 'historical' }) }],
+      },
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          {page === 'analysis' ? <RootCauseIntelligencePage /> : <ServiceEvidencePackPage />}
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const drawer = screen.getByRole('dialog');
+    const narrative = within(drawer).getByTestId('operational-narrative');
+    expect(narrative).toHaveTextContent(published.summary);
+    expect(narrative).not.toHaveTextContent(retained.analysis.summary);
+    for (const limitation of published.limitations) expect(narrative).toHaveTextContent(limitation);
+    expect(within(drawer).getByText('Signal evidence available')).toBeInTheDocument();
+    expect(within(drawer).queryByText('Showing retained measurements')).toBeNull();
   });
 
   it.each(['analysis', 'pack'] as const)('does not turn initially missing %s histories into numeric zeroes or hide its controls', (page) => {

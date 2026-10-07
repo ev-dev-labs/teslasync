@@ -19,6 +19,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime, isoUtcToLocalDatetimeInput, localDatetimeInputToIso } from '@/lib/dateFormat';
+import { downloadCSV, downloadJSON, objectsToCSV, type CsvCellValue } from '@/lib/csvExport';
 
 import type {
   ChargingInvoice,
@@ -51,6 +52,15 @@ function blankLine(): InvoiceLine {
     billed_tax_minor: 0,
     billed_total_minor: 0,
   };
+}
+
+function exportSourceRows(
+  format: 'csv' | 'json',
+  filename: string,
+  rows: readonly Record<string, CsvCellValue>[],
+) {
+  if (format === 'csv') downloadCSV(filename, objectsToCSV(rows));
+  else downloadJSON(filename, rows);
 }
 
 export default function ChargingReconciliationPage() {
@@ -98,6 +108,20 @@ export default function ChargingReconciliationPage() {
   const openDispute = useCreateDispute(activeInvoice);
 
   const invoices = useMemo(() => invoicesQuery.data?.items ?? [], [invoicesQuery.data?.items]);
+  const exportInvoices = (format: 'csv' | 'json') => {
+    const rows = invoices.map((row) => ({
+      invoice_ref: row.invoice_ref,
+      provider: row.provider,
+      period_start: row.period_start,
+      period_end: row.period_end,
+      billed_total_minor: row.billed_total_minor,
+      currency: row.currency,
+      line_count: row.line_count,
+      status: row.status,
+    }));
+    if (format === 'csv') downloadCSV('charging-invoices', objectsToCSV(rows));
+    else downloadJSON('charging-invoices', rows);
+  };
   const report = reportQuery.data;
   const currency = report?.invoice.currency ?? draft.currency;
   const money = (minor: number | null | undefined) =>
@@ -676,17 +700,17 @@ export default function ChargingReconciliationPage() {
             keyExtractor={(row) => row.id}
             tableId="ownership-reconcile-invoices"
             exportable
-            exportFilename="charging-invoices"
-            exportRow={(row) => ({
-              invoice_ref: row.invoice_ref,
-              provider: row.provider,
-              period_start: row.period_start,
-              period_end: row.period_end,
-              billed_total_minor: row.billed_total_minor,
-              currency: row.currency,
-              line_count: row.line_count,
-              status: row.status,
-            })}
+            controls={{
+              exports: {
+                onExportCsv: () => exportInvoices('csv'),
+                onExportJson: () => exportInvoices('json'),
+                disabled: invoices.length === 0,
+                description: t(
+                  'ownership.reconcile.invoices.exportScope',
+                  'Exports include all loaded statements, not the server total, with original fields and ISO currency minor amounts, regardless of table search or visible columns.',
+                ),
+              },
+            }}
             emptyMessage={t('ownership.reconcile.invoices.empty', 'No statements imported yet for this vehicle.')}
           />
           <MutationError error={remove.error} />
@@ -805,22 +829,22 @@ export default function ChargingReconciliationPage() {
             tableId="ownership-reconcile-lines"
             exportable
             exportFilename="charging-reconciliation-lines"
-            exportRow={(row) => ({
+            onExport={(format, rows) => exportSourceRows(format, 'charging-reconciliation-lines', rows.map((row) => ({
               line_ref: row.line.line_ref,
-              location: row.line.location ?? '',
+              location: row.line.location,
               occurred_at: row.line.occurred_at,
               match_state: row.match_state,
               match_confidence_pct: row.match_confidence_pct,
               billed_energy_wh: row.line.billed_energy_wh,
-              measured_energy_wh: row.measured_energy_wh ?? '',
-              energy_delta_pct: row.energy_delta_pct ?? '',
-              time_delta_s: row.time_delta_s ?? '',
+              measured_energy_wh: row.measured_energy_wh,
+              energy_delta_pct: row.energy_delta_pct,
+              time_delta_s: row.time_delta_s,
               billed_total_minor: row.line.billed_total_minor,
               expected_cost_minor: row.expected_cost_minor,
               variance_minor: row.variance_minor,
               recoverable: row.recoverable,
-              variance_reasons: (row.variance_reasons ?? []).join(' '),
-            })}
+              variance_reasons: row.variance_reasons,
+            })))}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -849,14 +873,14 @@ export default function ChargingReconciliationPage() {
             tableId="ownership-reconcile-buckets"
             exportable
             exportFilename="charging-variance-attribution"
-            exportRow={(row) => ({
+            onExport={(format, rows) => exportSourceRows(format, 'charging-variance-attribution', rows.map((row) => ({
               category: row.label,
               reason: row.reason,
               line_count: row.line_count,
               amount_minor: row.amount_minor,
               share_pct: row.share_pct,
               recoverable: row.recoverable,
-            })}
+            })))}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -885,13 +909,13 @@ export default function ChargingReconciliationPage() {
             tableId="ownership-reconcile-uninvoiced"
             exportable
             exportFilename="charging-uninvoiced-sessions"
-            exportRow={(row) => ({
+            onExport={(format, rows) => exportSourceRows(format, 'charging-uninvoiced-sessions', rows.map((row) => ({
               session_id: row.session_id,
               started_at: row.started_at,
-              location: row.location ?? '',
+              location: row.location,
               energy_wh: row.energy_wh,
               narrative: row.narrative,
-            })}
+            })))}
           />
         </OwnershipPanel>
       </FadeIn>

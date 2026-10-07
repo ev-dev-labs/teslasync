@@ -27,39 +27,44 @@ export function ArrivalReliabilitySupportMetrics({
   const metrics: ArrivalReliabilityEvidenceMetric[] = [
     {
       label: t('arrivalReliability.quality.supportBand', 'Global support band'),
-      value: arrivalEvidenceBandLabel(t, support.band),
+      metricId: 'status', rawValue: arrivalEvidenceBandLabel(t, support.band),
     },
     {
       label: t('arrivalReliability.quality.supportIndex', 'Global support index'),
-      value: arrivalIndex(support.index, locale),
+      metricId: 'score', rawValue: support.index,
+      displayValue: arrivalIndex(support.index, locale),
     },
     {
       label: t(
         'arrivalReliability.quality.volumeIngredient',
         'Supported-drive volume ingredient',
       ),
-      value: arrivalPercent(support.supportedDriveVolumeIngredient, locale),
+      metricId: 'percent', rawValue: support.supportedDriveVolumeIngredient != null ? support.supportedDriveVolumeIngredient * 100 : null,
+      displayValue: arrivalPercent(support.supportedDriveVolumeIngredient, locale),
     },
     {
       label: t(
         'arrivalReliability.quality.routeIngredient',
         'Supported-route ingredient',
       ),
-      value: arrivalPercent(support.supportedRouteIngredient, locale),
+      metricId: 'percent', rawValue: support.supportedRouteIngredient != null ? support.supportedRouteIngredient * 100 : null,
+      displayValue: arrivalPercent(support.supportedRouteIngredient, locale),
     },
     {
       label: t(
         'arrivalReliability.quality.weekIngredient',
         'Active-week ingredient',
       ),
-      value: arrivalPercent(support.activeWeekIngredient, locale),
+      metricId: 'percent', rawValue: support.activeWeekIngredient != null ? support.activeWeekIngredient * 100 : null,
+      displayValue: arrivalPercent(support.activeWeekIngredient, locale),
     },
     {
       label: t(
         'arrivalReliability.quality.coverageIngredient',
         'Repeated-coverage ingredient',
       ),
-      value: arrivalPercent(support.repeatedCoverageIngredient, locale),
+      metricId: 'percent', rawValue: support.repeatedCoverageIngredient != null ? support.repeatedCoverageIngredient * 100 : null,
+      displayValue: arrivalPercent(support.repeatedCoverageIngredient, locale),
     },
   ];
 
@@ -70,6 +75,7 @@ export function ArrivalReliabilitySupportMetrics({
         'Transparent support ingredients',
       )}
       metrics={metrics}
+      testId="arrival-support-ingredients-brief"
     />
   );
 }

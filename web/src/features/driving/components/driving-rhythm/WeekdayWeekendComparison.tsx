@@ -2,11 +2,10 @@ import { CalendarRange, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import {
   Badge,
   GlassPanel,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Text,
 } from '@/components/ui';
@@ -104,41 +103,26 @@ export function WeekdayWeekendComparison({
                     })}
                   </Badge>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div>
-                    <MetricValue>{row.drives}</MetricValue>
-                    <MetricLabel>
-                      {t('rhythm.comparison.drives', 'Valid drives')}
-                    </MetricLabel>
-                  </div>
-                  <div>
-                    <MetricValue>
-                      {row.drivesPerCalendarDay != null
-                        ? fmtNumber(row.drivesPerCalendarDay)
-                        : '—'}
-                    </MetricValue>
-                    <MetricLabel>
-                      {t('rhythm.comparison.perDay', 'Drives / selected day')}
-                    </MetricLabel>
-                  </div>
-                  <div>
-                    <MetricValue>{row.activeDays}</MetricValue>
-                    <MetricLabel>
-                      {t('rhythm.comparison.activeDays', 'Active local days')}
-                    </MetricLabel>
-                  </div>
-                  <div>
-                    <MetricValue>
-                      {formatDistance(row.averageDistanceM)}
-                    </MetricValue>
-                    <MetricLabel>
-                      {t(
-                        'rhythm.comparison.averageDistance',
-                        'Avg measured distance',
-                      )}
-                    </MetricLabel>
-                  </div>
-                </div>
+                <NestedDrivingBrief title={row.label}
+                  description={t('rhythm.comparison.subtitle', 'Per-day rates use every selected calendar day, including days with no drive.')}
+                  loading={state.isLoading} unavailable={state.error != null}
+                  period={{ kind: 'unknown', label: `${row.label} · ${summary.timeZone}`,
+                    reason: row.calendarDays == null
+                      ? t('rhythm.comparison.noCalendarScope', 'Selected calendar-day coverage is unavailable; raw counts remain valid.')
+                      : t('rhythm.brief.calendarDenominator', '{{count}} selected local calendar days define the rate denominator.', { count: row.calendarDays }) }}
+                  metrics={[
+                    { metricId: 'count', occurrenceId: `${row.key}-drives`, rawValue: row.drives,
+                      label: t('rhythm.comparison.drives', 'Valid drives') },
+                    { metricId: 'rate', occurrenceId: `${row.key}-rate`, rawValue: row.drivesPerCalendarDay,
+                      label: t('rhythm.comparison.perDay', 'Drives / selected day'), display: { unit: '' },
+                      context: row.calendarDays == null ? t('rhythm.comparison.noCalendarScope', 'Selected calendar-day coverage is unavailable; raw counts remain valid.')
+                        : t('rhythm.brief.calendarDenominator', '{{count}} selected local calendar days define the rate denominator.', { count: row.calendarDays }) },
+                    { metricId: 'count', occurrenceId: `${row.key}-active`, rawValue: row.activeDays,
+                      label: t('rhythm.comparison.activeDays', 'Active local days') },
+                    { metricId: 'distance', occurrenceId: `${row.key}-distance`, rawValue: row.averageDistanceM,
+                      label: t('rhythm.comparison.averageDistance', 'Avg measured distance'),
+                      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+                  ]} />
                 <Text as="p" variant="caption" className="mt-4">
                   {row.calendarDays != null
                     ? t(

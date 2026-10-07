@@ -112,6 +112,13 @@
       "unsupported": {
         "global": "A centralized fleet model or cross-subject access",
         "upload": "Raw-data or gradient upload"
+      },
+      "brief": {
+        "total": "Returned subject-scoped privacy budget in dimensionless epsilon, not a percentage.",
+        "spent": "Returned local aggregate privacy spend for this subject and vehicle.",
+        "remaining": "Existing budget minus spend, floored at zero; unresolved budget is not zero remaining.",
+        "description": "Subject-scoped local privacy accounting, independent of the paginated model-card count and proposed next round.",
+        "source": "Local subject privacy accounting"
       }
     },
     "firmware": {
@@ -227,6 +234,14 @@
       "unsupported": {
         "commands": "Navigation, charging, or climate commands",
         "traffic": "Live traffic and charger availability"
+      },
+      "brief": {
+        "readiness": "Returned readiness percentage from supported factors; not a vehicle health assessment or confidence estimate.",
+        "arrivalLow": "Lower modeled arrival state-of-charge bound for the submitted journey.",
+        "arrivalHigh": "Upper modeled arrival state-of-charge bound; unsupported is not zero reserve.",
+        "energy": "Estimated energy requirement for the submitted route, not measured journey consumption.",
+        "description": "Returned readiness and arrival bounds for the submitted journey; factors and unsupported planning capabilities remain explicit.",
+        "source": "Journey readiness assessment"
       }
     },
     "limitations": {
@@ -280,6 +295,12 @@
       "unsupported": {
         "dispatch": "Automatic load shedding or energy dispatch",
         "v2h": "Assumed vehicle-to-home capability or authorization"
+      },
+      "brief": {
+        "horizon": "Energy survival duration from the submitted outage plan; not a weather forecast or guarantee.",
+        "checkpoints": "Number of checkpoints returned in this modeled outage timeline, not a count of observed storms.",
+        "description": "Modeled energy survival and timeline coverage remain separate from Storm guardian forecast and activity sources.",
+        "source": "Modeled outage plan"
       }
     },
     "sentinel": {
@@ -354,7 +375,17 @@
         "control": "Charger, panel, solar, or storage control",
         "guarantee": "Guaranteed real-world queue performance"
       },
-      "utilization": "Utilization"
+      "utilization": "Utilization",
+      "brief": {
+        "utilization": "Modeled utilization under the submitted arrival and service assumptions.",
+        "queueP50": "Modeled median queue wait; unsupported is not zero wait.",
+        "queueP90": "Modeled 90th-percentile queue wait; not a live site observation.",
+        "peak": "Projected electrical demand for the submitted site scenario.",
+        "panel": "Returned panel constraint percentage; no charger limits are changed.",
+        "status": "Stability is the returned queue projection, not a site-health assessment.",
+        "description": "Planning outputs from the submitted site scenario, with unsupported queue estimates kept explicit.",
+        "source": "Charging site simulation"
+      }
     },
     "survival": {
       "adjustedP50": "adjusted P50 {{value}}",
@@ -470,6 +501,14 @@
       "unsupported": {
         "commands": "Vehicle commands and physical actuation",
         "guarantee": "Guaranteed real-world outcomes"
+      },
+      "brief": {
+        "model": "Source-provided model name from this simulation result.",
+        "efficiency": "Calibrated energy intensity in preferred energy-per-distance units; missing calibration is not zero consumption.",
+        "capacity": "Returned usable battery estimate for the calibrated baseline.",
+        "samples": "Calibration sample count for this model, not scenario count or confidence.",
+        "description": "Vehicle-specific calibration returned by the simulation, with source measurements and uncertainty kept separate from real-world guarantees.",
+        "source": "Calibrated twin simulation"
       }
     },
     "unsupported": {
@@ -484,6 +523,31 @@
       "error": "Intelligence evidence could not be loaded.",
       "paused": "The initial evidence query is paused; no empty result is inferred.",
       "unresolved": "Evidence availability has not resolved yet."
+    },
+    "brief": {
+      "quality": {
+        "sufficient": "Sufficient evidence",
+        "limited": "Limited evidence",
+        "insufficient": "Insufficient evidence",
+        "unknown": "Quality not supplied"
+      },
+      "retained": "Retained result",
+      "failed": "Source unavailable",
+      "loading": "Awaiting result",
+      "refreshing": "Updating result",
+      "unresolved": "Source unresolved",
+      "notCalculated": "Not calculated",
+      "window": "Observation window: {{start}} – {{end}}",
+      "windowUnknown": "Observation window not supplied",
+      "vehicleUnknown": "Vehicle scope not selected",
+      "vehicle": "Vehicle #{{id}}",
+      "retainedNotice": "Previously loaded data remains visible while affected sources recover.",
+      "generated": "Result generated: {{date}}",
+      "generatedUnknown": "Result generation time not supplied",
+      "qualitySamples": "Source quality sample count: {{value}}",
+      "qualityCoverage": "Source coverage: {{value}}%",
+      "coverageUnknown": "Source coverage not supplied",
+      "evidenceSamples": "{{summary}} · {{count}} samples"
     }
   },
   "stormguard": {

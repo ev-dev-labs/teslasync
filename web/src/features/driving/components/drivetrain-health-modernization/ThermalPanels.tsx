@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { CardGrid, LayoutCard } from '@/components/layout/layout-reference';
 import { LinearGauge } from '@/components/charts';
-import { StatGroup } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { KVList } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import type { DataState } from '@/api/dataState';
@@ -83,7 +83,11 @@ export function ThermalPanels({ sensors, power, stats, healthState, statsState, 
       {/* Independent neighbors remain visible when the health source fails. */}
       <SourceBoundary state={drivesState} label={t('drivetrain.powerSummary', 'Power Summary')}
         empty={false} emptyMessage={t('drivetrain.noData', 'No data')}>
-        <StatGroup period={{ kind: 'unknown', label: t('drivetrain.modernization.driveSubset', 'Recent drives within the selected range') }}
+        <NestedDrivingBrief period={{ kind: 'unknown', label: t('drivetrain.modernization.driveSubset', 'Recent drives within the selected range'),
+          reason: t('drivetrain.brief.powerScope', 'Loaded recent drives, not a complete selected-range power aggregate.') }}
+          title={t('drivetrain.powerSummary', 'Power Summary')}
+          description={t('drivetrain.brief.powerScope', 'Loaded recent drives, not a complete selected-range power aggregate.')}
+          retained={drivesState.refreshError != null} unavailable={drivesState.fatalError != null}
           preferences={preferences} metrics={[
             { metricId: 'power', label: t('drivetrain.peakPower', 'Peak Power'), rawValue: power.peakPower },
             { metricId: 'power', label: t('drivetrain.avgPower', 'Avg Power'), rawValue: power.avgPowerMax },

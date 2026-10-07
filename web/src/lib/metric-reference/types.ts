@@ -2,7 +2,8 @@ import type { UnitPref } from '@/lib/unitConversion';
 
 export type MetricFormat = 'count' | 'currency' | 'energy' | 'power' | 'duration'
   | 'distance' | 'speed' | 'percent' | 'ratio' | 'efficiency' | 'temperature'
-  | 'pressure' | 'score' | 'number' | 'text' | 'status';
+  | 'pressure' | 'score' | 'number' | 'text' | 'status' | 'bytes' | 'byteRate' | 'latency'
+  | 'mass' | 'multiplier' | 'rate' | 'identifier';
 export type MetricRaw = number | string | null | undefined;
 export interface MetricDefinition {
   readonly label: string;
@@ -21,10 +22,23 @@ export interface MetricDisplayOptions {
   readonly precision?: number;
   readonly units?: Partial<UnitPref>;
   /** Retain an existing fmtCompact contract, including its existing locale/threshold behavior. */
-  readonly notation?: 'compact';
+  readonly notation?: 'compact' | 'source';
   readonly compactThreshold?: number;
   /** Retain the existing rounded-minute presentation; input remains canonical seconds. */
   readonly durationStyle?: 'roundedMinutes';
+  readonly latencyStyle?: 'milliseconds' | 'adaptive';
+  /** Rate inputs remain bytes per second; only the display interval changes. */
+  readonly byteRatePeriod?: 's' | 'd';
+  /** Preserve a source count/total presentation without converting either count to text. */
+  readonly countTotal?: number;
+  /** Source rate units only; physical measurements use typed unit preferences. */
+  readonly unit?: string;
+  readonly identifierPrefix?: string;
+  /** Preserve a proven specialist display while retaining validated numeric raw input. */
+  readonly formatter?: (raw: number, preferences: MetricPreferences) => {
+    readonly value: string;
+    readonly unit: string;
+  };
 }
 export interface FormattedMetric {
   readonly value: string;

@@ -271,7 +271,7 @@ export default function SettingsPage() {
                       action={
                         <Button variant="ghost" wrapLabel className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
                           <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {t('tour.restart', 'Open tour launcher')}
+                          {t('tour.openLauncher', 'Show tours')}
                         </Button>
                       }
                     />

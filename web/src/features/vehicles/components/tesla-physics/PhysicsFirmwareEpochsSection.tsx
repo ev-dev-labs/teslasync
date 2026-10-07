@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { Badge, Select, Text } from '@/components/ui';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
+import { Select, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, seconds, time, unknown } from './PhysicsPageShell';
@@ -23,17 +22,17 @@ export default function PhysicsFirmwareEpochsSection({ physics }: { physics: Phy
   const latestBounded = bounded.length ? bounded[bounded.length - 1] : undefined;
   return <>
     <Evidence title={physics.title} honesty={report?.firmware_epochs?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.epochCount', 'Observed firmware epochs')} value={epochs.length} color="cyan" />
-        <MetricCard label={t('teslaOnly.firmware', 'Firmware')} value={last?.version || unknown(t)} color="green" />
-        <MetricCard label={t('teslaOnly.epochLatestStart', 'Latest first observed')} value={time(last?.started_at, t)} color="purple" />
-      </Grid>
-      <Text as="p" variant="caption">{t('teslaOnly.epochNote', 'FSD meter bounds are counter readings, not FSD engaged miles. An epoch ends when a different firmware value is observed. Missing readings can conceal intermediate versions.')}</Text>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.epochsBoundsKnown', 'Epochs with both FSD counter bounds: {{count}} / {{total}}', { count: bounded.length, total: epochs.length })}</Badge>
-        <Badge variant="warning" size="sm">{t('teslaOnly.epochsCounterDrops', 'Epochs with lower final FSD counter: {{count}}', { count: counterDrops.length })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.epochsDwellKnown', 'Epochs with complete-to-unplug value: {{count}}', { count: dwellObserved.length })}</Badge>
-      </div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-epochs-summary" available={report?.firmware_epochs != null}
+        description={t('teslaOnly.epochNote', 'FSD meter bounds are counter readings, not FSD engaged miles. An epoch ends when a different firmware value is observed. Missing readings can conceal intermediate versions.')}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'epochs', label: t('teslaOnly.epochCount', 'Observed firmware epochs'), rawValue: report?.firmware_epochs ? epochs.length : null },
+          { metricId: 'text', occurrenceId: 'version', label: t('teslaOnly.firmware', 'Firmware'), rawValue: last?.version || null },
+          { metricId: 'text', occurrenceId: 'started', label: t('teslaOnly.epochLatestStart', 'Latest first observed'), rawValue: last?.started_at == null ? null : time(last.started_at, t), context: last?.started_at },
+          { metricId: 'count', occurrenceId: 'bounds', label: t('teslaOnly.epochsBoundsKnownLabel', 'Epochs with both FSD counter bounds'), rawValue: report?.firmware_epochs ? bounded.length : null, display: { countTotal: epochs.length }, context: t('teslaOnly.epochsBoundsKnown', 'Epochs with both FSD counter bounds: {{count}} / {{total}}', { count: bounded.length, total: epochs.length }) },
+          { metricId: 'count', occurrenceId: 'drops', label: t('teslaOnly.epochsCounterDropsLabel', 'Epochs with lower final FSD counter'), rawValue: report?.firmware_epochs ? counterDrops.length : null, context: t('teslaOnly.epochsCounterDrops', 'Epochs with lower final FSD counter: {{count}}', { count: counterDrops.length }) },
+          { metricId: 'count', occurrenceId: 'dwell', label: t('teslaOnly.epochsDwellKnownLabel', 'Epochs with complete-to-unplug value'), rawValue: report?.firmware_epochs ? dwellObserved.length : null, context: t('teslaOnly.epochsDwellKnown', 'Epochs with complete-to-unplug value: {{count}}', { count: dwellObserved.length }) },
+          { metricId: 'distance', occurrenceId: 'change', label: t('teslaOnly.epochsLatestChangeLabel', 'Latest bounded FSD counter change'), rawValue: latestBounded?.fsd_meter_start_m != null && latestBounded.fsd_meter_end_m != null ? latestBounded.fsd_meter_end_m - latestBounded.fsd_meter_start_m : null, display: { formatter: raw => ({ value: distance(raw), unit: '' }) }, context: latestBounded?.version },
+        ]} />
       <Text as="p" variant="bodySm">{t('teslaOnly.epochsLatestChange', 'Latest epoch with two FSD counter bounds: {{version}} · signed change {{delta}}', {
         version: latestBounded?.version ?? unknown(t),
         delta: latestBounded?.fsd_meter_start_m != null && latestBounded.fsd_meter_end_m != null

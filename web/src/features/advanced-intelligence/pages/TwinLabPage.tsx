@@ -21,6 +21,7 @@ import { EvidencePanel, InsightPanel, MutationError, TwinScenarioForm } from '..
 import { formatEfficiencyFromSI } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 
 const createScenario = (index: number, name: string): TwinScenarioInput => ({
   name,
@@ -37,6 +38,9 @@ export default function TwinLabPage() {
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const mutation = useRunTwinLab();
+  const publication = useRetainedMutation(mutation, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const [scenarios, setScenarios] = useState<TwinScenarioInput[]>(() => [
     createScenario(0, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 1 })),
     createScenario(1, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 2 })),
@@ -54,7 +58,7 @@ export default function TwinLabPage() {
     mutation.mutate({ vehicle_id: vehicleId, scenarios, confirmed: true });
   };
 
-  const result = mutation.data;
+  const result = publication.result;
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'model', metricId: 'text', rawValue: result?.model_name,
       label: t('advancedIntelligence.twin.baseline.model', 'Model'),
@@ -110,7 +114,7 @@ export default function TwinLabPage() {
         >
           <TwinScenarioForm
             scenarios={scenarios}
-            pending={mutation.isPending}
+            pending={publication.pending}
             disabled={vehicleId == null}
             onUpdate={updateScenario}
             onRemove={(index) => setScenarios((current) => current.filter((_, i) => i !== index))}
@@ -125,7 +129,7 @@ export default function TwinLabPage() {
             ])}
             onSubmit={submit}
           />
-          <MutationError error={mutation.error} />
+          <MutationError error={publication.error} />
         </InsightPanel>
       </FadeIn>
 
@@ -137,8 +141,9 @@ export default function TwinLabPage() {
           metrics={summaryMetrics}
           vehicleId={result?.vehicle_id ?? vehicleId}
           hasResult={result != null}
-          pending={mutation.isPending}
-          error={mutation.error}
+          pending={publication.pending}
+          error={publication.error}
+          query={result ? publication.source : undefined}
           quality={result?.data_quality}
           evidence={result?.evidence}
           limitations={result?.limitations}

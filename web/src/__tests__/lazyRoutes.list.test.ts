@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it, expect } from 'vitest'
 import { LAZY_ROUTE_IMPORTS } from './lazyRoutes.list'
+import { lazyBindings, manifestSpecifiers } from './lazyRoutes.parse'
 
 /**
  * `lazyRoutes.list.ts` is a hand-maintained manifest that MUST mirror every
@@ -16,18 +17,13 @@ import { LAZY_ROUTE_IMPORTS } from './lazyRoutes.list'
  *   3. every referenced module actually exists on disk (catches path typos
  *      without paying the smoke test's 30s-per-chunk import cost),
  *   4. **zero drift vs App.tsx** — the contract the file exists to uphold, and
- *      the exact bug this elevation fixed (13 admin/settings/explore routes had
- *      been added to App.tsx but never mirrored here, leaving the parity smoke
- *      test red and 13 chunks un-exercised),
- *   5. **the drift check can see every lazy() call** — a route written with a
- *      specifier form the regex misses would pass the set comparison and fail
- *      only the count, with a message that names neither the route nor the
- *      cause,
+ *      including conditional developer references and named-export adapters,
+ *   5. **the drift check can see every lazy() call**, not only direct imports,
  *   6. **names match App.tsx bindings** — a mirrored-but-misnamed entry sends
  *      whoever reads a smoke failure to the wrong route,
  *   7. a real, callable loader that resolves to a module with a default export.
  *
- * Paths/specifiers are parsed from source text (via fs) rather than from
+ * Paths/specifiers are parsed with the installed TypeScript parser rather than from
  * `load.toString()` because Vite's SSR/test transform rewrites dynamic
  * `import()` specifiers, which would mangle the function body.
  */
@@ -36,26 +32,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const listSource = fs.readFileSync(path.join(here, 'lazyRoutes.list.ts'), 'utf8')
 const appSource = fs.readFileSync(path.join(here, '..', 'App.tsx'), 'utf8')
 
-// `{ name: 'X', load: () => import('../features/…') }`
-const LIST_IMPORT_RE = /load:\s*\(\)\s*=>\s*import\(\s*['"](\.\.\/[^'"]+)['"]\s*\)/g
-// `const X = lazy(() => import('./features/…'))`
-const APP_LAZY_RE = /lazy\(\s*\(\)\s*=>\s*import\(\s*['"](\.\/[^'"]+)['"]\s*\)\s*\)/g
-// Same, but capturing the binding name so the manifest's `name` can be checked
-// against what App.tsx actually calls the route.
-const APP_LAZY_NAMED_RE =
-  /const\s+(\w+)\s*=\s*lazy\(\s*\(\)\s*=>\s*import\(\s*['"](\.\/[^'"]+)['"]\s*\)\s*\)/g
-// Every lazy() call site, regardless of specifier form. Used to prove the two
-// regexes above see ALL of them.
-const APP_LAZY_ANY_RE = /lazy\(\s*\(\)/g
-
-const specifiersFrom = (source: string, re: RegExp): string[] => {
-  const out: string[] = []
-  for (const m of source.matchAll(re)) out.push(m[1])
-  return out
-}
-
-// Normalize `./features/x` and `../features/x` to a comparable `features/x` key.
-const toKey = (spec: string): string => spec.replace(/^\.\.?\//, '')
+const toKey = (spec: string): string => spec.replace(/^(?:\.\.?\/|@\/)/, '')
 
 const MODULE_EXTS = ['.tsx', '.ts', '/index.tsx', '/index.ts']
 const resolvesOnDisk = (spec: string): boolean => {
@@ -63,13 +40,14 @@ const resolvesOnDisk = (spec: string): boolean => {
   return MODULE_EXTS.some((ext) => fs.existsSync(base + ext))
 }
 
-const listSpecifiers = specifiersFrom(listSource, LIST_IMPORT_RE)
-const appSpecifiers = specifiersFrom(appSource, APP_LAZY_RE)
+const listSpecifiers = manifestSpecifiers(listSource)
+const appBindings = lazyBindings(appSource)
+const appSpecifiers = appBindings.map(({ specifier }) => specifier)
 
 /** `features/x/pages/YPage` → the `const Y` App.tsx binds it to. */
 const appNamesByKey = new Map<string, string>()
-for (const m of appSource.matchAll(APP_LAZY_NAMED_RE)) {
-  appNamesByKey.set(toKey(m[2]), m[1])
+for (const { name, specifier } of appBindings) {
+  appNamesByKey.set(toKey(specifier), name)
 }
 
 /** `features/x/pages/YPage` → the `name` the manifest gives it. */
@@ -107,7 +85,7 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
   })
 
   it('parses one ../features/* specifier per entry with no duplicates', () => {
-    // The source regex must capture exactly as many specifiers as there are
+    // The parser must capture exactly as many specifiers as there are
     // runtime entries — proof the parse below is complete, not partial.
     expect(listSpecifiers).toHaveLength(LAZY_ROUTE_IMPORTS.length)
     for (const spec of listSpecifiers) expect(spec).toMatch(/^\.\.\/features\//)
@@ -135,26 +113,25 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
     expect(notMirrored).toEqual([]) // App route missing from the list
     expect(stale).toEqual([]) // list entry pointing at a removed App route
 
-    // Guard the same textual contract the smoke test enforces, so drift is
-    // caught here too (App.tsx counts `lazy(()` occurrences).
-    const appLazyCount = (appSource.match(/lazy\(\s*\(\)/g) ?? []).length
-    expect(LAZY_ROUTE_IMPORTS.length).toBe(appLazyCount)
+    expect(LAZY_ROUTE_IMPORTS.length).toBe(appBindings.length)
   })
 
   it('sees EVERY lazy() call in App.tsx — no specifier form escapes the drift check', () => {
-    // The drift check above compares *parsed specifier sets*, while the count
-    // check compares *totals*. If a route is added with a specifier form the
-    // specifier regex cannot see — an alias (`@/features/…`), a template
-    // literal, a multi-line import — the set comparison silently passes and
-    // only the count fails, with a message that says nothing about which
-    // route or why.
-    //
-    // Pinning "the specifier regex captures all N call sites" turns that into
-    // an explicit failure at the point of the mistake, and documents that
-    // `const X = lazy(() => import('./…'))` is the required form.
-    const totalLazyCalls = (appSource.match(APP_LAZY_ANY_RE) ?? []).length
-    expect(appSpecifiers).toHaveLength(totalLazyCalls)
-    expect(appNamesByKey.size).toBe(totalLazyCalls)
+    expect(appNamesByKey.size).toBe(appBindings.length)
+    expect(lazyBindings(`
+      const Direct = lazy(() => import('./features/direct'));
+      const Conditional = import.meta.env.DEV ? lazy(() => import('./features/dev')) : null;
+      const Named = lazy(async () => {
+        const module = await import('@/features/named');
+        return { default: module.Named };
+      });
+      // const NotALoader = lazy(() => import('./features/comment'));
+    `)).toEqual([
+      { name: 'Direct', specifier: './features/direct' },
+      { name: 'Conditional', specifier: './features/dev' },
+      { name: 'Named', specifier: '@/features/named' },
+    ])
+    expect(() => lazyBindings('const Unsupported = lazy(() => import(path))')).toThrow('static import')
   })
 
   it('names every entry exactly as App.tsx binds it', () => {
@@ -215,5 +192,13 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
     const mod = (await pending) as { default?: unknown }
     expect(mod).toHaveProperty('default')
     expect(typeof mod.default).toBe('function')
+  })
+
+  it('adapts the named onboarding export exactly like App.tsx', async () => {
+    const entry = LAZY_ROUTE_IMPORTS.find(({ name }) => name === 'TaskOnboardingHost')
+    expect(entry).toBeDefined()
+    if (!entry) throw new Error('TaskOnboardingHost entry is missing from the manifest')
+    const module = await entry.load()
+    expect(module).toHaveProperty('default', expect.any(Function))
   })
 })

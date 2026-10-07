@@ -47,6 +47,7 @@
     },
     "sourceError": "Signal reconstruction could not be loaded.",
     "summary": "Reconstruction summary",
-    "summarySource": "Historical signal reconstruction"
+    "summarySource": "Historical signal reconstruction",
+    "briefDescription": "Reconstructed signals belong to the resolved instant; tracked fields and history span come from the independent timeline source."
   }
 }

@@ -2,13 +2,14 @@ import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import { MetricLabel, MetricValue, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RhythmCoverageSummaryProps {
   summary: DrivingRhythm;
@@ -17,38 +18,26 @@ interface RhythmCoverageSummaryProps {
 export function RhythmCoverageSummary({
   summary,
 }: RhythmCoverageSummaryProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'returned', rawValue: summary.observed,
+      label: t('rhythm.method.returned', 'Rows returned') },
+    { metricId: 'count', occurrenceId: 'included', rawValue: summary.total,
+      label: t('rhythm.method.included', 'Valid starts included') },
+    { metricId: 'count', occurrenceId: 'invalid', rawValue: summary.invalidTimestampCount,
+      label: t('rhythm.method.invalid', 'Invalid timestamps') },
+    { metricId: 'count', occurrenceId: 'future', rawValue: summary.futureTimestampCount,
+      label: t('rhythm.method.future', 'Future timestamps') },
+  ];
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(summary.observed)}</MetricValue>
-          <MetricLabel>
-            {t('rhythm.method.returned', 'Rows returned')}
-          </MetricLabel>
-        </div>
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(summary.total)}</MetricValue>
-          <MetricLabel>
-            {t('rhythm.method.included', 'Valid starts included')}
-          </MetricLabel>
-        </div>
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(summary.invalidTimestampCount)}</MetricValue>
-          <MetricLabel>
-            {t('rhythm.method.invalid', 'Invalid timestamps')}
-          </MetricLabel>
-        </div>
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(summary.futureTimestampCount)}</MetricValue>
-          <MetricLabel>
-            {t('rhythm.method.future', 'Future timestamps')}
-          </MetricLabel>
-        </div>
-      </div>
+      <NestedDrivingBrief metrics={metrics}
+        title={t('rhythm.brief.coverage', 'Observed-history coverage')}
+        description={t('rhythm.method.coverage', 'All {{count}} drives in the selected dates were fetched across API pages and accounted for.', { count: summary.observed })}
+        period={{ kind: 'unknown', label: `${summary.firstStartTs ?? '—'} – ${summary.lastStartTs ?? '—'} · ${summary.timeZone}`,
+          reason: t('rhythm.brief.coverageScope', 'Included non-future starts define the observed span; the selected date scope may be wider.') }} />
       {summary.total === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
           className="py-6"

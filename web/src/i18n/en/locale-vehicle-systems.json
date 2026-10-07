@@ -945,6 +945,7 @@
       "badge": "Helix",
       "emptyHint": "Select a vehicle first."
     },
+    "itemProgress": "{{name}} service progress",
     "title": "Maintenance",
     "subtitle": "Service schedule, records, and upcoming maintenance",
     "kpis": "Maintenance summary",
@@ -1030,6 +1031,48 @@
     }
   },
   "media": {
+    "status": {
+      "playing": "Playing",
+      "paused": "Paused",
+      "stopped": "Stopped"
+    },
+    "title": "Media player",
+    "unknownSource": "Unknown",
+    "col": {
+      "time": "Time",
+      "track": "Track",
+      "artist": "Artist",
+      "source": "Source",
+      "volume": "Volume",
+      "status": "Status"
+    },
+    "subtitle": "Now playing, volume, and listening history",
+    "nowPlayingSection": "Now playing",
+    "nowPlaying": "Now playing",
+    "selectVehicle": "Select a vehicle to see what’s playing",
+    "resource": "Media",
+    "noTrack": "No track",
+    "unknownArtist": "Unknown artist",
+    "progress": "Playback progress",
+    "volume": "Volume",
+    "volumeStep": "Step",
+    "chartsSection": "Media charts",
+    "volumeOverTime": "Volume over time",
+    "selectVehicleChart": "Select a vehicle to view volume history",
+    "noVolumeData": "No volume data for this period",
+    "sourceDistribution": "Source distribution",
+    "selectVehicleSource": "Select a vehicle to view sources",
+    "noSourceData": "No source data available",
+    "playbackHistory": "Playback history",
+    "records": "records",
+    "selectVehicleHistory": "Select a vehicle to view playback history",
+    "noHistory": "No playback history for this period",
+    "noHistoryShort": "No playback history",
+    "uniqueTracks": "Unique tracks",
+    "topSource": "Top source",
+    "avgVolume": "Avg volume",
+    "volumeStepFull": "Volume step",
+    "statsSection": "Listening stats",
     "modernization": {
       "unknownStatus": "Unknown status",
       "retained": "Refresh failed; previously loaded data remains visible for the affected source.",
@@ -1358,6 +1401,9 @@
     }
   },
   "safety": {
+    "brief": {
+      "counterSource": "Counters from the reported safety snapshot; source field names and the existing distance display are retained without inferring units from identifiers."
+    },
     "openFsdInsights": "Open FSD insights",
     "settings": {
       "unknown": "Unknown",
@@ -1476,12 +1522,14 @@
     },
     "cadence": {
       "title": "Update cadence",
+      "aria": "Software updates per calendar month",
       "series": "Updates",
       "empty": "No update activity in this range",
       "colMonth": "Month"
     },
     "breakdown": {
       "title": "By status",
+      "noKnownStatus": "No categorized update statuses to show",
       "empty": "No updates to summarize"
     },
     "status": {
@@ -1503,6 +1551,9 @@
     }
   },
   "tireDifferentialDrift": {
+    "brief": {
+      "scope": "Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings."
+    },
     "title": "Tire differential drift",
     "subtitle": "Removes the four-tire common mode at every sample, so what remains is how each corner moves relative to its peers — an inference, not a manufacturer reading",
     "kpis": "Differential drift metrics",
@@ -1580,6 +1631,22 @@
       "generateButton": "Narrate trend"
     },
     "pressureHistoryAria": "Tire pressure over time for all four positions"
+  },
+  "vehicleSystems": {
+    "brief": {
+      "loading": "Loading source",
+      "retained": "Retained evidence",
+      "unavailable": "Source unavailable",
+      "returned": "Returned evidence",
+      "unknown": "Evidence unresolved",
+      "coverage": "Returned source only; completeness is not established.",
+      "undated": "Observation time unavailable",
+      "notLive": "Not a live-state observation",
+      "eyebrow": "Vehicle systems evidence",
+      "sectionSummary": "{{section}} evidence",
+      "retainedWarning": "Showing retained measurements",
+      "availabilityDenominator": "Counts are evaluated against {{count}} unique timestamp-valid rows."
+    }
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -2470,6 +2537,11 @@
       "inputLabel": "Ask a question about the app",
       "placeholder": "e.g. How do I enable energy cost forecasting?",
       "title": "Ask the help assistant"
+    },
+    "tireDifferentialDrift": {
+      "iconLabel": "More info about this inference",
+      "imbalance": "The spread between each corner's mean (constant) residual — independent of the leak ranking. A corner permanently offset (e.g. after a wheel swap) shows up here with zero slope, invisible to the leak ranking alone.",
+      "leakCorner": "Each corner residual (reading minus the four-tire median) gets its own Theil-Sen slope over time. The corner with the strongest, most pairwise-consistent negative slope — clearing minimum samples, span, and agreement bars — is flagged here. A shared weather swing cancels equally, so it cannot trigger this alone."
     }
   },
   "impersonation": {

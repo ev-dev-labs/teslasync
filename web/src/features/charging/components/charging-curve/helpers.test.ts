@@ -1,10 +1,10 @@
 // charging-curve/helpers unit tests.
 //
 // Every export is exercised across multiple facets / branches:
-//   isDcSession          — charger_type presence, the 20 kW peak-power
+//   isDcSession          — explicit AC exclusion, the 20 kW peak-power
 //                          threshold (exclusive boundary) and the fully-null
 //                          "AC" fallback.
-//   getChargerLabel      — Tesla → Supercharger, any other charger_type or a
+//   getChargerLabel      — explicit AC → Home / AC, Tesla → Supercharger, DC or a
 //                          high peak → DC Fast, otherwise Home / AC.
 //   durationMinutes      — happy path, null end, non-positive/equal ranges,
 //                          unparseable timestamps and minute rounding.
@@ -68,7 +68,7 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
 }
 
 describe('isDcSession', () => {
-  it('treats any populated charger_type as a DC session', () => {
+  it('treats populated non-AC charger types as DC sessions', () => {
     expect(isDcSession(makeSession({ charger_type: 'Tesla', peak_power_w: null }))).toBe(true);
     expect(isDcSession(makeSession({ charger_type: 'CCS', peak_power_w: null }))).toBe(true);
   });
@@ -84,6 +84,21 @@ describe('isDcSession', () => {
     // Empty-string charger_type is falsy and must not force a DC classification.
     expect(isDcSession(makeSession({ charger_type: '', peak_power_w: null }))).toBe(false);
   });
+
+  it.each(['AC', 'ac', 'Home', 'Wall Connector', 'Tesla Wall Connector'])(
+    'keeps explicit %s charging AC even above the fallback power threshold',
+    charger_type => {
+      expect(isDcSession(makeSession({ charger_type, peak_power_w: null }))).toBe(false);
+      expect(isDcSession(makeSession({ charger_type, peak_power_w: 44_000 }))).toBe(false);
+    },
+  );
+
+  it.each(['DC', 'CCS', 'CHAdeMO', 'Supercharger', 'Tesla'])(
+    'keeps explicit %s charging DC without recorded peak power',
+    charger_type => {
+      expect(isDcSession(makeSession({ charger_type, peak_power_w: null }))).toBe(true);
+    },
+  );
 });
 
 describe('getChargerLabel', () => {
@@ -92,7 +107,7 @@ describe('getChargerLabel', () => {
     expect(getChargerLabel(makeSession({ charger_type: 'tesla supercharger v3' }))).toBe('Supercharger');
   });
 
-  it('labels any other charger_type or a high peak as DC Fast', () => {
+  it('labels non-AC charger types or an unknown high peak as DC Fast', () => {
     expect(getChargerLabel(makeSession({ charger_type: 'CCS' }))).toBe('DC Fast');
     expect(getChargerLabel(makeSession({ charger_type: null, peak_power_w: 50_000 }))).toBe('DC Fast');
   });
@@ -101,6 +116,14 @@ describe('getChargerLabel', () => {
     expect(getChargerLabel(makeSession({ charger_type: null, peak_power_w: null }))).toBe('Home / AC');
     expect(getChargerLabel(makeSession({ charger_type: null, peak_power_w: 5_000 }))).toBe('Home / AC');
   });
+
+  it.each(['AC', 'Home', 'Tesla Wall Connector'])(
+    'labels explicit %s sessions Home / AC rather than DC Fast or Supercharger',
+    charger_type => {
+      expect(getChargerLabel(makeSession({ charger_type, peak_power_w: 44_000 }))).toBe('Home / AC');
+      expect(sessionLabel(makeSession({ charger_type, peak_power_w: 44_000 }))).toContain('Home / AC');
+    },
+  );
 });
 
 describe('durationMinutes', () => {
@@ -175,6 +198,14 @@ describe('generateChargingCurve', () => {
     expect(curve).toHaveLength(61);
     expect(curve.every((p) => p.power === 11)).toBe(true);
     expect(curve[0]).toEqual({ soc: 20, power: 11 });
+  });
+
+  it('does not apply DC taper to an explicitly AC session with a high recorded peak', () => {
+    const curve = generateChargingCurve(
+      makeSession({ charger_type: 'AC', peak_power_w: 44_000, start_soc_pct: 20, end_soc_pct: 100 }),
+    );
+    expect(curve).toHaveLength(81);
+    expect(curve.every(point => point.power === 44)).toBe(true);
   });
 
   it('tapers a DC curve monotonically and never emits negative power', () => {

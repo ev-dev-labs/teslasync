@@ -38,7 +38,8 @@
       "available": "Evidence available",
       "limited": "Limited evidence",
       "noCount": "Awaiting a successful report",
-      "inspect": "Inspect evidence"
+      "inspect": "Inspect evidence",
+      "resistance": "Resistance steps"
     },
     "electrochem": {
       "title": "Battery electrochemistry (pack-equivalent)",
@@ -73,7 +74,11 @@
       "throughput": "Throughput",
       "restHours": "Rest",
       "proxySlope": "Proxy slope",
-      "capacityProxy": "Capacity proxy"
+      "capacityProxy": "Capacity proxy",
+      "activationEnergy": "Ea",
+      "activationInterval": "CI",
+      "temperatureSpan": "Temperature span",
+      "arrheniusTitle": "Temperature dependence of pack resistance"
     },
     "thermal": {
       "title": "Thermal science (τ, residual)",
@@ -105,7 +110,11 @@
       "weatherUnknown": "weather unknown",
       "joined": "joined {{n}} drives",
       "rainDry": "rain/dry",
-      "empty": "No drives joined archive weather in this window."
+      "empty": "No drives joined archive weather in this window.",
+      "densityCorrelation": "r(density, residual)",
+      "windCorrelation": "r(wind, residual)",
+      "rainCount": "Rain drives",
+      "dryCount": "Dry drives"
     },
     "tires": {
       "title": "Tire / contact mechanics",
@@ -130,6 +139,26 @@
       "noneReported": "None reported",
       "residual": "Fit residual (mean / RMSE)",
       "recordId": "Generated record"
+    },
+    "brief": {
+      "firmwareContext": "Source firmware epoch; observations are not a cell diagnostic.",
+      "intervalUnknown": "Confidence interval unknown",
+      "arrheniusContext": "Inspect fit eligibility and temperature coverage before interpreting activation energy.",
+      "temperatureDelta": "Temperature difference, not an absolute temperature.",
+      "restExposure": "Reported rest exposure, not a measured aging split.",
+      "capacityContext": "Energy-based capacity proxy, not a battery health score or cell diagnostic.",
+      "assumedCapacity": "Assumed reference, not measured vehicle capacity.",
+      "holdoutContext": "Holdout error is unavailable unless the source reports it; it is not zero.",
+      "partial": "Some reports unavailable",
+      "offline": "Cached · refresh paused",
+      "stale": "Retained report",
+      "pending": "Some reports loading",
+      "scope": "Vehicle {{vehicle}} · {{start}} → {{end}}",
+      "independent": "Independent reports; inspect each source state below.",
+      "loaded": "Report loaded {{at}}",
+      "provenance": "Historical inputs and derived fits; source eligibility, assumptions and uncertainty apply. Counts are not a health grade.",
+      "pressureImbalance": "Reported corner-pressure imbalance in the selected source window.",
+      "underinflation": "Source underinflation fraction relative to the assumed placard pressure."
     }
   },
   "achievements": {

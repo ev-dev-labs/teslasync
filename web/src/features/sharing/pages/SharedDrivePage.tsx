@@ -1,12 +1,9 @@
 import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  MapPin, Clock, Zap, Battery, Mountain, Gauge, TrendingUp,
-} from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { GlassPanel, Logo, Text } from '@/components/ui';
-import { ChartCard, Grid, LayoutCard, PageHeader } from '@/components/layout';
-import { StatCard } from '@/components/data-display';
+import { ChartCard, LayoutCard, PageHeader } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import {
   ChartGradient, chartGrid, axisTick,
@@ -21,8 +18,8 @@ import {
 } from '@/components/maps';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';
+import { PublicDriveBrief } from '../components/operationalbrief-public';
 
 import {
   convertDistanceFromSI,
@@ -273,55 +270,17 @@ export default function SharedDrivePage() {
 
       {/* Content */}
       <div className="w-full min-w-0 px-4 py-8 space-y-6">
-        {/* Stats grid */}
+        {/* Owner-shared measurements */}
         <FadeIn delay={0.05}>
-          <Grid cols={{ default: 2, md: 4 }} gap={4}>
-            <StatCard
-              label={t('share.distance', 'Distance')}
-              value={formatDistance(drive.distance_m)}
-              icon={<MapPin className="h-4 w-4" />}
-            />
-            <StatCard
-              label={t('share.duration', 'Duration')}
-              value={formatDurationSecondsAsMinutes(drive.duration_s)}
-              icon={<Clock className="h-4 w-4" />}
-            />
-            {drive.efficiency_wh_per_m != null && (
-              <StatCard
-                label={t('share.efficiency', 'Efficiency')}
-                value={`${fmtNumber(toEfficiencyDisplay(drive.efficiency_wh_per_m * METERS_PER_KM, distancePref))} ${effPref}`}
-                icon={<Zap className="h-4 w-4" />}
-              />
-            )}
-            {drive.start_battery != null && drive.end_battery != null && (
-              <StatCard
-                label={t('share.battery', 'Battery')}
-                value={`${fmtNumber(drive.start_battery)}% → ${fmtNumber(drive.end_battery)}%`}
-                icon={<Battery className="h-4 w-4" />}
-              />
-            )}
-            {drive.max_speed_mps != null && (
-              <StatCard
-                label={t('share.maxSpeed', 'Max speed')}
-                value={formatSpeed(drive.max_speed_mps)}
-                icon={<Gauge className="h-4 w-4" />}
-              />
-            )}
-            {drive.avg_speed_mps != null && (
-              <StatCard
-                label={t('share.avgSpeed', 'Avg speed')}
-                value={formatSpeed(drive.avg_speed_mps)}
-                icon={<TrendingUp className="h-4 w-4" />}
-              />
-            )}
-            {drive.elevation_gain != null && (
-              <StatCard
-                label={t('share.elevGain', 'Elevation gain')}
-                value={`${fmtNumber(convertElevation(drive.elevation_gain, distancePref))} ${elevPref}`}
-                icon={<Mountain className="h-4 w-4" />}
-              />
-            )}
-          </Grid>
+          <PublicDriveBrief
+            drive={drive}
+            preferences={{ units: unitPrefs, currency: { kind: 'symbol', value: '' } }}
+            formatDistance={formatDistance}
+            formatSpeed={formatSpeed}
+            fmtNumber={fmtNumber}
+            formatEfficiency={raw => `${fmtNumber(toEfficiencyDisplay(raw * METERS_PER_KM, distancePref))} ${effPref}`}
+            formatElevation={raw => `${fmtNumber(convertElevation(raw, distancePref))} ${elevPref}`}
+          />
         </FadeIn>
 
         {/* Vehicle badge */}

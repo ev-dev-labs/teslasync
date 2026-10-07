@@ -39,15 +39,9 @@
  * Pure, React-free and clock-free.
  */
 
-/**
- * Minimal structural shape this model needs — mirrors the `SignalPoint`
- * shape `useSignalHistory` resolves to, declared locally so this module
- * stays independently testable.
- */
-export interface ChangePointSample {
-  timestamp?: string | null;
-  valueNum?: number | null;
-}
+import { toSignalHistoryMeasurements, type SignalHistorySample } from './signalHistorySamples';
+
+export type ChangePointSample = SignalHistorySample;
 
 export interface Segment {
   startMs: number;
@@ -110,22 +104,7 @@ interface NumericPoint {
 
 /** Numeric samples only, ascending, de-duplicated by timestamp. */
 export function toNumericPoints(samples: readonly ChangePointSample[]): NumericPoint[] {
-  const points: NumericPoint[] = [];
-  for (const s of samples) {
-    if (s.timestamp == null) continue;
-    const ms = new Date(s.timestamp).getTime();
-    if (!Number.isFinite(ms)) continue;
-    if (typeof s.valueNum !== 'number' || !Number.isFinite(s.valueNum)) continue;
-    points.push({ ms, value: s.valueNum });
-  }
-  points.sort((a, b) => a.ms - b.ms);
-  const deduped: NumericPoint[] = [];
-  for (const p of points) {
-    const last = deduped[deduped.length - 1];
-    if (last != null && last.ms === p.ms) deduped[deduped.length - 1] = p;
-    else deduped.push(p);
-  }
-  return deduped;
+  return toSignalHistoryMeasurements(samples);
 }
 
 function median(values: readonly number[]): number {

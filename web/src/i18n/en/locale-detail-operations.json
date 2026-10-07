@@ -50,7 +50,9 @@
       "onTrack": "On track",
       "review": "Review recommended",
       "ready": "Fleet ready",
-      "loading": "Resolving live state"
+      "loading": "Resolving live state",
+      "unavailable": "Data unavailable",
+      "prerequisite": "Prerequisite required"
     },
     "battery": {
       "eyebrow": "Battery posture",
@@ -223,7 +225,9 @@
         "evidenceLimit": "Supporting evidence is limited to four vehicle snapshots and two urgent work orders.",
         "liveMethod": "Resolves current state independently for every registered vehicle.",
         "serviceMethod": "Counts open work orders and elevates high- and critical-severity records."
-      }
+      },
+      "stateRequestFailed": "Live state could not be retrieved for {{count}} vehicle(s).",
+      "coverageNote": "Based on {{covered}} of {{total}} vehicles with a current reading."
     },
     "charging": {
       "eyebrow": "Charging posture",
@@ -307,7 +311,21 @@
         "causeLimitation": "Session records show observed energy and fees but do not diagnose the cause of charging behavior.",
         "evidenceLimit": "Supporting evidence is limited to the five most recent sessions matching the active filters.",
         "sourceMethod": "Aggregates energy, direct Tesla fee fields, charger type, and site from synchronized business-account sessions."
-      }
+      },
+      "businessAccessTitle": "Tesla Fleet Charging access required",
+      "businessAccessDescription": "This import requires a Tesla business account with Fleet Charging access.",
+      "noSessionsTitle": "No sessions in this analysis window",
+      "noSessionsDescription": "Adjust the vehicle or date scope, or refresh from Tesla to import recent history.",
+      "feesTitle": "Charging fees need review",
+      "feesDescription": "{{amount}} in idle or congestion fees was recorded in this window.",
+      "partialCostTitle": "Cost coverage is incomplete",
+      "partialCostDescription": "{{count}} sessions have no reported cost, so totals are partial.",
+      "averageDuration": "Average duration",
+      "durationDetail": "Mean charging duration for sessions with valid timing data.",
+      "sessionsLoading": "Updating",
+      "returnedSessionsTitle": "Cost, energy, and session evidence in one operating view",
+      "returnedSessionsDescription": "The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.",
+      "returnedSessionsProvenance": "Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display."
     },
     "drives": {
       "eyebrow": "Driving posture",

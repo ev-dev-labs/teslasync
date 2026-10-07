@@ -457,7 +457,7 @@ export default function TeslaChargingHistoryPage() {
             ) : (
               <EmbeddedChart
                 title={t('tesla_charging.monthlySpending', 'Monthly spending')}
-                ariaLabel={t('tesla_charging.monthlySpending.aria', 'Monthly Tesla charging spending bar chart')}
+                ariaLabel={t('tesla_charging.monthlySpendingAria', 'Monthly Tesla charging spending bar chart')}
                 data={monthlyData}
                 exportData={monthlyData}
                 exportable

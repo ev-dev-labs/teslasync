@@ -30,6 +30,7 @@ import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } 
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -109,6 +110,9 @@ export default function TariffLabPage() {
   const create = useCreateTariff();
   const remove = useDeleteTariff();
   const simulate = useSimulateTariffs();
+  const publication = useRetainedMutation(simulate, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const { confirm, dialogProps } = useConfirm();
 
   const handleRemove = async (row: Tariff) => {
@@ -126,11 +130,11 @@ export default function TariffLabPage() {
   };
 
   const tariffs = useMemo(() => tariffQuery.data?.items ?? [], [tariffQuery.data?.items]);
-  const result = simulate.data;
+  const result = publication.result;
   const results = useMemo(() => result?.results ?? [], [result?.results]);
-  const currency = results[0]?.currency ?? draft.currency;
+  const currency = results[0]?.currency;
   const money = (minor: number | null | undefined) =>
-    formatCurrencyMinor(minor, currency, units.unitPrefs.locale);
+    currency == null ? '—' : formatCurrencyMinor(minor, currency, units.unitPrefs.locale);
 
   const chartData = useMemo(
     () =>
@@ -436,8 +440,8 @@ export default function TariffLabPage() {
             <div className="flex items-end">
               <Button
                 onClick={runSimulation}
-                loading={simulate.isPending}
-                disabled={vehicleId == null || simulate.isPending}
+                loading={publication.pending}
+                disabled={vehicleId == null || publication.pending}
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
               >
                 {t('ownership.tariff.controls.run', 'Replay load against plans')}
@@ -454,7 +458,7 @@ export default function TariffLabPage() {
                   'No plans selected — every stored plan will be evaluated.',
                 )}
           </Text>
-          <MutationError error={simulate.error} />
+          <MutationError error={publication.error} />
         </OwnershipPanel>
       </FadeIn>
 
@@ -471,14 +475,33 @@ export default function TariffLabPage() {
           <OwnershipBrief
             title={t('ownership.tariff.brief.title', 'Returned tariff replay comparison')}
             description={t('ownership.tariff.brief.description', 'Annualised savings and shiftable share are modelled replay results, not a bill or a completed charging action.')}
-            scope={t('ownership.tariff.brief.scope', 'Latest replay selection and model assumptions; source coverage remains in the evidence')}
-            source={simulate}
+            scope={<>
+              <span>{t('ownership.tariff.brief.scope', 'Latest replay selection and model assumptions; source coverage remains in the evidence')}</span>
+              {publication.published?.inputs && <span>{t(
+                'ownership.tariff.brief.submittedScope',
+                'Submitted replay: vehicle #{{vehicle}}, {{days}} days, shiftable {{shift}}%, switching fee {{fee}} minor units, tariff IDs {{plans}}',
+                {
+                  vehicle: publication.published.inputs.vehicle_id,
+                  days: publication.published.inputs.window_days,
+                  shift: publication.published.inputs.shiftable_pct,
+                  fee: publication.published.inputs.switch_fee_minor,
+                  plans: publication.published.inputs.tariff_ids.length > 0
+                    ? publication.published.inputs.tariff_ids.join(', ')
+                    : t('ownership.tariff.controls.all', 'No plans selected — every stored plan will be evaluated.'),
+                },
+              )}</span>}
+            </>}
+            source={publication.source}
+            enabled={vehicleId != null}
             window={result?.window}
             metrics={[
               {
                 occurrenceId: 'saving', metricId: 'currency',
                 label: t('ownership.tariff.stat.saving', 'Best-case annual saving'),
-                rawValue: result?.max_saving_minor,
+                rawValue: currency == null ? null : result?.max_saving_minor,
+                missingReason: currency == null && result?.max_saving_minor != null
+                  ? t('ownership.tariff.brief.currencyUnknown', 'Replay currency not supplied; the tariff editor currency is not a result denomination.')
+                  : undefined,
                 display: specialistDisplay(money),
                 tone: (result?.max_saving_minor ?? 0) > 0 ? 'positive' : 'default',
                 context: bestResult?.name,

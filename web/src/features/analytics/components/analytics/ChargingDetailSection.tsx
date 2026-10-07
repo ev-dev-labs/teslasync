@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
 import { Building2, Plug, DollarSign, TrendingUp } from 'lucide-react';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import {
   ChartTooltip,
@@ -17,6 +17,7 @@ import { AnalyticsPanel } from './AnalyticsPanel';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import type { FleetAnalyticsQuery } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FleetSectionBrief } from '../operationalbrief-a-m/FleetSectionBrief';
 
 /** Stable bar corner-radius — hoisted so the hot chart JSX never allocates a fresh array per render. */
 const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
@@ -39,6 +40,16 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
   const chargerTypes = ca?.charger_types ?? [];
   const monthlyTrend = ca?.monthly_trend ?? [];
   const costStats = ca?.cost_stats;
+  const metrics: StatMetric[] = [
+    { metricId: 'currency', occurrenceId: 'charging-min-cost', rawValue: costStats?.min, label: t('analytics.charging.minCost', 'Min cost') },
+    { metricId: 'currency', occurrenceId: 'charging-average-cost', rawValue: costStats?.avg, label: t('analytics.charging.avgCost', 'Avg cost') },
+    { metricId: 'currency', occurrenceId: 'charging-median-cost', rawValue: costStats?.median, label: t('analytics.charging.medianCost', 'Median cost') },
+    { metricId: 'currency', occurrenceId: 'charging-max-cost', rawValue: costStats?.max, label: t('analytics.charging.maxCost', 'Max cost') },
+  ];
+  const costMetrics: StatMetric[] = metrics.map(metric => ({
+    ...metric,
+    display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
+  }));
 
   const brandLeaderboard = useMemo(() => {
     const maxCount = brands.reduce((m, b) => Math.max(m, safe(b.count)), 0) || 1;
@@ -117,7 +128,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
 
       {/* Cost Analysis Cards */}
       <AnalyticsPanel
-        title={t('analytics.charging.costAnalysis', 'Cost analysis')}
+        title={t('analytics.brief.costTitle', 'Returned charging cost distribution')}
         icon={<DollarSign className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -126,32 +137,9 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         emptyMessage={t('analytics.charging.noCostStats', 'No cost statistics')}
         skeletonHeight={140}
       >
-        <div className="grid grid-cols-2 gap-3">
-          <MetricCard
-            label={t('analytics.charging.minCost', 'Min cost')}
-            value={formatCurrency(safe(costStats?.min))}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('analytics.charging.avgCost', 'Avg cost')}
-            value={formatCurrency(safe(costStats?.avg))}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('analytics.charging.medianCost', 'Median cost')}
-            value={formatCurrency(safe(costStats?.median))}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('analytics.charging.maxCost', 'Max cost')}
-            value={formatCurrency(safe(costStats?.max))}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="amber"
-          />
-        </div>
+        <FleetSectionBrief query={query} metrics={costMetrics}
+          title={t('analytics.charging.costAnalysis', 'Cost analysis')}
+          description={t('analytics.brief.costDescription', 'Minimum, average, median and maximum returned charging costs; missing prices are not free charging.')} />
       </AnalyticsPanel>
 
       {/* Monthly Charging Trend — hero band */}

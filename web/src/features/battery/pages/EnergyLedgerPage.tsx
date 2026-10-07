@@ -180,7 +180,7 @@ export default function EnergyLedgerPage() {
               'Charging above the line, consumption below; the line is what could not be explained',
             )}
             ariaLabel={t(
-              'energyLedger.chart.aria',
+              'energyLedger.chartAria',
               'Stacked bar chart of monthly energy charged against energy driven and lost to standby, with the unexplained residual overlaid',
             )}
             chartKey="energy-ledger-monthly"

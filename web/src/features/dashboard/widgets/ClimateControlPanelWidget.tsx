@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Thermometer, Fan, Armchair, CircleDot, Snowflake, Zap, Power,
+  Thermometer, Armchair, Snowflake, Zap, Power,
 } from 'lucide-react';
 import { Badge, Text } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display';
+import type { DataState } from '@/api/dataState';
 import { deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
@@ -11,7 +13,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { resolveHvacActive } from '@/lib/climateState';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -86,7 +89,9 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
         ) : (
           <FullView
             climateData={climateData}
-            temps={temps}
+            dataState={dataState}
+            sourceScope={t('widget.climatePanel.summaryScope', 'Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.', { id })}
+            toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
             seatHeaters={seatHeaters}
             steeringHeat={steeringHeat}
@@ -114,15 +119,34 @@ function CompactView({ inside, tempUnit }: { inside: string | null; tempUnit: st
 /* ── Full 2x2 view ── */
 interface FullViewProps {
   climateData: NonNullable<ReturnType<typeof useClimateLatest>['data']>;
-  temps: { inside: string | null; outside: string | null } | null;
+  dataState: DataState<unknown>;
+  sourceScope: string;
+  toTemperatureDisplay: (value: number) => number;
   tempUnit: string;
   seatHeaters: { label: string; level: number }[];
   steeringHeat: number | null;
   t: (k: string, f: string) => string;
 }
 
-function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
+function FullView({ climateData, dataState, sourceScope, toTemperatureDisplay, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
+  const { fmtInt } = useNumberFormatting();
   const hvacState = resolveHvacActive(climateData.hvac_power, climateData.is_ac_on);
+  const metrics: StatMetric[] = [
+    { metricId: 'temperature', occurrenceId: 'climate-panel-cabin', rawValue: climateData.inside_temp,
+      label: t('widget.climatePanel.cabin', 'Cabin'),
+      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
+    { metricId: 'temperature', occurrenceId: 'climate-panel-outside', rawValue: climateData.outside_temp,
+      label: t('widget.climatePanel.outside', 'Outside'),
+      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
+    { metricId: 'number', occurrenceId: 'climate-panel-fan-level', rawValue: climateData.fan_speed,
+      label: t('widget.climatePanel.fanSpeed', 'Fan speed'),
+      description: t('widget.climatePanel.fanLevelDescription', 'Reported fan level, not a velocity measurement.'),
+      display: { notation: 'source' } },
+    { metricId: 'number', occurrenceId: 'climate-panel-wheel-level', rawValue: steeringHeat,
+      label: t('widget.climatePanel.steeringHeat', 'Wheel heat'),
+      description: t('widget.climatePanel.wheelLevelDescription', 'Reported wheel-heater level on the 0–3 scale; zero means Off.'),
+      display: { formatter: raw => ({ value: raw > 0 ? `${raw}/3` : t('widget.climatePanel.off', 'Off'), unit: '' }) } },
+  ];
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -140,13 +164,12 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
         </div>
       </div>
 
-      {/* Temperature row */}
-      <WidgetStatGrid cols={2} stats={[
-        { icon: <Thermometer className="size-4" />, label: t('widget.climatePanel.cabin', 'Cabin'), value: temps?.inside != null ? `${temps.inside}${tempUnit}` : '—' },
-        { icon: <Thermometer className="size-4" />, label: t('widget.climatePanel.outside', 'Outside'), value: temps?.outside != null ? `${temps.outside}${tempUnit}` : '—' },
-        { icon: <Fan className="size-4" />, label: t('widget.climatePanel.fanSpeed', 'Fan speed'), value: climateData.fan_speed != null ? `${climateData.fan_speed}` : '—' },
-        { icon: <CircleDot className="size-4" />, label: t('widget.climatePanel.steeringHeat', 'Wheel heat'), value: steeringHeat == null ? '—' : steeringHeat > 0 ? `${steeringHeat}/3` : t('widget.climatePanel.off', 'Off') },
-      ]} />
+      <DashboardSourceBrief metrics={metrics} state={dataState}
+        eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+        title={t('widget.climatePanel.summaryTitle', 'Returned climate control readings')}
+        description={t('widget.climatePanel.summaryDescription', 'Cabin and outside temperatures are independent SI measurements converted only for display. Fan and wheel-heater levels are not speeds; HVAC and heater statuses remain separate.')}
+        scope={sourceScope}
+        testId="dashboard-climate-panel-brief" />
 
       {/* Seat heaters + status badges */}
       <div className="flex items-center gap-1.5 flex-wrap">

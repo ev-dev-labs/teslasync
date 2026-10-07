@@ -13,8 +13,6 @@ import {
   Badge,
   GlassPanel,
   HelpTooltip,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Table,
   Text,
@@ -25,55 +23,28 @@ import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { UtilizationSectionBody } from './UtilizationSectionBody';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { DataStatus } from '@/api/dataState';
+import { VehicleEvidenceBrief } from '../operationalbrief-n-z/VehicleEvidenceBrief';
 
 interface UtilizationMethodologyProps {
   summary: UtilizationSummary;
   historyLimit: number;
   state: UtilizationSectionState;
+  sourceStatus?: DataStatus;
+  hasSource?: boolean;
 }
 
 export function UtilizationMethodology({
   summary,
   historyLimit,
   state,
+  sourceStatus,
+  hasSource = true,
 }: UtilizationMethodologyProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = summary.accounting;
-  const observedDays =
-    summary.observedDays != null
-      ? fmtNumber(summary.observedDays)
-      : '—';
-  const coverage = [
-    {
-      value: fmtInt(accounting.returnedRows),
-      label: t(
-        'utilization.method.returned',
-        'Rows returned',
-      ),
-    },
-    {
-      value: fmtInt(accounting.eligibleRows),
-      label: t(
-        'utilization.method.eligible',
-        'Eligible drives',
-      ),
-    },
-    {
-      value: fmtInt(accounting.excludedRows),
-      label: t(
-        'utilization.method.excluded',
-        'Timestamp exclusions',
-      ),
-    },
-    {
-      value: observedDays,
-      label: t(
-        'utilization.method.observedDays',
-        'Exact observed days',
-      ),
-    },
-  ];
+  const status = sourceStatus ?? (state.isLoading ? 'initial' : state.error ? 'initialFailure' : hasSource ? 'ok' : 'unavailable');
   const exclusions = [
     {
       label: t(
@@ -225,21 +196,24 @@ export function UtilizationMethodology({
         </Badge>
       </div>
 
+      <VehicleEvidenceBrief id="utilization-coverage-summary"
+        title={t('utilization.method.title', 'Coverage & methodology')}
+        description={t('utilization.method.window', 'The observed window begins at the first eligible returned drive, avoiding claims about time before the first in-range record.')}
+        status={status === 'ok' && accounting.historyCapReached ? 'partial' : status}
+        loading={state.isLoading}
+        provenance={t('utilization.briefSource', 'Returned drive history and configured energy price')}
+        scope={t('utilization.method.selectedScope', 'Selected UTC scope: {{start}} to {{end}}. Analysis as-of is frozen for this page mount.', { start: summary.window.rangeStart, end: summary.window.rangeEnd })}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'returned', label: t('utilization.method.returned', 'Rows returned'), rawValue: hasSource ? accounting.returnedRows : null },
+          { metricId: 'count', occurrenceId: 'eligible', label: t('utilization.method.eligible', 'Eligible drives'), rawValue: hasSource ? accounting.eligibleRows : null },
+          { metricId: 'count', occurrenceId: 'excluded', label: t('utilization.method.excluded', 'Timestamp exclusions'), rawValue: hasSource ? accounting.excludedRows : null },
+          { metricId: 'duration', occurrenceId: 'days', label: t('utilization.method.observedDays', 'Exact observed days'), rawValue: hasSource && summary.observedDays != null ? summary.observedDays * 86400 : null,
+            display: { formatter: raw => ({ value: fmtNumber(raw / 86400), unit: '' }) },
+            context: t('utilization.method.observedDaysUnit', 'Source duration expressed in exact days; canonical raw operand is seconds.') },
+        ]} />
       <UtilizationSectionBody state={state} className="mt-4 min-h-72">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">
           <div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {coverage.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-xl bg-[var(--surface-2)] p-3"
-                >
-                  <MetricValue>{item.value}</MetricValue>
-                  <MetricLabel>{item.label}</MetricLabel>
-                </div>
-              ))}
-            </div>
-
             {accounting.returnedRows === 0 ? (
               <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
                 className="py-6"
@@ -343,7 +317,7 @@ export function UtilizationMethodology({
             </div>
           </div>
 
-          <ul className="space-y-3">
+          <ul className="space-y-3" aria-label={t('utilization.method.stepsLabel', 'Methodology notes')}>
             {methods.map((method) => (
               <li
                 key={method.text}

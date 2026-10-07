@@ -1,0 +1,89 @@
+{
+  "route": "/energy-orchestrator",
+  "sourcePrerequisite": "browser-source-gap-reconciliation-20261007T061301Z\\mapping.json home-positive-history",
+  "templateCount": 2,
+  "themes": [
+    "dark",
+    "light"
+  ],
+  "widths": [
+    320,
+    1440
+  ],
+  "authoredScenarioCount": 8,
+  "executedScenarioCount": 0,
+  "status": "SOURCE AUTHORED; NOT EXECUTED OR ACCEPTED",
+  "cases": [
+    {
+      "template": "positive history and modeled outcomes",
+      "bands": [
+        "home-energy-outcomes",
+        "home-energy-forecast-quality"
+      ],
+      "sources": [
+        "typed vehicles",
+        "authoritative /vehicles/states?vehicle_ids=7&limit=500",
+        "energy-sites selects energy_site_id=42, not grid-only41",
+        "exact site-info",
+        "exact live-status",
+        "exact energy-history?period=day"
+      ],
+      "history": "288 five-minute UTC samples; solar_energy_wh=solarW*(5/60); consumer_energy_wh=200*(5/60)",
+      "assertions": [
+        "exact producer-built canonical input and optimizer result",
+        "raw W/Wh preserved in exported input/results",
+        "currency glyph from settings, not invented ISO denomination",
+        "positive forecasts, sample counts and latest source timestamp",
+        "all ten sections",
+        "model recommendation versus observations"
+      ],
+      "actions": [
+        "Horizon Home to6h",
+        "Max grid import Home to1000W",
+        "Optimization priority costFirst",
+        "Save as stability baseline",
+        "Recompute from now fixed+15min reanchors only; unchanged history reads",
+        "Review details keyboard/Escape",
+        "canonical JSON export read stream"
+      ]
+    },
+    {
+      "template": "held then failed history with resolved siblings",
+      "bands": [
+        "home-energy-outcomes",
+        "home-energy-forecast-quality"
+      ],
+      "lifecycle": [
+        "held initial history, live/site/fleet siblings fulfilled",
+        "503 across actual retry attempts; source Retry becomes visible",
+        "Recompute changes startTimeIso without retry",
+        "actual history source Retry recovers positive history"
+      ],
+      "assertions": [
+        "exact empty-history model while siblings retain measured input30/60 SoC",
+        "quality loading then incomplete/no history0 samples",
+        "site name and all ten sections retained",
+        "no selected-site41 reads",
+        "history-only expected503 diagnostic failures",
+        "strict fulfill ledger completion after recovery"
+      ]
+    }
+  ],
+  "commandsNotRun": [
+    "TypeScript",
+    "tests",
+    "validators",
+    "lint",
+    "audit",
+    "build",
+    "browser",
+    "preview",
+    "install",
+    "commit",
+    "push",
+    "deploy"
+  ],
+  "sourceClock": "2026-10-07T06:18:02.4151525Z",
+  "hardStopUtc": "2026-10-07T06:38:02.4151525Z",
+  "perVehicleStateNote": "Current useFleetStates implementation fetches /vehicles/states; no obsolete per-vehicle fan-out fabricated."
+}

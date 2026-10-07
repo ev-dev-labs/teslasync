@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigation, Thermometer, Gauge, Mountain } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { MetricBar } from '@/components/data-display';
+import { MetricBar, type StatMetric } from '@/components/data-display';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { gaugeTone } from '@/lib/tokens';
@@ -12,7 +12,8 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -61,11 +62,6 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
     [data?.new_range_km, toDistanceDisplay],
   );
 
-  const avgDaily = useMemo(
-    () => toDistanceDisplay(data?.avg_daily_km),
-    [data?.avg_daily_km, toDistanceDisplay],
-  );
-
   const healthScore = knownNumber(data?.health_score);
   const badge = healthScore != null ? healthBadge(healthScore, t) : undefined;
 
@@ -75,30 +71,33 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
     : null;
 
   // Factors list for wide view — derived from available data fields
-  const factors = useMemo(() => {
+  const factors = useMemo<StatMetric[]>(() => {
     return [
       {
-        icon: <Gauge className="size-4" />,
         label: t('widget.projectedRange.degradation', 'Battery degradation'),
-        value: knownNumber(data?.degradation_pct) != null ? `${fmtNumber(data?.degradation_pct)}%` : null,
+        metricId: 'percent', occurrenceId: 'projected-range-degradation', rawValue: data?.degradation_pct,
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
       },
       {
-        icon: <Navigation className="size-4" />,
         label: t('widget.projectedRange.avgDaily', 'Avg daily usage'),
-        value: avgDaily != null ? `${fmtNumber(avgDaily)} ${distanceUnit}` : null,
+        metricId: 'rate', occurrenceId: 'projected-range-daily-distance',
+        rawValue: data?.avg_daily_km == null ? data?.avg_daily_km : data.avg_daily_km * 1000,
+        description: t('widget.projectedRange.dailySource', 'Returned daily distance rate normalized from kilometers/day to meters/day, not a vehicle speed.'),
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
       },
       {
-        icon: <Thermometer className="size-4" />,
         label: t('widget.projectedRange.capacity', 'Current capacity'),
-        value: knownNumber(data?.current_capacity_pct) != null ? `${fmtNumber(data?.current_capacity_pct)}%` : null,
+        metricId: 'percent', occurrenceId: 'projected-range-capacity', rawValue: data?.current_capacity_pct,
+        display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
       },
       {
-        icon: <Mountain className="size-4" />,
         label: t('widget.projectedRange.cycles', 'Battery cycles'),
-        value: knownNumber(data?.total_cycles) != null ? fmtInt(data?.total_cycles) : null,
+        metricId: 'number', occurrenceId: 'projected-range-cycles', rawValue: data?.total_cycles,
+        description: t('widget.projectedRange.cyclesSource', 'Returned equivalent battery cycles; not assumed to be an integer event population.'),
+        display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       },
     ];
-  }, [data, avgDaily, distanceUnit, t, fmtNumber, fmtInt]);
+  }, [data, distanceUnit, t, fmtNumber, fmtInt]);
 
   return (
     <WidgetShell
@@ -129,7 +128,12 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
         {isWide && (
           <section className="flex min-w-0 flex-col gap-2">
             <h4 className={dashboardTokens.metricLabel}>{t('widget.projectedRange.factors', 'Range factors')}</h4>
-            <WidgetStatGrid stats={factors} cols={2} />
+            <DashboardSourceBrief metrics={factors} state={trust}
+              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+              title={t('widget.projectedRange.summaryTitle', 'Returned range-model inputs')}
+              description={t('widget.projectedRange.summaryDescription', 'Degradation, daily distance, capacity and equivalent cycles remain distinct from the projected-range hero and retained EPA comparison.')}
+              scope={t('widget.projectedRange.summaryScope', 'Vehicle {{id}} · inferred range analysis; exact observation bounds and recording completeness are not supplied.', { id: id ?? '—' })}
+              testId="dashboard-projected-range-factors-brief" />
           </section>
         )}
         {!data && (

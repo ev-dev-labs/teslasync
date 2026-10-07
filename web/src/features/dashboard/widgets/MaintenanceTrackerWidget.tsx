@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Wrench, CheckCircle2, Clock } from 'lucide-react';
 import { Badge, Caption, Subhead } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
-import { Timeline } from '@/components/data-display';
+import { Timeline, type StatMetric } from '@/components/data-display';
 import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useMaintenance, useServiceRecords, useMaintenanceForecast } from '@/api/hooks/useVehicleSystems';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -13,7 +13,8 @@ import { combineDataStates } from '@/api/dataState';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid } from './shared';
+import { WidgetBigNumber, WidgetStatusGrid } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -80,6 +81,16 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   const maintenanceTrust = useDataState({ ...maintenanceQuery, data: maintenanceItems ?? (maintLoading || maintIsError ? undefined : []) }, { provenance: 'historical' });
   const recordsTrust = useDataState({ ...recordsQuery, data: serviceRecords ?? (recordsLoading || recordsQuery.isError ? undefined : []) }, { provenance: 'historical' });
   const forecastTrust = useDataState({ ...forecastQuery, data: forecast ?? (forecastQuery.isLoading || forecastQuery.isError ? undefined : null) }, { provenance: 'inferred' });
+  const forecastMetrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'maintenance-overdue', rawValue: forecast?.overdue_count,
+      label: t('widget.maintenance.overdue', 'Overdue'), display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'maintenance-due-soon', rawValue: forecast?.due_soon_count,
+      label: t('widget.maintenance.soon', 'Soon'), display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'rate', occurrenceId: 'maintenance-daily-distance', rawValue: forecast?.km_per_day != null ? convertDistanceToSI(forecast.km_per_day, 'km') : null,
+      label: t('widget.maintenance.dailyDistance', 'Daily distance'),
+      description: t('widget.maintenance.paceSource', 'Source distance pace normalized to meters per day, not vehicle speed.'),
+      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: `${distanceUnit}/${t('widget.maintenance.dayUnit', 'day')}` }) } },
+  ];
   const combined = combineDataStates([maintenanceTrust, recordsTrust, forecastTrust]);
 
   const isLoading = maintLoading || recordsLoading;
@@ -253,11 +264,12 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
             >
               <StaleRefreshWarning state={forecastTrust} />
               {forecastTrust.fatalError && <QueryError error={forecastTrust.fatalError} onRetry={forecastTrust.retry ?? undefined} />}
-              <WidgetStatGrid cols={3} stats={[
-                { label: t('widget.maintenance.overdue', 'Overdue'), value: forecast?.overdue_count == null ? null : fmtInt(forecast.overdue_count) },
-                { label: t('widget.maintenance.soon', 'Soon'), value: forecast?.due_soon_count == null ? null : fmtInt(forecast.due_soon_count) },
-                { label: t('widget.maintenance.dailyDistance', 'Daily distance'), value: forecast?.km_per_day == null ? null : fmtNumber(toDistanceDisplay(forecast.km_per_day)), unit: forecast?.km_per_day == null ? undefined : `${distanceUnit}/${t('widget.maintenance.dayUnit', 'day')}` },
-              ]} />
+              <DashboardSourceBrief metrics={forecastMetrics} state={forecastTrust}
+                eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+                title={t('widget.maintenance.summaryTitle', 'Maintenance forecast summary')}
+                description={t('widget.maintenance.summaryDescription', 'Due counts and distance pace come from the returned forecast; configured intervals remain recommendations rather than countdowns.')}
+                scope={t('widget.maintenance.summaryScope', 'Forecast vehicle {{id}} · inferred due counts and observed daily distance; configured intervals and service records are separate sources.', { id: forecast?.vehicle_id ?? '—' })}
+                loading={forecastQuery.isLoading && !forecast} testId="dashboard-maintenance-forecast-brief" />
               <Caption className="block break-words">
                 {t('widget.maintenance.forecastCaveat', 'Forecast depends on recorded service history and mileage.')}
               </Caption>

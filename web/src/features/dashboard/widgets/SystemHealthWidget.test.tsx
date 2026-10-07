@@ -33,6 +33,34 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
+import type { UnitPref } from '@/lib/unitConversion';
+
+const captured = vi.hoisted(() => ({
+  metrics: [] as OperationalBriefProps['metrics'],
+}));
+
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({
+    unitPrefs: {
+      distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
+      energy: 'kWh', power: 'kW', duration: 'h', locale: 'en-US', precision: 2,
+    } satisfies UnitPref,
+  }),
+}));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+vi.mock('@/components/data-display', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/data-display')>();
+  return {
+    ...actual,
+    OperationalBrief: (props: OperationalBriefProps) => {
+      captured.metrics = props.metrics;
+      return <actual.OperationalBrief {...props} />;
+    },
+  };
+});
 
 // ── i18n stub: return the English fallback (2nd arg) or the key. ──
 vi.mock('react-i18next', () => ({
@@ -148,6 +176,86 @@ function renderWidget(size: { cols: number; rows: number }) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('SystemHealthWidget — actual pool source Brief', () => {
+  it('keeps measured zero distinct from missing counts and preserves the separate memory reference and review details', () => {
+    setup({ pool: makeQuery({ data: makePool({ inUse: 0, goroutines: undefined, memoryMB: 0 }) }) });
+    const view = renderWidget(STANDARD);
+    let brief = screen.getByTestId('system-health-pool-operational-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([0, null]);
+    expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'missing']);
+    expect(within(brief).getByText('0/25')).toBeInTheDocument();
+    expect(within(brief).getByText('—')).toBeInTheDocument();
+    expect(within(brief).queryByText('Memory')).not.toBeInTheDocument();
+    expect(screen.getByText('0 MB')).toBeInTheDocument();
+    expect(screen.getByText('2.4 GB')).toBeInTheDocument();
+
+    setup({ pool: makeQuery({ data: makePool({ inUse: undefined, goroutines: 0, memoryMB: 0 }) }) });
+    view.rerender(<MemoryRouter><SystemHealthWidget size={STANDARD} /></MemoryRouter>);
+    brief = screen.getByTestId('system-health-pool-operational-brief');
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([null, 0]);
+    expect(captured.metrics.map(metric => metric.valueState)).toEqual(['missing', 'value']);
+    expect(within(brief).getByText('—')).toBeInTheDocument();
+    expect(within(brief).getByText('0')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Goroutines in the returned runtime snapshot; an absent reading remains unknown.')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/no historical window or verified-live coverage is inferred/).length).toBeGreaterThan(0);
+  });
+
+  it('uses pool-only trust and validates outlier counts and positive maxima without clamping or borrowing other sources', () => {
+    const healthRetry = vi.fn(), dbRetry = vi.fn(), poolRetry = vi.fn();
+    const health = makeQuery({ data: makeHealth(), isError: true, error: new Error('health refresh'), refetch: healthRetry });
+    const db = makeQuery({ isError: true, error: new Error('database unavailable'), refetch: dbRetry });
+    setup({ health, db, pool: makeQuery({ data: makePool({ inUse: 100, goroutines: 0, memoryMB: 0 }), refetch: poolRetry }) });
+    const view = renderWidget({ cols: 3, rows: 4 });
+    let brief = screen.getByTestId('system-health-pool-operational-brief');
+    expect(within(brief).getByText('Source available')).toBeInTheDocument();
+    expect(within(brief).queryByText('Retained readings')).not.toBeInTheDocument();
+    expect(within(brief).getByText('100/25')).toBeInTheDocument();
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([100, 0]);
+    expect(screen.getAllByText('Healthy')).toHaveLength(4);
+    expect(screen.getByText('2.4 GB')).toBeInTheDocument();
+    expect(screen.getByText('0 MB')).toBeInTheDocument();
+
+    for (const maxOpen of [0, -2, undefined, Number.NaN]) {
+      setup({ health, db, pool: makeQuery({ data: makePool({ inUse: 3, maxOpen, goroutines: 0 }) }) });
+      view.rerender(<MemoryRouter><SystemHealthWidget size={{ cols: 3, rows: 4 }} /></MemoryRouter>);
+      brief = screen.getByTestId('system-health-pool-operational-brief');
+      expect(within(brief).getByText('3')).toBeInTheDocument();
+      expect(captured.metrics[0].rawValue).toBe(3);
+      expect(captured.metrics[0].valueState).toBe('value');
+    }
+    for (const maxOpen of [0.5, Number.MAX_SAFE_INTEGER + 1]) {
+      setup({ health, db, pool: makeQuery({ data: makePool({ inUse: 3, maxOpen, goroutines: 0 }) }) });
+      view.rerender(<MemoryRouter><SystemHealthWidget size={{ cols: 3, rows: 4 }} /></MemoryRouter>);
+      brief = screen.getByTestId('system-health-pool-operational-brief');
+      expect(within(brief).getByText('—')).toBeInTheDocument();
+      expect(captured.metrics[0].rawValue).toBe(3);
+      expect(captured.metrics[0].valueState).toBe('invalid');
+      expect(within(brief).getByText('Expected a non-negative safe integer total')).toBeInTheDocument();
+    }
+
+    setup({
+      health: makeQuery({ isLoading: true }), db: makeQuery({ isLoading: true }),
+      pool: makeQuery({
+        data: makePool({ inUse: Number.MAX_SAFE_INTEGER + 1, goroutines: 1.5 }),
+        isError: true, error: new Error('pool refresh'), refetch: poolRetry,
+      }),
+    });
+    view.rerender(<MemoryRouter><SystemHealthWidget size={{ cols: 3, rows: 4 }} /></MemoryRouter>);
+    brief = screen.getByTestId('system-health-pool-operational-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([Number.MAX_SAFE_INTEGER + 1, 1.5]);
+    expect(captured.metrics.map(metric => metric.valueState)).toEqual(['invalid', 'invalid']);
+    expect(within(brief).getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('512 MB')).toBeInTheDocument();
+    expect(healthRetry).not.toHaveBeenCalled();
+    expect(dbRetry).not.toHaveBeenCalled();
+    expect(poolRetry).not.toHaveBeenCalled();
+  });
 });
 
 describe('statusTier', () => {

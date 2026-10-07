@@ -1,9 +1,12 @@
-import { GlassPanel, PanelTitle } from '@/components/ui';
-import { KpiOverviewCard, MetricCard } from '@/components/data-display';
-import { QueryError, Skeleton, EmptyState } from '@/components/feedback';
+import { GlassPanel } from '@/components/ui';
+import { Delta } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { QueryError, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { formatDurationMinutes } from '@/lib/dateFormat';
 import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
+import { useUnits } from '@/hooks/useUnits';
 
 type Props = Pick<DrivesListPageController,
   't' | 'drivesState' | 'refetchDrives' | 'isDrivesLoading' | 'currentStats'
@@ -18,111 +21,60 @@ export function DrivesOverview({
   priorDistMi, driveTimeMin, priorDriveTimeMin, avgGrade, efficiencyUnit,
   avgEffDisp, fmtInt, priorEffDisp, formatEnergy, formatEnergyCost, priorTotalCost, totalCost,
 }: Props) {
-  return (
-    <FadeIn>
-      {drivesState.fatalError ? (
-        <GlassPanel id="drives-overview" className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('drives.overview', 'Overview')}</PanelTitle>
-          <QueryError error={drivesState.fatalError} onRetry={() => { void refetchDrives(); }} />
-        </GlassPanel>
-      ) : isDrivesLoading ? (
-        <GlassPanel id="drives-overview" className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('drives.overview', 'Overview')}</PanelTitle>
-          <Skeleton className="h-32" />
-        </GlassPanel>
-      ) : currentStats.count > 0 ? (
-        <KpiOverviewCard
-          id="drives-overview"
-          testId="drives-overview"
-          compact
-          gridClassName="grid-cols-2 lg:grid-cols-3"
-          header={{
-            title: t('drives.overview', 'Overview'),
-            currentLabel: periodLabel,
-            comparisonLabel: priorLabel,
-          }}
-          kpis={
-            <>
-              <MetricCard
-                compact
-                label={t('drives.totalDrives', 'Drives')}
-                value={fmtCompact(currentStats.count)}
-                color="cyan"
-                delta={priorHasData ? {
-                  metric: 'trip_count',
-                  previous: priorStats!.count,
-                  current: currentStats.count,
-                  display: 'percent',
-                } : undefined}
-              />
-              <MetricCard
-                compact
-                label={`${t('drives.distance', 'Distance')} (${distanceUnit})`}
-                value={fmtCompact(distMi, 10000)}
-                color="green"
-                delta={priorHasData ? {
-                  metric: 'distance',
-                  previous: priorDistMi,
-                  current: distMi,
-                  display: 'percent',
-                } : undefined}
-              />
-              <MetricCard
-                compact
-                label={t('drives.driveTime', 'Drive time')}
-                value={formatDurationMinutes(driveTimeMin)}
-                color="blue"
-                delta={priorHasData ? {
-                  metric: { direction: 'neutral' },
-                  previous: priorDriveTimeMin,
-                  current: driveTimeMin,
-                  display: 'percent',
-                } : undefined}
-              />
-              <MetricCard
-                compact
-                label={t('drives.avgGrade', 'Efficiency grade')}
-                value={avgGrade.label}
-                color="purple"
-              />
-              <MetricCard
-                compact
-                label={`${t('drives.efficiency', 'Energy intensity')} (${efficiencyUnit})`}
-                value={avgEffDisp != null ? fmtInt(avgEffDisp) : '—'}
-                color="amber"
-                delta={priorHasData && avgEffDisp != null && priorEffDisp != null ? {
-                  metric: 'efficiency',
-                  previous: priorEffDisp,
-                  current: avgEffDisp,
-                  display: 'percent',
-                } : undefined}
-              />
-              <MetricCard
-                compact
-                label={t('drives.energyAndCost', 'Measured energy / cost')}
-                value={currentStats.energyMeasuredCount > 0
-                  ? `${formatEnergy(currentStats.totalEnergyWh)} · ${formatEnergyCost(currentStats.totalEnergyWh / 1_000)}`
-                  : '—'}
-                color="red"
-                delta={priorHasData && priorTotalCost != null && currentStats.energyMeasuredCount > 0 ? {
-                  metric: 'cost',
-                  previous: priorTotalCost,
-                  current: totalCost,
-                  display: 'percent',
-                } : undefined}
-              />
-            </>
-          }
-        />
-      ) : (
-        <GlassPanel id="drives-overview" className="p-6">
-          <PanelTitle className="mb-3">{t('drives.overview', 'Overview')}</PanelTitle>
-          <EmptyState
-            /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            message={t('drives.noStatsRange', 'No drives in this range')}
-          />
-        </GlassPanel>
-      )}
-    </FadeIn>
-  );
+  const { unitPrefs } = useUnits();
+  const available = drivesState.hasData && !isDrivesLoading;
+  const scope = t('drives.brief.overviewScope', 'Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals.');
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'drives', rawValue: available ? currentStats.count : null,
+      label: t('drives.totalDrives', 'Drives'),
+      display: { formatter: raw => ({ value: fmtCompact(raw), unit: '' }) },
+      comparisonContent: priorHasData && priorStats ? <Delta metric="trip_count" previous={priorStats.count}
+        current={currentStats.count} display="percent" comparedTo={priorLabel} /> : undefined },
+    { metricId: 'distance', occurrenceId: 'distance', rawValue: available ? currentStats.totalDistanceM : null,
+      label: `${t('drives.distance', 'Distance')} (${distanceUnit})`,
+      display: { formatter: () => ({ value: fmtCompact(distMi, 10000), unit: '' }) },
+      comparisonContent: priorHasData ? <Delta metric="distance" previous={priorDistMi}
+        current={distMi} display="percent" comparedTo={priorLabel} /> : undefined },
+    { metricId: 'duration', occurrenceId: 'drive-time', rawValue: available ? currentStats.totalDurationS : null,
+      label: t('drives.driveTime', 'Drive time'),
+      display: { formatter: raw => ({ value: formatDurationMinutes(raw / 60), unit: '' }) },
+      comparisonContent: priorHasData ? <Delta metric={{ direction: 'neutral' }} previous={priorDriveTimeMin}
+        current={driveTimeMin} display="percent" comparedTo={priorLabel} /> : undefined },
+    { metricId: 'status', occurrenceId: 'efficiency-grade',
+      rawValue: available && currentStats.avgEfficiencyWhKm != null && Number.isFinite(currentStats.avgEfficiencyWhKm) ? avgGrade.label : null,
+      label: t('drives.avgGrade', 'Efficiency grade') },
+    { metricId: 'efficiency', occurrenceId: 'efficiency',
+      rawValue: available && currentStats.avgEfficiencyWhKm != null ? currentStats.avgEfficiencyWhKm / 1000 : null,
+      label: `${t('drives.efficiency', 'Energy intensity')} (${efficiencyUnit})`,
+      display: { formatter: () => ({ value: avgEffDisp != null ? fmtInt(avgEffDisp) : '—', unit: '' }) },
+      description: t('operations.drives.efficiencyDetail', '{{measured}} of {{total}} drives have measured energy and sufficient distance.', {
+        measured: currentStats.efficiencyMeasuredCount, total: currentStats.count,
+      }),
+      comparisonContent: priorHasData && avgEffDisp != null && priorEffDisp != null
+        ? <Delta metric="efficiency" previous={priorEffDisp} current={avgEffDisp} display="percent" comparedTo={priorLabel} /> : undefined },
+    { metricId: 'energy', occurrenceId: 'measured-energy',
+      rawValue: available && currentStats.energyMeasuredCount > 0 ? currentStats.totalEnergyWh : null,
+      label: t('drives.energyAndCost', 'Measured energy / cost'),
+      display: { formatter: raw => ({ value: `${formatEnergy(raw)} · ${formatEnergyCost(raw / 1000)}`, unit: '' }) },
+      context: t('drives.brief.measuredEnergyScope', '{{measured}} of {{total}} returned drives supply energy; cost uses the configured rate, not invoices.', {
+        measured: currentStats.energyMeasuredCount, total: currentStats.count,
+      }),
+      comparisonContent: priorHasData && priorTotalCost != null && currentStats.energyMeasuredCount > 0
+        ? <Delta metric="cost" previous={priorTotalCost} current={totalCost} display="percent" comparedTo={priorLabel} /> : undefined },
+  ];
+  return <FadeIn>
+    <GlassPanel id="drives-overview" className="p-4 sm:p-5">
+      <NestedDrivingBrief metrics={metrics} title={t('drives.overview', 'Overview')}
+        testId="drives-overview" description={scope}
+        preferences={{ units: unitPrefs, currency: { kind: 'symbol', value: '' } }}
+        loading={isDrivesLoading} retained={drivesState.refreshError != null}
+        unavailable={drivesState.fatalError != null}
+        period={{ kind: 'unknown', label: periodLabel,
+          reason: `${scope}${priorLabel ? ` · ${priorLabel}` : ''}` }} />
+      {drivesState.fatalError ? <QueryError error={drivesState.fatalError} onRetry={() => { void refetchDrives(); }} /> : null}
+      {available && currentStats.count === 0 ? <EmptyState
+        /* no-action: the header owns the selected window. */
+        message={t('drives.noStatsRange', 'No drives in this range')} /> : null}
+    </GlassPanel>
+  </FadeIn>;
 }

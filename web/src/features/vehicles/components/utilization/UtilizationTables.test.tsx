@@ -77,7 +77,7 @@ describe('Shared utilization tables', () => {
     const coverage = screen.getByRole('table', { name: 'Metric field coverage' });
     expect(within(coverage).getAllByRole('rowheader')).toHaveLength(3);
     expect(coverage).toHaveTextContent('2 usable · 0 excluded');
-    expect(screen.getByRole('list')).toHaveTextContent('display units are applied only while rendering');
+    expect(screen.getByRole('list', { name: 'Methodology notes' })).toHaveTextContent('display units are applied only while rendering');
   });
 
   it('keeps the ranked section shell while loading', () => {

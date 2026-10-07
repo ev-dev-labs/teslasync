@@ -217,6 +217,14 @@
       "unsupported": {
         "physical": "Measuring physical wear — no tread-depth or pad-thickness sensor exists on the vehicle",
         "recall": "Manufacturer service bulletins and recalls affecting a part"
+      },
+      "brief": {
+        "title": "Projected wear and replacement costs",
+        "scope": "Selected vehicle and recorded parts; costs and replacement dates are projections"
+      },
+      "economicsBrief": {
+        "title": "Blended wear cost and recorded distance",
+        "description": "Blended wear cost retains the recorded currency per 1 000 metres, independently of the odometer display unit."
       }
     },
     "driver": {
@@ -230,7 +238,12 @@
         "aria": "Bar chart of drive share and aggression score per behaviour cluster",
         "empty": "Not enough drives in this window to separate behaviour clusters.",
         "inner": "Share of drives by cluster",
-        "title": "Cluster mix and driving intensity"
+        "title": "Cluster mix and driving intensity",
+        "col": {
+          "cluster": "Cluster",
+          "share": "Share of drives",
+          "aggression": "Aggression score"
+        }
       },
       "cluster": {
         "aggression": "Aggression",
@@ -318,6 +331,10 @@
         "strong": "Clusters are well separated — attributions can be trusted for cost splitting.",
         "title": "Interpretation",
         "weak": "Behaviour is too similar to separate reliably. Treat attributions as indicative only."
+      },
+      "brief": {
+        "title": "Cluster separation and attribution",
+        "description": "Behavioural clusters are anonymous until labelled. Inferred and ambiguous drives remain distinct from confirmed drives."
       }
     },
     "error": {
@@ -441,6 +458,16 @@
       "unsupported": {
         "delete": "Actually deleting rows — this screen is deliberately read-only",
         "index": "Index and TOAST overhead attribution below table granularity"
+      },
+      "brief": {
+        "title": "Governed storage and policy coverage",
+        "description": "Policy coverage describes intent, not deletion. Legal holds remain exempt from every plan.",
+        "scope": "Current database catalog and retention policies; coverage does not imply enforcement",
+        "modeUnknown": "Enforcement mode unknown; this screen only computes dry-run plans."
+      },
+      "impactBrief": {
+        "title": "Computed dry-run totals",
+        "scope": "Latest requested dry-run plan; no rows are deleted"
       }
     },
     "insurance": {
@@ -552,11 +579,29 @@
         "empty": "At least two buckets of driving are needed to plot a trajectory.",
         "score": "Risk score",
         "subtitle": "Rolling risk score and loss cost across the window — a rising line means underwriting exposure is growing.",
-        "title": "Risk trajectory"
+        "title": "Risk trajectory",
+        "col": {
+          "bucket": "Period"
+        }
       },
       "unsupported": {
         "claims": "Actual claim history — the model uses driving exposure only",
         "quote": "Binding quotes, carrier acceptance, or regulatory rate approval"
+      },
+      "brief": {
+        "title": "Modelled underwriting indices"
+      },
+      "exposureBrief": {
+        "title": "Recorded driving exposure",
+        "description": "Exposure distance and duration retain the selected observation window; peer percentile compares against your own history."
+      },
+      "premiumBrief": {
+        "title": "Policy-based premium model",
+        "scope": "Stored policy and selected risk window; annual amounts retain the recorded currency"
+      },
+      "costBrief": {
+        "title": "Policy loss and distance costs",
+        "description": "Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis."
       }
     },
     "limitations": {
@@ -632,6 +677,7 @@
       },
       "invoices": {
         "empty": "No statements imported yet for this vehicle.",
+        "exportScope": "Exports include all loaded statements, not the server total, with original fields and ISO currency minor amounts, regardless of table search or visible columns.",
         "import": "Import statement",
         "subtitle": "Import a statement, then pick one to audit line by line.",
         "title": "Provider statements"
@@ -681,6 +727,14 @@
       "unsupported": {
         "submit": "Submitting the dispute to the provider — the packet is prepared, not sent",
         "tax": "Tax and idle-fee legality, which vary by site contract"
+      },
+      "brief": {
+        "title": "Statement amounts and variance",
+        "scope": "Selected statement and matched telemetry; amounts retain the statement currency"
+      },
+      "energyBrief": {
+        "title": "Statement matching and energy",
+        "description": "Matched and unmatched lines remain separate; measured energy is retained beside the energy variance."
       }
     },
     "subscription": {
@@ -693,7 +747,12 @@
         "aria": "Bar chart of return on spend percentage for each subscription, coloured by verdict",
         "empty": "No subscription has enough measured usage to compute a return yet.",
         "inner": "Return on spend, per subscription",
-        "title": "Return by subscription"
+        "title": "Return by subscription",
+        "col": {
+          "name": "Subscription",
+          "roi": "Return on spend",
+          "verdict": "Verdict"
+        }
       },
       "delete": {
         "title": "Delete this subscription?",
@@ -768,6 +827,9 @@
       "unsupported": {
         "cancel": "Cancelling a subscription with the provider — this measures, it does not transact",
         "intangible": "Convenience and enjoyment, which have real value but no measurable unit here"
+      },
+      "brief": {
+        "title": "Subscription commitment and realised value"
       }
     },
     "tariff": {
@@ -784,7 +846,14 @@
         "cost": "Annual cost",
         "empty": "Run a replay to populate this chart.",
         "subtitle": "Green is the cheapest ranked plan; grey bars are the alternatives you would be paying instead.",
-        "title": "Annualised cost by plan"
+        "title": "Annualised cost by plan",
+        "statusCurrent": "Current plan",
+        "statusBest": "Cheapest",
+        "statusAlt": "Alternative",
+        "col": {
+          "plan": "Plan",
+          "status": "Status"
+        }
       },
       "controls": {
         "all": "No plans selected — every stored plan will be evaluated.",
@@ -869,6 +938,13 @@
       "unsupported": {
         "future": "Future utility price changes, seasonal reindexing, or regulatory riders",
         "home": "Household load outside the vehicle — only measured charging sessions are priced"
+      },
+      "brief": {
+        "title": "Returned tariff replay comparison",
+        "description": "Annualised savings and shiftable share are modelled replay results, not a bill or a completed charging action.",
+        "scope": "Latest replay selection and model assumptions; source coverage remains in the evidence",
+        "submittedScope": "Submitted replay: vehicle #{{vehicle}}, {{days}} days, shiftable {{shift}}%, switching fee {{fee}} minor units, tariff IDs {{plans}}",
+        "currencyUnknown": "Replay currency not supplied; the tariff editor currency is not a result denomination."
       }
     },
     "trust": {
@@ -879,7 +955,13 @@
         "first": "First scored {{when}}",
         "for": "Showing {{model}} → {{target}}",
         "last": "Last scored {{when}}",
-        "title": "Calibration by prediction magnitude"
+        "title": "Calibration by prediction magnitude",
+        "col": {
+          "bin": "Prediction bin",
+          "error": "Mean absolute error",
+          "bias": "Mean bias",
+          "samples": "Samples"
+        }
       },
       "card": {
         "bias": "Bias",
@@ -955,6 +1037,9 @@
       "unsupported": {
         "cause": "Explaining why a model drifted; it reports that it did",
         "retrain": "Retraining or auto-correcting a model — this lab measures, it does not tune"
+      },
+      "brief": {
+        "title": "Recorded model trust and scoring"
       }
     },
     "unsupported": {
@@ -1073,6 +1158,10 @@
       "unsupported": {
         "legal": "Interpreting contract exclusions — readiness is factual, not legal advice",
         "submit": "Filing the claim with the provider on your behalf"
+      },
+      "brief": {
+        "title": "Recorded warranty coverage and expiry",
+        "scope": "Selected vehicle and recorded coverage terms; expiry projections use recorded driving"
       }
     },
     "window": {
@@ -1105,6 +1194,23 @@
     "source": {
       "empty": "No supported data is available yet.",
       "error": "This source could not be loaded."
+    },
+    "brief": {
+      "window": "Selected vehicle · {{count}}-day analysis window; coverage is described below",
+      "selectionRequired": "Selection required",
+      "unavailable": "Source unavailable",
+      "retained": "Retained source",
+      "loading": "Loading source",
+      "notComputed": "Not computed",
+      "refreshing": "Refreshing source",
+      "returned": "Source returned",
+      "eyebrow": "Ownership evidence",
+      "bounds": "Recorded bounds {{from}} → {{to}}",
+      "boundsUnknown": "Recorded analysis bounds not supplied",
+      "observedAt": "Source as of {{date}}",
+      "freshnessUnknown": "Source freshness unknown",
+      "loadedAt": "Client loaded {{date}}",
+      "provenance": "Returned source values; model assumptions and limitations remain in the evidence below."
     }
   },
   "achievements": {

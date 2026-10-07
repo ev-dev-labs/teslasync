@@ -4,6 +4,7 @@ import { Cog } from 'lucide-react';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Caption } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
+import type { StatMetric } from '@/components/data-display';
 import { useDrivetrainHealth } from '@/api/hooks/useDriving';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -12,7 +13,8 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatusGrid, WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetStatusGrid } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -85,34 +87,37 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
   const motorTemp = health?.frontMotorTempC ?? motor?.motor_temp_c_front ?? null;
   const statorTemp = motor?.di_stator_temp ?? null;
   const inverterTemp = health?.inverterTempC ?? motor?.inverter_temp_c ?? null;
-  const driveState = motor?.state_front ?? health?.motorStatus ?? '—';
+  const driveState = motor?.state_front ?? health?.motorStatus;
 
-  const stats: StatGridItem[] = useMemo(() => [
+  const stats: StatMetric[] = useMemo(() => [
     {
       label: t('widget.drivetrainHealth.motorTemp', 'Motor temp'),
-      value: motorTemp != null ? fmtNumber(toTemperatureDisplay(motorTemp)) : '—',
-      unit: motorTemp != null ? tempUnit : undefined,
+      metricId: 'temperature', occurrenceId: 'drivetrain-front-temperature', rawValue: motorTemp,
+      description: t('widget.drivetrainHealth.frontSource', 'Inferred health temperature when supplied, otherwise the independent motor snapshot.'),
+      display: { formatter: raw => ({ value: fmtNumber(toTemperatureDisplay(raw)), unit: tempUnit }) },
     },
     {
       label: t('widget.drivetrainHealth.statorTemp', 'Stator temp'),
-      value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp)) : '—',
-      unit: statorTemp != null ? tempUnit : undefined,
+      metricId: 'temperature', occurrenceId: 'drivetrain-stator-temperature', rawValue: statorTemp,
+      description: t('widget.drivetrainHealth.statorSource', 'Returned stator temperature from the independent motor snapshot.'),
+      display: { formatter: raw => ({ value: fmtNumber(toTemperatureDisplay(raw)), unit: tempUnit }) },
     },
     {
       label: t('widget.drivetrainHealth.inverterHealth', 'Inverter'),
-      value: inverterTemp != null ? fmtNumber(toTemperatureDisplay(inverterTemp)) : '—',
-      unit: inverterTemp != null ? tempUnit : undefined,
+      metricId: 'temperature', occurrenceId: 'drivetrain-inverter-temperature', rawValue: inverterTemp,
+      description: t('widget.drivetrainHealth.inverterSource', 'Inferred health inverter temperature when supplied, otherwise the independent motor snapshot.'),
+      display: { formatter: raw => ({ value: fmtNumber(toTemperatureDisplay(raw)), unit: tempUnit }) },
     },
     {
       label: t('widget.drivetrainHealth.driveState', 'Drive state'),
-      value: driveState,
+      metricId: 'status', occurrenceId: 'drivetrain-drive-state', rawValue: driveState,
     },
     {
       label: t('widget.drivetrainHealth.rearMotorTemp', 'Rear motor temp'),
-      value: health?.rearMotorTempC != null || motor?.motor_temp_c_rear != null
-        ? fmtNumber(toTemperatureDisplay(health?.rearMotorTempC ?? motor?.motor_temp_c_rear ?? 0))
-        : '—',
-      unit: health?.rearMotorTempC != null || motor?.motor_temp_c_rear != null ? tempUnit : undefined,
+      metricId: 'temperature', occurrenceId: 'drivetrain-rear-temperature',
+      rawValue: health?.rearMotorTempC ?? motor?.motor_temp_c_rear,
+      description: t('widget.drivetrainHealth.rearSource', 'Inferred health rear temperature when supplied, otherwise the independent motor snapshot.'),
+      display: { formatter: raw => ({ value: fmtNumber(toTemperatureDisplay(raw)), unit: tempUnit }) },
     },
   ], [motorTemp, statorTemp, inverterTemp, driveState, health?.rearMotorTempC, motor?.motor_temp_c_rear, toTemperatureDisplay, tempUnit, t, fmtNumber]);
 
@@ -176,7 +181,12 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
         </SourceContent>
         <StaleRefreshWarning state={motorTrust} />
         {motorTrust.fatalError && <QueryError error={motorTrust.fatalError} onRetry={motorTrust.retry ?? undefined} />}
-        <WidgetStatGrid stats={stats} cols={2} />
+        <DashboardSourceBrief metrics={stats} state={combined}
+          eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+          title={t('widget.drivetrainHealth.summaryTitle', 'Returned drivetrain readings')}
+          description={t('widget.drivetrainHealth.summaryDescription', 'Inferred health and motor telemetry are independent sources. Original temperature fallbacks remain explicit; the categorical assessment, source errors and mechanical-inspection caveat are retained.')}
+          scope={t('widget.drivetrainHealth.summaryScope', 'Vehicle {{id}} · returned health and motor snapshots; these readings do not establish continuous recording or a mechanical diagnosis.', { id: vid ?? '—' })}
+          testId="dashboard-drivetrain-readings-brief" />
         <Caption className="block break-words">
           {t('widget.drivetrainHealth.assessmentCaveat', 'Assessment from available telemetry; not a mechanical inspection.')}
         </Caption>

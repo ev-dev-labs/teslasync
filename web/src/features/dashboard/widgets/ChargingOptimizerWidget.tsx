@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Clock, BatteryCharging, DollarSign, Zap } from 'lucide-react';
+import { Sparkles, Zap } from 'lucide-react';
 import { Badge, Caption, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useChargingOptimizer } from '@/api/hooks/useCharging';
@@ -15,7 +15,9 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { neonColorMap } from '@/lib/tokens';
 
@@ -79,6 +81,19 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
   const peakHours = safeArray(costAnalysis?.peak_hours);
 
   const scheduleMatchesOptimal = peakPct != null && peakPct < 30;
+  const summaryMetrics: StatMetric[] = [
+    { metricId: 'number', occurrenceId: 'optimizer-start-hour', rawValue: schedule?.most_common_start_hour,
+      label: t('widget.chargingOptimizer.optimalStart', 'Optimal start'),
+      description: t('widget.chargingOptimizer.hourSource', 'Returned wall-clock hour, not an elapsed duration or timezone-shifted instant.'),
+      display: { formatter: raw => ({ value: hourLabel(raw), unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'optimizer-target-soc', rawValue: schedule?.avg_charge_to_pct,
+      label: t('widget.chargingOptimizer.targetSoc', 'Target SOC'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+    { metricId: 'number', occurrenceId: 'optimizer-monthly-savings', rawValue: costAnalysis?.potential_monthly_savings,
+      label: t('widget.chargingOptimizer.savingsLabel', 'Savings/mo'),
+      description: t('widget.chargingOptimizer.savingsSource', 'Returned monthly savings estimate, retaining the existing currency formatting without changing its denomination.'),
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+  ];
 
   const tips: TipItem[] = useMemo(
     () =>
@@ -149,11 +164,12 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
       ) : (
         <div className="flex flex-col gap-3 h-full">
           {/* Key metrics row */}
-          <WidgetStatGrid cols={3} stats={[
-            { label: t('widget.chargingOptimizer.optimalStart', 'Optimal start'), value: hourLabel(optimalStartHour), icon: <Clock className="size-4" /> },
-            { label: t('widget.chargingOptimizer.targetSoc', 'Target SOC'), value: targetSoc == null ? '—' : `${fmtNumber(targetSoc)}%`, icon: <BatteryCharging className="size-4" /> },
-            { label: t('widget.chargingOptimizer.savingsLabel', 'Savings/mo'), value: monthlySavings == null ? '—' : formatCurrency(monthlySavings), icon: <DollarSign className="size-4" /> },
-          ]} />
+          <DashboardSourceBrief metrics={summaryMetrics} state={sourceState}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.chargingOptimizer.summaryTitle', 'Returned charging recommendations')}
+            description={t('widget.chargingOptimizer.summaryDescription', 'Schedule and cost estimates remain separate inferred operands; peak-use classification, the rate timeline and actionable recommendations remain below.')}
+            scope={t('widget.chargingOptimizer.summaryScope', 'Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied.', { id: vid ?? '—' })}
+            testId="dashboard-charging-optimizer-brief" />
 
           {/* Schedule match badge */}
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">

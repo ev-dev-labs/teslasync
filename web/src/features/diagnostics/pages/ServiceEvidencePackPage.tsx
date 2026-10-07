@@ -252,6 +252,8 @@ export default function ServiceEvidencePackPage() {
             windowHours={workspace.windowHours}
             hasChosenSignal={workspace.hasChosenSignal}
             sources={workspace.evidenceBundle.sources}
+            summary={focalAvailable ? liveCore.summary : null}
+            limitations={liveCore.limitations}
           />
         </section>
       </FadeIn>

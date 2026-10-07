@@ -162,6 +162,20 @@ it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
   expect(screen.getByRole('heading', { name: 'Battery forecast', level: 3 })).toBeVisible();
 });
 
+it('keeps measured health and degradation zero independent of projected risk and recommendation outputs', () => {
+  mockDegradation.mockReturnValue(qr({ data: makeData({
+    current_health_pct: 0, degradation_rate_pct_per_month: 0,
+  }) }));
+  renderWidget(STANDARD);
+  const brief = screen.getByTestId('dashboard-battery-forecast-brief');
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
+  expect(brief).toHaveTextContent('0.00%');
+  expect(brief).toHaveTextContent('0.00%/mo');
+  expect(brief).toHaveTextContent('does not establish continuous recording coverage');
+  expect(screen.getByText('High Temperature')).toBeInTheDocument();
+  expect(screen.getByText('Charge to 80% for daily use')).toBeInTheDocument();
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();

@@ -255,7 +255,7 @@ export default function LocationsPage() {
             emptyMessage={t('locations.noVisitData', 'No visited location data')}
             emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
             onResetFilters={resetRange}
-            ariaLabel={t('locations.byVisits.aria', 'Bar chart of the most-visited locations')}
+            ariaLabel={t('locations.byVisitsAria', 'Bar chart of the most-visited locations')}
           />
           <LocationLeaderboardPanel
             title={t('locations.byTime', 'Top locations by time spent (hours)')}
@@ -269,7 +269,7 @@ export default function LocationsPage() {
             emptyMessage={t('locations.noTimeData', 'No time-spent data available')}
             emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
             onResetFilters={resetRange}
-            ariaLabel={t('locations.byTime.aria', 'Bar chart of locations by hours spent')}
+            ariaLabel={t('locations.byTimeAria', 'Bar chart of locations by hours spent')}
           />
         </section>
       </FadeIn>

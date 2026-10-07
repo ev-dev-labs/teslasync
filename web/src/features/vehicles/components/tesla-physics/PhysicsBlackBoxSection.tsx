@@ -1,5 +1,4 @@
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
 import { Badge, Text } from '@/components/ui';
 
 import { Evidence, RawRows } from './Evidence';
@@ -24,11 +23,15 @@ export default function PhysicsBlackBoxSection({ physics }: { physics: PhysicsPa
   const versions = [...new Set(frames.map((frame) => frame.firmware).filter((version): version is string => !!version))];
   return <>
     <Evidence title={physics.title} honesty={box?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.blackBoxTrigger', 'Latest selected trigger')} value={box?.trigger || unknown(t)} color="amber" />
-        <MetricCard label={t('teslaOnly.blackBoxFrameCount', 'Returned frames')} value={frames.length} color="cyan" />
-        <MetricCard label={t('teslaOnly.blackBoxCurrentCoverage', 'Frames with pack current')} value={frames.length ? `${knownCurrent} / ${frames.length}` : unknown(t)} color="green" />
-      </Grid>
+      <PhysicsEvidenceBrief physics={physics} id="physics-black-box-summary" available={box != null}
+        description={t('teslaOnly.blackBoxNote', 'Only the latest selected trigger is shown. Empty frames mean no sample in this 90-second window, not that no event occurred.')}
+        metrics={[
+          { metricId: 'text', occurrenceId: 'trigger', label: t('teslaOnly.blackBoxTrigger', 'Latest selected trigger'), rawValue: box?.trigger || null },
+          { metricId: 'count', occurrenceId: 'frames', label: t('teslaOnly.blackBoxFrameCount', 'Returned frames'), rawValue: box ? frames.length : null },
+          { metricId: 'count', occurrenceId: 'current', label: t('teslaOnly.blackBoxCurrentCoverage', 'Frames with pack current'), rawValue: frames.length ? knownCurrent : null, display: { countTotal: frames.length } },
+          { metricId: 'duration', occurrenceId: 'span', label: t('teslaOnly.blackBoxSpanLabel', 'Selected window span'), rawValue: windowSpan != null && windowSpan >= 0 ? windowSpan : null, display: { formatter: raw => ({ value: `${fmtNumber(raw)} s`, unit: '' }) }, context: t('teslaOnly.blackBoxWindow', 'Evidence window: {{from}} to {{to}}', { from: time(box?.from, t), to: time(box?.to, t) }) },
+          { metricId: 'count', occurrenceId: 'source', label: t('teslaOnly.blackBoxSourceRowsLabel', 'Bounded black-box source rows'), rawValue: source?.black_box_available ? source.black_box_rows : null, context: source ? t('teslaOnly.blackBoxSourceRows', '{{count}} bounded source rows; source {{status}}', { count: source.black_box_rows, status: source.black_box_available ? t('teslaOnly.sourceAvailable', 'available') : t('teslaOnly.sourceUnavailable', 'unavailable') }) : undefined },
+        ]} />
       <Text as="p" variant="bodySm">{t('teslaOnly.blackBoxWindow', 'Evidence window: {{from}} to {{to}}', { from: time(box?.from, t), to: time(box?.to, t) })}</Text>
       <Text as="p" variant="bodySm">{t('teslaOnly.blackBoxSpan', 'Selected window span: {{span}}; first returned frame: {{first}}', {
         span: windowSpan != null && windowSpan >= 0 ? `${fmtNumber(windowSpan)} s` : unknown(t), first: time(ordered[0]?.at, t),
@@ -37,26 +40,23 @@ export default function PhysicsBlackBoxSection({ physics }: { physics: PhysicsPa
         at: time(newest?.at, t), gear: newest?.gear || unknown(t), firmware: newest?.firmware || unknown(t),
       })}</Text>
       {source ? <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.blackBoxSourceRows', '{{count}} bounded source rows; source {{status}}', {
-          count: source.black_box_rows, status: source.black_box_available ? t('teslaOnly.sourceAvailable', 'available') : t('teslaOnly.sourceUnavailable', 'unavailable'),
-        })}</Badge>
         {source.black_box_truncated && <Badge variant="warning" size="sm">{t('teslaOnly.blackBoxPartial', 'Black-box row cap reached: frames and selected trigger may omit earlier evidence')}</Badge>}
         {!source.black_box_available && <Badge variant="warning" size="sm">{t('teslaOnly.blackBoxMissing', 'Black-box source unavailable: an empty frame list cannot exclude an event')}</Badge>}
         {(!source.history_available || source.history_truncated) && <Badge variant="warning" size="sm">{t('teslaOnly.blackBoxTriggerPartial', 'Trigger selection may be incomplete because report history is unavailable or capped')}</Badge>}
       </div> : <Text as="p" variant="caption">{t('teslaOnly.scopeUnavailable', 'Evidence coverage metadata was not returned; counts cannot establish completeness.')}</Text>}
-      <Text as="p" variant="caption">{t('teslaOnly.blackBoxNote', 'Only the latest selected trigger is shown. Empty frames mean no sample in this 90-second window, not that no event occurred.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.blackBoxFrameChanges', 'Frame changes inside the selected window')}>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.blackBoxChanges', '{{count}} observed state, latch or gear changes after the first frame', { count: changes.length })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.blackBoxKnownGear', 'Recorded gears: {{values}}', { values: gears.length ? gears.join(', ') : unknown(t) })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.blackBoxKnownFirmware', 'Recorded firmware: {{values}}', { values: versions.length ? versions.join(', ') : unknown(t) })}</Badge>
-      </div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-black-box-changes" available={box != null}
+        description={t('teslaOnly.blackBoxChangeCaution', 'The first frame establishes observed state, not the start of a transition. Compare event timestamps before interpreting a change as causal.')}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'changes', label: t('teslaOnly.blackBoxChangesLabel', 'Observed state, latch or gear changes after the first frame'), rawValue: box ? changes.length : null, context: t('teslaOnly.blackBoxChanges', '{{count}} observed state, latch or gear changes after the first frame', { count: changes.length }) },
+          { metricId: 'text', occurrenceId: 'gears', label: t('teslaOnly.blackBoxKnownGearLabel', 'Recorded gears'), rawValue: gears.length ? gears.join(', ') : null, context: t('teslaOnly.blackBoxKnownGear', 'Recorded gears: {{values}}', { values: gears.length ? gears.join(', ') : unknown(t) }) },
+          { metricId: 'text', occurrenceId: 'firmware', label: t('teslaOnly.blackBoxKnownFirmwareLabel', 'Recorded firmware'), rawValue: versions.length ? versions.join(', ') : null, context: t('teslaOnly.blackBoxKnownFirmware', 'Recorded firmware: {{values}}', { values: versions.length ? versions.join(', ') : unknown(t) }) },
+        ]} />
       {changes.length ? changes.slice(-5).reverse().map((frame) =>
         <Text key={frame.at} as="p" variant="bodySm">{t('teslaOnly.blackBoxChangeRow', '{{at}}: {{state}} / {{latch}} / gear {{gear}}', {
           at: time(frame.at, t), state: frame.charge_state || unknown(t), latch: frame.latch || unknown(t), gear: frame.gear || unknown(t),
         })}</Text>) : <Text as="p" variant="bodySm">{t('teslaOnly.blackBoxNoChanges', 'No changes among returned frames; missing or sparse frames cannot rule out events.')}</Text>}
-      <Text as="p" variant="caption">{t('teslaOnly.blackBoxChangeCaution', 'The first frame establishes observed state, not the start of a transition. Compare event timestamps before interpreting a change as causal.')}</Text>
       <RawRows title={physics.title} rows={frames} tableId="physics:black-box" t={t} keyExtractor={(r) => r.at}
         mobileColumns={['at', 'state', 'gear', 'firmware', 'current']} columns={[
           { key: 'at', header: t('teslaOnly.started', 'Started'), render: (r) => time(r.at, t) },

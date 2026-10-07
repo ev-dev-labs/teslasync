@@ -10,11 +10,12 @@ import type { ChartLegend } from '@/components/charts';
 import type { ComponentProps } from 'react';
 import type { DataStateSource } from '@/api/dataState';
 import type { ChargingSession } from '@/types/charging';
+import type { ChargingSession as ApiChargingSession } from '@/api/types';
 import type { ThermalTaxSample } from '../../lib/chargingThermalTax';
 import ChargingThermalTaxPage from '../../pages/ChargingThermalTaxPage';
 
 const sources = vi.hoisted(() => ({
-  history: {} as DataStateSource<ChargingSession[]>,
+  history: {} as DataStateSource<(ChargingSession | ApiChargingSession)[]>,
   telemetry: {} as DataStateSource<ThermalTaxSample[]>,
   vehicleId: 7 as number | null,
   historyHook: vi.fn(),
@@ -79,6 +80,15 @@ const session: ChargingSession = {
   total_energy_added_wh: 1000, peak_power_w: 5000, cost_decimal: null,
   started_at: '2026-10-01T00:00:00Z', ended_at: '2026-10-01T00:02:00Z',
   start_ts: '2026-10-01T00:00:00Z', startedAt: '2026-10-01T00:00:00Z', duration_min: 2,
+};
+const numericSession: ApiChargingSession = {
+  id: 42, vehicle_id: 7, charger_type: 'DC', start_soc_pct: 20, end_soc_pct: 50,
+  delta_soc_pct: 30, start_odometer_m: null, end_odometer_m: null,
+  start_lat: null, start_lng: null, start_place: null, avg_power_w: 5000,
+  total_energy_added_wh: 1000, peak_power_w: 5000, cost_decimal: null,
+  cost_currency: null, cable_type: null,
+  started_at: '2026-10-01T00:00:00Z', ended_at: '2026-10-01T00:02:00Z',
+  startedAt: '2026-10-01T00:00:00Z', duration_min: 2,
 };
 function reading(ts: string, heater: number | null, energy: number): ThermalTaxSample {
   // A typed structural sample, not a fabricated complete API reading.
@@ -145,6 +155,39 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
+  it('matches the string selector to a canonical numeric session ID and retains selected telemetry on refresh failure', () => {
+    sources.history = { ...sources.history, data: [numericSession] };
+    const result = mountPage();
+    expect(sources.telemetryHook).toHaveBeenLastCalledWith(null);
+    chooseSession();
+    expect(screen.getByRole('combobox', { name: 'Inspect session' })).toHaveValue('42');
+    expect(sources.telemetryHook).toHaveBeenLastCalledWith(42);
+    expect(metricTiles(result.container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0.03');
+    expect(screen.getByText('Metered running total')).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: 'Heater vs. Charge Power' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Thermal Phases' })).toBeInTheDocument();
+    sources.history = { ...sources.history, error: new Error('numeric history refresh failed'), isError: true };
+    sources.telemetry = { ...sources.telemetry, error: new Error('numeric telemetry refresh failed'), isError: true };
+    result.rerender(<ChargingThermalTaxPage />);
+    expect(sources.telemetryHook).toHaveBeenLastCalledWith(42);
+    expect(screen.getByRole('combobox', { name: 'Inspect session' })).toHaveValue('42');
+    expect(metricTiles(result.container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0.03');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+  });
+
+  it('does not request telemetry for an empty or no-longer-returned numeric selection', () => {
+    sources.history = { ...sources.history, data: [numericSession] };
+    const result = mountPage();
+    expect(sources.telemetryHook).toHaveBeenLastCalledWith(null);
+    chooseSession();
+    expect(sources.telemetryHook).toHaveBeenLastCalledWith(42);
+    sources.history = { ...sources.history, data: [{ ...numericSession, id: 43 }] };
+    result.rerender(<ChargingThermalTaxPage />);
+    expect(sources.telemetryHook).toHaveBeenLastCalledWith(null);
+    expect(metricTiles(result.container)).toHaveLength(4);
+    for (const tile of metricTiles(result.container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
+  });
+
   it('retries an empty history without requesting a fabricated session or hiding analysis shells', () => {
     sources.history = { ...sources.history, data: [] };
     const { container } = mountPage();

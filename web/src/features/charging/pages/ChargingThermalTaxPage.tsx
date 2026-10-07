@@ -27,7 +27,7 @@ export default function ChargingThermalTaxPage() {
   const sessionsQuery = useChargingHistory(vehicleIdStr);
   const sessionsState = useDataState(sessionsQuery, { provenance: 'historical' });
   const sessions = sessionsQuery.data ?? [];
-  const selectedSession = sessions.find(session => session.id === selectedSessionId) ?? null;
+  const selectedSession = sessions.find(session => String(session.id) === selectedSessionId) ?? null;
   const rawNumericId = selectedSession != null ? Number(selectedSession.id) : NaN;
   const numericSessionId = Number.isFinite(rawNumericId) ? rawNumericId : null;
   const telemetryQuery = useChargeTelemetry(numericSessionId);
@@ -39,7 +39,7 @@ export default function ChargingThermalTaxPage() {
   );
   const sessionOptions = useMemo(
     () => sessions.map(session => ({
-      value: session.id,
+      value: String(session.id),
       label: `${formatDateShort(session.started_at)} \u00b7 ${session.charger_type ?? t('chargingThermalTax.unknownCharger', 'Unknown charger')}`,
     })),
     [sessions, t],

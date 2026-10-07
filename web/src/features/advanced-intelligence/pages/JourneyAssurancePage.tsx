@@ -18,6 +18,7 @@ import type { JourneyAssuranceRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 
 type JourneyForm = Omit<JourneyAssuranceRequest, 'vehicle_id' | 'confirmed' | 'departure_at'> & {
   departure_at: string;
@@ -36,6 +37,9 @@ export default function JourneyAssurancePage() {
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const mutation = useRunJourneyAssurance();
+  const publication = useRetainedMutation(mutation, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const [form, setForm] = useState<JourneyForm>({
     route_distance_m: 250000,
     departure_at: defaultDeparture(),
@@ -56,7 +60,7 @@ export default function JourneyAssurancePage() {
       confirmed: true,
     });
   };
-  const result = mutation.data;
+  const result = publication.result;
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'readiness', metricId: 'percent', rawValue: result?.readiness_score_pct,
       label: t('advancedIntelligence.journey.readiness', 'Readiness score'),
@@ -169,14 +173,14 @@ export default function JourneyAssurancePage() {
             </div>
             <Button
               type="submit"
-              loading={mutation.isPending}
-              disabled={vehicleId == null || mutation.isPending}
+              loading={publication.pending}
+              disabled={vehicleId == null || publication.pending}
               icon={<Route className="h-4 w-4" aria-hidden="true" />}
             >
               {t('advancedIntelligence.journey.form.run', 'Run confirmed readiness assessment')}
             </Button>
           </form>
-          <MutationError error={mutation.error} />
+          <MutationError error={publication.error} />
         </InsightPanel>
       </FadeIn>
 
@@ -188,8 +192,9 @@ export default function JourneyAssurancePage() {
           metrics={summaryMetrics}
           vehicleId={result?.vehicle_id ?? vehicleId}
           hasResult={result != null}
-          pending={mutation.isPending}
-          error={mutation.error}
+          pending={publication.pending}
+          error={publication.error}
+          query={result ? publication.source : undefined}
           quality={result?.data_quality}
           evidence={result?.evidence}
           limitations={result?.limitations}

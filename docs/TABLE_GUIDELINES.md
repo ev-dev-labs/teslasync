@@ -83,6 +83,16 @@ human-readable accessible name.
 
 ## Column metadata
 
+For a source-record download whose schema differs from the display columns,
+use `onExport(format, rows, scope)` on `DataTable`. It receives original matching
+loaded rows after local search/value filters, or selected loaded rows for the
+selected scope. With `exportAll`, non-selected exports receive its full-result
+rows instead. Client pagination and hidden columns do not trim this payload.
+The callback owns serialization and downloads; rejected promises use the
+existing export-menu error surface. Without this callback, `exportRow` and
+`Column.exportValue` retain the default visible-column projection.
+Explicit `controls.exports` still takes precedence and owns its own scope.
+
 Every `Column<T>` accepts these optional fields in addition to the original
 `{ key, header, render, sortable, className }`:
 

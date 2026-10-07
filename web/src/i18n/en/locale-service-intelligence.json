@@ -135,7 +135,14 @@
       "latest": "Latest successful",
       "importPeriodLabel": "Import official NHTSA artifact for {{period}}",
       "refreshPeriod": "Refresh",
-      "importPeriod": "Import"
+      "importPeriod": "Import",
+      "brief": {
+        "recordsDetail": "Normalized catalog inventory across imported periods; not the selected vehicle match count.",
+        "coverageDetail": "Allow-listed official periods available to import, not proof that every period has been imported.",
+        "title": "Catalog coverage summary",
+        "scope": "Global catalog · official periods",
+        "provenance": "Official NHTSA bulk artifacts. Freshness follows the last successful import; a failed later attempt does not replace retained records."
+      }
     },
     "claim": {
       "title": "Warranty claim draft",
@@ -147,6 +154,23 @@
       "selectMessage": "Choose a vehicle to draft a warranty service ticket.",
       "emptyTitle": "No ticket yet",
       "empty": "Describe an issue and generate a ready-to-paste service ticket."
+    },
+    "brief": {
+      "recallDetail": "Returned model-year recall candidates, not confirmed vehicle eligibility.",
+      "applicableDetail": "Returned applicability hypotheses; campaign completion remains unknown.",
+      "communicationDetail": "Returned official manufacturer-communication matches, not findings of fault.",
+      "symptomDetail": "Returned observed signal overlaps; match scores and evidence remain in the ranked records below.",
+      "title": "Service match summary",
+      "description": "Server-returned recall, communication, and symptom matches are service hypotheses, not findings of fault.",
+      "retained": "Retained report",
+      "unavailable": "Summary unavailable",
+      "returned": "Returned report",
+      "scope": "Selected vehicle · source windows may differ",
+      "generated": "Report generated",
+      "provenance": "Decoded vehicle context, NHTSA records, and observed signals. Retrieval freshness is source-specific; counts do not establish eligibility or completion."
+    },
+    "warranty": {
+      "title": "Warranty countdown"
     }
   },
   "achievements": {

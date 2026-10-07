@@ -118,6 +118,14 @@
         "test": "Tests",
         "other": "Other",
         "unknown": "Unattributed"
+      },
+      "category": "Category",
+      "count": "Count",
+      "brief": {
+        "scope": "{{from}} to {{to}} (exclusive) · {{timezone}}",
+        "title": "Triggers, linked deliveries, and outbound calls",
+        "available": "Report loaded",
+        "unavailable": "Report unavailable"
       }
     },
     "tab": {
@@ -155,7 +163,24 @@
       "pageNumber": "Page {{page}}",
       "summary": {
         "total": "Recent notifications",
-        "recentScope": "Latest 50 active entries · all time"
+        "recentScope": "Latest 50 active entries · all time",
+        "label": "Inbox summary",
+        "brief": {
+          "provenance": "Counts describe this bounded unfiltered sample, not the workspace period or the server total. Missing read timestamps count as unread.",
+          "title": "Backlog severity and read status",
+          "available": "Sample loaded",
+          "unknown": "Unknown severity"
+        },
+        "unread": "Unread",
+        "unreadOf": "{{unread}} of {{total}}",
+        "critical": "Critical",
+        "warnings": "Warnings",
+        "info": "Info",
+        "lastReceived": "Last received",
+        "resource": "notifications",
+        "empty": "No notifications yet",
+        "cta": "Manage alert rules",
+        "unknownSeverity": "{{count}} with unknown severity"
       },
       "selectAll": "Select all visible",
       "countLabel": "{{count}} notifications",
@@ -689,6 +714,17 @@
     },
     "device": {
       "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
+    },
+    "archived": {
+      "summary": {
+        "label": "Archived summary",
+        "recentScope": "Latest 50 archived entries · all time",
+        "total": "Total archived",
+        "lastArchived": "Last archived",
+        "resource": "archived notifications",
+        "empty": "No archived notifications yet",
+        "cta": "Go to inbox"
+      }
     }
   }
 }

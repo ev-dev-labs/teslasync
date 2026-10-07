@@ -1,6 +1,11 @@
 {
   "help": {
     "title": "Help",
+    "tireDifferentialDrift": {
+      "leakCorner": "Each corner residual (reading minus the four-tire median) gets its own Theil-Sen slope over time. The corner with the strongest, most pairwise-consistent negative slope — clearing minimum samples, span, and agreement bars — is flagged here. A shared weather swing cancels equally, so it cannot trigger this alone.",
+      "imbalance": "The spread between each corner's mean (constant) residual — independent of the leak ranking. A corner permanently offset (e.g. after a wheel swap) shows up here with zero slope, invisible to the leak ranking alone.",
+      "iconLabel": "More info about this inference"
+    },
     "chargerHealth": {
       "iconLabel": "More info about site grouping",
       "sites": "Each location is judged only against itself. Comparing a home wall box to a Supercharger would be meaningless, so instead every site establishes its own demonstrated ceiling from its cleanest past sessions, and recent sessions are measured against that. Sessions that sat mostly above the taper threshold are excluded, because a slow charge from 80 % is physics, not a fault.",
@@ -135,7 +140,9 @@
       "avgPower": "Time-averaged charging power across the session. Always lower than peak when the session includes a taper or initial ramp.",
       "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.",
       "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
-      "kwhPerHour": "Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger."
+      "kwhPerHour": "Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger.",
+      "socRangeAria": "More info about state-of-charge range",
+      "chargeCurveAria": "More info about taper and derating"
     },
     "fields": {
       "settings": {
@@ -261,7 +268,32 @@
       "methodologyLabel": "More info about utilization coverage"
     },
     "alertFatigue": {
-      "fatiguingIconLabel": "More info about fatiguing rules"
+      "fatiguingIconLabel": "More info about fatiguing rules",
+      "fatiguing": "The noise score blends three things that make a rule tiring rather than helpful: how many times a day it fires, what share of those firings arrive in bursts on the heels of another, and how often a delivered notification is never read. A rule can be low-volume and still fatiguing if every firing comes in a cluster of six.",
+      "iconLabel": "More info about rule grouping"
+    },
+    "rootCauseIntelligence": {
+      "hypotheses": "Ranked by robust shift strength, temporal lead/lag proximity, sample coverage, and evidence reliability. Every item is an evidence-ranked hypothesis, never a diagnosis or a claim of causal proof.",
+      "quality": "Combines focal sample coverage, corroborating-candidate ratio, and analysis window length into a single 0–1 score."
+    },
+    "energyLedger": {
+      "closure": "Energy has to go somewhere. Everything charged either reached the wheels, was lost while standing still, or is still sitting in the pack — so charged minus driven minus standby minus the change in stored energy should come out near zero. Whatever is left over is the ledger residual, and it is the honest measure of how much your data is failing to explain.",
+      "iconLabel": "More info about the ledger method"
+    },
+    "rangeSimulator": {
+      "iconLabel": "More info about the simulation"
+    },
+    "chargeDepartureAlignment": {
+      "avgMargin": "The realized safety buffer: how much charge was still left when the paired drive finished. A low average does not itself mean anything went wrong — it only describes what happened, not what was intended.",
+      "misaligned": "Share of pairings that tripped at least one heuristic (a tight margin, a very long or already-full dwell, far more energy added than that trip used, or an inconsistent SoC reading). Each is circumstantial on its own."
+    },
+    "chargeInterruption": {
+      "overallRisk": "A Beta-Bayesian estimate, not a count of confirmed failures. Every signal used (missing end SoC, a stalled charge rate, a power collapse, an early abort) is circumstantial — each has an innocent explanation too. This number is a probability, weighted by how much evidence exists, never a verdict.",
+      "highestRisk": "Ranked by the conservative (2.5th percentile) bound of the risk estimate, not the raw average — so a single unlucky session at a brand-new site can’t outrank a site with a real, well-evidenced pattern."
+    },
+    "chargerResilience": {
+      "score": "A composite of three things: how much energy is NOT concentrated in your top site (40%), how often an alternate site has actually been used rather than just being available on paper (30%), and how many effectively-equal sites your charging behaves like (30%).",
+      "effectiveSites": "The reciprocal of the energy-weighted Herfindahl-Hirschman Index (1/HHI) — the number of equally-sized sites this portfolio behaves like. Usually smaller than a raw count of distinct locations, because a handful of those were only visited once."
     }
   }
 }

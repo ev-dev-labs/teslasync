@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
 import { Badge, Text } from '@/components/ui';
 
 import { Evidence, RawRows } from './Evidence';
@@ -22,22 +21,21 @@ export default function PhysicsUnknownSection({ physics }: { physics: PhysicsPag
   const flagged = budgets.filter((row) => row.unknown);
   return <>
     <Evidence title={physics.title} honesty={coverage?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.window', 'Window')} value={hours(window, t)} color="cyan" />
-        <MetricCard label={t('teslaOnly.sampled', 'Sampled')} value={hours(coverage?.sample_hours, t)} color="green" />
-        <MetricCard label={t('teslaOnly.unknownHours', 'Unknown')} value={hours(coverage?.unknown_hours, t)} color="amber" />
-      </Grid>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.unknownAccepted', 'Accepted telemetry: {{value}}', { value: sampled == null ? unknown(t) : `${fmtNumber(sampled)}%` })}</Badge>
-        <Badge variant="warning" size="sm">{t('teslaOnly.unknownUncovered', 'Uncovered window: {{value}}', { value: missing == null ? unknown(t) : `${fmtNumber(missing)}%` })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.unknownKinds', 'Reported signal budgets: {{count}}', { count: budgets.length })}</Badge>
-      </div>
-      <Text as="p" variant="caption">{t('teslaOnly.unknownAnalysis', 'Accepted telemetry is not completeness of every signal. Per-signal unknown budgets can overlap in time; never add them together or subtract them from sampled hours. An absent budget is unknown, not zero.')}</Text>
+      <PhysicsEvidenceBrief physics={physics} id="physics-unknown-summary" available={coverage != null}
+        description={t('teslaOnly.unknownAnalysis', 'Accepted telemetry is not completeness of every signal. Per-signal unknown budgets can overlap in time; never add them together or subtract them from sampled hours. An absent budget is unknown, not zero.')}
+        metrics={[
+          { metricId: 'duration', occurrenceId: 'window', label: t('teslaOnly.window', 'Window'), rawValue: window == null ? null : window * 3600, display: { formatter: raw => ({ value: hours(raw / 3600, t), unit: '' }) } },
+          { metricId: 'duration', occurrenceId: 'sampled', label: t('teslaOnly.sampled', 'Sampled'), rawValue: coverage?.sample_hours == null ? null : coverage.sample_hours * 3600, display: { formatter: raw => ({ value: hours(raw / 3600, t), unit: '' }) } },
+          { metricId: 'duration', occurrenceId: 'unknown', label: t('teslaOnly.unknownHours', 'Unknown'), rawValue: coverage?.unknown_hours == null ? null : coverage.unknown_hours * 3600, display: { formatter: raw => ({ value: hours(raw / 3600, t), unit: '' }) } },
+          { metricId: 'percent', occurrenceId: 'accepted', label: t('teslaOnly.unknownAcceptedLabel', 'Accepted telemetry'), rawValue: sampled, display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) }, context: t('teslaOnly.unknownAccepted', 'Accepted telemetry: {{value}}', { value: sampled == null ? unknown(t) : `${fmtNumber(sampled)}%` }) },
+          { metricId: 'percent', occurrenceId: 'uncovered', label: t('teslaOnly.unknownUncoveredLabel', 'Uncovered window'), rawValue: missing, display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) }, context: t('teslaOnly.unknownUncovered', 'Uncovered window: {{value}}', { value: missing == null ? unknown(t) : `${fmtNumber(missing)}%` }) },
+          { metricId: 'count', occurrenceId: 'budgets', label: t('teslaOnly.unknownKindsLabel', 'Reported signal budgets'), rawValue: coverage ? budgets.length : null, context: t('teslaOnly.unknownKinds', 'Reported signal budgets: {{count}}', { count: budgets.length }) },
+          { metricId: 'count', occurrenceId: 'flagged', label: t('teslaOnly.unknownFlaggedLabel', 'Unknown-flagged signal budgets'), rawValue: coverage ? flagged.length : null, display: { countTotal: budgets.length }, context: t('teslaOnly.unknownFlagged', 'Unknown-flagged signal budgets: {{count}} / {{total}}', { count: flagged.length, total: budgets.length }) },
+        ]} />
       <Text as="p" variant="caption">{t('teslaOnly.unknownWindowCaution', 'Accepted hours and unknown hours use the report window, not a promise of contiguous coverage. A zero or missing percentage does not prove a sensor never went silent.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.unknownSignalInvestigation', 'Signal-specific unknown-hour investigation')}>
       <div className="flex flex-wrap gap-2">
-        <Badge variant="warning" size="sm">{t('teslaOnly.unknownFlagged', 'Unknown-flagged signal budgets: {{count}} / {{total}}', { count: flagged.length, total: budgets.length })}</Badge>
         {report?.evidence?.history_truncated && <Badge variant="warning" size="sm">{t('teslaOnly.historyCapped', 'History row cap reached')}</Badge>}
         {report?.evidence && !report.evidence.history_available && <Badge variant="warning" size="sm">{t('teslaOnly.historyUnavailable', 'History unavailable')}</Badge>}
       </div>

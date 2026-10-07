@@ -566,7 +566,7 @@ export default function ChargingDetailPage() {
                   size="sm"
                   i18nKey="help.charging.socRange"
                   defaultValue="The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper."
-                  ariaLabel={t('help.charging.socRange.aria', { defaultValue: 'More info about state-of-charge range' })}
+                  ariaLabel={t('help.charging.socRangeAria', { defaultValue: 'More info about state-of-charge range' })}
                 />
             }>
               <div className="space-y-4">
@@ -631,7 +631,7 @@ export default function ChargingDetailPage() {
                   size="sm"
                   i18nKey="help.charging.chargeCurve"
                   defaultValue="Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits."
-                  ariaLabel={t('help.charging.chargeCurve.aria', { defaultValue: 'More info about taper and derating' })}
+                  ariaLabel={t('help.charging.chargeCurveAria', { defaultValue: 'More info about taper and derating' })}
                 />
               </div>
               {chargeCurve.length > 0 ? (

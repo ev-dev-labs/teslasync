@@ -106,6 +106,18 @@ describe('SafetyHistoryWidget retained snapshot semantics', () => {
     expect(screen.queryByText('Stable')).toBeNull();
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
+
+  it('keeps returned-window zero distinct from missing history and disclaims complete event coverage', () => {
+    mockSafety.mockReturnValue(qr({ data: [snap({ created_at: daysAgo(40) })] }));
+    renderWidget(STANDARD);
+    const brief = screen.getByTestId('dashboard-safety-history-brief');
+    expect(brief).toHaveTextContent('Returned safety-history summary');
+    expect(brief).toHaveTextContent('loaded history is not complete event coverage');
+    expect(brief).toHaveTextContent('preceding 30-day comparison window: 1');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+    expect(brief).not.toHaveTextContent('Stable');
+    expect(screen.getByText('Safety state update')).toBeInTheDocument();
+  });
 });
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useVehicles')>();

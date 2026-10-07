@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, BookOpen, History, Route } from 'lucide-react';
+import { BookOpen, History } from 'lucide-react';
 
 import { EmptyState } from '@/components/feedback';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { safeArray } from '@/lib/safeArray';
@@ -23,8 +23,6 @@ interface FsdObservatoryPanelProps {
   state: FsdSectionState;
 }
 
-const KPI_COLUMNS = { default: 1, sm: 2, xl: 4 } as const;
-
 /**
  * Reset-safe journal of reported FSD kilometres. Unknown and ambiguous
  * distance stay first-class. This is not an engagement map.
@@ -42,6 +40,27 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
       'fsd.observatory.honesty',
       'Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed.',
     );
+  const metrics: StatMetric[] = [
+    { metricId: 'distance', occurrenceId: 'stitched-fsd', rawValue: totals?.stitched_fsd_distance_m,
+      label: t('fsd.observatory.stitched', 'Stitched reported FSD'),
+      description: totals?.stitched_fsd_distance_m == null
+        ? t('fsd.observatory.stitchedUnavailable', 'No high-confidence or estimated counter change in this period')
+        : t('fsd.observatory.stitchedHint', 'High and estimated only; resets add no kilometres'),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+    { metricId: 'distance', occurrenceId: 'ambiguous-fsd', rawValue: totals?.ambiguous_fsd_distance_m,
+      label: t('fsd.observatory.ambiguous', 'Ambiguous FSD'),
+      description: t('fsd.observatory.ambiguousHint', 'Counter increased across overlapping drives'),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+    { metricId: 'distance', occurrenceId: 'unknown-drive-distance', rawValue: totals?.unknown_drive_distance_m,
+      label: t('fsd.observatory.unknown', 'Unknown drive distance'),
+      description: totals == null ? t('fsd.notMeasured', 'Not measured')
+        : t('fsd.observatory.unknownHint', '{{count}} drives with no measured FSD', { count: totals.unknown_drive_count }),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'counter-resets', rawValue: totals?.reset_break_count,
+      label: t('fsd.observatory.resets', 'Counter resets'),
+      description: t('fsd.observatory.resetsHint', 'Each reset is a break in the stitch, not travelled FSD'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+  ];
 
   return (
     <section
@@ -57,60 +76,12 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
           {honesty}
         </Text>
         <FsdSectionBody state={state} className="min-h-28">
-          <Grid cols={KPI_COLUMNS} gap={4}>
-            <MetricCard
-              icon={<Route className="h-5 w-5" aria-hidden="true" />}
-              color="cyan"
-              wrapLabel
-              label={t('fsd.observatory.stitched', 'Stitched reported FSD')}
-              value={totals?.stitched_fsd_distance_m == null
-                ? '—'
-                : formatDistance(totals.stitched_fsd_distance_m)}
-              subtitle={
-                totals?.stitched_fsd_distance_m == null
-                  ? t(
-                      'fsd.observatory.stitchedUnavailable',
-                      'No high-confidence or estimated counter change in this period',
-                    )
-                  : t(
-                      'fsd.observatory.stitchedHint',
-                      'High and estimated only; resets add no kilometres',
-                    )
-              }
-            />
-            <MetricCard
-              icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-              color="purple"
-              wrapLabel
-              label={t('fsd.observatory.ambiguous', 'Ambiguous FSD')}
-              value={totals?.ambiguous_fsd_distance_m == null
-                ? '—'
-                : formatDistance(totals.ambiguous_fsd_distance_m)}
-              subtitle={t(
-                'fsd.observatory.ambiguousHint',
-                'Counter increased across overlapping drives',
-              )}
-            />
-            <MetricCard
-              wrapLabel
-              label={t('fsd.observatory.unknown', 'Unknown drive distance')}
-              value={formatDistance(totals?.unknown_drive_distance_m ?? null)}
-              subtitle={t(
-                'fsd.observatory.unknownHint',
-                '{{count}} drives with no measured FSD',
-                { count: totals?.unknown_drive_count ?? 0 },
-              )}
-            />
-            <MetricCard
-              wrapLabel
-              label={t('fsd.observatory.resets', 'Counter resets')}
-              value={fmtInt(totals?.reset_break_count ?? 0)}
-              subtitle={t(
-                'fsd.observatory.resetsHint',
-                'Each reset is a break in the stitch, not travelled FSD',
-              )}
-            />
-          </Grid>
+          <NestedDrivingBrief metrics={metrics}
+            title={t('fsd.brief.observatoryMetrics', 'Reset-safe counter quantities')}
+            description={honesty} loading={state.isLoading} unavailable={state.error != null || insights == null}
+            period={{ kind: 'unknown',
+              label: insights ? `${insights.period.start_at} – ${insights.period.end_at} · ${insights.period.timezone}` : t('fsd.notMeasured', 'Not measured'),
+              reason: honesty }} />
 
           <div className="mt-6">
             <Text as="h3" size="sm" weight="semibold" className="mb-2">

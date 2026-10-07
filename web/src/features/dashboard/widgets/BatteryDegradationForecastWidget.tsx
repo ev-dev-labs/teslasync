@@ -8,9 +8,11 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, WidgetTipCards, type TipItem } from './shared';
+import { WidgetBigNumber, WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -87,6 +89,15 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   const tier = rate != null ? healthTier(rate) : null;
   const currentHealthPct = knownNumber(data?.current_health_pct) ?? knownNumber(data?.current_health);
   const projectedDate = formatProjectedMonth(data?.projected_80pct_date, locale);
+  const summaryMetrics: StatMetric[] = [
+    { metricId: 'percent', occurrenceId: 'forecast-current-health', rawValue: currentHealthPct,
+      label: t('widget.forecast.currentHealth', 'Current health'),
+      display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+    { metricId: 'rate', occurrenceId: 'forecast-degradation-rate', rawValue: data?.degradation_rate_pct_per_month,
+      label: t('widget.degradation', 'Degradation'),
+      description: t('widget.forecast.rateSource', 'Returned percentage-point degradation rate per month; the existing displayed loss sign is retained.'),
+      display: { formatter: raw => ({ value: `${raw > 0 ? '−' : ''}${fmtNumber(raw)}%/${t('widget.mo', 'mo')}`, unit: '' }) } },
+  ];
 
   const riskFactors = data?.risk_factors ?? [];
   const recommendations = data?.recommendations ?? [];
@@ -153,10 +164,12 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
             </div>
 
             {/* Current health stat */}
-            <WidgetStatGrid stats={[
-              { label: t('widget.forecast.currentHealth', 'Current health'), value: currentHealthPct != null ? `${fmtNumber(currentHealthPct)}%` : null },
-              { label: t('widget.degradation', 'Degradation'), value: rate != null ? `${rate > 0 ? '−' : ''}${fmtNumber(rate)}%/${t('widget.mo', 'mo')}` : null },
-            ]} cols={2} />
+            <DashboardSourceBrief metrics={summaryMetrics} state={trust}
+              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+              title={t('widget.forecast.summaryTitle', 'Returned degradation measurements')}
+              description={t('widget.forecast.summaryDescription', 'Current health and monthly degradation retain their separate meanings; the projected date, horizon intervals, risks and recommendations remain separate model outputs.')}
+              scope={t('widget.forecast.summaryScope', 'Vehicle {{id}} · returned inferred forecast; the response does not establish continuous recording coverage.', { id: id ?? '—' })}
+              loading={isLoading && !data} testId="dashboard-battery-forecast-brief" />
 
             {/* Horizon outlook: 1/3/5-year twin readout */}
               <div className="flex flex-col gap-1.5">

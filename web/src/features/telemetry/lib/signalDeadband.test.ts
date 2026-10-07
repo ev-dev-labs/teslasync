@@ -11,26 +11,27 @@ const ANCHOR = Date.UTC(2026, 6, 1);
 
 function samples(values: readonly number[], stepMs = 1_000): DeadbandSample[] {
   return values.map((value, index) => ({
-    timestamp: new Date(ANCHOR + index * stepMs).toISOString(),
-    valueNum: value,
+    ts: new Date(ANCHOR + index * stepMs).toISOString(),
+    kind: 'ValueKindFloat',
+    value,
   }));
 }
 
 describe('toNumericDeadbandSeries', () => {
-  it('accepts camelCase and snake_case histories, sorts, and deduplicates', () => {
+  it('accepts canonical typed histories, sorts, and deduplicates', () => {
     const rows: DeadbandSample[] = [
-      { ts: new Date(ANCHOR + 1_000).toISOString(), value_numeric: 2 },
-      { timestamp: new Date(ANCHOR).toISOString(), valueNum: 1 },
-      { timestamp: new Date(ANCHOR).toISOString(), valueNum: 1.5 },
+      { ts: new Date(ANCHOR + 1_000).toISOString(), kind: 'ValueKindFloat', value: 2 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindFloat', value: 1 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindFloat', value: 1.5 },
     ];
     expect(toNumericDeadbandSeries(rows).map((point) => point.value)).toEqual([1.5, 2]);
   });
 
   it('drops invalid timestamps and non-finite values', () => {
     expect(toNumericDeadbandSeries([
-      { timestamp: 'bad', valueNum: 1 },
-      { timestamp: new Date(ANCHOR).toISOString(), valueNum: Number.NaN },
-      { timestamp: new Date(ANCHOR + 1_000).toISOString(), valueNum: 4 },
+      { ts: 'bad', kind: 'ValueKindFloat', value: 1 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindFloat', value: Number.NaN },
+      { ts: new Date(ANCHOR + 1_000).toISOString(), kind: 'ValueKindFloat', value: 4 },
     ])).toHaveLength(1);
   });
 });
@@ -79,6 +80,20 @@ describe('simulateDeadband', () => {
 });
 
 describe('analyzeSignalDeadband', () => {
+  it('retains measured zero emissions and all original reduction denominators', () => {
+    const result = analyzeSignalDeadband(samples([0, 0, 0, 0]), {
+      candidateThresholds: [0, 0.5],
+    })!;
+    expect(result.sampleCount).toBe(4);
+    expect(result.updateCount).toBe(3);
+    expect(result.unchangedEmissionRatio).toBe(1);
+    expect(result.redundantEmissionRatio).toBe(1);
+    expect(result.candidates[0]?.retainedUpdates).toBe(4);
+    expect(result.candidates[0]?.reduction).toBe(0);
+    expect(result.candidates[1]?.retainedUpdates).toBe(1);
+    expect(result.candidates[1]?.reduction).toBe(0.75);
+  });
+
   it('requires at least three numeric observations', () => {
     expect(analyzeSignalDeadband([])).toBeNull();
     expect(analyzeSignalDeadband(samples([1, 2]))).toBeNull();

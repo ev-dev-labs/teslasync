@@ -22,15 +22,18 @@ export function normalizationMetrics(
     versioned: normalization?.versioned_sample_count,
     unversioned: normalization?.unversioned_sample_count,
     coverage,
-    required: normalization?.required_version == null ? unknown : `v${normalization.required_version}`,
+    required: normalization?.required_version ?? unknown,
     critical: hasSnapshot ? fields.filter(field => field.severity === 'critical').length : null,
   };
   return labels.map(kpi => ({
-    metricId: kpi.key === 'coverage' ? 'percent' : kpi.key === 'required' ? 'text' : 'count',
+    metricId: kpi.key === 'coverage' ? 'percent' : kpi.key === 'required'
+      ? normalization?.required_version == null ? 'text' : 'identifier' : 'count',
     occurrenceId: `normalization-${kpi.key}`,
     rawValue: values[kpi.key],
     label: kpi.label,
     description: kpi.subtitle,
+    display: kpi.key === 'required' && normalization?.required_version != null
+      ? { identifierPrefix: 'v' } : undefined,
     missingReason: kpi.key === 'coverage' && coverage == null ? unknown : undefined,
     context: kpi.subtitle,
   }));

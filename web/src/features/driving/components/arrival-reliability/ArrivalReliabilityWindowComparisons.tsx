@@ -2,11 +2,10 @@ import { Clock3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import {
   GlassPanel,
   Heading,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Text,
 } from '@/components/ui';
@@ -33,15 +32,6 @@ interface ArrivalReliabilityWindowComparisonsProps {
   locale: string;
   timeZone: string;
   formatDuration: DurationFormatter;
-}
-
-function WindowMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <MetricLabel>{label}</MetricLabel>
-      <MetricValue className="mt-0.5">{value}</MetricValue>
-    </div>
-  );
 }
 
 export function ArrivalReliabilityWindowComparisons({
@@ -137,36 +127,30 @@ export function ArrivalReliabilityWindowComparisons({
                     { window: windowLabel(window), timeZone },
                   )}
                 </Text>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <WindowMetric
-                    label={t(
-                      'arrivalReliability.windows.consistency',
-                      'Timing consistency',
-                    )}
-                    value={arrivalIndex(
-                      window.timingConsistencyIndex,
-                      locale,
-                    )}
-                  />
-                  <WindowMetric
-                    label={t(
-                      'arrivalReliability.windows.allowance',
-                      'Observed within-allowance share',
-                    )}
-                    value={arrivalPercent(
-                      window.withinAllowanceShare,
-                      locale,
-                    )}
-                  />
-                  <WindowMetric
-                    label={t('arrivalReliability.windows.p50', 'Observed p50')}
-                    value={formatDuration(window.p50DurationS)}
-                  />
-                  <WindowMetric
-                    label={t('arrivalReliability.windows.p90', 'Observed p90')}
-                    value={formatDuration(window.p90DurationS)}
-                  />
-                </div>
+                <NestedDrivingBrief title={t('arrivalReliability.brief.windowQuantities', 'Route-window timing quantities')}
+                  description={rankLabel(index, window)}
+                  loading={state.isLoading} unavailable={state.error != null}
+                  period={{ kind: 'unknown',
+                    label: `${window.routeLabel} · ${t('arrivalReliability.windows.localWindow', '{{window}} in {{timeZone}}', { window: windowLabel(window), timeZone })}`,
+                    reason: t('arrivalReliability.windows.support', '{{count}} samples · route allowance {{allowance}}', {
+                      count: window.samples, allowance: formatDuration(window.allowanceThresholdS),
+                    }) }}
+                  metrics={[
+                    { metricId: 'number', occurrenceId: `${window.routeKey}-${window.bucketStartHour}-consistency`,
+                      label: t('arrivalReliability.windows.consistency', 'Timing consistency'),
+                      rawValue: window.timingConsistencyIndex,
+                      display: { formatter: raw => ({ value: arrivalIndex(raw, locale), unit: '' }) } },
+                    { metricId: 'percent', occurrenceId: `${window.routeKey}-${window.bucketStartHour}-allowance`,
+                      label: t('arrivalReliability.windows.allowance', 'Observed within-allowance share'),
+                      rawValue: window.withinAllowanceShare == null ? null : window.withinAllowanceShare * 100,
+                      display: { formatter: raw => ({ value: arrivalPercent(raw / 100, locale), unit: '' }) } },
+                    { metricId: 'duration', occurrenceId: `${window.routeKey}-${window.bucketStartHour}-p50`,
+                      label: t('arrivalReliability.windows.p50', 'Observed p50'), rawValue: window.p50DurationS,
+                      display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) } },
+                    { metricId: 'duration', occurrenceId: `${window.routeKey}-${window.bucketStartHour}-p90`,
+                      label: t('arrivalReliability.windows.p90', 'Observed p90'), rawValue: window.p90DurationS,
+                      display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) } },
+                  ]} />
                 <Text as="p" variant="caption" className="mt-3">
                   {t(
                     'arrivalReliability.windows.support',

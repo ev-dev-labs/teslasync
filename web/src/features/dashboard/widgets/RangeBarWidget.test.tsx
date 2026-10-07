@@ -41,19 +41,36 @@
  * wraps every render because `EmptyState` reaches for `<Link>`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { Vehicle, VehicleState } from '@/api/types';
 import type { WidgetSize } from './types';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 
 // ── Hoisted mocks (referenced inside vi.mock factories) ─────────────────────────
 
-const { vehiclesMock, stateMock, unitsMock, metricBarSpy } = vi.hoisted(() => ({
+const { vehiclesMock, stateMock, unitsMock, metricBarSpy, capturedBrief } = vi.hoisted(() => ({
   vehiclesMock: vi.fn(),
   stateMock: vi.fn(),
   unitsMock: vi.fn(),
   metricBarSpy: vi.fn(),
+  capturedBrief: { metrics: [] as OperationalBriefProps['metrics'] },
+}));
+
+vi.mock('@/components/data-display', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/data-display')>();
+  return {
+    ...actual,
+    OperationalBrief: (props: OperationalBriefProps) => {
+      capturedBrief.metrics = props.metrics;
+      return <actual.OperationalBrief {...props} />;
+    },
+  };
+});
+
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({
@@ -218,9 +235,114 @@ function renderWidget(size: WidgetSize = FULL, vehicleId?: number) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  capturedBrief.metrics = [];
   setVehicles([makeVehicle()]);
   setUnits('mi');
   setState({ state: makeState() });
+});
+
+describe('RangeBarWidget — actual source comparison brief', () => {
+  it('distinguishes a measured secondary zero from a missing range without changing the primary', () => {
+    setState({ state: makeState({ rated_range: mi(300), ideal_range: 0 }), dataUpdatedAt: Date.now() });
+    const first = renderWidget(FULL);
+    const brief = screen.getByTestId('dashboard-range-comparison-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(within(brief).getByText('Source available')).toBeInTheDocument();
+    expect(within(brief).getByText('0.00 mi')).toBeInTheDocument();
+    expect(capturedBrief.metrics).toEqual([
+      expect.objectContaining({ key: 'range-secondary-distance', rawValue: 0, valueState: 'value' }),
+    ]);
+    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(within(brief).queryByText('EPA variance')).toBeNull();
+    first.unmount();
+
+    setState({
+      state: makeState({ rated_range: mi(300), ideal_range: undefined as unknown as number }),
+      dataUpdatedAt: Date.now(),
+    });
+    renderWidget(FULL);
+    const missing = screen.getByTestId('dashboard-range-comparison-brief');
+    expect(within(missing).getByText('Ideal range')).toBeInTheDocument();
+    expect(within(missing).getByText('—')).toBeInTheDocument();
+    expect(capturedBrief.metrics[0]).toMatchObject({ rawValue: undefined, valueState: 'missing' });
+    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(within(missing).queryByText('EPA variance')).toBeNull();
+  });
+
+  it('retains unrounded original meters rather than recovering raw distance from a converted string', () => {
+    const rated = 100_001;
+    const ideal = 123_456.789;
+    setState({ state: makeState({ rated_range: rated, ideal_range: ideal }) });
+    renderWidget(FULL);
+    const brief = screen.getByTestId('dashboard-range-comparison-brief');
+    expect(within(brief).getByText('76.71 mi')).toBeInTheDocument();
+    expect(capturedBrief.metrics[0]).toMatchObject({ rawValue: ideal, valueState: 'value' });
+    expect(capturedBrief.metrics[1]).toMatchObject({ rawValue: ((ideal - rated) / rated) * 100 });
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Secondary vehicle range reading in source meters, distinct from the preferred primary range.')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Vehicle 7 · range snapshot/).length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    { ideal: 110_000, raw: 10, display: '+10.00%' },
+    { ideal: 90_000, raw: -10, display: '-10.00%' },
+    { ideal: 100_000, raw: 0, display: '+0.00%' },
+  ])('retains the signed $display variance and its independent percent operand', ({ ideal, raw, display }) => {
+    setState({ state: makeState({ rated_range: 100_000, ideal_range: ideal }) });
+    renderWidget(FULL);
+    const brief = screen.getByTestId('dashboard-range-comparison-brief');
+    expect(within(brief).getByText(display)).toBeInTheDocument();
+    expect(capturedBrief.metrics[1]).toMatchObject({
+      key: 'range-epa-variance', rawValue: raw, valueState: 'value',
+    });
+  });
+
+  it('preserves the full-layout ideal primary fallback while the brief retains the original rated zero', () => {
+    setState({ state: makeState({ rated_range: 0, ideal_range: mi(280) }) });
+    renderWidget(FULL);
+    expect(screen.getByText('280.00')).toBeInTheDocument();
+    const brief = screen.getByTestId('dashboard-range-comparison-brief');
+    expect(within(brief).getByText('Rated range')).toBeInTheDocument();
+    expect(within(brief).getByText('0.00 mi')).toBeInTheDocument();
+    expect(capturedBrief.metrics).toEqual([
+      expect.objectContaining({ rawValue: 0, valueState: 'value' }),
+    ]);
+    expect(screen.queryByText('EPA variance')).toBeNull();
+  });
+
+  it('preserves the unknown-rated primary fallback without inventing a rated measurement', () => {
+    setState({ state: makeState({ rated_range: null as unknown as number, ideal_range: km(400) }) });
+    setUnits('km');
+    renderWidget(FULL);
+    expect(screen.getByText('400.00')).toBeInTheDocument();
+    const brief = screen.getByTestId('dashboard-range-comparison-brief');
+    expect(within(brief).getByText('Rated range')).toBeInTheDocument();
+    expect(within(brief).getByText('—')).toBeInTheDocument();
+    expect(capturedBrief.metrics[0]).toMatchObject({ rawValue: null, valueState: 'missing' });
+    expect(screen.queryByText('EPA variance')).toBeNull();
+  });
+
+  it('uses retained source trust during a failed refresh and preserves the shell retry action', () => {
+    const q = setState({ state: makeState(), isError: true, error: new Error('refresh failed') });
+    renderWidget(FULL);
+    const brief = screen.getByTestId('dashboard-range-comparison-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    expect(within(brief).getByText('350.00 mi')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+    expect(q.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps compact primary fallback and suppresses only the originally noncompact comparison band', () => {
+    setState({ state: makeState({ rated_range: 0, ideal_range: mi(280) }) });
+    renderWidget(COMPACT);
+    expect(screen.getByText('280.00')).toBeInTheDocument();
+    expect(screen.getByText('Ideal range')).toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard-range-comparison-brief')).toBeNull();
+    expect(capturedBrief.metrics).toHaveLength(0);
+    expect(screen.queryByText('EPA variance')).toBeNull();
+  });
 });
 
 // ── Loading & empty states ────────────────────────────────────────────────────

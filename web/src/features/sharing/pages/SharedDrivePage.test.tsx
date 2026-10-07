@@ -35,7 +35,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { SharedDriveData, SharedDriveDataV1, SharedSessionData } from '@/types/sharing'
@@ -52,6 +52,7 @@ const h = vi.hoisted(() => ({
   maps: {
     containerCenters: [] as unknown[],
     containerZooms: [] as number[],
+    scrollWheelZooms: [] as boolean[],
     polylines: [] as Array<Array<[number, number]>>,
     markers: [] as Array<{ center: unknown; color: unknown }>,
     tileStyles: [] as string[],
@@ -164,14 +165,17 @@ vi.mock('@/components/maps', () => ({
   MapContainer: ({
     center,
     zoom,
+    scrollWheelZoom,
     children,
   }: {
     center: unknown
     zoom: number
+    scrollWheelZoom: boolean
     children?: ReactNode
   }) => {
     h.maps.containerCenters.push(center)
     h.maps.containerZooms.push(zoom)
+    h.maps.scrollWheelZooms.push(scrollWheelZoom)
     return <div data-testid="map-container">{children}</div>
   },
   Polyline: ({ positions }: { positions: Array<[number, number]> }) => {
@@ -353,6 +357,7 @@ beforeEach(() => {
   h.unit.locale = 'en-US'
   h.maps.containerCenters = []
   h.maps.containerZooms = []
+  h.maps.scrollWheelZooms = []
   h.maps.polylines = []
   h.maps.markers = []
   h.maps.tileStyles = []
@@ -710,6 +715,78 @@ describe('SharedDrivePage — session share branch', () => {
     // Drive chrome stays out: no map, no drive header.
     expect(screen.queryByTestId('map-container')).toBeNull()
     expect(screen.queryByText('Shared drive report')).toBeNull()
+  })
+
+  describe('SharedDrivePage — real public OperationalBrief details', () => {
+    it('retains all seven metrics and unrounded raw source evidence in the real drawer without changing maps, profiles or public links', () => {
+      const payload = makeV2()
+      const snapshot = structuredClone(payload)
+      Object.freeze(payload.drive)
+      setData(payload)
+      renderPage('owner-public-scope')
+      const brief = screen.getByTestId('public-drive-brief')
+      expect(within(brief).getAllByRole('listitem')).toHaveLength(7)
+      expect(within(brief).getByText('80.00% → 65.00%')).toBeInTheDocument()
+      expect(h.maps.scrollWheelZooms.every(value => value === false)).toBe(true)
+      expect(screen.getByTestId('area-chart')).toHaveAttribute('data-count', '2')
+      expect(screen.getByTestId('line-chart')).toHaveAttribute('data-count', '2')
+      expect(screen.getByRole('link', { name: 'Learn more →' }))
+        .toHaveAttribute('rel', 'noopener noreferrer')
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+      const drawer = screen.getByRole('dialog', { name: 'Shared drive measurements details' })
+      for (const raw of [
+        'distance_m: 5000 m', 'duration_s: 600 s', 'efficiency_wh_per_m: 0.15 Wh/m',
+        'start_battery: 80 %', 'end_battery: 65 %', 'max_speed_mps: 30 m/s',
+        'avg_speed_mps: 20 m/s', 'elevation_gain: 120 m',
+      ]) expect(within(drawer).getByText(raw)).toBeInTheDocument()
+      expect(within(drawer).getAllByText('Owner-shared drive payload').length).toBeGreaterThan(0)
+      expect(within(drawer).getAllByText(/Report event date: 2025-03-01/).length).toBeGreaterThan(0)
+      expect(within(drawer).getByText('Not scored')).toBeInTheDocument()
+      expect(drawer).not.toHaveTextContent('owner-public-scope')
+      expect(drawer).not.toHaveTextContent('Seattle')
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+      expect(h.sharedHook.mock.calls.every(([token]) => token === 'owner-public-scope')).toBe(true)
+      expect(payload).toEqual(snapshot)
+    })
+
+    it('keeps measured zero evidence distinct from withheld fields after a mounted owner response changes', () => {
+      setData(makeV2({}, {
+        distance_m: 0, duration_s: 0, efficiency_wh_per_m: 0,
+        start_battery: 0, end_battery: 0, max_speed_mps: 0, avg_speed_mps: 0, elevation_gain: 0,
+      }))
+      const view = renderPage()
+      const brief = screen.getByTestId('public-drive-brief')
+      expect(within(brief).getAllByRole('listitem')).toHaveLength(7)
+      expect(within(brief).getByText('0.00% → 0.00%')).toBeInTheDocument()
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+      expect(screen.getByRole('dialog')).toHaveTextContent('max_speed_mps: 0 m/s')
+      setData(makeV2({}, {
+        efficiency_wh_per_m: null, start_battery: null, end_battery: null,
+        max_speed_mps: null, avg_speed_mps: null, elevation_gain: null,
+      }))
+      view.rerenderPage()
+      expect(within(screen.getByTestId('public-drive-brief')).getAllByRole('listitem')).toHaveLength(2)
+      const drawer = screen.getByRole('dialog', { name: 'Shared drive measurements details' })
+      for (const label of ['Efficiency', 'Battery', 'Max speed', 'Avg speed', 'Elevation gain']) {
+        expect(within(drawer).queryByText(label)).not.toBeInTheDocument()
+      }
+      expect(within(drawer).queryByText('max_speed_mps: 0 m/s')).not.toBeInTheDocument()
+      expect(within(drawer).getByText('distance_m: 5000 m')).toBeInTheDocument()
+    })
+
+    it('removes the open report drawer along with cached source content after the public token is revoked', () => {
+      const payload = makeV2()
+      setData(payload)
+      const view = renderPage('revocable-public-token')
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+      expect(screen.getByRole('dialog', { name: 'Shared drive measurements details' })).toBeInTheDocument()
+      setData(payload, { error: new ApiError('revoked', 403) })
+      view.rerenderPage()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('public-drive-brief')).not.toBeInTheDocument()
+      expect(screen.queryByText('distance_m: 5000 m')).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Go to TeslaSync' })).toHaveAttribute('href', '/')
+    })
   })
 
   it('passes every shared power and battery curve value through the actual session report without sampling or mutation', () => {

@@ -315,6 +315,43 @@ describe('TimeToChargeSection', () => {
     expect(yearlyRows()).toHaveLength(0);
   });
 
+  it('keeps populated AC sessions out of DC thresholds, extremes and yearly totals', () => {
+    const explicitAc = makeSession({
+      id: 201, charger_type: 'AC', peak_power_w: 44_000,
+      started_at: '2026-08-25T08:00:00Z', ended_at: '2026-08-25T09:00:00Z',
+      total_energy_added_wh: 18_000, start_soc_pct: 0, end_soc_pct: 80,
+    });
+    const dc = makeSession({
+      id: 202, charger_type: 'DC', peak_power_w: 44_000,
+      started_at: '2026-08-24T08:00:00Z', ended_at: '2026-08-24T09:30:00Z',
+      total_energy_added_wh: 36_000, start_soc_pct: 10, end_soc_pct: 80,
+    });
+    const { container } = render(<TimeToChargeSection sessions={[explicitAc, dc]} />);
+    for (const key of ['avg10to80', 'avg20to80']) {
+      expect(container.querySelector(`[data-operational-metric="${key}"] [data-operational-value]`))
+        .toHaveTextContent('90.00 min');
+    }
+    for (const key of ['fastest', 'slowest']) {
+      const metric = container.querySelector(`[data-operational-metric="${key}"]`);
+      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('24.00 kWh/h');
+      expect(metric).toHaveTextContent('Session #202');
+      expect(metric).not.toHaveTextContent('Session #201');
+    }
+    expect(yearlyRows()).toEqual([
+      { year: '2026', avg10to80: 90, avg20to80: 90, count: 1 },
+    ]);
+  });
+
+  it('keeps unknown DC metrics rather than inventing zero for an explicitly AC-only returned history', () => {
+    render(<TimeToChargeSection sessions={[makeSession({ charger_type: 'AC', peak_power_w: 44_000 })]} />);
+    expect(cards()).toHaveLength(4);
+    for (const metric of cards()) {
+      expect(metric).toHaveAttribute('data-value-state', 'missing');
+      expect(metric.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    }
+    expect(yearlyRows()).toEqual([]);
+  });
+
   it('builds a per-year trend sorted ascending, excluding zero-duration crossings', () => {
     render(<TimeToChargeSection sessions={MAIN} />);
 

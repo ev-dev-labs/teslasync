@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { AlertOctagon, ShieldAlert, AlertTriangle, CarFront, Navigation } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { cleanSafetyEnum, isSafetyEnumActive } from '@/lib/safetyEnum';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed, WidgetStatGrid } from './shared';
+import { WidgetEventFeed } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -123,6 +125,7 @@ function CompactView({
   totalEvents,
   mostCommon,
   trend,
+  priorCount,
   t,
 }: {
   totalEvents: number;
@@ -235,6 +238,18 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
       trend,
     };
   }, [list, t]);
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'safety-returned-events', rawValue: history === undefined ? null : stats.totalEvents,
+      label: t('widget.safetyTotal', 'Events (30d)'),
+      context: t('widget.safety.priorCount', 'Returned snapshots in the preceding 30-day comparison window: {{count}}.', { count: history === undefined ? '—' : stats.priorCount }) },
+    { metricId: 'text', occurrenceId: 'safety-most-common', rawValue: stats.mostCommon === '—' ? null : stats.mostCommon,
+      label: t('widget.safetyMostCommon', 'Most common') },
+    { metricId: 'status', occurrenceId: 'safety-trend', rawValue: stats.trend === '—' ? null : stats.trend,
+      label: t('widget.safetyTrend', 'Trend'),
+      context: stats.trend === '↑' ? t('widget.trendUp', 'Increasing')
+        : stats.trend === '↓' ? t('widget.trendDown', 'Decreasing')
+          : stats.trend === '→' ? t('widget.trendFlat', 'Stable') : undefined },
+  ];
 
   return (
     <WidgetShell
@@ -267,17 +282,12 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
       ) : (
         <div className="flex flex-col gap-3 h-full min-h-0">
           {/* Stat cards row */}
-          <WidgetStatGrid cols={3} stats={[
-            { label: t('widget.safetyTotal', 'Events (30d)'), value: history === undefined ? null : stats.totalEvents },
-            { label: t('widget.safetyMostCommon', 'Most common'), value: stats.mostCommon },
-            {
-              label: t('widget.safetyTrend', 'Trend'),
-              value: stats.trend,
-              unit: stats.trend === '↑' ? t('widget.trendUp', 'Increasing')
-                : stats.trend === '↓' ? t('widget.trendDown', 'Decreasing')
-                  : stats.trend === '→' ? t('widget.trendFlat', 'Stable') : undefined,
-            },
-          ]} />
+          <DashboardSourceBrief metrics={metrics} state={displayState}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.safety.summaryTitle', 'Returned safety-history summary')}
+            description={t('widget.safety.summaryDescription', 'Counts and classifications summarize loaded snapshots; a warning setting is not a detected intervention.')}
+            scope={t('widget.safety.summaryScope', 'Vehicle {{id}} · returned snapshots in the last 30 days, compared with the preceding 30 days; loaded history is not complete event coverage.', { id: vid ?? '—' })}
+            loading={isLoading && history === undefined} testId="dashboard-safety-history-brief" />
 
           {/* Event feed */}
           <div className="flex-1 min-h-0 overflow-y-auto">

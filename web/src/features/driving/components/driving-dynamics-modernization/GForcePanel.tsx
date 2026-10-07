@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutCard } from '@/components/layout/layout-reference';
-import { StatGroup, type StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
@@ -14,7 +15,7 @@ import { isFiniteNumber } from '@/lib/numberFormat';
 export default function GForcePanel({ vehicleId }: { vehicleId: number | null | undefined }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
-  const { precision, locale } = useNumberFormatting();
+  const { precision, locale, fmtNumber } = useNumberFormatting();
   const query = useDriveDynamicsLatest(vehicleId ?? 0, INTERVALS.REALTIME);
   const state = useDataState(query);
   const data = state.data;
@@ -32,19 +33,22 @@ export default function GForcePanel({ vehicleId }: { vehicleId: number | null | 
   }, [data?.lateral_acceleration, data?.longitudinal_acceleration]);
   const metrics: StatMetric[] = [
     { metricId: 'number', occurrenceId: 'g-force-lateral', rawValue: lateral,
-      label: t('dynamics.lateral', 'Lateral'), context: t('dynamics.modernization.gUnit', 'g') },
+      label: t('dynamics.lateral', 'Lateral'), display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'g' }) }, context: t('dynamics.modernization.gUnit', 'g') },
     { metricId: 'number', occurrenceId: 'g-force-longitudinal', rawValue: longitudinal,
-      label: t('dynamics.longitudinal', 'Longitudinal'), context: t('dynamics.modernization.gUnit', 'g') },
+      label: t('dynamics.longitudinal', 'Longitudinal'), display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'g' }) }, context: t('dynamics.modernization.gUnit', 'g') },
     { metricId: 'number', occurrenceId: 'g-force-combined', rawValue: magnitude,
-      label: t('dynamics.combined', 'Combined'), context: t('dynamics.modernization.gUnit', 'g') },
+      label: t('dynamics.combined', 'Combined'), display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'g' }) }, context: t('dynamics.modernization.gUnit', 'g') },
   ];
   return (
     <LayoutCard title={t('dynamics.gForce', 'Acceleration G-Force')}>
       <StaleRefreshWarning state={state} label={t('dynamics.gForce', 'Acceleration G-Force')} />
       {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
       {hasAny || query.isLoading ? (
-        <StatGroup
-          id="dynamics-g-force"
+        <NestedDrivingBrief
+          testId="dynamics-g-force"
+          title={t('dynamics.brief.accelerationAxes', 'Reported acceleration axes')}
+          description={t('dynamics.modernization.gSource', 'Latest reported acceleration; missing axes are not zero.')}
+          unavailable={state.fatalError != null}
           metrics={metrics}
           preferences={{ units: { ...unitPrefs, precision, locale }, currency: { kind: 'symbol', value: '' } }}
           loading={query.isLoading && !state.hasData}

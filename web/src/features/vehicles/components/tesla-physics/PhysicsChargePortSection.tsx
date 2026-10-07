@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { Badge, Select, Text } from '@/components/ui';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
+import { Select, Text } from '@/components/ui';
 
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, time, unknown, yesNo } from './PhysicsPageShell';
@@ -33,26 +32,26 @@ export default function PhysicsChargePortSection({ physics }: { physics: Physics
   ];
   return <>
     <Evidence title={physics.title} honesty={port?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.portSamples', 'Returned port samples')} value={rows.length} color="cyan" />
-        <MetricCard label={t('teslaOnly.workbench.latestChargeState', 'Latest returned charge state')} value={last?.charge_state || unknown(t)} color="green" />
-        <MetricCard label={t('teslaOnly.workbench.latestCurrent', 'Latest returned pack current')} value={last?.pack_current_a == null ? unknown(t) : `${fmtNumber(last.pack_current_a)} A`} color="amber" />
-      </Grid>
+      <PhysicsEvidenceBrief physics={physics} id="physics-port-summary" available={port != null}
+        description={t('teslaOnly.portNote', 'Compare adjacent state, latch, current, and schedule samples before treating a paused charge as unplugged. Only Disconnected marks unplugging. Park and firmware come from the same returned reading, not a continuous signal.')}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'samples', label: t('teslaOnly.portSamples', 'Returned port samples'), rawValue: port ? rows.length : null },
+          { metricId: 'status', occurrenceId: 'state', label: t('teslaOnly.workbench.latestChargeState', 'Latest returned charge state'), rawValue: last?.charge_state || null, context: time(last?.at, t) },
+          { metricId: 'number', occurrenceId: 'current', label: t('teslaOnly.workbench.latestCurrent', 'Latest returned pack current'), rawValue: last?.pack_current_a, display: { formatter: raw => ({ value: `${fmtNumber(raw)} A`, unit: '' }) }, context: time(last?.at, t) },
+          { metricId: 'count', occurrenceId: 'missing-current', label: t('teslaOnly.portUnknownCurrentLabel', 'Samples without current'), rawValue: port ? noCurrent : null, context: t('teslaOnly.portUnknownCurrent', 'Samples without current: {{count}}', { count: noCurrent }) },
+          ...byState.map((state): import('@/components/data-display').StatMetric => ({ metricId: 'count', occurrenceId: `state-${state}`, label: state, rawValue: rows.filter(row => (row.charge_state || unknown(t)) === state).length })),
+        ]} />
       <Text as="p" variant="bodySm">{t('teslaOnly.workbench.portContext', 'Latest gear {{gear}} · firmware {{firmware}} · latch {{latch}} · schedule {{schedule}}', {
         gear: last?.gear || unknown(t), firmware: last?.firmware || unknown(t), latch: last?.latch || unknown(t), schedule: last?.scheduled_mode || unknown(t),
       })}</Text>
-      <div className="flex flex-wrap gap-2">
-        {byState.map((state) => <Badge key={state} variant="neutral" size="sm">{state}: {rows.filter((r) => (r.charge_state || unknown(t)) === state).length}</Badge>)}
-        <Badge variant="warning" size="sm">{t('teslaOnly.portUnknownCurrent', 'Samples without current: {{count}}', { count: noCurrent })}</Badge>
-      </div>
-      <Text as="p" variant="caption">{t('teslaOnly.portNote', 'Compare adjacent state, latch, current, and schedule samples before treating a paused charge as unplugged. Only Disconnected marks unplugging. Park and firmware come from the same returned reading, not a continuous signal.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.portTransitions', 'Charge-port transitions and schedule context')}>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.portChanges', 'Observed charge-state changes: {{count}}', { count: transitions.length })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.portDisconnects', 'Disconnected readings: {{count}}', { count: disconnected })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.portSchedule', 'Latest recorded schedule: {{value}}', { value: last?.scheduled_mode || unknown(t) })}</Badge>
-      </div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-port-transitions" available={port != null}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'changes', label: t('teslaOnly.portChangesLabel', 'Observed charge-state changes'), rawValue: port ? transitions.length : null, context: t('teslaOnly.portChanges', 'Observed charge-state changes: {{count}}', { count: transitions.length }) },
+          { metricId: 'count', occurrenceId: 'disconnected', label: t('teslaOnly.portDisconnectsLabel', 'Disconnected readings'), rawValue: port ? disconnected : null, context: t('teslaOnly.portDisconnects', 'Disconnected readings: {{count}}', { count: disconnected }) },
+          { metricId: 'text', occurrenceId: 'schedule', label: t('teslaOnly.scheduleMode', 'Schedule mode'), rawValue: last?.scheduled_mode || null, context: <>{time(last?.at, t)}<div>{t('teslaOnly.portSchedule', 'Latest recorded schedule: {{value}}', { value: last?.scheduled_mode || unknown(t) })}</div></> },
+        ]} />
       {transitions.length ? transitions.slice(-5).reverse().map((row) => <Text key={row.at} as="p" variant="bodySm">
         {t('teslaOnly.portChangeReading', '{{at}}: {{state}} · latch {{latch}} · gear {{gear}} · current {{current}}', {
           at: time(row.at, t), state: row.charge_state || unknown(t), latch: row.latch || unknown(t),

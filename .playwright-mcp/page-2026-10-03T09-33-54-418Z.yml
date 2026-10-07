@@ -1,0 +1,55 @@
+- generic [active] [ref=f12e1]:
+  - generic [ref=f12e2]:
+    - generic [ref=f12e6]: TeslaSync
+    - generic [ref=f12e7]: Fleet Intelligence Platform
+  - generic [ref=f12e9]:
+    - status [ref=f12e10]
+    - link "Skip to main content" [ref=f12e11] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=f12e12]:
+      - status [ref=f12e13]
+      - alert [ref=f12e14]
+      - navigation "Primary" [ref=f12e15]:
+        - link "TeslaSync" [ref=f12e17] [cursor=pointer]:
+          - /url: /
+      - main [ref=f12e26]:
+        - status "Loading..." [ref=f12e29]
+      - contentinfo "Application status" [ref=f12e59]:
+        - generic [ref=f12e60]:
+          - generic [ref=f12e61]:
+            - 'link "API connection status: Connecting…" [ref=f12e62] [cursor=pointer]':
+              - /url: /system-status
+              - generic [ref=f12e67]: API
+            - tooltip "API connection · Connecting…"
+          - generic [ref=f12e69]:
+            - 'link "Live telemetry status: Idle" [ref=f12e70] [cursor=pointer]':
+              - /url: /signal-diff
+              - generic [ref=f12e79]: Idle
+            - tooltip "Live telemetry stream · Idle"
+          - generic [ref=f12e80]:
+            - link "Telemetry honesty meter" [ref=f12e81] [cursor=pointer]:
+              - /url: /
+              - generic [ref=f12e85]: Missing
+            - tooltip "Live 0 · Stale 0 · Guessed 0 · Missing 0 · Stream missing"
+          - generic [ref=f12e86]:
+            - button "Current data with live actions available." [ref=f12e87] [cursor=pointer]:
+              - generic [ref=f12e92]: Now
+            - tooltip "Current data with live actions available."
+        - generic [ref=f12e93]:
+          - generic [ref=f12e94]:
+            - button "Open recently viewed pages, 2 saved" [ref=f12e95] [cursor=pointer]:
+              - generic [ref=f12e99]: Recent
+            - tooltip "Recently viewed pages - 2 pages"
+          - generic [ref=f12e101]:
+            - button "Open presentation options" [ref=f12e102] [cursor=pointer]:
+              - generic [ref=f12e106]: Present
+            - tooltip "Report and kiosk views"
+          - generic [ref=f12e107]:
+            - button "Open help and about. Update or release notes available" [ref=f12e108] [cursor=pointer]:
+              - generic [ref=f12e112]: Help
+            - tooltip "Help and about · Update or release notes available"
+          - generic [ref=f12e115]:
+            - button "Open Helix chat" [ref=f12e116] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=f12e120]
+      - progressbar "Loading"

@@ -284,7 +284,8 @@
     "percentage": "%",
     "timestamp": "Timestamp",
     "unavailable": "Unavailable",
-    "noDataAvailable": "No data available"
+    "noDataAvailable": "No data available",
+    "dash": "—"
   },
   "compat": {
     "banner": {
@@ -859,7 +860,9 @@
       "lat": "Lat",
       "lon": "Lon",
       "home": "Home",
-      "work": "Work"
+      "work": "Work",
+      "latitude": "Lat",
+      "longitude": "Lon"
     },
     "wp": {
       "name": "Name",
@@ -1180,6 +1183,18 @@
       "settings": "Settings",
       "tesla_physics": "Tesla physics",
       "vehicles": "Vehicles"
+    },
+    "brief": {
+      "scope": "Selected vehicle · current route snapshot, latest 200 location snapshots, and independent arrival-energy telemetry; no common source window.",
+      "distance": "Remaining route distance, reported in meters.",
+      "eta": "Source ETA is in minutes; bridged as seconds and displayed in the original minute denomination.",
+      "delay": "Current route traffic delay in seconds; unknown differs from measured no delay.",
+      "average": "Mean of positive measured speeds in the latest 200 snapshots; measured stationary history yields zero, unmeasured history stays unknown.",
+      "arrival": "Expected arrival percentage comes from independent charging telemetry, not a calculation from the route history.",
+      "presenceScope": "Selected vehicle · latest location snapshot. False is a reported away state; missing presence is unknown.",
+      "heading": "Cardinal direction and rounded degrees retain the reported heading.",
+      "description": "Route distance, ETA and delay remain separate from history-derived speed and projected arrival energy.",
+      "presenceDescription": "GPS, heading and reported home/work presence retain their own known and missing states."
     }
   },
   "notFound": {
@@ -2003,6 +2018,9 @@
     "moreLabel": "Additional active filters",
     "removed": "Filter removed",
     "removeAria": "Remove filter {{label}}"
+  },
+  "metricCard": {
+    "moreInfoAbout": "More info about {{label}}"
   },
   "mobile": {
     "refresh": {

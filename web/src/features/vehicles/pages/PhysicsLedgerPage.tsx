@@ -131,13 +131,13 @@ export default function PhysicsLedgerPage() {
                 </div>,
               }]} />
           </FadeIn>
-          <DynamicsPanel ledger={ledger} />
+          <DynamicsPanel ledger={ledger} status={state.status} />
           <DriveLedgerPanel ledger={ledger.drive} />
           <ChargeLedgerPanel ledger={ledger} />
           <ParkLedgerPanel ledger={ledger} />
-          <ThermalPanel ledger={ledger} />
-          <RangePanel ledger={ledger} />
-          <TiresPanel ledger={ledger} />
+          <ThermalPanel ledger={ledger} status={state.status} />
+          <RangePanel ledger={ledger} status={state.status} />
+          <TiresPanel ledger={ledger} status={state.status} />
           <EpochsPanel ledger={ledger} />
           <UnknownPanel ledger={ledger} />
           <BlackBoxPanel points={ledger.black_box} />

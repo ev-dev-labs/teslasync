@@ -1,13 +1,56 @@
 {
   "explore": {
     "subtitle": {
-      "category": "{{matches}} features in the selected category"
+      "category": "{{matches}} features in the selected category",
+      "filtered": "{{matches}} of {{total}} features match \"{{query}}\"",
+      "all": "Every feature in TeslaSync — {{total}} in total."
     },
     "searchLabel": "Filter features",
     "searchPlaceholder": "Filter features by name, section, or description (press / to focus)",
     "sectionsAriaLabel": "Filter features by category",
     "all": "All",
-    "showing": "{{count}} of {{total}} features"
+    "showing": "{{count}} of {{total}} features",
+    "pageTitle": "Explore features",
+    "brief": {
+      "status": {
+        "unavailable": "Fleet unavailable",
+        "offline": "Fleet offline",
+        "retained": "Retained fleet",
+        "pending": "Fleet pending",
+        "refreshing": "Fleet refreshing",
+        "ready": "Catalog ready"
+      },
+      "selectedCategory": "selected category",
+      "scope": "Visible catalog and returned fleet list · no date window",
+      "freshnessUnknown": "Fleet load time not supplied",
+      "freshness": "Fleet last loaded: {{time}}",
+      "featuresDetail": "Visible catalog entries after vehicle and authentication gates; unaffected by search or category filters.",
+      "categoriesDetail": "Distinct categories in the visible catalog before search and category filters.",
+      "filterContext": "Search: {{query}} · Category: {{category}}",
+      "noSearch": "No search filter",
+      "vehiclesDetail": "Vehicles in the returned fleet list, not the workspace vehicle selection or a historical total.",
+      "vehiclesMissing": "No fleet list is available; vehicle-gated destinations remain hidden.",
+      "eyebrow": "Feature discovery",
+      "description": "Catalog counts follow visibility gates; showing follows your search and category. Fleet availability is independent of catalog navigation.",
+      "provenance": "Local navigation catalog, authentication mode, and the vehicles query snapshot. Catalog counts are derived, not vehicle telemetry.",
+      "offlineRetained": "Fleet refresh is paused; retained vehicles still determine destination eligibility."
+    },
+    "kpi": {
+      "filtered": "matching filter",
+      "all": "all features",
+      "features": "Features",
+      "categories": "Categories",
+      "showing": "Showing",
+      "vehicles": "Vehicles"
+    },
+    "title": "Explore features",
+    "overview": "Feature overview",
+    "empty": {
+      "title": "No features match \"{{query}}\"",
+      "body": "Try a different word, or open the command palette (⌘K) to search across pages, settings, and actions.",
+      "didYouMean": "Did you mean",
+      "clear": "Clear filter"
+    }
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",

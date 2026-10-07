@@ -1,0 +1,26 @@
+[
+  {
+    "oldKey": "operations.status.loading",
+    "newKey": "operations.charging.sessionsLoading",
+    "english": "Updating",
+    "approval": "Exact parent-approved source-specific sibling; parent alone owns canonical/generated catalog integration"
+  },
+  {
+    "oldKey": "operations.charging.title",
+    "newKey": "operations.charging.returnedSessionsTitle",
+    "english": "Cost, energy, and session evidence in one operating view",
+    "approval": "Exact parent-approved source-specific sibling; parent alone owns canonical/generated catalog integration"
+  },
+  {
+    "oldKey": "operations.charging.description",
+    "newKey": "operations.charging.returnedSessionsDescription",
+    "english": "The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.",
+    "approval": "Exact parent-approved source-specific sibling; parent alone owns canonical/generated catalog integration"
+  },
+  {
+    "oldKey": "operations.charging.provenance",
+    "newKey": "operations.charging.returnedSessionsProvenance",
+    "english": "Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display.",
+    "approval": "Exact parent-approved source-specific sibling; parent alone owns canonical/generated catalog integration"
+  }
+]

@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { Delta } from '@/components/data-display';
+import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useDrivingStats } from '@/api/hooks/useDriving';
@@ -8,7 +10,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 
-import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDistanceToSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import type { Direction, MetricUnit } from '@/lib/metricSemantics';
 import type { DriveDetail } from '@/types/driving';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -32,7 +34,7 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
-  const { formatEnergyCost, pricingState } = useFormatting();
+  const { formatEnergyCost, pricingState, costPerKwh } = useFormatting();
   const query = useDrivingStats(drive.vehicleId != null ? String(drive.vehicleId) : undefined);
   const state = useDataState(query, { provenance: 'historical' });
   const fleet = state.data;
@@ -131,22 +133,59 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
   ];
   const performance = rows.filter((row) =>
     row.key === 'average-speed' || row.key === 'maximum-speed' || row.key === 'battery-rate');
-  const metric = (row: SummaryMetric, tiled: boolean) => (
-    <div key={row.key} data-drive-metric={row.key}
-      className={`min-w-0 ${tiled ? 'rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4' : 'py-2'} ${row.key === 'odometer' ? 'min-[380px]:col-span-2 xl:col-span-1' : ''}`}>
-      <Text variant="metricLabel">{row.label}</Text>
-      <div className="mt-2 flex flex-wrap items-baseline gap-1">
-        <Text as="span" variant="metricValue" className="break-words tabular-nums">
-          {row.formattedValue ?? (row.value != null ? fmtNumber(row.value) : '—')}
-        </Text>
-        {row.unit ? <Text as="span" size="xs" color="muted">{row.unit}</Text> : null}
-      </div>
-      {row.description ? <Text as="p" variant="caption" className="mt-2">{row.description}</Text> : null}
-      {row.value != null && row.baseline != null ? (
-        <Delta metric={{ direction: row.direction, unit: row.metricUnit }} current={row.value} previous={row.baseline} display="percent" comparedTo={row.comparedTo} />
-      ) : null}
-    </div>
-  );
+  const recordPeriod: StatPeriod = {
+    kind: 'event', eventId: String(drive.id), start: drive.startTs,
+    end: drive.endTs ?? null, label: t('driveDetail.heroGauges', 'Drive summary'),
+    provenance: t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history'),
+  };
+  const canonicalMetric = (row: SummaryMetric): StatMetric => {
+    let metricId: StatMetric['metricId'] = 'number';
+    let rawValue: number | null = row.value;
+    switch (row.key) {
+      case 'drive-cost':
+        metricId = 'currency';
+        rawValue = energyWh != null && costPerKwh != null ? energyWh / 1000 * costPerKwh : null;
+        break;
+      case 'distance': metricId = 'distance'; rawValue = meaningful ? distance : null; break;
+      case 'duration': metricId = 'duration'; rawValue = row.value != null ? row.value * 60 : null; break;
+      case 'average-speed': metricId = 'speed'; rawValue = meaningful ? finite(drive.avgSpeedMps) : null; break;
+      case 'maximum-speed': metricId = 'speed'; rawValue = meaningful ? finite(drive.maxSpeedMps) : null; break;
+      case 'consumption': metricId = 'efficiency'; rawValue = consumption != null && distance != null && distance > 0 ? consumption / distance : null; break;
+      case 'drive-energy': metricId = 'energy'; rawValue = energyWh; break;
+      case 'battery-change': metricId = 'percent'; rawValue = finite(drive.startBatteryPct) ?? finite(drive.endBatteryPct); break;
+      case 'odometer': metricId = 'distance'; rawValue = odometer.start != null || odometer.end != null
+        ? convertDistanceToSI(odometer.start ?? odometer.end ?? 0, unitPrefs.distance) : null; break;
+      case 'battery-rate': metricId = 'rate'; break;
+    }
+    return {
+      metricId, occurrenceId: row.key, label: row.label, rawValue,
+      description: row.description ?? t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history'),
+      display: { formatter: () => ({
+        value: row.formattedValue ?? (row.value != null ? fmtNumber(row.value) : '—'),
+        unit: row.unit,
+      }) },
+      context: row.key === 'battery-change'
+        ? t('driveDetail.brief.batteryEndpoints', 'Recorded battery endpoints: {{start}}% → {{end}}%; an absent endpoint remains unknown.', {
+          start: finite(drive.startBatteryPct) != null ? fmtNumber(drive.startBatteryPct!) : '—',
+          end: finite(drive.endBatteryPct) != null ? fmtNumber(drive.endBatteryPct!) : '—',
+        })
+        : row.key === 'odometer' ? t('driveDetail.brief.odometerSource', 'Odometer endpoints use {{source}} evidence; missing endpoints are not zero.', { source: odometer.source })
+          : row.key === 'battery-rate' ? t('driveDetail.brief.batteryRateBasis', 'Recorded battery percentage-point change divided by positive measured distance, per 100 {{unit}}.', { unit: unitPrefs.distance })
+            : undefined,
+      comparison: row.key === 'battery-change' && finite(drive.endBatteryPct) != null
+        ? { metricId: 'percent', rawValue: drive.endBatteryPct!, period: recordPeriod,
+          label: t('driveDetail.brief.endBattery', 'Recorded end battery') }
+        : row.key === 'odometer' && odometer.end != null
+          ? { metricId: 'distance', rawValue: convertDistanceToSI(odometer.end, unitPrefs.distance), period: recordPeriod,
+            label: drive.endTs == null ? t('driveDetail.brief.latestOdometer', 'Latest observed odometer') : t('driveDetail.brief.endOdometer', 'Recorded end odometer') }
+          : undefined,
+      comparisonContent: row.value != null && row.baseline != null
+        ? <Delta metric={{ direction: row.direction, unit: row.metricUnit }}
+          current={row.value} previous={row.baseline} display="percent" comparedTo={row.comparedTo} /> : undefined,
+    };
+  };
+  const basicMetrics = basics.map(canonicalMetric);
+  const performanceMetrics = performance.map(canonicalMetric);
   return (
     <FadeIn>
       <GlassPanel className="p-4 sm:p-5" data-testid="drive-canonical-summary">
@@ -170,18 +209,17 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
         ) : null}
         {pricingState ? <StaleRefreshWarning state={pricingState} label={t('nav.settings', 'Settings')} /> : null}
         <div role="group" aria-label={t('driveDetail.heroGauges', 'Drive summary')}>
-          <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 xl:grid-cols-4">
-            {basics.slice(0, 4).map(row => metric(row, true))}
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 xl:grid-cols-3">
-            {basics.slice(4).map(row => metric(row, true))}
-          </div>
+          <NestedDrivingBrief metrics={basicMetrics}
+            title={t('driveDetail.heroGauges', 'Drive summary')}
+            description={t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history')}
+            period={recordPeriod}
+            retained={state.refreshError != null || pricingState?.refreshError != null} />
         </div>
         <div className="mt-5 border-t border-[var(--border-subtle)] pt-4">
-          <Text as="p" variant="caption" className="mb-3">
-            {t('driveDetail.report.performance', 'Performance and comparisons')}
-          </Text>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{performance.map(row => metric(row, false))}</div>
+          <NestedDrivingBrief metrics={performanceMetrics}
+            title={t('driveDetail.report.performance', 'Performance and comparisons')}
+            description={t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history')}
+            period={recordPeriod} retained={state.refreshError != null} />
         </div>
         {drive.energyUsedWh == null && consumption != null ? (
           <Text as="p" variant="caption" className="mt-3">

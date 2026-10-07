@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { Badge, DataTable, Select, Text } from '@/components/ui';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
+import { DataTable, Select, Text } from '@/components/ui';
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, pagination, time } from './PhysicsPageShell';
 import type { LogbookEntry } from '@/types/teslaPhysics';
@@ -33,13 +32,15 @@ export default function PhysicsLogbookSection({ physics }: { physics: PhysicsPag
   ];
   return <>
     <Evidence title={physics.title} honesty={log?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.logbookEntries', 'Returned entries')} value={entries.length} color="cyan" />
-        <MetricCard label={t('teslaOnly.historicalWords', 'Recorded gear / charge-state entries')} value={states.length} color="green" />
-        <MetricCard label={t('teslaOnly.sessionWords', 'Session-boundary entries')} value={sessions.length} color="amber" />
-      </Grid>
-      <div className="flex flex-wrap gap-2">{kinds.map((kind) =>
-        <Badge key={kind} variant="neutral" size="sm">{kind}: {entries.filter((r) => r.kind === kind).length}</Badge>)}</div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-logbook-summary" available={log != null}
+        description={t('teslaOnly.logbookNote', 'Observed historical gear and charge-state changes appear beside drive and charge session boundaries. The first recorded value establishes observed state, not the exact transition time. Synthetic live state is excluded when recorded entries exist and appears only as a fallback when there are none. Gaps and unobserved changes remain unknown.')}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'entries', label: t('teslaOnly.logbookEntries', 'Returned entries'), rawValue: log ? entries.length : null },
+          { metricId: 'count', occurrenceId: 'states', label: t('teslaOnly.historicalWords', 'Recorded gear / charge-state entries'), rawValue: log ? states.length : null },
+          { metricId: 'count', occurrenceId: 'sessions', label: t('teslaOnly.sessionWords', 'Session-boundary entries'), rawValue: log ? sessions.length : null },
+          { metricId: 'count', occurrenceId: 'unlinked', label: t('teslaOnly.logbookUnlinkedLabel', 'Session-like entries without a positive ID'), rawValue: log ? unlinked : null },
+          ...kinds.map((kind): import('@/components/data-display').StatMetric => ({ metricId: 'count', occurrenceId: `kind-${kind}`, label: kind, rawValue: entries.filter(row => row.kind === kind).length })),
+        ]} />
       <Text as="p" variant="bodySm">{t('teslaOnly.logbookFirst', 'First recorded gear: {{gear}} · first charge state: {{charge}}', {
         gear: firstGear?.word || t('teslaOnly.unknown', 'unknown'), charge: firstCharge?.word || t('teslaOnly.unknown', 'unknown'),
       })}</Text>
@@ -47,7 +48,6 @@ export default function PhysicsLogbookSection({ physics }: { physics: PhysicsPag
         gear: lastGear?.word || t('teslaOnly.unknown', 'unknown'), charge: lastCharge?.word || t('teslaOnly.unknown', 'unknown'),
       })}</Text>
       <Text as="p" variant="caption">{t('teslaOnly.logbookUnlinked', '{{count}} session-like entries have no positive session ID and cannot link to a recorded session.', { count: unlinked })}</Text>
-      <Text as="p" variant="caption">{t('teslaOnly.logbookNote', 'Observed historical gear and charge-state changes appear beside drive and charge session boundaries. The first recorded value establishes observed state, not the exact transition time. Synthetic live state is excluded when recorded entries exist and appears only as a fallback when there are none. Gaps and unobserved changes remain unknown.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.logbookNarrative', 'Observed narrative and session drilldowns')}>
       {entries.length === 0 && <Text as="p" variant="bodySm">{t('teslaOnly.logbookNoEntries', 'No historical changes or session boundaries returned in the bounded window. Unobserved states remain unknown.')}</Text>}

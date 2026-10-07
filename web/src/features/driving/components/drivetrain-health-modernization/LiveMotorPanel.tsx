@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import type { MotorSnapshot } from '@/api/types';
 import type { DataState } from '@/api/dataState';
 import { LayoutCard } from '@/components/layout/layout-reference';
-import { StatGroup, type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { Badge, DataTable, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -56,32 +57,32 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
       rawValue: motorLatest?.source,
     },
     {
-      metricId: 'text',
+      metricId: 'number',
       occurrenceId: 'rpm-front',
       label: t('drivetrain.rpmFront', 'Front Motor RPM'),
-      rawValue: finite(motorLatest?.motor_rpm_front) != null
-        ? scalar(motorLatest?.motor_rpm_front, 'RPM', true) : null,
+      rawValue: finite(motorLatest?.motor_rpm_front),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: 'RPM' }) },
     },
     {
-      metricId: 'text',
+      metricId: 'number',
       occurrenceId: 'rpm-rear',
       label: t('drivetrain.rpmRear', 'Rear Motor RPM'),
-      rawValue: finite(motorLatest?.motor_rpm_rear) != null
-        ? scalar(motorLatest?.motor_rpm_rear, 'RPM', true) : null,
+      rawValue: finite(motorLatest?.motor_rpm_rear),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: 'RPM' }) },
     },
     {
-      metricId: 'text',
+      metricId: 'number',
       occurrenceId: 'torque-front',
       label: t('drivetrain.torqueFront', 'Front Torque'),
-      rawValue: finite(motorLatest?.torque_nm_front) != null
-        ? scalar(motorLatest?.torque_nm_front, 'Nm') : null,
+      rawValue: finite(motorLatest?.torque_nm_front),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'Nm' }) },
     },
     {
-      metricId: 'text',
+      metricId: 'number',
       occurrenceId: 'torque-rear',
       label: t('drivetrain.torqueRear', 'Rear Torque'),
-      rawValue: finite(motorLatest?.torque_nm_rear) != null
-        ? scalar(motorLatest?.torque_nm_rear, 'Nm') : null,
+      rawValue: finite(motorLatest?.torque_nm_rear),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'Nm' }) },
     },
     {
       metricId: 'temperature',
@@ -108,10 +109,11 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
       rawValue: finite(motorLatest?.battery_temp_c),
     },
     {
-      metricId: 'text',
+      metricId: 'number',
       occurrenceId: 'isolation',
       label: t('drivetrain.isolationResistance', 'HV Isolation'),
-      rawValue: isolationValue != null ? scalar(isolationValue, 'kΩ') : null,
+      rawValue: isolationValue,
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kΩ' }) },
       context: isolationValue == null ? t('drivetrain.modernization.unknown', 'Unknown')
         : isolationValue >= 500 ? t('drivetrain.modernization.isolationHigh', '500 kΩ or above')
           : isolationValue >= 100 ? t('drivetrain.modernization.isolationMiddle', '100–499 kΩ')
@@ -152,9 +154,12 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
     </Badge>
     <SourceBoundary state={state} label={t('drivetrain.liveMotor', 'Live Motor Status')}
       loading={loading} empty={!motorLatest} emptyMessage={t('drivetrain.noLiveMotor', 'No live motor telemetry yet')}>
-      <StatGroup metrics={metrics} preferences={preferences}
+      <NestedDrivingBrief metrics={metrics} preferences={preferences}
+        title={t('drivetrain.brief.liveReadings', 'Returned motor readings')}
+        description={period.provenance ?? period.label}
+        loading={loading} unavailable={state.fatalError != null}
         period={period}
-        retained={state.hasData} />
+        retained={state.refreshError != null} />
       <DataTable tableId="drivetrain-health:live-details" variant="embedded" data={details} columns={columns}
         keyExtractor={row => row.key} caption={t('drivetrain.modernization.liveDetails', 'Live motor record details')}
         mobileColumns={['label', 'value']} mobilePresentation={{

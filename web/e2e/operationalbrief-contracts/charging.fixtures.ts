@@ -1,4 +1,4 @@
-import type { ChargingSession, PhysicsLedger } from '../../src/api/types';
+import type { ChargeTelemetryReading, ChargingSession, PhysicsLedger } from '../../src/api/types';
 import type { ChargePhysics } from '../../src/types/teslaPhysics';
 import type {
   TeslaChargingHistoryEntry,
@@ -47,6 +47,48 @@ export const incompleteSession: ChargingSession = {
   duration_min: 0, peak_power_w: null, avg_power_w: null, cost_decimal: null,
   live: true,
 };
+
+export const unknownCostSession: ChargingSession = {
+  ...measuredWindow[1], cost_decimal: null,
+};
+export const mixedCostWindow: ChargingSession[] = [
+  measuredSession,
+  unknownCostSession,
+  { ...measuredWindow[1], id: 204, total_energy_added_wh: 9000 },
+];
+
+export const thermalSession: ChargingSession = {
+  ...measuredWindow[1],
+  ended_at: '2026-08-24T08:02:00.000Z', duration_min: 2,
+  total_energy_added_wh: 1000, peak_power_w: 5000, avg_power_w: 5000,
+};
+
+function thermalReading(ts: string, heaterW: number | null, energyWh: number): ChargeTelemetryReading {
+  return {
+    session_id: thermalSession.id, vehicle_id: 7, ts, created_at: ts,
+    battery_heater_on: heaterW == null ? null : heaterW > 0,
+    battery_heater_power_w: heaterW,
+    ac_charging_power_w: 0, dc_charging_power_w: 5000,
+    ac_charging_energy_in_wh: 0, dc_charging_energy_in_wh: energyWh,
+    charger_voltage_v: null, charger_actual_current_a: null,
+    charger_pilot_current_a: null, charger_phases: null,
+    charge_limit_soc_pct: null, charge_request: null, fast_charger_type: null,
+    charging_cable_type: null, charge_port_door_open: null, charge_port_latch: null,
+  };
+}
+
+// Raw W and Wh match the selected session's typed telemetry contract.
+export const thermalTelemetry: ChargeTelemetryReading[] = [
+  thermalReading('2026-08-24T08:00:00.000Z', 1000, 0),
+  thermalReading('2026-08-24T08:01:00.000Z', 1000, 500),
+  thermalReading('2026-08-24T08:02:00.000Z', 0, 1000),
+];
+export const zeroHeaterTelemetry: ChargeTelemetryReading[] = thermalTelemetry.map(reading => ({
+  ...reading, battery_heater_on: false, battery_heater_power_w: 0,
+}));
+export const missingHeaterTelemetry: ChargeTelemetryReading[] = thermalTelemetry.map(reading => ({
+  ...reading, battery_heater_on: null, battery_heater_power_w: null,
+}));
 
 export const invoicedSession: ChargingSession = {
   ...measuredSession, charger_type: 'Tesla', billed_energy_wh: 20000,

@@ -25,8 +25,8 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import { Grid } from '@/components/layout';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { useUnits } from '@/hooks/useUnits';
 import { defaultExportFilename, downloadJSON, downloadRowsAsCSV } from '@/lib/csvExport';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -82,6 +82,28 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const comparison = insights?.drive_analytics?.comparison;
+  const metrics: StatMetric[] = [
+    { metricId: 'distance', occurrenceId: 'period-fsd-distance', rawValue: insights?.totals.fsd_distance_m,
+      label: t('fsd.comparison.distance', 'Reported FSD distance'),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
+      context: comparison?.fsd_distance_change_m == null
+        ? t('fsd.comparison.noDistanceBaseline', 'Periods lack comparable trusted coverage')
+        : t('fsd.comparison.distanceDelta', '{{delta}} vs previous', {
+          delta: `${comparison.fsd_distance_change_m >= 0 ? '+' : ''}${formatDistance(comparison.fsd_distance_change_m)}`,
+        }) },
+    { metricId: 'percent', occurrenceId: 'period-fsd-share', rawValue: insights?.totals.fsd_share_pct,
+      label: t('fsd.comparison.share', 'Share of observed driving'),
+      context: comparison?.fsd_share_change_pct_points == null
+        ? t('fsd.comparison.noShareBaseline', 'Share periods lack comparable trusted coverage')
+        : t('fsd.comparison.shareDelta', '{{delta}} percentage points', {
+          delta: `${comparison.fsd_share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(comparison.fsd_share_change_pct_points)}`,
+        }) },
+    { metricId: 'distance', occurrenceId: 'previous-fsd-distance', rawValue: comparison?.previous_fsd_distance_m,
+      label: t('fsd.comparison.previous', 'Previous FSD distance'),
+      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
+      context: comparison ? `${comparison.previous_period.start_date} - ${comparison.previous_period.end_date} · ${comparison.previous_period.timezone}`
+        : t('fsd.comparison.notLoaded', 'Previous period not loaded') },
+  ];
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="fsd-period-comparison">
@@ -96,52 +118,12 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
         )}
       </Text>
       <FsdSectionBody state={state} className="min-h-28">
-        <Grid cols={{ default: 1, sm: 3 }} gap={4}>
-          <MetricCard
-            label={t('fsd.comparison.distance', 'Reported FSD distance')}
-            value={insights?.totals.fsd_distance_m == null
-              ? '-'
-              : formatDistance(insights.totals.fsd_distance_m)}
-            subtitle={comparison?.fsd_distance_change_m == null
-              ? t(
-                  'fsd.comparison.noDistanceBaseline',
-                  'Periods lack comparable trusted coverage',
-                )
-              : t('fsd.comparison.distanceDelta', '{{delta}} vs previous', {
-                  delta: `${comparison.fsd_distance_change_m >= 0 ? '+' : ''}${formatDistance(
-                    comparison.fsd_distance_change_m,
-                  )}`,
-                })}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('fsd.comparison.share', 'Share of observed driving')}
-            value={insights?.totals.fsd_share_pct == null
-              ? '-'
-              : `${fmtNumber(insights.totals.fsd_share_pct)}%`}
-            subtitle={comparison?.fsd_share_change_pct_points == null
-              ? t(
-                  'fsd.comparison.noShareBaseline',
-                  'Share periods lack comparable trusted coverage',
-                )
-              : t('fsd.comparison.shareDelta', '{{delta}} percentage points', {
-                  delta: `${comparison.fsd_share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(
-                    comparison.fsd_share_change_pct_points,
-                  )}`,
-                })}
-            color="purple"
-          />
-          <MetricCard
-            label={t('fsd.comparison.previous', 'Previous FSD distance')}
-            value={comparison?.previous_fsd_distance_m == null
-              ? '-'
-              : formatDistance(comparison.previous_fsd_distance_m)}
-            subtitle={comparison
-              ? `${comparison.previous_period.start_date} - ${comparison.previous_period.end_date}`
-              : t('fsd.comparison.notLoaded', 'Previous period not loaded')}
-            color="green"
-          />
-        </Grid>
+        <NestedDrivingBrief metrics={metrics}
+          title={t('fsd.brief.periodQuantities', 'Current and previous period quantities')}
+          description={t('fsd.comparison.subtitle', 'The immediately preceding window uses the same duration and timezone.')}
+          loading={state.isLoading} unavailable={state.error != null || insights == null}
+          period={{ kind: 'unknown', label: insights ? `${insights.period.start_at} – ${insights.period.end_at} · ${insights.period.timezone}` : t('fsd.notMeasured', 'Not measured'),
+            reason: t('fsd.comparison.subtitle', 'The immediately preceding window uses the same duration and timezone.') }} />
       </FsdSectionBody>
     </GlassPanel>
   );

@@ -12,7 +12,11 @@
       "enable": "Enable",
       "disable": "Disable",
       "delete": "Delete",
-      "selectionSummary": "{{count}} selected · {{filtered}} matching loaded rules · {{loaded}} loaded"
+      "selectionSummary": "{{count}} selected · {{filtered}} matching loaded rules · {{loaded}} loaded",
+      "deleteConfirm": {
+        "title": "Delete automations?",
+        "body": "Selected automations will stop running and be removed permanently. This cannot be undone."
+      }
     },
     "empty": {
       "title": "No automations yet",
@@ -24,7 +28,27 @@
       "runs": "Runs",
       "status": "Status"
     },
-    "selectAutomation": "Select automation {{name}}"
+    "selectAutomation": "Select automation {{name}}",
+    "kpi": {
+      "runs": "Total runs",
+      "failures": "Failures",
+      "total": "Total",
+      "active": "Active",
+      "disabled": "Disabled",
+      "autoDisabled": "Auto-disabled"
+    },
+    "filter": {
+      "all": "All statuses",
+      "active": "Active",
+      "disabled": "Disabled",
+      "autoDisabled": "Auto-disabled",
+      "statusAria": "Filter automations by status"
+    },
+    "search": "Search automations…",
+    "searchAria": "Search automations",
+    "subtitle": "Bulk-manage automations. Click an automation to edit it in the builder.",
+    "new": "New",
+    "kpis": "Automation summary"
   },
   "automations": {
     "historyPage": {
@@ -208,7 +232,46 @@
         "isClimateOn": "Climate on",
         "sentryMode": "Sentry Mode",
         "state": "Vehicle state"
-      }
+      },
+      "triggerNone": "Not set",
+      "brief": {
+        "context": "Current editor draft only. Publishing still requires validation and an explicit save.",
+        "eyebrow": "Automation draft",
+        "scope": "Editor configuration; not execution history",
+        "unsaved": "Local changes not published",
+        "editor": "Current editor state"
+      },
+      "summaryTrigger": "Trigger",
+      "summaryConditions": "Conditions",
+      "onlyIfDesc": "Optional checks that must pass before actions run.",
+      "summaryActions": "Actions",
+      "thenDesc": "Actions are executed in order.",
+      "statusEnabled": "Enabled",
+      "statusDisabled": "Disabled",
+      "summaryStatus": "Status",
+      "readyName": "Name added",
+      "readyTrigger": "Trigger configured",
+      "readyActions": "At least one action",
+      "subtitle": "Configure supported typed triggers, conditions, and actions for your automation.",
+      "summary": "Automation summary",
+      "readyToSave": "Ready to save",
+      "notReady": "Not ready yet",
+      "descriptionPlaceholder": "Prepare the car for the morning commute",
+      "whenDesc": "Choose the supported typed contract that starts this automation.",
+      "emptyTrigger": "Select a supported trigger type to configure when this automation starts.",
+      "assistant": "Builder assistant",
+      "readiness": "Readiness",
+      "readyDone": "complete",
+      "readyPending": "incomplete",
+      "presetHint": "Not sure where to start? Browse typed automation templates.",
+      "triggerSchedule": "Schedule",
+      "triggerEvent": "Vehicle event",
+      "triggerGeofence": "Geofence",
+      "triggerSignal": "Signal threshold",
+      "cronHint": "minute hour day-of-month month day-of-week",
+      "geofenceLoading": "Loading geofences…",
+      "geofenceError": "Could not load geofences",
+      "geofenceEmpty": "No geofences configured yet"
     },
     "recentActivity": "Recent activity",
     "live": "Live",
@@ -244,7 +307,8 @@
       "total": "Total",
       "active": "Active",
       "disabled": "Disabled",
-      "autoDisabled": "Auto-disabled"
+      "autoDisabled": "Auto-disabled",
+      "aria": "Automation summary"
     },
     "filterStatus": "Filter by status",
     "search": "Search automations...",
@@ -315,7 +379,90 @@
       "toggleAria": "Show or hide quick start templates"
     },
     "empty": "No automations yet. Create a typed automation to get started!",
-    "noMatch": "No automations match your filters"
+    "noMatch": "No automations match your filters",
+    "historyBrief": {
+      "context": "Server summary across the selected period and rule/status filters, not just this page of rows.",
+      "noRuns": "No completed runs in this summary; a rate and average duration are undefined.",
+      "eyebrow": "Automation executions",
+      "loading": "Loading executions",
+      "unavailable": "Summary unavailable",
+      "retained": "Retained execution summary",
+      "available": "Summary loaded",
+      "unknownScope": "Execution window supplied by the caller",
+      "freshness": "History response; live events are a separate source",
+      "bounds": "{{start}} inclusive → {{end}} exclusive · rule: {{rule}} · status: {{status}}"
+    },
+    "brief": {
+      "countContext": "Full loaded rule set, before status and search filters.",
+      "counterContext": "Cumulative counters on loaded rules; their start time is not supplied.",
+      "eyebrow": "Automation rules",
+      "title": "Rule inventory",
+      "description": "Review the loaded rules without changing their triggers, conditions, or actions.",
+      "loading": "Loading rules",
+      "unavailable": "Rules unavailable",
+      "retained": "Retained rules",
+      "available": "Rules loaded",
+      "scope": "All loaded rules · unfiltered",
+      "freshness": "Rule response; not a live execution stream"
+    },
+    "activityBrief": {
+      "context": "History aggregate window is not supplied. Independent live events and recent rows are not this summary denominator.",
+      "eyebrow": "Execution history",
+      "scope": "History aggregate · window unknown"
+    },
+    "totalRunsCount": "{{count}} total",
+    "successRateValue": "{{value}} success",
+    "avgDurationValue": "{{value}} avg",
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "disabled": "Disabled",
+      "autoDisabled": "Auto-disabled"
+    },
+    "importTypedEnvelopeRequired": "Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.",
+    "importFailedWithReason": "Typed automation import failed: {{message}}",
+    "importFileLabel": "Choose automation export file",
+    "autoDisabledTitle": "Attention needed",
+    "autoDisabledWarning": "{{count}} automation(s) have been auto-disabled due to repeated failures.",
+    "filterCount": "{{shown}} / {{total}}",
+    "yourAutomations": "Your automations",
+    "showingCount": "Showing {{count}}",
+    "emptyCta": "Create automation",
+    "noMatchCta": "Reset filters",
+    "events": {
+      "driveStart": "Drive starts",
+      "driveEnd": "Drive ends",
+      "chargeStart": "Charging starts",
+      "chargeEnd": "Charging ends",
+      "sleepStart": "Sleep starts",
+      "sleepEnd": "Sleep ends",
+      "online": "Comes online",
+      "offline": "Goes offline",
+      "sentryAlert": "Sentry alert"
+    },
+    "geofence": {
+      "enter": "Enter",
+      "exit": "Exit",
+      "dwell": "Dwell"
+    },
+    "operators": {
+      "equals": "=",
+      "notEquals": "!=",
+      "lessThan": "<",
+      "lessThanOrEqual": "<=",
+      "greaterThan": ">",
+      "greaterThanOrEqual": ">=",
+      "changed": "Changed",
+      "crossedAbove": "Crossed above",
+      "crossedBelow": "Crossed below"
+    },
+    "event": {
+      "triggered": "triggered",
+      "succeeded": "succeeded",
+      "failed": "failed",
+      "skipped": "skipped",
+      "state_changed": "state_changed"
+    }
   },
   "comfort": {
     "title": "Cabin comfort Autopilot",

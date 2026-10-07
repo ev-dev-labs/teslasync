@@ -1,8 +1,9 @@
 import { Activity, AlertTriangle, CheckCircle2, Clock3, Target } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import {
-  Badge, GlassPanel, MetricLabel, MetricValue, PanelTitle, Text,
+  Badge, GlassPanel, MetricLabel, PanelTitle, Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { TargetBand, TargetSummary } from '../../lib/efficiencyTarget';
@@ -100,12 +101,14 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
             </div>
             {latest ? (
               <div className="mt-5 space-y-3">
-                <div>
-                  <MetricValue>{formatEfficiency(latest.whPerKm)}</MetricValue>
-                  <MetricLabel>
-                    {t('effTarget.pulse.consumption', 'Consumption')}
-                  </MetricLabel>
-                </div>
+                <NestedDrivingBrief title={t('effTarget.brief.completedTitle', 'Completed-week consumption')}
+                  description={marginLabel} loading={state.isLoading} unavailable={state.error != null}
+                  period={{ kind: 'unknown', label: formatWeek(latest.weekStart),
+                    reason: t('effTarget.brief.completedScope', 'Latest completed eligible week; target grading and streaks exclude the active week.') }}
+                  metrics={[{ metricId: 'efficiency', occurrenceId: 'completed-consumption',
+                    rawValue: latest.whPerKm == null ? null : latest.whPerKm / 1000,
+                    label: t('effTarget.pulse.consumption', 'Consumption'), context: marginLabel,
+                    display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } }]} />
                 <div className="flex items-start gap-2">
                   {latest.hit ? (
                     <CheckCircle2
@@ -149,30 +152,22 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
               </Badge>
             </div>
             {active ? (
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                <div>
-                  <MetricValue className="text-lg">
-                    {formatEfficiency(active.whPerKm)}
-                  </MetricValue>
-                  <MetricLabel>
-                    {t('effTarget.pulse.consumption', 'Consumption')}
-                  </MetricLabel>
-                </div>
-                <div>
-                  <MetricValue className="text-lg">
-                    {formatDistance(active.distanceM)}
-                  </MetricValue>
-                  <MetricLabel>
-                    {t('effTarget.pulse.distance', 'Distance')}
-                  </MetricLabel>
-                </div>
-                <div>
-                  <MetricValue className="text-lg">{active.drives}</MetricValue>
-                  <MetricLabel>
-                    {t('effTarget.pulse.drives', 'Drives')}
-                  </MetricLabel>
-                </div>
-              </div>
+              <NestedDrivingBrief title={t('effTarget.brief.activeTitle', 'Active-week observations')}
+                description={t('effTarget.status.inProgress', 'In progress · not graded')}
+                loading={state.isLoading} unavailable={state.error != null}
+                period={{ kind: 'unknown', label: formatWeek(active.weekStart),
+                  reason: t('effTarget.pulse.activeHint', 'Snapshot only') }}
+                metrics={[
+                  { metricId: 'efficiency', occurrenceId: 'active-consumption',
+                    rawValue: active.whPerKm == null ? null : active.whPerKm / 1000,
+                    label: t('effTarget.pulse.consumption', 'Consumption'),
+                    display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } },
+                  { metricId: 'distance', occurrenceId: 'active-distance', rawValue: active.distanceM,
+                    label: t('effTarget.pulse.distance', 'Distance'),
+                    display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+                  { metricId: 'count', occurrenceId: 'active-drives', rawValue: active.drives,
+                    label: t('effTarget.pulse.drives', 'Drives') },
+                ]} />
             ) : (
               <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
                 className="py-8"

@@ -238,6 +238,39 @@
       "costMinor": "Cost (minor units)",
       "currency": "Currency",
       "description": "Description"
+    },
+    "brief": {
+      "source": {
+        "initial": "Awaiting source",
+        "initialFailure": "Source unavailable",
+        "unavailable": "Source reports no data",
+        "partial": "Partial source data",
+        "stale": "Retained source data",
+        "ok": "Loaded source data"
+      },
+      "refreshBlocked": "Refresh paused",
+      "refreshing": "Refreshing source data",
+      "receivedAt": "Received {{time}}",
+      "receivedUnknown": "Source receipt time unavailable",
+      "listCoverage": "{{loaded}} loaded of {{total}} source records; offset {{offset}}, limit {{limit}}",
+      "coverageUnknown": "List coverage unavailable",
+      "listWindow": "Operational lists are not date-filtered.",
+      "forecastWindow": "Forecast source window: {{from}} – {{to}}",
+      "forecastWindowUnknown": "Forecast source window unavailable",
+      "reservationsMeaning": "Requested or confirmed reservations in the loaded records.",
+      "assignmentsMeaning": "Distinct vehicle IDs in the loaded assignments; not a count of assignments active at this instant.",
+      "workOrdersMeaning": "Loaded work orders excluding completed and cancelled orders.",
+      "forecastMeaning": "Arithmetic mean of expected utilization across returned vehicle-day points, rounded to one decimal.",
+      "forecastGenerated": "Forecast generated {{time}}",
+      "forecastPoints": "{{count}} returned vehicle-day points",
+      "forecastLimitations": "Forecast limitations: {{limitations}}",
+      "partialCoverage": "Partial source coverage",
+      "eyebrow": "Fleet coordination",
+      "title": "Operational record summary",
+      "description": "Counts cover loaded operational records; utilization comes from the fleet forecast. These sources have independent windows and refresh times.",
+      "scope": "Fleet-wide · {{scope}}",
+      "freshness": "Independent source snapshots",
+      "provenance": "Fleet assignment, reservation and work-order API records; inferred utilization forecast. Loaded counts are not server-wide totals."
     }
   },
   "achievements": {

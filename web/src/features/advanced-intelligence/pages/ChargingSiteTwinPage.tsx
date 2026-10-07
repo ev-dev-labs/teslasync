@@ -17,6 +17,7 @@ import type { ChargingSiteTwinRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 
 type SiteForm = Omit<ChargingSiteTwinRequest, 'vehicle_id' | 'confirmed'>;
 
@@ -26,6 +27,9 @@ export default function ChargingSiteTwinPage() {
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const mutation = useRunChargingSiteTwin();
+  const publication = useRetainedMutation(mutation, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const [form, setForm] = useState<SiteForm>({
     charger_count: 8,
     charger_power_w: 11500,
@@ -45,7 +49,7 @@ export default function ChargingSiteTwinPage() {
     if (vehicleId == null) return;
     mutation.mutate({ ...form, vehicle_id: vehicleId, confirmed: true });
   };
-  const result = mutation.data;
+  const result = publication.result;
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'utilization', metricId: 'percent', rawValue: result?.utilization_pct,
       label: t('advancedIntelligence.site.utilization', 'Utilization'),
@@ -215,14 +219,14 @@ export default function ChargingSiteTwinPage() {
             </div>
             <Button
               type="submit"
-              loading={mutation.isPending}
-              disabled={vehicleId == null || mutation.isPending}
+              loading={publication.pending}
+              disabled={vehicleId == null || publication.pending}
               icon={<Building2 className="h-4 w-4" aria-hidden="true" />}
             >
               {t('advancedIntelligence.site.form.run', 'Run confirmed site simulation')}
             </Button>
           </form>
-          <MutationError error={mutation.error} />
+          <MutationError error={publication.error} />
         </InsightPanel>
       </FadeIn>
 
@@ -234,8 +238,9 @@ export default function ChargingSiteTwinPage() {
           metrics={summaryMetrics}
           vehicleId={result?.vehicle_id ?? vehicleId}
           hasResult={result != null}
-          pending={mutation.isPending}
-          error={mutation.error}
+          pending={publication.pending}
+          error={publication.error}
+          query={result ? publication.source : undefined}
           quality={result?.data_quality}
           evidence={result?.evidence}
           limitations={[...(result?.limitations ?? []), ...(result?.assumptions ?? [])]}

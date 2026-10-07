@@ -127,6 +127,7 @@ function render(params: {
       mpg: params.mpg ?? 30,
       electricityRate: params.electricityRate ?? 0.13,
       toDistanceDisplay: params.toDistanceDisplay ?? toMiles,
+      isMiles: params.toDistanceDisplay == null,
     }),
   );
   return result;
@@ -308,7 +309,7 @@ describe('useCostAnalysisData — lifetimeMetrics', () => {
     expect(life.maxSessionCost).toBe(5);
   });
 
-  it('falls back to 0 min/max when every session is free', () => {
+  it('retains 0 min/max with one free and one unknown-cost session without counting unknown as free', () => {
     const free = [
       makeSession({ id: 10, cost_decimal: 0 }),
       makeSession({ id: 11, cost_decimal: null }),
@@ -316,7 +317,35 @@ describe('useCostAnalysisData — lifetimeMetrics', () => {
     const life = render({ sessions: free }).current.lifetimeMetrics!;
     expect(life.minSessionCost).toBe(0);
     expect(life.maxSessionCost).toBe(0);
-    expect(life.freeCount).toBe(2);
+    expect(life.freeCount).toBe(1);
+    expect(life.freeEnergy).toBe(10);
+  });
+
+  it('excludes unknown cost from free count and energy without dropping it from loaded history totals', () => {
+    const sessions = [
+      makeSession({ id: 10, cost_decimal: 0, total_energy_added_wh: 0 }),
+      makeSession({ id: 11, cost_decimal: 0, total_energy_added_wh: 15_000 }),
+      makeSession({ id: 12, cost_decimal: null, total_energy_added_wh: 80_000 }),
+      makeSession({ id: 13, cost_decimal: 4, total_energy_added_wh: 20_000 }),
+    ];
+    const result = render({ sessions }).current;
+    expect(result.lifetimeMetrics?.freeCount).toBe(2);
+    expect(result.lifetimeMetrics?.freeEnergy).toBe(15);
+    expect(result.coreStats?.count).toBe(4);
+    expect(result.coreStats?.totalEnergy).toBe(115);
+    expect(result.coreStats?.totalCost).toBe(4);
+    expect(result.costPerKwhTrend.map(point => point.costPerKwh)).toEqual([0, 0.2]);
+  });
+
+  it('counts no free sessions when all recorded costs are unknown', () => {
+    const result = render({
+      sessions: [makeSession({ cost_decimal: null, total_energy_added_wh: 80_000 })],
+    }).current;
+    expect(result.lifetimeMetrics?.freeCount).toBe(0);
+    expect(result.lifetimeMetrics?.freeEnergy).toBe(0);
+    expect(result.coreStats?.count).toBe(1);
+    expect(result.coreStats?.totalEnergy).toBe(80);
+    expect(result.costPerKwhTrend).toEqual([]);
   });
 });
 

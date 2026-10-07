@@ -62,7 +62,23 @@
       "distribution": {
         "range": "Voltage range"
       },
-      "time": "Time"
+      "time": "Time",
+      "status": {
+        "unknown": "Unknown",
+        "significant": "Significant deviation",
+        "slight": "Slight deviation",
+        "normal": "Normal"
+      },
+      "kpi": {
+        "totalCells": "Total cells",
+        "avgVoltage": "Avg voltage",
+        "minCell": "Min cell",
+        "maxCell": "Max cell",
+        "imbalance": "Imbalance",
+        "packVoltage": "Pack voltage"
+      },
+      "kpis": "Summary metrics",
+      "summary": "At a glance"
     },
     "degradation": {
       "title": "Battery degradation",
@@ -127,14 +143,21 @@
       "monthsCount": "{{count}} months",
       "yearsMonthsShort": "{{y}}y {{m}}m",
       "yearsCount": "{{y}} years",
-      "noRecords": "No degradation records found."
+      "noRecords": "No degradation records found.",
+      "brief": {
+        "prediction": "Degradation model evidence",
+        "summary": "Battery degradation evidence"
+      }
     },
     "health": {
       "excellent": "Excellent",
       "good": "Good",
       "degraded": "Degraded",
       "unavailable": "Not measured",
-      "missingMeasurement": "Capacity measurements are not available yet; battery health cannot be assessed."
+      "missingMeasurement": "Capacity measurements are not available yet; battery health cannot be assessed.",
+      "brief": {
+        "capacityScope": "Capacity and range model unavailable"
+      }
     },
     "insight": {
       "excellentTitle": "Excellent health",
@@ -175,7 +198,13 @@
       "capacityRangeFailed": "Capacity & range comparison failed to load",
       "acdcFailed": "AC/DC energy breakdown failed to load",
       "quickLinksFailed": "Quick links failed to load",
-      "recommendationsFailed": "Recommendations failed to load"
+      "recommendationsFailed": "Recommendations failed to load",
+      "overview": "Health score and capacity",
+      "thermalCompare": "Thermal monitoring and capacity comparison",
+      "linksTips": "Related pages and recommendations",
+      "kpis": "Battery health summary metrics",
+      "trends": "Capacity and range trends",
+      "chargingAnalysis": "Charging energy analysis"
     },
     "gauge": {
       "health": "Health score",
@@ -251,7 +280,12 @@
       "capNow": "Capacity now",
       "rangeNew": "Range when new",
       "rangeNow": "Range now",
-      "lost": "lost"
+      "lost": "lost",
+      "brief": {
+        "summary": "Capacity and range evidence",
+        "scope": "Reference capacity and first / latest range snapshots",
+        "description": "Capacity values are modeled estimates; range comparison uses the first and latest available history points, not a controlled capacity test."
+      }
     },
     "stats": {
       "title": "Charging statistics",
@@ -264,6 +298,22 @@
     },
     "recommendations": {
       "title": "Recommendations"
+    },
+    "brief": {
+      "eyebrow": "Battery and energy evidence",
+      "loading": "Loading source evidence",
+      "retained": "Retained source evidence",
+      "available": "Available source readings",
+      "unavailable": "Source readings unavailable"
+    },
+    "glossary": {
+      "lead": "Terms on this page:"
+    },
+    "hero": {
+      "title": "Health Overview"
+    },
+    "bars": {
+      "title": "Capacity & Wear"
     }
   }
 }

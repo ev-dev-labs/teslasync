@@ -21,6 +21,7 @@ import {
 import type { ResiliencePlanRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput, StormGuardPanel } from '../components';
 import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 
 type ResilienceForm = Omit<ResiliencePlanRequest, 'vehicle_id' | 'confirmed'>;
 
@@ -29,6 +30,9 @@ export default function EmergencyResiliencePage() {
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const mutation = useCreateResiliencePlan();
+  const publication = useRetainedMutation(mutation, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const [form, setForm] = useState<ResilienceForm>({
     vehicle_energy_wh: 60000,
     stationary_storage_wh: 13500,
@@ -46,7 +50,7 @@ export default function EmergencyResiliencePage() {
     mutation.mutate({ ...form, vehicle_id: vehicleId, confirmed: true });
   };
 
-  const result = mutation.data;
+  const result = publication.result;
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'survival-horizon', metricId: 'duration', rawValue: result?.survival_horizon_s,
       label: t('advancedIntelligence.resilience.horizon', 'Modeled survival horizon'),
@@ -168,14 +172,14 @@ export default function EmergencyResiliencePage() {
             </div>
             <Button
               type="submit"
-              loading={mutation.isPending}
-              disabled={vehicleId == null || mutation.isPending}
+              loading={publication.pending}
+              disabled={vehicleId == null || publication.pending}
               icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
             >
               {t('advancedIntelligence.resilience.form.run', 'Create confirmed outage plan')}
             </Button>
           </form>
-          <MutationError error={mutation.error} />
+          <MutationError error={publication.error} />
         </InsightPanel>
       </FadeIn>
 
@@ -187,8 +191,9 @@ export default function EmergencyResiliencePage() {
           metrics={summaryMetrics}
           vehicleId={result?.vehicle_id ?? vehicleId}
           hasResult={result != null}
-          pending={mutation.isPending}
-          error={mutation.error}
+          pending={publication.pending}
+          error={publication.error}
+          query={result ? publication.source : undefined}
           quality={result?.data_quality}
           evidence={result?.evidence}
           limitations={result?.limitations}

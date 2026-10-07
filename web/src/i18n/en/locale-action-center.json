@@ -16,7 +16,31 @@
       "high": "High",
       "acknowledged": "Acknowledged",
       "snoozed": "Snoozed",
-      "dismissed": "Dismissed"
+      "dismissed": "Dismissed",
+      "openHelp": "Generated recommendations in the open state.",
+      "criticalHelp": "Generated recommendations with critical priority across all inbox states.",
+      "highHelp": "Generated recommendations with high priority across all inbox states.",
+      "acknowledgedHelp": "Generated recommendations in the acknowledged state.",
+      "snoozedHelp": "Generated recommendations in the snoozed state.",
+      "dismissedHelp": "Generated recommendations in the dismissed state.",
+      "status": {
+        "initial": "Awaiting summary evidence",
+        "initialFailure": "Summary request failed",
+        "ok": "Summary returned",
+        "stale": "Retained summary",
+        "partial": "Partial source coverage",
+        "unavailable": "Summary unavailable"
+      },
+      "scope": "{{vehicle}} · Before priority, source, state, and pagination filters",
+      "windowContext": "Provider-specific evidence windows and limits apply; these counts are not an all-time total.",
+      "eyebrow": "Decision inbox",
+      "title": "Decision queue overview",
+      "description": "Recommendation state and priority counts from generated evidence, not just the visible page.",
+      "generatedAt": "Generated {{date}}",
+      "generatedUnknown": "Generation time unavailable",
+      "coverageIncomplete": "Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.",
+      "evidenceSource": "Server-generated recommendation evidence",
+      "vehicleId": "Vehicle {{id}}"
     },
     "filters": {
       "title": "Filter decisions",

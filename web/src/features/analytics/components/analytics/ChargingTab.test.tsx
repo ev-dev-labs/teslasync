@@ -193,8 +193,10 @@ describe('ChargingTab — loading', () => {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
 
-    // The KPI band is a skeleton — no metric labels, and no empty/error UI.
-    expect(screen.queryByText('Sessions')).toBeNull();
+    const brief = container.querySelector('[data-operational-brief]');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief?.querySelector('[data-operational-value]')).toBeNull();
+    expect(within(screen.getByRole('region', { name: SUMMARY_REGION })).getByText('Sessions')).toBeInTheDocument();
     expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -204,14 +206,14 @@ describe('ChargingTab — loaded', () => {
   it('renders the formatted top-level and stat KPIs inside the labelled summary region', () => {
     renderTab(makeQuery({ data: makeFleet() }));
 
-    const region = screen.getByRole('region', { name: SUMMARY_REGION });
+    const region = screen.getAllByRole('region', { name: SUMMARY_REGION })[0];
     // Top-level totals (sessions / energy / cost via the '$' currency stub).
     expect(within(region).getByText('128')).toBeInTheDocument();
-    expect(within(region).getByText('543.20')).toBeInTheDocument();
+    expect(within(region).getByText('543.20 kWh')).toBeInTheDocument();
     expect(within(region).getByText('$87.50')).toBeInTheDocument();
     // Stat-derived KPIs (avg power / charge efficiency).
-    expect(within(region).getByText('48.60')).toBeInTheDocument();
-    expect(within(region).getByText('92.40')).toBeInTheDocument();
+    expect(within(region).getByText('48.60 kW')).toBeInTheDocument();
+    expect(within(region).getByText('92.40%')).toBeInTheDocument();
 
     // Loaded, non-empty ⇒ no skeletons, no empty states, no errors.
     expect(screen.queryByRole('status')).toBeNull();
@@ -325,6 +327,17 @@ describe('ChargingTab — a11y', () => {
 });
 
 describe('ChargingTab — null-safety', () => {
+  it('preserves real zero totals and exposes source limitations through the real drawer', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet({
+      total_charging_sessions: 0, total_energy_kwh: 0, total_cost: 0,
+    }) }));
+    expect(container.querySelector('[data-operational-metric="charging-sessions"] [data-operational-value]')).toHaveTextContent('0');
+    expect(container.querySelector('[data-operational-metric="charging-total-energy"] [data-operational-value]')).toHaveTextContent('0.00 kWh');
+    expect(container.querySelector('[data-operational-metric="charging-total-cost"] [data-operational-value]')).toHaveTextContent('$0.00');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('The fleet response does not supply an observation timestamp for these aggregates.')).toBeInTheDocument();
+  });
+
   it('treats an absent charging_analytics block as empty without crashing', () => {
     renderTab(
       makeQuery({

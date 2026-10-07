@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Battery, TrendingUp, MapPin, Activity } from 'lucide-react';
-import { MetricCard } from '@/components/data-display';
+import { Heart, Battery, TrendingUp, MapPin } from 'lucide-react';
+import type { StatMetric } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
   ChartLegend,
@@ -15,7 +15,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
-import { MetricBandSkeleton } from './helpers';
+import { FleetSectionBrief } from '../operationalbrief-a-m/FleetSectionBrief';
 import type { FleetAnalyticsQuery } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -37,6 +37,23 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
   const trend = data?.battery_trend ?? [];
   const latest = trend.length > 0 ? trend[trend.length - 1] : null;
   const isEmpty = trend.length === 0;
+  const metrics: StatMetric[] = [
+    { metricId: 'percent', occurrenceId: 'battery-health', rawValue: latest?.health_score,
+      label: t('analytics.battery.healthScore', 'Health score'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+    { metricId: 'energy', occurrenceId: 'battery-capacity', rawValue: latest?.capacity_wh,
+      label: t('analytics.battery.capacity', 'Capacity'),
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'battery-degradation', rawValue: latest?.degradation_pct,
+      label: t('analytics.battery.degradation', 'Degradation'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+    { metricId: 'distance', occurrenceId: 'battery-range', rawValue: latest?.range_km != null ? latest.range_km * 1000 : null,
+      label: t('analytics.battery.estRange', 'Est. range'),
+      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) } },
+    { metricId: 'count', occurrenceId: 'battery-cycles', rawValue: latest?.cycle_count,
+      label: t('analytics.battery.cycles', 'Cycles'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+  ];
 
   // Range trend is plotted in the user's distance unit; derive once instead of
   // building a fresh array literal inline on every render.
@@ -53,45 +70,11 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
   return (
     <FadeIn className="mt-4 space-y-4 xl:space-y-5">
       {/* Battery Health Cards band */}
-      {isLoading ? (
-        <MetricBandSkeleton count={5} className="lg:grid-cols-5" />
-      ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          <MetricCard
-            label={t('analytics.battery.healthScore', 'Health score')}
-            value={latest ? fmtNumber(safe(latest.health_score)) : '—'}
-            subtitle="%"
-            icon={<Heart className="h-4 w-4" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('analytics.battery.capacity', 'Capacity')}
-            value={latest ? formatEnergy(safe(latest.capacity_wh)) : '—'}
-            icon={<Battery className="h-4 w-4" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('analytics.battery.degradation', 'Degradation')}
-            value={latest ? fmtNumber(safe(latest.degradation_pct)) : '—'}
-            subtitle="%"
-            icon={<TrendingUp className="h-4 w-4" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t('analytics.battery.estRange', 'Est. range')}
-            value={latest ? fmtNumber(fromKm(safe(latest.range_km))) : '—'}
-            subtitle={distanceUnit}
-            icon={<MapPin className="h-4 w-4" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('analytics.battery.cycles', 'Cycles')}
-            value={latest ? fmtInt(safe(latest.cycle_count)) : '—'}
-            icon={<Activity className="h-4 w-4" />}
-            color="cyan"
-          />
-        </div>
-      )}
+      <FleetSectionBrief query={query} metrics={metrics}
+        title={t('analytics.brief.batteryTitle', 'Latest returned battery measurements')}
+        description={t('analytics.brief.batteryDescription', 'Measurements describe the last returned battery-trend row, not an inferred current vehicle state.')}
+        scope={latest ? t('analytics.brief.batteryScope', 'Returned battery-trend date: {{date}}. Continuous recording coverage is unknown.', { date: latest.date })
+          : t('analytics.brief.batteryNoRow', 'No battery-trend row was returned for the selected range.')} />
 
       <section
         aria-label={t('analytics.tabs.battery', 'Battery')}

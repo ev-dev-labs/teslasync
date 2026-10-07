@@ -741,7 +741,12 @@
       "minTemp": "Min temp",
       "avgTemp": "Avg temp",
       "maxTemp": "Max temp",
-      "noData": "No battery cell data"
+      "noData": "No battery cell data",
+      "voltageSource": "Returned cell voltage in volts; no conversion is applied to the source measurement.",
+      "spreadSource": "Returned voltage spread in volts, displayed in millivolts.",
+      "summaryTitle": "Returned cell measurements",
+      "summaryDescription": "Voltage extremes, average and spread summarize the returned cells; wide layouts also retain the temperature summary.",
+      "summaryScope": "Vehicle {{id}} · returned cell snapshot; recording coverage is unknown."
     },
     "forecast": {
       "tip": "Tip",
@@ -756,7 +761,11 @@
       "currentHealth": "Current health",
       "riskFactors": "Risk factors",
       "recommendations": "Recommendations",
-      "noData": "No degradation forecast data"
+      "noData": "No degradation forecast data",
+      "rateSource": "Returned percentage-point degradation rate per month; the existing displayed loss sign is retained.",
+      "summaryTitle": "Returned degradation measurements",
+      "summaryDescription": "Current health and monthly degradation retain their separate meanings; the projected date, horizon intervals, risks and recommendations remain separate model outputs.",
+      "summaryScope": "Vehicle {{id}} · returned inferred forecast; the response does not establish continuous recording coverage."
     },
     "mo": "mo",
     "soh": "SoH",
@@ -783,7 +792,11 @@
       "tempExposure": "Temp score",
       "chargeHabits": "Habits",
       "noData": "No battery health data",
-      "title": "Battery analytics"
+      "title": "Battery analytics",
+      "cyclesSource": "Returned cycle measurement; the existing whole-number display is retained.",
+      "summaryTitle": "Returned battery-health factors",
+      "summaryDescription": "Source cycle, charge-depth, fast-charge and habit measurements retain their independent meanings; the health gauge remains separate.",
+      "summaryScope": "Vehicle {{id}} · returned inferred battery analytics; continuous coverage is unknown."
     },
     "level": "Level",
     "chargeLimit": "Limit",
@@ -875,7 +888,12 @@
       "peak": "Peak",
       "offpeak": "Off-peak",
       "standard": "Standard",
-      "noRecommendations": "No recommendations"
+      "noRecommendations": "No recommendations",
+      "hourSource": "Returned wall-clock hour, not an elapsed duration or timezone-shifted instant.",
+      "savingsSource": "Returned monthly savings estimate, retaining the existing currency formatting without changing its denomination.",
+      "summaryTitle": "Returned charging recommendations",
+      "summaryDescription": "Schedule and cost estimates remain separate inferred operands; peak-use classification, the rate timeline and actionable recommendations remain below.",
+      "summaryScope": "Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied."
     },
     "chargingSchedule": {
       "modeStartAt": "Start at",
@@ -926,7 +944,13 @@
       "notCharging": "Not currently charging",
       "title": "Charging telemetry",
       "charger": "charger",
-      "error": "Unable to load charging telemetry"
+      "error": "Unable to load charging telemetry",
+      "voltageSource": "Returned charger voltage in volts.",
+      "currentSource": "Returned charger current in amperes.",
+      "efficiencySource": "Existing ratio of actual power to pilot-current capacity, including the original phase fallback and upper clamp.",
+      "summaryTitle": "Returned charger measurements",
+      "summaryDescription": "Voltage, current, SI power and phases describe the supplied charging snapshot. Wide layouts also retain the existing capacity ratio and session-local power history.",
+      "summaryScope": "Vehicle {{id}} · source timestamp {{timestamp}}; a returned snapshot does not establish continuous coverage."
     },
     "climatePanel": {
       "seatFL": "FL",
@@ -1082,7 +1106,14 @@
       "smoothness": "Smoothness",
       "speed": "Speed discipline",
       "title": "Drive score",
-      "noData": "No score yet"
+      "noData": "No score yet",
+      "summaryTitle": "Returned driving score factors",
+      "summaryDescription": "Each factor retains its returned score independently of the overall gauge, grade and detailed factor bars.",
+      "summaryScope": "Vehicle {{id}} · weekly scoring response for {{count}} drives; recording completeness is not established.",
+      "consumptionSource": "Returned fleet average consumption in Wh/km, converted only for display; not a vehicle speed or individual-drive measurement.",
+      "consumptionTitle": "Returned fleet consumption",
+      "consumptionDescription": "The measured fleet consumption remains distinct from the retained derived efficiency score and its qualifying-drive rule.",
+      "consumptionScope": "Fleet-wide · requested seven-day analytics window; the response does not establish complete recording."
     },
     "score": "Score",
     "efficiency": "Efficiency",
@@ -1125,7 +1156,14 @@
       "noData": "No drivetrain data",
       "title": "Drivetrain health",
       "assessmentError": "The drivetrain assessment could not be loaded.",
-      "assessmentRetained": "The previous drivetrain assessment remains visible while it refreshes."
+      "assessmentRetained": "The previous drivetrain assessment remains visible while it refreshes.",
+      "frontSource": "Inferred health temperature when supplied, otherwise the independent motor snapshot.",
+      "statorSource": "Returned stator temperature from the independent motor snapshot.",
+      "inverterSource": "Inferred health inverter temperature when supplied, otherwise the independent motor snapshot.",
+      "rearSource": "Inferred health rear temperature when supplied, otherwise the independent motor snapshot.",
+      "summaryTitle": "Returned drivetrain readings",
+      "summaryDescription": "Inferred health and motor telemetry are independent sources. Original temperature fallbacks remain explicit; the categorical assessment, source errors and mechanical-inspection caveat are retained.",
+      "summaryScope": "Vehicle {{id}} · returned health and motor snapshots; these readings do not establish continuous recording or a mechanical diagnosis."
     },
     "drivingCoach": {
       "potentialSavings": "Potential savings: {{pct}}%",
@@ -1322,7 +1360,11 @@
       "itemsError": "Configured maintenance could not be loaded.",
       "itemsRetained": "Previously loaded maintenance intervals remain visible while they refresh.",
       "recordsError": "Service records could not be loaded.",
-      "recordsRetained": "Previously loaded service records remain visible while they refresh."
+      "recordsRetained": "Previously loaded service records remain visible while they refresh.",
+      "paceSource": "Source distance pace normalized to meters per day, not vehicle speed.",
+      "summaryTitle": "Maintenance forecast summary",
+      "summaryDescription": "Due counts and distance pace come from the returned forecast; configured intervals remain recommendations rather than countdowns.",
+      "summaryScope": "Forecast vehicle {{id}} · inferred due counts and observed daily distance; configured intervals and service records are separate sources."
     },
     "noMediaPlayed": "No tracks played",
     "mediaHistory": "Media history",
@@ -1403,7 +1445,11 @@
       "noData": "No odometer data",
       "total": "Total odometer",
       "totalDriven": "Total driven",
-      "unit": "Unit"
+      "unit": "Unit",
+      "distanceSource": "Returned driving-history distance, normalized from kilometers to meters; not the live lifetime odometer.",
+      "summaryTitle": "Recorded driving distance",
+      "summaryDescription": "Historical recorded distance uses its own source state and is not presented as equivalent to the independent live odometer.",
+      "summaryScope": "Vehicle {{id}} · returned driving statistics; exact history bounds and completeness are not supplied."
     },
     "positionHeatmap": {
       "noData": "No position data",
@@ -1440,7 +1486,12 @@
       "noData": "No projected range data",
       "epa": "EPA",
       "ofEpa": "of EPA rated",
-      "rangeComparison": "Projected range vs EPA rated"
+      "rangeComparison": "Projected range vs EPA rated",
+      "dailySource": "Returned daily distance rate normalized from kilometers/day to meters/day, not a vehicle speed.",
+      "cyclesSource": "Returned equivalent battery cycles; not assumed to be an integer event population.",
+      "summaryTitle": "Returned range-model inputs",
+      "summaryDescription": "Degradation, daily distance, capacity and equivalent cycles remain distinct from the projected-range hero and retained EPA comparison.",
+      "summaryScope": "Vehicle {{id}} · inferred range analysis; exact observation bounds and recording completeness are not supplied."
     },
     "rangeBar": "Range",
     "rated": "rated",
@@ -1490,7 +1541,23 @@
       "cfd": "Cruise follow distance",
       "title": "Safety features",
       "activeFeatures": "Active features",
-      "noData": "No safety data"
+      "noData": "No safety data",
+      "lane": "Lane departure",
+      "bsw": "Blind spot warning",
+      "general": "Safety state update",
+      "aebShort": "AEB",
+      "fcwShort": "FCW",
+      "laneShort": "Lane departure",
+      "bswShort": "Blind spot",
+      "eldaShort": "Emergency lane",
+      "generalShort": "General",
+      "speedLimit": "Speed limit",
+      "follow": "Follow",
+      "pinToDrive": "PIN to drive",
+      "priorCount": "Returned snapshots in the preceding 30-day comparison window: {{count}}.",
+      "summaryTitle": "Returned safety-history summary",
+      "summaryDescription": "Counts and classifications summarize loaded snapshots; a warning setting is not a detected intervention.",
+      "summaryScope": "Vehicle {{id}} · returned snapshots in the last 30 days, compared with the preceding 30 days; loaded history is not complete event coverage."
     },
     "safetyEvents": "events",
     "noSafetyEvents": "No safety events",
@@ -1729,7 +1796,15 @@
       "eventCount": "{{formattedCount}} events · {{hours}}h total",
       "trend": "Daily drain rate (last 30)",
       "noEvents": "No recent drain events",
-      "noData": "No vampire drain data"
+      "noData": "No vampire drain data",
+      "averageSource": "Observed battery percentage-point loss per day; a positive event population is required before the average is treated as measured.",
+      "averagePopulation": "Aggregate event count: {{count}} · observed hours: {{hours}}. The separately loaded event feed is limited to 30 rows.",
+      "summaryTitle": "Observed parked-drain average",
+      "summaryDescription": "The statistical average, event history and inferred watchdog are independent sources; the retained chart and event feed do not prove complete recording.",
+      "summaryScope": "Vehicle {{id}} · returned parked-window statistics; exact aggregate recording bounds are not supplied.",
+      "watchStatus": "Drain watchdog status",
+      "watchOk": "Watchdog: drain healthy",
+      "watchBreach": "Watchdog: {{streak}} breach streak · {{rec}}"
     },
     "vehicleAccessDrivers": "drivers",
     "vehicleAccessMobileOn": "Mobile access enabled",
@@ -1884,7 +1959,11 @@
       "sourceError": "Unable to load {{source}}",
       "recentDrives": "Recent drives",
       "recentCharges": "Recent charging sessions"
-    }
+    },
+    "summaryEyebrow": "Dashboard source summary",
+    "climateSummaryTitle": "Returned climate temperatures",
+    "climateSummaryDescription": "Cabin and outside temperatures remain separate SI measurements, converted only for display; HVAC, defrost and heater states remain below.",
+    "climateSummaryScope": "Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established."
   },
   "widgets": {
     "gridFootprint": "{{cols}}×{{rows}} grid",

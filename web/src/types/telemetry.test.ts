@@ -351,13 +351,56 @@ describe('signal data-shape contracts', () => {
       from: '2025-01-15T11:00:00Z',
       to: '2025-01-15T12:00:00Z',
       count: 1,
-      data: [{ timestamp: '2025-01-15T11:30:00Z', value_num: 55 }],
+      data: [{
+        ts: '2025-01-15T11:30:00Z',
+        kind: 'ValueKindDouble',
+        value: 55,
+        ingest_origin: null,
+        source_emitted_at: null,
+        received_at: null,
+        normalization_version: null,
+      }],
     }) as SignalHistoryResponse;
 
     expectHasKeys(resp, ['vehicleId', 'signal', 'from', 'to', 'count', 'data']);
     expect(resp.vehicleId).toBe(2);
     expect(resp.data).toHaveLength(1);
-    expect(resp.data[0].valueNum).toBe(55);
+    expect(resp.data[0].ts).toBe('2025-01-15T11:30:00Z');
+    expect(resp.data[0].kind).toBe('ValueKindDouble');
+    expect(resp.data[0].value).toBe(55);
+    expect(resp.data[0].ingest_origin).toBeNull();
+    expect(resp.data[0].source_emitted_at).toBeNull();
+    expect(resp.data[0].received_at).toBeNull();
+    expect(resp.data[0].normalization_version).toBeNull();
+  });
+
+  it.each([
+    ['ValueKindDouble', 0],
+    ['ValueKindBoolean', false],
+    ['ValueKindString', 'unknown'],
+    ['ValueKindDouble', null],
+  ])('SignalHistoryResponse retains the %s typed value %s', (kind, value) => {
+    const resp = camelCaseKeys({
+      vehicle_id: 2,
+      signal: 'ExampleSignal',
+      from: '2025-01-15T11:00:00Z',
+      to: '2025-01-15T12:00:00Z',
+      count: 1,
+      data: [{
+        ts: '2025-01-15T11:30:00Z',
+        kind,
+        value,
+        ingest_origin: null,
+        source_emitted_at: null,
+        received_at: null,
+        normalization_version: null,
+      }],
+    }) as SignalHistoryResponse;
+
+    expect(resp.data[0].kind).toBe(kind);
+    expect(resp.data[0].value).toBe(value);
+    expect(resp.data[0]).not.toHaveProperty('valueNum');
+    expect(resp.data[0]).not.toHaveProperty('timestamp');
   });
 
   it('SignalEntry: the discriminant + already-camel fields pass through the bridge intact', () => {

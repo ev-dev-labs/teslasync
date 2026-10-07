@@ -26,8 +26,15 @@ vi.mock('@/hooks/useUnits', () => ({
 vi.mock('@/api/hooks/useDriving', () => ({
   useDrivingStats: () => ({ data: state.data, error: state.error, isError: state.error != null, isFetching: false, dataUpdatedAt: 1000, refetch: state.refetch }),
 }));
-vi.mock('@/components/data-display', () => ({
+vi.mock('@/components/data-display', async () => ({
+  ...await vi.importActual<typeof import('@/components/data-display')>('@/components/data-display'),
   Delta: (props: typeof state.deltas[number]) => { state.deltas.push(props); return <span data-testid="delta" />; },
+}));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({
+    costPerKwh: 0.12, currencySymbol: '$',
+    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
+  }),
 }));
 vi.mock('@/components/motion', () => ({ FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> }));
 const fleet: DrivingStats = {
@@ -38,7 +45,7 @@ beforeEach(() => {
   state.refetch.mockClear();
   Object.assign(state, { distance: 'km', speed: 'km/h', data: fleet, error: null, deltas: [] });
 });
-const reading = (label: string) => screen.getByText(label).parentElement!.textContent;
+const reading = (label: string) => screen.getByText(label).closest('[data-operational-metric]')?.textContent;
 
 describe('Canonical drive overview', () => {
   it('puts cost and recorded endpoint odometers in the primary summary before performance comparisons', () => {
@@ -47,15 +54,17 @@ describe('Canonical drive overview', () => {
     expect(reading('Odometer (from → to)')).toContain('120,000.00 → 120,040.00');
     expect(screen.queryByText('Start odometer')).toBeNull();
     expect(screen.queryByText('End odometer')).toBeNull();
-    expect(container.querySelectorAll('[data-drive-metric="odometer"]')).toHaveLength(1);
-    const primaryMetrics = screen.getByRole('group', { name: 'Drive summary' }).querySelectorAll('[data-drive-metric]');
+    expect(container.querySelectorAll('[data-operational-metric="odometer"]')).toHaveLength(1);
+    const primaryMetrics = screen.getByRole('group', { name: 'Drive summary' }).querySelectorAll('[data-operational-metric]');
     expect(primaryMetrics).toHaveLength(7);
+    expect(screen.getByRole('group', { name: 'Drive summary' }).querySelector('[role="list"]'))
+      .toHaveClass('rounded-shape-md', 'border-[var(--border-subtle)]', 'bg-[var(--border-subtle)]');
     for (const metric of primaryMetrics) {
-      expect(metric).toHaveClass('rounded-shape-md', 'border-[var(--border-subtle)]', 'bg-[var(--surface-2)]');
+      expect(metric).toHaveClass('bg-[var(--surface-2)]');
       expect(metric.querySelector('[class~="border"]')).toBeNull();
     }
     for (const key of ['average-speed', 'maximum-speed', 'battery-rate']) {
-      expect(container.querySelector(`[data-drive-metric="${key}"]`)).not.toHaveClass('border');
+      expect(container.querySelector(`[data-operational-metric="${key}"]`)).not.toHaveClass('border');
     }
     expect(reading('Battery change')).toContain('80.00% → 70.00%');
     expect(reading('Drive energy')).toContain('8.00 kWh');
@@ -89,7 +98,10 @@ describe('Canonical drive overview', () => {
     for (const label of ['Distance', 'Duration', 'Average speed', 'Maximum speed', 'Consumption', 'Battery use per 100 km']) {
       expect(screen.getAllByText(label)).toHaveLength(1);
     }
-    expect(container.querySelector('[class*="gradient"], [class*="text-neon"], svg')).toBeNull();
+    expect(container.querySelector('[class*="gradient"], [class*="text-neon"]')).toBeNull();
+    expect(container.querySelector('[data-operational-value] svg')).toBeNull();
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(2);
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
     expect(reading('Distance')).toContain('40.00');
     expect(reading('Maximum speed')).toContain('108.00');
     expect(reading('Consumption')).toContain('200.00');

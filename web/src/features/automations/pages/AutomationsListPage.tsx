@@ -472,7 +472,7 @@ export default function AutomationsListPage() {
                   message={t('automations.empty', 'No automations yet. Create a typed automation to get started!')}
                   actionTo={operationalMode.canWrite
                     ? {
-                        label: t('automations.empty.cta', 'Create automation'),
+                        label: t('automations.emptyCta', 'Create automation'),
                         to: '/automations/new',
                       }
                     : undefined}
@@ -491,7 +491,7 @@ export default function AutomationsListPage() {
                   icon={<Zap className="h-8 w-8" />}
                   message={t('automations.noMatch', 'No automations match your filters')}
                   action={{
-                    label: t('automations.noMatch.cta', 'Reset filters'),
+                    label: t('automations.noMatchCta', 'Reset filters'),
                     onClick: () => {
                       setSearch('');
                       setStatusFilter('all');

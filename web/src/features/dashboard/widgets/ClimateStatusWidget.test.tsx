@@ -110,6 +110,18 @@ beforeEach(() => {
 });
 
 describe('ClimateStatusWidget — rendering', () => {
+  it('keeps two raw temperature operands, measured zero and negative temperature with the independent HVAC status', () => {
+    setup({ climate: makeQuery({ data: makeClimate({ inside_temp: 0, outside_temp: -10 }) }) });
+    render(<ClimateStatusWidget size={STANDARD} />);
+    const brief = screen.getByTestId('dashboard-climate-temperatures-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
+    expect(brief).toHaveTextContent('0°C');
+    expect(brief).toHaveTextContent('-10°C');
+    expect(brief).toHaveTextContent('continuous recording coverage is not established');
+    expect(screen.getByText('HVAC')).toBeInTheDocument();
+    expect(screen.getByText('Defrost')).toBeInTheDocument();
+  });
+
   it('retains temperatures and HVAC during a failed cached refresh', () => {
     setup({ climate: makeQuery({ data: makeClimate(), isError: true, error: new Error('refresh failed') }) });
     render(<ClimateStatusWidget size={STANDARD} />);

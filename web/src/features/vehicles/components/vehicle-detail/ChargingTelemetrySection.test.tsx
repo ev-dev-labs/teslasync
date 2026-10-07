@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { ChargingTelemetry } from '@/api/types'
 
 vi.mock('react-i18next', async () => {
@@ -181,5 +181,24 @@ describe('ChargingTelemetrySection — accessibility', () => {
     // exposed to the accessibility tree.
     expect(container.querySelectorAll('svg:not([aria-hidden="true"])')).toHaveLength(0)
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(9)
+  })
+
+  describe('ChargingTelemetrySection — operational source review', () => {
+    it('uses the real compact brief and keeps real zero distinct from a missing signed measurement', () => {
+      render(<ChargingTelemetrySection chargingTelemetry={makeTelemetry({
+        charger_power_w: 0, charger_actual_current: -1.25, charger_voltage: null,
+      })} />)
+      const brief = screen.getByTestId('vehicle-charging-telemetry-brief')
+      expect(brief).toHaveAttribute('data-operational-brief')
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(8)
+      expect(brief.querySelector('[data-operational-metric="power"]')).toHaveAttribute('data-value-state', 'value')
+      expect(brief.querySelector('[data-operational-metric="voltage"]')).toHaveAttribute('data-value-state', 'missing')
+      expect(brief.querySelector('[data-operational-metric="current"]')).toHaveTextContent('-1.25 A')
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+      const drawer = screen.getByRole('dialog')
+      expect(within(drawer).getByText('0.00 kW')).toBeInTheDocument()
+      expect(within(drawer).getByText('-1.25 A')).toBeInTheDocument()
+      expect(within(drawer).getByText(/meters of range added per hour, not vehicle motion/)).toBeInTheDocument()
+    })
   })
 })

@@ -5,8 +5,6 @@ import { EmptyState } from '@/components/feedback';
 import {
   Badge,
   GlassPanel,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
 } from '@/components/ui';
 
@@ -16,6 +14,8 @@ import { ParkingMethodCaveats } from './ParkingMethodCaveats';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { DataStatus } from '@/api/dataState';
+import { VehicleEvidenceBrief } from '../operationalbrief-n-z/VehicleEvidenceBrief';
 
 interface ParkingCoverageMethodologyProps {
   summary: ParkingSummary;
@@ -23,6 +23,8 @@ interface ParkingCoverageMethodologyProps {
   rangeStart: string;
   rangeEnd: string;
   className?: string;
+  sourceStatus?: DataStatus;
+  hasSource?: boolean;
 }
 
 /** Coverage accounting and the caveats required to interpret every chart. */
@@ -32,14 +34,17 @@ export function ParkingCoverageMethodology({
   rangeStart,
   rangeEnd,
   className,
+  sourceStatus,
+  hasSource = true,
 }: ParkingCoverageMethodologyProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
   const locationCoverage =
     summary.stints.length > 0
       ? (coverage.knownLocationStints / summary.stints.length) * 100
       : null;
+  const status = sourceStatus ?? (state.isLoading ? 'initial' : state.error ? 'initialFailure' : hasSource ? 'ok' : 'unavailable');
 
   return (
     <section
@@ -66,6 +71,21 @@ export function ParkingCoverageMethodology({
           </Badge>
         </div>
 
+        <VehicleEvidenceBrief id="parking-coverage-summary"
+          title={t('parking.coverage.title', 'Coverage & method')}
+          description={t('parking.briefDescription', 'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.')}
+          status={status === 'ok' && coverage.possiblyCapped ? 'partial' : status}
+          loading={state.isLoading}
+          provenance={t('parking.briefSource', 'Drive-derived parking reconstruction')}
+          scope={t('parking.coverage.briefWindow', 'Requested UTC window: {{start}} → {{end}}', { start: rangeStart, end: rangeEnd })}
+          metrics={[
+            { metricId: 'count', occurrenceId: 'returned', label: t('parking.coverage.returned', 'Records returned'), rawValue: hasSource ? coverage.recordsReturned : null },
+            { metricId: 'count', occurrenceId: 'usable', label: t('parking.coverage.usable', 'Usable drives'), rawValue: hasSource ? coverage.validDrives : null },
+            { metricId: 'count', occurrenceId: 'stints', label: t('parking.coverage.reconstructed', 'Reconstructed stints'), rawValue: hasSource ? summary.stints.length : null },
+            { metricId: 'percent', occurrenceId: 'located', label: t('parking.coverage.located', 'Location coverage'), rawValue: hasSource ? locationCoverage : null,
+              display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) },
+              context: t('parking.kpis.locationQuality', '{{known}} located · {{missing}} missing', { known: coverage.knownLocationStints, missing: coverage.missingLocationStints }) },
+          ]} />
         <ParkingSectionBody state={state} className="mt-4 min-h-64">
           {coverage.recordsReturned === 0 ? (
             <EmptyState
@@ -80,38 +100,7 @@ export function ParkingCoverageMethodology({
                 to: '/drives',
               }}
             />
-          ) : (
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-              <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{fmtInt(coverage.recordsReturned)}</MetricValue>
-                <MetricLabel>
-                  {t('parking.coverage.returned', 'Records returned')}
-                </MetricLabel>
-              </div>
-              <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{fmtInt(coverage.validDrives)}</MetricValue>
-                <MetricLabel>
-                  {t('parking.coverage.usable', 'Usable drives')}
-                </MetricLabel>
-              </div>
-              <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{fmtInt(summary.stints.length)}</MetricValue>
-                <MetricLabel>
-                  {t('parking.coverage.reconstructed', 'Reconstructed stints')}
-                </MetricLabel>
-              </div>
-              <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>
-                  {locationCoverage != null
-                    ? `${fmtNumber(locationCoverage)}%`
-                    : '—'}
-                </MetricValue>
-                <MetricLabel>
-                  {t('parking.coverage.located', 'Location coverage')}
-                </MetricLabel>
-              </div>
-            </div>
-          )}
+          ) : null}
 
           <ParkingMethodCaveats
             summary={summary}

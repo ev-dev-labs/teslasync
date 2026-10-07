@@ -24,6 +24,7 @@
     "lightbox",
     "listExport",
     "mask",
+    "metricCard",
     "mobile",
     "nav",
     "notFound",
@@ -514,6 +515,7 @@
       "driveDna",
       "drives",
       "drivetrain",
+      "driving",
       "drivingSecondary",
       "dynamics",
       "effTarget",
@@ -528,6 +530,7 @@
       "rhythm",
       "routeEfficiency",
       "seasonalEfficiency",
+      "segments",
       "speedProfile",
       "speedSweetSpot",
       "sweetSpot",
@@ -612,10 +615,13 @@
       "ai",
       "fleetSetup",
       "orders",
+      "overview",
+      "quickActions",
       "quietHours",
       "safetySettings",
       "serverConnect",
       "settingsReset",
+      "summaryBrief",
       "totp"
     ],
     "admin": [
@@ -653,10 +659,12 @@
       "safety",
       "softwareUpdates",
       "tireDifferentialDrift",
-      "tirePressure"
+      "tirePressure",
+      "vehicleSystems"
     ],
     "diagnostics": [
       "anomaly",
+      "diagnostics",
       "rootCauseIntelligence",
       "rul",
       "serviceEvidencePack"
@@ -666,6 +674,7 @@
       "geofences",
       "locations",
       "mapOverview",
+      "mapsBrief",
       "navigation",
       "tempImpact"
     ],
@@ -711,6 +720,7 @@
       "science"
     ],
     "power-user": [
+      "powerGrafana",
       "powerSql"
     ]
   },
@@ -1718,6 +1728,7 @@
       "tagInput",
       "tco",
       "tempImpact",
+      "teslaOnly",
       "tirePressure",
       "toast",
       "tour",
@@ -1778,6 +1789,7 @@
       "maintenance",
       "mqttSseInspector",
       "notifications",
+      "onboarding",
       "operationalMode",
       "operations",
       "productPreferences",

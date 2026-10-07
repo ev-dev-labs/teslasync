@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { CHART_COLORS } from '@/components/charts';
 import { MetricBar } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState } from '@/components/feedback';
 import {
   Badge,
   GlassPanel,
   HelpTooltip,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Text,
 } from '@/components/ui';
@@ -56,6 +56,22 @@ export function ColdWarmComparison({
           pct: fmtNumber(Math.abs(summary.penaltyShare) * 100),
         })
       : t('coldStart.comparison.awaitingDelta', 'Aggregate difference withheld');
+  const cohortContext = t('coldStart.comparison.samples', '{{cold}} cold and {{warm}} warm observations', {
+    cold: summary.cold.drives, warm: summary.warm.drives,
+  });
+  const metrics: StatMetric[] = [
+    { metricId: 'efficiency', occurrenceId: 'cold-warm-penalty',
+      rawValue: summary.penaltyWhPerKm == null ? null : summary.penaltyWhPerKm / 1000,
+      label: t('coldStart.brief.penalty', 'Cold minus warm consumption'),
+      description: deltaLabel, context: cohortContext,
+      display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } },
+    { metricId: 'efficiency', occurrenceId: 'cold-consumption', rawValue: summary.cold.whPerKm == null ? null : summary.cold.whPerKm / 1000,
+      label: t('coldStart.coldGroup', 'Cold starts ({{count}} drives)', { count: summary.cold.drives }),
+      context: cohortContext, display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } },
+    { metricId: 'efficiency', occurrenceId: 'warm-consumption', rawValue: summary.warm.whPerKm == null ? null : summary.warm.whPerKm / 1000,
+      label: t('coldStart.warmGroup', 'Warm starts ({{count}} drives)', { count: summary.warm.drives }),
+      context: cohortContext, display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } },
+  ];
 
   return (
     <GlassPanel
@@ -99,10 +115,12 @@ export function ColdWarmComparison({
                     ? t('coldStart.comparison.sufficient', 'Aggregate sample ready')
                     : t('coldStart.comparison.building', 'Building aggregate confidence')}
                 </Badge>
-                <MetricValue className="mt-4">
-                  {formatEfficiency(summary.penaltyWhPerKm)}
-                </MetricValue>
-                <MetricLabel className="mt-1">{deltaLabel}</MetricLabel>
+                <NestedDrivingBrief metrics={metrics}
+                  title={t('coldStart.brief.cohortTitle', 'Distance-weighted cohort consumption')}
+                  description={deltaLabel} loading={state.isLoading}
+                  unavailable={state.error != null}
+                  period={{ kind: 'unknown', label: cohortContext,
+                    reason: t('coldStart.comparison.help', 'A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous.') }} />
                 <Text as="p" variant="bodySm" className="mt-3">
                   {t(
                     'coldStart.comparison.samples',

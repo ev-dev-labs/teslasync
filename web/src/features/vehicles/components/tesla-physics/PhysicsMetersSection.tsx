@@ -1,6 +1,5 @@
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
-import { Badge, Text } from '@/components/ui';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
+import { Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
 import { Evidence, RawRows } from './Evidence';
@@ -24,22 +23,19 @@ export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage
     ? 100 * meter.fsd_distance_m / meter.driving_distance_m : null;
   return <>
     <Evidence title={physics.title} honesty={meter?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.odometer', 'Odometer')} value={distance(meter?.odometer_m)} color="cyan" />
-        <MetricCard label={t('teslaOnly.drivingMeter', 'Driving trip meter')} value={distance(meter?.driving_distance_m)} color="green" />
-        <MetricCard label={t('teslaOnly.fsdMeter', 'FSD trip meter')} value={distance(meter?.fsd_distance_m)} color="purple" />
-      </Grid>
-      <Text as="p" variant="caption">{t('teslaOnly.metersSnapshot', 'These are the latest returned counters; the report does not timestamp each current counter reading or provide a continuous counter time series. The FSD counter does not measure engaged FSD driving.')}</Text>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.workbench.resetSummary', '{{count}} returned meter drops; inspect before and after readings below.', { count: resets.length })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.metersQuantified', 'Quantifiable drops: {{count}}', { count: drops.length })}</Badge>
-        <Badge variant="warning" size="sm">{t('teslaOnly.metersLargest', 'Largest measured drop: {{value}}', { value: largest ? distance(largest.delta) : unknown(t) })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.metersRelative', 'FSD counter / driving counter: {{value}}', { value: fsdFraction == null ? unknown(t) : `${fmtNumber(fsdFraction)}%` })}</Badge>
-      </div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-meters-summary" available={meter != null}
+        description={t('teslaOnly.metersSnapshot', 'These are the latest returned counters; the report does not timestamp each current counter reading or provide a continuous counter time series. The FSD counter does not measure engaged FSD driving.')}
+        metrics={[
+          { metricId: 'distance', occurrenceId: 'odometer', label: t('teslaOnly.odometer', 'Odometer'), rawValue: meter?.odometer_m, display: { formatter: raw => ({ value: distance(raw), unit: '' }) } },
+          { metricId: 'distance', occurrenceId: 'driving', label: t('teslaOnly.drivingMeter', 'Driving trip meter'), rawValue: meter?.driving_distance_m, display: { formatter: raw => ({ value: distance(raw), unit: '' }) } },
+          { metricId: 'distance', occurrenceId: 'fsd', label: t('teslaOnly.fsdMeter', 'FSD trip meter'), rawValue: meter?.fsd_distance_m, display: { formatter: raw => ({ value: distance(raw), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'drops', label: t('teslaOnly.workbench.resetCount', 'Returned meter drops'), rawValue: meter ? resets.length : null, context: t('teslaOnly.workbench.resetSummary', '{{count}} returned meter drops; inspect before and after readings below.', { count: resets.length }) },
+          { metricId: 'count', occurrenceId: 'quantifiable', label: t('teslaOnly.metersQuantifiedLabel', 'Quantifiable drops'), rawValue: meter ? drops.length : null, context: t('teslaOnly.metersQuantified', 'Quantifiable drops: {{count}}', { count: drops.length }) },
+          { metricId: 'distance', occurrenceId: 'largest-drop', label: t('teslaOnly.metersLargestLabel', 'Largest measured drop'), rawValue: largest?.delta, display: { formatter: raw => ({ value: distance(raw), unit: '' }) }, context: t('teslaOnly.metersLargest', 'Largest measured drop: {{value}}', { value: largest ? distance(largest.delta) : unknown(t) }) },
+          { metricId: 'percent', occurrenceId: 'relative', label: t('teslaOnly.metersRelativeLabel', 'FSD counter / driving counter'), rawValue: fsdFraction, display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) }, context: <>{t('teslaOnly.metersRelative', 'FSD counter / driving counter: {{value}}', { value: fsdFraction == null ? unknown(t) : `${fmtNumber(fsdFraction)}%` })}<div>{t('teslaOnly.metersRatioNote', 'The counter ratio compares two returned readings only. It does not indicate FSD engagement share, particularly across resets or different counter scopes.')}</div></> },
+          ...byMeter.map((name): import('@/components/data-display').StatMetric => ({ metricId: 'count', occurrenceId: `drops-${name}`, label: name, rawValue: resets.filter(row => row.meter === name).length, context: t('teslaOnly.metersCountByType', '{{meter}}: {{count}} returned drops', { meter: name, count: resets.filter(row => row.meter === name).length }) })),
+        ]} />
       <Text as="p" variant="caption">{t('teslaOnly.metersRatioNote', 'The counter ratio compares two returned readings only. It does not indicate FSD engagement share, particularly across resets or different counter scopes.')}</Text>
-      <div className="grid gap-2 sm:grid-cols-2">{byMeter.map((name) => <div key={name} className="rounded-lg border border-[var(--glass-border)] p-3">
-        <Text as="p" variant="bodySm">{t('teslaOnly.metersCountByType', '{{meter}}: {{count}} returned drops', { meter: name, count: resets.filter((row) => row.meter === name).length })}</Text>
-      </div>)}</div>
     </Evidence>
     <Evidence title={t('teslaOnly.metersTimeline', 'Observed counter changes and firmware bounds')}>
       {resets.length ? resets.slice(-8).reverse().map((row) => <div key={`${row.meter}-${row.at}`} className="rounded-lg border border-[var(--glass-border)] p-3">

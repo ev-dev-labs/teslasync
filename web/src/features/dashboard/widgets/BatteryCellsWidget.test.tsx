@@ -78,6 +78,10 @@ vi.mock('@/hooks/useUnits', async () => {
   const { formatTemperature } = await import('@/lib/unitConversion');
   return {
     useUnits: () => ({
+      unitPrefs: {
+        distance: 'km', speed: 'km/h', temperature: temperatureUnit,
+        pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US',
+      },
       formatTemperature: (value: number | null | undefined, options?: { precision?: number }) =>
         formatTemperature(value, {
           distance: 'km', speed: 'km/h', temperature: temperatureUnit,
@@ -194,6 +198,23 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     expect(screen.getByText('Warning')).toBeInTheDocument();
     expect(screen.getByText('Error')).toBeInTheDocument();
+  });
+
+  it('keeps seven raw summary operands, signed temperatures and measured zero in the real wide brief', () => {
+    batteryCellsMock.mockReturnValue(makeQuery(makeSummary({
+      min_voltage: 0, voltage_spread: 0, min_temperature: -5,
+    })));
+    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
+    const brief = screen.getByTestId('dashboard-battery-cells-brief');
+    expect(brief).toHaveTextContent('Returned cell measurements');
+    expect(brief).toHaveTextContent('recording coverage is unknown');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(7);
+    expect(brief).toHaveTextContent('0.000 V');
+    expect(brief).toHaveTextContent('0.00 mV');
+    expect(brief).toHaveTextContent('-5.0°C');
+    expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
+    expect(screen.getByText('Cell 2 · M1')).toBeInTheDocument();
+    expect(screen.getByText('Cell 3 · M2')).toBeInTheDocument();
   });
 
   it('retains cell readings and summary during a cached refresh failure', () => {

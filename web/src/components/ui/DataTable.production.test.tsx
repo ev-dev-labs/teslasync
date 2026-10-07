@@ -219,6 +219,74 @@ describe('DataTable production pipeline contracts', () => {
     expect(csv).not.toContain('private')
   })
 
+  it.each([375, 640])('passes original matching and selected loaded rows to a custom exporter at %ipx', async width => {
+    const onExport = vi.fn<NonNullable<Parameters<typeof DataTable<Row>>[0]['onExport']>>(async () => {})
+    mount({ enableValueFilters: true, exportable: true, onExport,
+      pagination: { defaultPageSize: 1, pageSizeOptions: [1] },
+      selectable: 'multi', selectedKeys: [0, 'outside'], onSelectionChange: vi.fn() })
+    resize(width)
+    onlyLastValue()
+    await exportAs('JSON', 'Visible (1)')
+    expect(onExport).toHaveBeenLastCalledWith('json', [rows[2]], 'visible')
+    await exportAs('CSV', 'Selected (1)')
+    expect(onExport).toHaveBeenLastCalledWith('csv', [rows[0]], 'selected')
+    expect(onExport.mock.calls[0][1][0]).toBe(rows[2])
+    expect(downloadJSON).not.toHaveBeenCalled()
+    expect(downloadCSV).not.toHaveBeenCalled()
+  })
+
+  it('passes every local search match to a custom exporter rather than only the current page', async () => {
+    const onExport = vi.fn<NonNullable<Parameters<typeof DataTable<Row>>[0]['onExport']>>(async () => {})
+    mount({ data: [rows[2], rows[0], rows[1]], onExport, exportable: true,
+      pagination: { defaultPageSize: 1, pageSizeOptions: [1] } })
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }),
+      { target: { value: 'zero' } })
+    await waitFor(() => expect(screen.queryByText('Last record')).toBeNull())
+    await exportAs('JSON')
+    expect(onExport).toHaveBeenCalledWith('json', [rows[0], rows[1]], 'visible')
+    expect(downloadJSON).not.toHaveBeenCalled()
+  })
+
+  it('passes full-result rows to a custom exporter without local filtering or projection', async () => {
+    const serverRows = [{ ...rows[2], id: 99, name: 'Server-only record' }]
+    const full = vi.fn(async () => serverRows)
+    const onExport = vi.fn<NonNullable<Parameters<typeof DataTable<Row>>[0]['onExport']>>(async () => {})
+    mount({ exportAll: full, onExport })
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }),
+      { target: { value: 'no loaded matches' } })
+    await waitFor(() => expect(screen.queryByText('Last record')).toBeNull())
+    await exportAs('JSON')
+    expect(full).toHaveBeenCalledOnce()
+    expect(onExport).toHaveBeenCalledWith('json', serverRows, 'visible')
+    expect(downloadJSON).not.toHaveBeenCalled()
+  })
+
+  it('surfaces custom-export rejection without falling back to a projected download', async () => {
+    const error = new Error('Raw export unavailable')
+    const onExport = vi.fn().mockRejectedValue(error)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      mount({ exportable: true, onExport })
+      await exportAs('CSV')
+      expect(onExport).toHaveBeenCalledOnce()
+      expect(log).toHaveBeenCalledWith('[ListExportMenu] CSV export failed', error)
+      expect(downloadJSON).not.toHaveBeenCalled()
+      expect(downloadCSV).not.toHaveBeenCalled()
+    } finally {
+      log.mockRestore()
+    }
+  })
+
+  it('keeps caller-owned export controls ahead of the scoped exporter', async () => {
+    const onExport = vi.fn()
+    const onExportJson = vi.fn()
+    mount({ onExport, controls: { exports: { onExportJson, onExportCsv: vi.fn() } } })
+    await exportAs('JSON')
+    expect(onExportJson).toHaveBeenCalledWith('visible')
+    expect(onExport).not.toHaveBeenCalled()
+    expect(downloadJSON).not.toHaveBeenCalled()
+  })
+
   it('selects the entire filtered loaded set, not the revealed batch, and resolves bulk rows from the source', () => {
     const data = [rows[2], rows[1], rows[0]]
     function Controlled() {

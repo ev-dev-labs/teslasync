@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gauge, Calendar, TrendingUp } from 'lucide-react';
+import { Gauge } from 'lucide-react';
+import type { StatMetric } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useDrivingStats } from '@/api/hooks/useDriving';
@@ -9,7 +10,8 @@ import { useCombinedDataState, useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -65,16 +67,19 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
   };
 
   const odometer = knownNumber(stateData?.state?.odometer);
-  const totalDistanceKm = knownNumber(stats?.totalDistanceKm);
-
   const convertedOdometer = useMemo(
     () => (odometer != null ? toOdometerDisplay(odometer, distanceUnit) : null),
     [odometer, distanceUnit],
   );
-  const convertedTotalDriven = useMemo(
-    () => (totalDistanceKm != null ? toTotalDrivenDisplay(totalDistanceKm, distanceUnit) : null),
-    [totalDistanceKm, distanceUnit],
-  );
+  const statsMetrics: StatMetric[] = [
+    { metricId: 'distance', occurrenceId: 'odometer-recorded-distance',
+      rawValue: stats?.totalDistanceKm == null ? stats?.totalDistanceKm : stats.totalDistanceKm * 1000,
+      label: t('widget.odometer.totalDriven', 'Total driven'),
+      description: t('widget.odometer.distanceSource', 'Returned driving-history distance, normalized from kilometers to meters; not the live lifetime odometer.'),
+      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) } },
+    { metricId: 'text', occurrenceId: 'odometer-display-unit', rawValue: distanceUnit,
+      label: t('widget.odometer.unit', 'Unit') },
+  ];
 
   return (
     <WidgetShell
@@ -120,10 +125,12 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
           ) : statsLoading && !stats ? (
             <Skeleton className="h-16 rounded-xl" />
           ) : (
-            <WidgetStatGrid cols={2} stats={[
-              { label: t('widget.odometer.totalDriven', 'Total driven'), value: convertedTotalDriven == null ? null : `${fmtNumber(convertedTotalDriven)} ${distanceUnit}`, icon: <TrendingUp className="h-3.5 w-3.5" /> },
-              { label: t('widget.odometer.unit', 'Unit'), value: distanceUnit, icon: <Calendar className="h-3.5 w-3.5" /> },
-            ]} />
+            <DashboardSourceBrief metrics={statsMetrics} state={statsTrust}
+              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+              title={t('widget.odometer.summaryTitle', 'Recorded driving distance')}
+              description={t('widget.odometer.summaryDescription', 'Historical recorded distance uses its own source state and is not presented as equivalent to the independent live odometer.')}
+              scope={t('widget.odometer.summaryScope', 'Vehicle {{id}} · returned driving statistics; exact history bounds and completeness are not supplied.', { id })}
+              testId="dashboard-odometer-history-brief" />
           )}
         </div>
       )}
