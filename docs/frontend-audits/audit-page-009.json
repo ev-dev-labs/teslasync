@@ -1,0 +1,236 @@
+{
+  "item": "audit-page-009",
+  "phase": 0,
+  "page": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+  "routes": ["/admin/disk-forecast"],
+  "purpose": "Deployment-wide TimescaleDB hypertable storage composition, growth and backend-owned quota severity.",
+  "primaryGoal": "Identify the largest and fastest-growing hypertables and imminent quota pressure without changing measurements, retention settings or backend thresholds.",
+  "dataSources": [
+    {
+      "hook": "useDiskForecast",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 174,
+      "hookPath": "/admin/observability/disk-forecast",
+      "endpoint": "GET /api/v1/admin/observability/disk-forecast",
+      "routeEvidence": ["internal\\api\\router.go:4584", "internal\\handler\\v1\\admin_observability_handler.go:37"],
+      "sourceOwner": "internal\\app\\adminobssvc\\service.go:187 / internal\\database\\observability\\hypertable_metrics_repo.go:125",
+      "response": "Handler returns an httputil data envelope containing hypertables; fetchEnvelope unwraps locally. HypertableSize JSON tags match frontend snake_case fields. Null/absent est_days_to_quota is supported; other numeric fields are nonnullable in the inspected Go/TS contract.",
+      "behavior": "Query key ['admin','observability','disk-forecast']; staleTime STANDARD 60000 ms; polling SLOW 60000 ms; refetchIntervalInBackground false; retry 1; AbortSignal forwarded. No parameters or mutation hooks.",
+      "units": "Bytes, counts, bytes/day, estimated days and severity. Summary adapts bytes/day to bytes/second and days to seconds only in its presentation metric input, then displays day units. Wire/cache fields remain unchanged.",
+      "forecastSemantics": "Repository computes max(total_bytes minus 30-day historical bytes, 0)/30. Missing historical map entry is read as zero by current source. Days are rounded only with configured positive quota and positive growth below quota; quota reached/exceeded yields zero days and critical. No client-side threshold inference.",
+      "unsupported": "Service maps missing repository or Timescale-unavailable error to ErrNotConfigured. Page interprets fatal HTTP 503 as unsupported; actual deployed endpoint/auth/envelope behavior not exercised.",
+      "workspace": "Deployment snapshot, no vehicle/date arguments. /admin/disk-forecast is not RANGE_ENABLED_PATHS; /admin disables workspace vehicle selection at workspaceScope.ts:94. Preserve this scope rather than adding duplicate or nonfunctional selectors."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Full-width min-w-0 container and existing shell/query integration; PageContainer.tsx:253 mounts DataSourceNotice alongside children."},
+    {"name": "LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 17, "role": "Canonical panel/title association, wrapping header and flex content owner."},
+    {"name": "DiskForecastSummary", "owner": "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx", "line": 22, "role": "Six raw numeric metrics via useOperationalMetrics and OperationalBrief; explicit unmeasured/retained state and source-period limitation."},
+    {"name": "EmbeddedChart / ChartContainer", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "line": 19, "role": "Existing embedded chart frame; source state branches, accessible data columns, series visibility and forced-color alternative belong to ChartContainer."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "line": 450, "role": "Existing table pipeline, pagination, value filters, stable persistence ID and column visibility; mobile hiding and expansion APIs inspected."},
+    {"name": "MetricBar / Badge / Caption / Text / FadeIn / feedback components", "owner": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx", "line": 23, "role": "Existing category-barrel presentation primitives; their full implementations were not audited."},
+    {"name": "deriveDataState", "owner": "web\\src\\api\\dataState.ts", "line": 180, "role": "Retained payload, fatal versus refresh failure and offline/paused trust derivation."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 424,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Growth, quota and table repeat loading/fatal-error/empty/content branches around existing LayoutCard/feedback primitives (also lines 450 and 488). Chart branches already belong to EmbeddedChart. This is local repetition, not evidence for a new global component.",
+      "fix": "Reuse current source-state contracts and preserve section-specific explanations; consider a local typed extraction only if it materially improves orchestration. Do not introduce another state or card library.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "Source inspected; every viewport remains unverified.",
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "strengths": ["Composition stacks until xl with min-w-0; outlook stacks until 2xl.", "Quota rows wrap and names use break-words.", "Shared layout maintains allocated full width."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+        "line": 508,
+        "rule": "MDC-023 / MDC-043 / no mobile information loss",
+        "detail": "mobileColumns exposes hypertable/severity/days only. Total, compressed/uncompressed split and daily growth are hidden below md by DataTable.tsx:724-725. Caller provides neither expandable/renderExpanded nor mobilePresentation. Top-ten composition and top-eight growth do not expose every table's omitted measurements.",
+        "fix": "Use existing table expansion/mobile detail contract or preserve all columns in a bounded scrollable table. Keep all six columns, chunk counts, filters, source order, pagination and tableId.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+        "line": 327,
+        "rule": "MDC-043 / allocated chart width",
+        "detail": "Composition dedicates 132px to the Y axis plus margins and truncates names at 18 characters. At narrow allocated widths this may leave little plot space; no viewport was exercised, so clipping or unusability is not established.",
+        "fix": "Validate narrow-container plot and accessible full-name data alternative first; adapt existing axis/size props if needed without deleting series or hypertable identities.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "Keyboard, focus, screen reader, target sizes, effective contrast, forced colors and reduced motion not exercised.",
+    "strengths": ["Named sections and localized chart ariaLabel values.", "Both charts provide dataColumns; ChartContainer.tsx:680-686 explicitly retains a forced-colors table alternative.", "Critical alert and severity badges use text, not color alone.", "LayoutCard names its own card using the title ID."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+        "line": 505,
+        "rule": "MDC-040 / named semantic table",
+        "detail": "DataTable caller supplies no caption. DataTable.tsx:293 supports one; LayoutCard's aria-labelledby names the containing card, not automatically the nested table.",
+        "fix": "Pass the localized Hypertables caption through the existing API; verify actual table naming and keyboard filter/pagination behavior.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+        "line": 100,
+        "rule": "MDC-025 / unknown evidence semantics",
+        "detail": "The unknown severity tier is named only '—' in the donut, legend and detail badge, unlike textual OK/Warn/Critical tiers. A neutral dash does not explain that classification is unknown.",
+        "fix": "Use a localized Unknown label for this tier without reclassifying it as OK/offline/error or changing server severity.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Four content groups stay mounted. Summary uses source.status initial; charts use query.isLoading; growth/quota/table render contextual 200/280px skeletons.",
+    "empty": "Composition, severity, growth and table have localized distinct explanations. Summary knows whether a payload exists and uses measured zero aggregates for an explicitly empty inventory, rather than claiming zero before a response.",
+    "unsupported": "Fatal 503 yields DataStateNotice unsupported at page:264 and suppresses generic errors. Charts/outlook still show their empty messages; table mounts empty DataTable when subsystemMissing, while the explicit unsupported notice remains.",
+    "fatalFailure": "Other fatal errors reach summary QueryError and all section error branches; retry refetches the existing query.",
+    "refreshFailure": "Only fatalError drives showError, so retained rows/charts survive failed refresh. Summary receives retained=true when stale or refreshing; PageContainer receives query/dataSources for shared freshness notices.",
+    "offline": "deriveDataState distinguishes paused refresh; page retains available payload. Actual offline notice, retry recovery and cold offline loading behavior unverified.",
+    "unknown": "Optional days use dash and filter exclusions. Other numeric fields are nonnullable in inspected backend contract, but nullish fallbacks would render zero for malformed/mismatched payloads; partial transport resilience is not proven.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+        "line": 456,
+        "rule": "MDC-026 / source-backed explanation",
+        "detail": "No estimated rows always yields 'No quota configured', echoed by summary:53. Repository:133-150 also omits estimates when quota IS configured but growth is zero below quota; empty inventory and unsupported source can produce the same client condition. Absence of an estimate is not proof of missing configuration.",
+        "fix": "Use a truthful no-estimate explanation identifying possible causes, or consume authoritative quota metadata only if an integration owner explicitly adds it. Preserve configured zero-days critical cases; do not guess configuration.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 60,
+      "rule": "MDC-010 / MDC-011 / MDC-034 / restrained semantic palette",
+      "detail": "Local hex palette drives donut, stacked bars, severity dots and MetricBar. Amber/green composition colors duplicate warning/success meanings even though compression status is not quota severity. This bypasses canonical chart/theme choices; saturation and contrast were not measured. No neon/glow source pattern was found.",
+      "fix": "Reuse the existing restrained chart palette for storage composition and canonical severity colors for quota status. Retain all categories, user chart preferences and textual labels; no new palette registry.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 471,
+      "rule": "MDC-012 / cross-theme semantic text",
+      "detail": "Critical days force text-rose-300 instead of canonical semantic text treatment. This is less intense than neon but not proof of contrast on light or customized backgrounds.",
+      "fix": "Use existing semantic danger text tokens while retaining the critical badge and numeric days; measure composed contrast.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 321,
+      "rule": "MDC-013 / preference-preserving chart typography",
+      "detail": "Both axes force fontSize 10 (also line 328), bypassing shared typography sizing/preferences.",
+      "fix": "Use current chart typography tokens/preferences and verify long names and 200% text; preserve tick formatting and plotted series.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 505,
+      "rule": "MDC-023 / single surface owner",
+      "detail": "DataTable is nested in LayoutCard but omits variant='embedded'. Shared DataTable defaults to standalone at line 452 and applies its own frame at line 1339.",
+      "fix": "Adopt existing embedded variant after validating toolbar, filtering, pagination and scroll preservation; no new wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Restore full per-row mobile measurement access", "Correct unsupported/no-estimate quota explanations", "Name table and unknown severity", "Unify chart/semantic palette and typography", "Remove redundant table surface"],
+    "reason": "Mobile measurement reachability and misleading quota interpretation outweigh cosmetic refinements."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "No new shared component required by this bounded audit",
+      "existingOwner": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Reuse expandable/renderExpanded or verified mobilePresentation, caption and variant='embedded'. Chart frames, trust notices and OperationalBrief already exist.",
+      "usedBy": ["/admin/disk-forecast"],
+      "dependsOn": ["Page-owned integration of existing APIs", "Parent-owned responsive/keyboard/theme runtime acceptance"],
+      "changeNeeded": false,
+      "note": "If explicit quota-configured metadata is desired, backend/type integration needs separate ownership. Current contract does not expose it, and truthful page copy can avoid that change."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 60,
+      "detail": "Local severity hex mapping competes with canonical semantic/chart color ownership; reuse rather than add another registry.",
+      "scopeLimit": "No other pages or alternate disk-forecast components were inventoried."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "ec6b5a15dc04dbb2480003d88ca0c0059b116e3ba76e37169fb274102fd23fbc",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact bytes of the root page file, not concatenated dependencies.",
+    "currentLineCount": 522,
+    "pageSpecificComponentLineCount": 73,
+    "sectionGroupCount": 4,
+    "sectionNames": ["Six-metric fleet disk summary", "Storage composition and severity mix", "Fastest-growing hypertables and days-to-quota outlook", "Per-hypertable detail table"],
+    "contentPanelCount": 6,
+    "layoutCardCount": 5,
+    "embeddedChartCount": 2,
+    "glassPanelCount": 0,
+    "chartContainerDirectCount": 0,
+    "metrics": ["Total disk", "Uncompressed", "Compressed", "Growth per day", "Largest table", "Soonest quota"],
+    "tableColumns": ["Hypertable with chunk count", "Total bytes", "Uncompressed/compressed split", "Growth per day", "Days to quota", "Severity"],
+    "actions": ["Retry/refetch from source errors", "Table value filters", "Table pagination", "Shared table persistence/column controls", "Composition legend series visibility with chartKey admin-disk-composition", "OperationalBrief shared summary/details presentation"],
+    "persistentIdentifiers": ["admin:disk-forecast", "admin-disk-composition", "disk-forecast-summary"],
+    "dataBehavior": ["Preserve top ten size ranking, top eight strictly positive growth leaders and all estimated quota rows in ascending days order.", "Preserve server severity, critical alert count, totals, compression shares, largest and soonest selection.", "Keep all rows in the detail table and raw payload/cache values unchanged.", "Preserve signed/zero/missing semantics according to actual source contract; do not change forecast calculations during visual work.", "Keep deployment scope, query key, cancellation, polling, retry, retained data, translations and number preferences.", "Keep unsupported/fatal/empty explanations and every section reachable; source inspection is not proof of runtime preservation."],
+    "mutations": "No page mutation actions identified; audit changed no source."
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED: no application/browser endpoint, viewport, screenshots, keyboard, contrast or offline scenario exercised.",
+    "validation": "No Git, source/shared/queue changes, TypeScript, lint, full builds or tests run. Skill audit.sh inspected but not executed because it unconditionally runs prohibited project TypeScript; bounded read-only pattern counts substituted.",
+    "scopedPatternEvidence": {"page": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx", "rawControlMatches": 0, "directLibraryImportMatches": 0, "legacyApiImportMatches": 0, "neonTextMatches": 0, "inlineStyleMatches": 1, "inlineStyleAssessment": "Line 399 is computed severity-map background color, not a static CSS-variable inline-style violation."},
+    "commandEvidence": [
+      {"command": "Get-FileHash web\\src\\features\\admin\\pages\\DiskForecastPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\admin\\pages\\DiskForecastPage.tsx).Count; bounded Select-String pattern counts", "exitCode": 0, "output": "SHA256=EC6B5A15DC04DBB2480003D88CA0C0059B116E3BA76E37169FB274102FD23FBC; LINES=522; directLibraries=0; inlineStyle=1 (399); rawControls=0; neonText=0; legacyApiImports=0"},
+      {"command": "Initial combined PowerShell heartbeat/hash/pattern probe", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement. Parse failure executed no writes; corrected bounded probe subsequently succeeded."}
+    ],
+    "scope": "Only assigned root page, its extracted summary, direct presentation/data contracts and narrow mount/endpoint evidence inspected. Shared implementations were sampled only for page-specific capabilities, not comprehensively audited.",
+    "sourceDrift": "Concurrent workers may change shared dependencies. Root hash pins this audit snapshot; no repository cleanliness or global acceptance claim.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-009.json", ".agent-status\\audit-page-009.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-007.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go",
+    "internal\\app\\adminobssvc\\service.go",
+    "internal\\database\\observability\\hypertable_metrics_repo.go"
+  ]
+}
