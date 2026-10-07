@@ -1,0 +1,305 @@
+{
+  "item": "audit-page-239",
+  "page": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx",
+  "routes": ["/vehicles"],
+  "purpose": "Fleet-wide registered vehicle inventory, independently verified live-state overview, operational readiness and vehicle management.",
+  "primaryGoal": "Understand fleet availability and readiness, inspect a vehicle, and safely sync, pin, compare or remove registered vehicles.",
+  "dataSources": [
+    {
+      "hook": "useVehicles",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoints": ["GET /api/v1/vehicles"],
+      "owner": "Vehicle query domain; router.go:3319-3320",
+      "behavior": "Registered fleet, not selected-vehicle or date-filtered history. Retained list data survives refresh failure through useDataState."
+    },
+    {
+      "hook": "useFleetStates",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 1270,
+      "endpoints": ["GET /api/v1/vehicles/states?vehicle_ids=<ids>&limit=<chunk-size>"],
+      "owner": "Fleet-state domain; fetchFleetStates:695-720; router.go:3325",
+      "behavior": "Actual current implementation batches IDs, uses live query policy and cancellation, retains failed-batch entries, seeds detail state caches, ages freshness and applies sequenced SSE updates with coalesced authoritative recovery. Returns data plus server summary; do not restore obsolete per-vehicle fan-out described by page comments."
+    },
+    {
+      "hook": "useFleetWorkOrders({ limit: 100 })",
+      "file": "web\\src\\api\\hooks\\useFleetOps.ts",
+      "line": 389,
+      "endpoints": ["GET /api/v1/fleet-ops/work-orders?limit=100"],
+      "owner": "Fleet operations; router.go:3927 delegates to internal\\api\\fleetops\\handler.go:85-101",
+      "behavior": "Only loaded items feed open/urgent work-order counts and narrative. No full-result aggregation or pagination loop is present on this page; backend total/filter semantics were not inspected."
+    },
+    {
+      "hook": "usePinned('vehicle') and PinButton/useTogglePin",
+      "file": "web\\src\\api\\hooks\\usePinned.ts",
+      "line": 61,
+      "endpoints": ["GET /api/v1/pinned", "POST /api/v1/pinned", "DELETE /api/v1/pinned/{id}"],
+      "owner": "User pin preference domain; router.go:3718-3723",
+      "behavior": "Persistent item_type/item_id/context, pinned position ordering, mutation toasts and invalidation/broadcast; unpin uses existing row ID with a cache/fetch fallback."
+    },
+    {
+      "hook": "useSyncVehicles and useDeleteVehicle",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 318,
+      "endpoints": ["POST /api/v1/vehicles/sync", "DELETE /api/v1/vehicles/{vehicleID}"],
+      "owner": "Vehicle mutation domain; router.go:3326,3331",
+      "behavior": "Both require live mode, retain mutation notifications and list invalidation/broadcast. Sync is server rate-limited; delete requires sudo. Page additionally invalidates fleet-state queries. No mutation was executed."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / Section", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Existing PageContainer adapter with full allocated width/min-w-0; shell owns navigation and workspace controls."},
+    {"name": "VehiclePanelGrid / VehiclePanelCell / CardGrid", "owner": "web\\src\\features\\vehicles\\components\\modernization\\VehiclePanelGrid.tsx", "line": 14, "role": "Existing source migration: composes already-surface-owning panels through shared container-width placement; do not add nested surface wrappers."},
+    {"name": "VirtualizedVehicleGrid", "owner": "web\\src\\components\\vehicles\\VirtualizedVehicleGrid.tsx", "line": 34, "role": "Large-fleet measured row virtualization with list semantics, overscan and visible-card detail-cache warming."},
+    {"name": "OperationalBrief / VehicleEvidenceBrief / useOperationalMetrics", "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx", "line": 18, "role": "Preserve migrated raw metric pipeline, four summary metrics and six posture metrics, evidence, narrative and review drawer; no replacement KPI engine."},
+    {"name": "GlassPanel / Text / PanelTitle / Badge / Button", "owner": "web\\src\\components\\ui\\Button.tsx", "line": 28, "role": "Existing semantic surfaces, typography, statuses, focus/disabled/loading and wrapLabel contracts."},
+    {"name": "MetricBar", "owner": "web\\src\\components\\data-display\\MetricBar.tsx", "line": 43, "role": "Named accessible measured bar, missing-value handling, forced-color support, reduced-motion support and existing solid-fill variant."},
+    {"name": "PinButton", "owner": "web\\src\\components\\ui\\PinButton.tsx", "line": 46, "role": "Persistent pin toggle with tooltip, aria-pressed and mutation pending/error handling."},
+    {"name": "EntityPreviewDrawer", "owner": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx", "line": 60, "role": "Shared Drawer, seven evidence fields, primary details navigation and six related context links with workspace selection."},
+    {"name": "ConfirmDialog / Popover", "owner": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 546, "role": "Existing shared overlay callers; quick-view/remove are explicitly named, and removal remains confirmed."},
+    {"name": "QueryError / EmptyState / DataStateNotice / StaleRefreshWarning / skeletons / motion", "owner": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 27, "role": "Retain independent source recovery, missing/partial/stale notices, skeletons and shared entrance-motion components."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 675,
+      "rule": "MDC-002 / MDC-026 / MDC-042",
+      "detail": "VehicleCard duplicates a battery progress track, while FleetBatteryPanel already uses MetricBar. The local version lacks the shared missing-valuetext, clamp and forced-color/motion contract.",
+      "fix": "Reuse MetricBar with showHeader=false, showValue=false, ariaLabel, a supported solid fill and preserved adjacent percent label; do not add a new battery renderer.",
+      "owner": "page", "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source only; no viewport rendered",
+    "strengths": ["Card names break words and links provide minimum 44px height.", "VehiclePanelGrid uses allocated container width and keeps every overview/list section.", "Card stat chips and preview related links reflow; shared drawer footer stacks.", "Large fleets use row measurement rather than fixed card-height truncation."],
+    "issues": [
+      {
+        "file": "web\\src\\components\\vehicles\\VirtualizedVehicleGrid.tsx", "line": 21,
+        "rule": "MDC-031 / MDC-043",
+        "detail": "Fleet count changes layout ownership at page:1696. Virtualized grid uses 1/2/3/4 columns at 768/1536/1920, whereas layoutPolicy.ts:4-35 uses phone/tablet/desktop container bands and quarter-card spans (two cards at tablet widths, four at desktop). A 24-to-25 fleet transition changes geometry at the same allocated width. Its min-h-[28rem] may also exceed short phone viewport height.",
+        "fix": "Shared owner should align large-fleet placement with the existing container policy while preserving measured virtualization, source order, all cards and cache-warming callback. Test threshold transitions and short viewports without dropping vehicles.",
+        "owner": "shared", "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 1377,
+        "rule": "MDC-020 / MDC-043 / MDC-044",
+        "detail": "Compare/sync and overflow-action Buttons do not opt into existing wrapLabel. Fixed default heights can be insufficient with long translations or 200% text; this is a source risk, not an observed overflow.",
+        "fix": "Use existing wrapLabel where labels may wrap, retain explicit icon trigger dimensions, and exercise header/menu open states at narrow widths and expanded text.",
+        "owner": "page", "confidence": "medium"
+      }
+    ],
+    "requiredChecks": ["320/375/390/430/768/1024/1280/1440/1920/2560px", "Allocated width after shell/sidebar changes", "24/25 vehicle threshold", "Long names, VINs, translations, RTL and 200% text", "Open preview, confirm and overflow popover", "No lost sections or actions"]
+  },
+  "accessibility": {
+    "verified": "source only; keyboard, screen reader, contrast and forced colors unverified",
+    "strengths": ["Named links and overflow action trigger with aria-expanded and aria-haspopup.", "Decorative card icons mostly aria-hidden; status and last-known meanings also have text.", "Shared MetricBar exposes progress semantics and missing-valuetext.", "Preview uses shared Drawer with dl/dt/dd evidence and real navigation links.", "Virtualized items expose aria-posinset and aria-setsize."],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\PinButton.tsx", "line": 36,
+        "rule": "MDC-040 / MDC-020",
+        "detail": "Vehicle cards pass size=md, whose trigger is h-8 w-8 (32px); each button is named only Pin/Unpin, without vehicle identity. Neighbor spacing exception and actual touch reachability are not proven.",
+        "fix": "Shared owner should support an opt-in 44px target and caller-supplied localized accessible name. Page supplies vehicle identity without changing item IDs, saved pins or compact consumers.",
+        "owner": "shared", "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx", "line": 151,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Related-context links use fixed h-10 (40px) and text-sm without a wrapping target variant. Long labels and mobile spacing need actual checking.",
+        "fix": "Shared owner should permit minimum-44px, multiline link targets using existing BUTTON_BASE/outline semantics; preserve href, onNavigate-before-close and all six destinations.",
+        "owner": "shared", "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 677,
+        "rule": "MDC-025 / MDC-040",
+        "detail": "Missing battery percentage omits aria-valuenow but gives no missing aria-valuetext, which can resemble an indeterminate progress indicator despite the adjacent unknown label.",
+        "fix": "Use the existing MetricBar missing-reading semantics rather than representing unknown battery as ongoing progress.",
+        "owner": "page", "confidence": "high"
+      }
+    ],
+    "requiredChecks": ["Popover Escape, focus restoration and dialog-to-dialog transitions", "Confirm removal loading/cancel/retry and sudo challenge", "Keyboard reachability of virtualized off-screen items and nested scroll region", "Reduced motion including battery transitions", "Composed contrast and forced colors in light/dark/custom themes"]
+  },
+  "states": {
+    "loading": "Initial fleet list has PageLayout plus KPI/overview/card skeletons at page:178-213; state-specific loading keeps registered cards. Posture briefly renders derived narrative while live state resolves.",
+    "empty": "No registered fleet has a sync recovery action plus explicit posture/summary/overview/list placeholders; battery/status missing states independently provide refresh.",
+    "error": "Initial list failure replaces only unavailable list content with retry at page:1353-1369. Retained refresh failures keep content. Work-order failure gets a partial notice and sync gets dismissible feedback. Delete and pin hooks already provide mutation error toasts.",
+    "partial": "Per-field verification and coverage denominators drive KPI, readiness and status summaries; unrelated sources remain visible.",
+    "staleOfflineUnknown": "Fleet observation timestamps, not wrapper completion times, drive freshness. Preview uses exact-field verification and dated last-known detail. Unknown state is not counted as offline in statusCounts.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 696,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Card range/odometer use state.rated_range ?? 0 and state.odometer ?? 0; missing readings become actual formatted zero. Unlike preview currentFieldValue and aggregate field gating, card battery, range, odometer, charger/security flags are not individually verified; a globally current state can still contain stale/unverified individual fields.",
+        "fix": "Reuse the exact-field trust helper/descriptor and knownNumber for card readings, with explicit unknown or dated last-known labels. Preserve retained values as retained, not current; never coerce missing to measured zero.",
+        "owner": "page", "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 831,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "Pin query loading/error status is discarded; [] is treated as unpinned ordering. PinButton similarly defaults missing query data to []; a failed initial pin read looks like a confirmed unpinned fleet.",
+        "fix": "Keep actual inventory usable but expose pin-preference uncertainty and retry through the existing query-state contract; distinguish unknown pin state from known unpinned before user toggles.",
+        "owner": "integration", "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 1150,
+        "rule": "MDC-026 / MDC-033",
+        "detail": "workOrdersQuery items default to [] during loading; narrative at 1165-1240 can assert zero urgent/open orders and high confidence whenever isError is false, before work orders have resolved. Retained work orders are also not separately disclosed as stale in the narrative.",
+        "fix": "Derive a work-order DataState and propagate pending, unknown, retained/refresh-failure and coverage into narrative/status/attention while keeping usable live fleet data.",
+        "owner": "page", "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 706,
+      "rule": "MDC-010 / MDC-012 / mission sections 5-8",
+      "detail": "Charging chip still uses bg-neon-green/10; muted foreground text does not remove neon surface decoration. Card/menu/icons also force text-rose-300, text-emerald-400 and text-cyan-400 (581,723,726), without the light-theme pairs used by OperationalBrief.",
+      "fix": "Use existing restrained semantic status/surface/text variants, preserving visible charging/security/destructive meaning and user theme IDs; measure actual contrast rather than claiming failure from token names.",
+      "owner": "page", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 375,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Fleet battery and status MetricBar calls retain the shared default gradient fill; solid is already supported at MetricBar.tsx:27,45,89. This is unnecessary decorative emphasis for small operational tracks, not evidence of a glow.",
+      "fix": "Opt into existing fill=solid and retain threshold meaning, values and labels. No new palette or shared renderer needed.",
+      "owner": "page", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 1714,
+      "rule": "MDC-031 / mission section 7",
+      "detail": "An empty fleet renders a primary sync EmptyState plus four additional section-specific empty panels; loaded content has both six-metric posture and four-metric summary. This can produce repetitive visual weight, but each existing section/evidence role must survive.",
+      "fix": "Use restrained section spacing and hierarchy within existing layout contracts, retaining all section names, recovery, four summary and six posture metrics and narrative detail; do not solve repetition by deleting capabilities.",
+      "owner": "page", "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 959,
+      "rule": "MDC-002 / MDC-026 / MDC-046",
+      "detail": "Page recomputes fleet posture/status and describes a never-rejecting per-vehicle fan-out in comments at 411 and 820, while useFleetStates:1282-1309 actually batches/rejects and :1488 returns an authoritative server summary. Source migration is present in the hook but page consumes only data and its own summariseFleetStates.",
+      "fix": "Reconcile page posture with the current typed server-summary/trust ownership under an integration scope; explicitly map unavailable server summaries after SSE or failure, retaining specialist field coverage and all existing metrics. Correct obsolete comments rather than reverting batched reads or retaining duplicate semantic engines.",
+      "owner": "integration", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 712,
+      "rule": "MDC-045",
+      "detail": "Charging chip formats raw charger_power directly and appends kW, with ?? 0. The mapped API reading preserves raw charger_power at useVehicles.ts:250 and no conversion appears here; useUnits.ts:167 already supplies formatPower. The field's unit is not documented in VehicleState at api/types.ts:636, so current backend meaning was not independently proven.",
+      "fix": "Confirm canonical SI watts at the current backend boundary, then use existing formatPower only at display with missing/field-trust handling. Do not change API/cache units or add a legacy converter; resolve the undocumented unit rather than guessing.",
+      "owner": "integration", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 827,
+      "rule": "MDC-026 / MDC-033",
+      "detail": "Operational brief describes fleet service attention from one limit=100 work-order page and does not disclose loaded-window coverage. Open/urgent counts and narrative can understate fleet-wide service if additional records exist.",
+      "fix": "Preserve the current endpoint/filter and loaded records; disclose bounded coverage unless an existing authoritative total/aggregate is proven. Any full-fleet aggregate or paging behavior requires separate integration ownership, not invented backend support.",
+      "owner": "integration", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx", "line": 497,
+      "rule": "MDC-025 / MDC-044",
+      "detail": "Status breakdown derives English labels by capitalizing backend status strings and passes vehicle statuses to generic service statusHexColor, whose recognized keys at colors.ts:197-203 exclude driving/charging/asleep/offline. Known vehicle states therefore share muted fallback color.",
+      "fix": "Use the existing vehicle-domain status labeling/color contract, not another status registry; retain exact status counts and unknown/coverage exclusions, with localized labels and text plus semantic color.",
+      "owner": "page", "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-only trust defects in card readings and pending/bounded service narrative outrank decoration. Preserve the already migrated batched/SSE source and layout/stat adapters.",
+    "order": ["Current per-field trust and missing values", "Work-order pending/retained/coverage", "Canonical charger-power display verification", "Server-summary ownership reconciliation", "Threshold-responsive and keyboard virtualization", "Shared action target/name gaps", "Restrained visual token cleanup"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Align measured large-fleet grid with existing placement policy",
+      "owner": "web\\src\\components\\vehicles\\VirtualizedVehicleGrid.tsx",
+      "props": ["Preserve vehicles, label, renderVehicle, onVisibleVehiclesChange and className"],
+      "variants": ["Existing virtualized row mode; reuse shared containerPolicy/packCardRows rather than another breakpoint engine"],
+      "states": ["24/25 threshold", "Resize and sidebar width change", "Long cards", "Keyboard scrolling to off-screen cards"],
+      "usedBy": ["VehicleListPage large-fleet branch; other consumers not inspected"],
+      "dependsOn": ["web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts", "Existing react-virtual measurement/list semantics", "Parent-owned responsive/keyboard runtime acceptance"]
+    },
+    {
+      "name": "Opt-in contextual accessible pin action and touch sizing",
+      "owner": "web\\src\\components\\ui\\PinButton.tsx",
+      "props": ["Optional caller-owned localized ariaLabel", "Opt-in minimum target sizing; retain size/className defaults and itemType/itemId/context"],
+      "variants": ["44px fleet-card action without globally changing compact consumers"],
+      "states": ["Known pinned/unpinned", "Pin-read pending/error", "Toggle pending/error"],
+      "usedBy": ["VehicleListPage VehicleCard; widget/picker consumers mentioned in PinButton documentation but not audited"],
+      "dependsOn": ["usePinned/useTogglePin source trust", "Existing Tooltip/Button focus policy", "Preserve pin persistence and ordering"]
+    },
+    {
+      "name": "Reachable multiline related-context link targets",
+      "owner": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+      "props": ["Existing relatedActions key/label/to/icon/onNavigate unchanged", "Opt-in or accepted shared minimum-height/wrapping link presentation"],
+      "variants": ["Existing outline links with at least 44px target, long-label wrapping"],
+      "states": ["Phone open drawer", "RTL", "200% text", "Keyboard navigation/close"],
+      "usedBy": ["VehicleListPage preview; independent production consumers not inspected"],
+      "dependsOn": ["Existing BUTTON_BASE/BUTTON_VARIANTS and Drawer", "Parent-owned overlay acceptance"]
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Grid placement", "existingOwner": "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts:4-35", "competingOwner": "web\\src\\components\\vehicles\\VirtualizedVehicleGrid.tsx:21-25", "decision": "Unify placement contract without replacing virtualization."},
+    {"pattern": "Battery bar", "existingOwner": "web\\src\\components\\data-display\\MetricBar.tsx:43-95", "competingOwner": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx:675-686", "decision": "Reuse existing primitive and its solid/missing/accessibility/motion contracts."},
+    {"pattern": "Fleet posture summary", "existingOwner": "web\\src\\api\\hooks\\useVehicles.ts:695-720,1439-1444,1488", "competingOwner": "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx:780-783,847-933,959-970", "decision": "Integration must reconcile authoritative server summary and specialist field coverage; no reintroduction of old fan-out."}
+  ],
+  "preservation": {
+    "sourceHash": "8E13134BDA6D69224048338FCED23CECE12DF9DBCCB38EC008E5E523369E3005",
+    "sourceHashAlgorithm": "SHA-256 of exact root page bytes",
+    "currentLineCount": 1904,
+    "sections": [
+      {"name": "Fleet posture", "count": 1, "metrics": 6, "line": 1457},
+      {"name": "Fleet summary", "count": 1, "metrics": 4, "line": 1633},
+      {"name": "Fleet overview", "count": 1, "panels": ["Fleet battery status", "Fleet status"], "line": 1655},
+      {"name": "All vehicles", "count": 1, "line": 1694},
+      {"name": "Vehicle preview", "count": 1, "fields": 7, "relatedActions": 6, "line": 1741},
+      {"name": "Remove confirmation", "count": 1, "line": 1724}
+    ],
+    "counts": {"topLevelContentSections": 4, "namedSectionMounts": 3, "glassPanelJSXOccurrencesIncludingBranches": 9, "vehiclePanelGridJSXOccurrencesIncludingSkeleton": 5, "chartContainerJSXOccurrences": 0},
+    "actions": ["Sync from Tesla with pending/success/error/reset", "Compare first two registered vehicles using frontend leftId/rightId URL parameters", "Refresh vehicle list/live fleet", "Pin/unpin and saved pinned-first ordering", "Vehicle details title/footer navigation and cache prefetch/warming", "Quick view", "Confirmed destructive remove with live-mode/sudo protection and pending state", "Fleet operations navigation", "Operational narrative review details", "Preview details navigation", "Preview drives/charging/locations/inbox/maintenance/signals navigation with setVehicleId before navigation", "Masked VIN copy/privacy behavior"],
+    "dataBehavior": ["Fleet-wide /vehicles intentionally has no workspace vehicle or range selector: workspaceScope.ts:127 includes /vehicles in VEHICLE_DISABLED_PATHS and RANGE_ENABLED_PATHS excludes it.", "Historical related routes retain shell-owned workspace selection; no local duplicate picker.", "Preserve registered inventory during refresh failure and independent live/work-order degradation.", "Preserve raw SI hook/cache values, useUnits display conversion, locale and user preferences.", "Verified battery/range/charging/software fields have independent coverage; unknown is not measured zero.", "Current status excludes unresolved/unverified/retained entries; retained preview evidence stays visible with timestamps.", "Actual source migration uses batched states, cancellation, SSE sequence recovery, automatic freshness ageing and cache seeding.", "Preserve >24 virtualization threshold until intentional aligned shared change, all vehicles, source/pin order and cache-warming callbacks.", "Preserve migrated PageLayout/Section/VehiclePanelGrid and OperationalBrief/VehicleEvidenceBrief; do not restore legacy page/API/rendering patterns.", "Narrative has up to four vehicle snapshots and two urgent work-order evidence records with provenance and stated limitations."],
+    "risk": "Proposed fixes must improve evidence qualification without deleting retained readings, sections, actions, specialist calculations or existing migrations."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified; no screenshot or composed theme review",
+    "keyboard": "unverified",
+    "contrast": "unverified; no measured contrast ratios",
+    "viewport": "unverified at all ten required widths",
+    "backend": "Read actual route declarations only; no backend query, database, sudo, production API or mutation executed. Work-order total/ordering and undocumented charger_power unit remain unknown.",
+    "validation": "Source inspection, exact root SHA-256/line count and case-sensitive scoped pattern counts only. No Git, TypeScript, lint, build, test suite, browser or production action. Skill audit.sh was inspected but not executed because its mandatory project TypeScript step conflicts with this Phase 0 source-only assignment.",
+    "focusedCounts": {"rawRestrictedHTML": 0, "directRechartsLeafletFramerImports": 0, "dynamicInlineStyleOccurrences": 1, "staticInlineStyleViolationsObserved": 0, "neonBackgroundOccurrences": 1, "directPureWhiteOrGlowOccurrences": 0},
+    "countNote": "Initial PowerShell Select-String probe was case-insensitive and matched six shared <Button> uses; corrected case-sensitive regex yields zero raw restricted elements. No claim of globally zero violations.",
+    "scope": "One assigned mounted page and narrowly relevant data/presentation owners. Shared proposals require owner acceptance and cross-consumer evidence before expanding APIs; no source edits or hypothetical files included."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\VehicleListPage.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehiclePanelGrid.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehiclePanelCell.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\components\\vehicles\\VirtualizedVehicleGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+    "web\\src\\components\\ui\\PinButton.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useFleetOps.ts",
+    "web\\src\\api\\hooks\\usePinned.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\routePrefetch.ts",
+    "web\\src\\i18n\\route-closure.test.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\fleetops\\handler.go",
+    "internal\\api\\fleetops\\handler_test.go",
+    "internal\\api\\fleetops\\guardrails_test.go",
+    "internal\\api\\fleetops\\guardrails.go"
+  ]
+}
