@@ -1,0 +1,332 @@
+{
+  "item": "audit-page-164",
+  "page": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+  "routes": ["/power/grafana"],
+  "purpose": "Manual persistent Grafana panel JSON composer, bundled reference catalogs and optional propose-only Helix drafter. The inspected route is not an embedded Grafana dashboard or proxy viewer.",
+  "primaryGoal": "Write or explicitly apply a proposed panel envelope, review its reference metadata, then copy JSON for manual paste into the user's existing Grafana editor without an automatic push.",
+  "dataSources": [
+    {
+      "name": "User-owned manual JSON",
+      "hook": "useState(loadPersistedJson), useEffect(persistJson)",
+      "endpoint": null,
+      "owner": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+      "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:36,166-188,194-196,231-249,339-350"],
+      "behavior": "Restore ai.grafanaPanel.draft verbatim; persist every truthy string including whitespace; remove key on empty string. Storage exceptions are swallowed. Copy trims without rewriting the draft. Manual text is not parsed or SQL-executed."
+    },
+    {
+      "name": "Bundled catalog and derived summary",
+      "hook": "Local constants/useMemo -> useOperationalMetrics",
+      "endpoint": null,
+      "owner": "Page constants; parallel whitelist owner internal\\api\\ainlgrafana\\handler.go",
+      "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:72-164,198-225,280-291,308-321", "internal\\api\\ainlgrafana\\handler.go:437-552"],
+      "behavior": "8 panel types, 2 datasource types, 5 tables, 33 documented columns. Counts are reference metadata, never fleet statistics, connected datasource checks or actual database row counts. Sorted names use localeCompare; column order is retained.",
+      "knownIdentifiers": {
+        "panelTypes": ["timeseries", "stat", "gauge", "table", "barchart", "heatmap", "piechart", "logs"],
+        "datasourceUids": ["tesla-postgres", "tesla-prometheus"],
+        "tables": ["drives", "charging_sessions", "vehicles", "alerts", "signal_log_view"]
+      },
+      "limits": "Backend calls UIDs placeholders to be adjusted by the user and accepts nonempty UIDs. Table existence, deployed schema, Grafana compatibility and connectivity are unverified."
+    },
+    {
+      "name": "AI draft stream",
+      "hook": "AINLGrafanaPanel -> useAiStream",
+      "endpoint": "POST /api/v1/ai/power/grafana-panel/draft",
+      "owner": "web\\src\\hooks\\useAiStream.ts; internal\\api\\ainlgrafana\\handler.go",
+      "evidence": ["web\\src\\components\\ai\\AINLGrafanaPanel.tsx:148-181", "web\\src\\hooks\\useAiStream.ts:316-360", "internal\\api\\ai_routes.go:134,740-744", "internal\\api\\router.go:3043-3056,5106"],
+      "behavior": "Bare route receives canonical API prefix; body {prompt: trimmedPrompt}; stream uses existing authHeaders/serverCredentials/AbortController. Capture successful draft_grafana_panel tool_result separately. Starting a new draft clears the old candidate. Applying is explicit and blocked while streaming; no browser push to Grafana.",
+      "shape": "GrafanaPanelDraft {prompt, panel:{title,type,datasource:{type,uid},targets:[{ref_id,raw_sql?,expr?,format?}],grid_pos:{x,y,w,h}},rationale,referenced_tables}. Parser filters malformed targets rather than rejecting the whole array and checks numeric grid types, not finiteness.",
+      "limits": "Route binding is source-verified only. No provider, SSE, guard, validator, database or Grafana endpoint exercised."
+    },
+    {
+      "name": "AI settings and presentation preferences",
+      "hook": "withAiFeature -> useAiEnabled -> useSettings; useOperationalMetrics -> useUnits/useFormatting",
+      "endpoint": "GET /api/v1/settings",
+      "owner": "web\\src\\hooks\\useSettings.ts; web\\src\\api\\settings.ts",
+      "evidence": ["web\\src\\components\\ai\\withAiFeature.tsx:46-56", "web\\src\\hooks\\useAiEnabled.ts:31-39", "web\\src\\hooks\\useSettings.ts:26-59,81-105", "web\\src\\api\\settings.ts:24", "internal\\api\\router.go:3659", "web\\src\\hooks\\useOperationalMetrics.tsx:11-25"],
+      "behavior": "Existing settings key ['settings'], five-minute stale time, refetchOnMount always, retry 1. AI defaults off and nl-grafana-panel must be exactly true. Missing settings keep manual workflow available. Summary formatter retains preferences; no page settings writes."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Grid",
+      "owner": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "web\\src\\components\\layout\\Grid.tsx"],
+      "contract": "Existing PageContainer/shell, full-width min-w-0 adapter, one column then three at xl. Preserve shell ownership; no second page width or workspace selector engine.",
+      "evidence": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-17", "web\\src\\components\\layout\\Grid.tsx:65-98", "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:37,296-306,332-333"]
+    },
+    {
+      "name": "OperationalBrief / useOperationalMetrics",
+      "owner": ["web\\src\\components\\data-display\\OperationalBrief.tsx", "web\\src\\hooks\\useOperationalMetrics.tsx"],
+      "contract": "Four raw count metrics with source descriptions, neutral Static reference status, explicit scope/freshness/provenance, named section and Review details drawer. Details are inspection only, not editor mutation, clipboard or Grafana publish.",
+      "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:209-225,308-321", "web\\src\\components\\data-display\\OperationalBrief.tsx:100-160,234-300"]
+    },
+    {
+      "name": "Button / CopyButton / Textarea / GlassPanel / PanelTitle / Text / Code",
+      "owner": "web\\src\\components\\ui",
+      "contract": "Controlled 14-row monospaced editor with native text selection and localized accessible name. Copy uses exact trimmed text and shared stale-attempt invalidation. Copy and Clear are disabled for whitespace-only drafts. Retain shared focus/typography/theme/density contracts.",
+      "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:333-375", "web\\src\\components\\ui\\Textarea.tsx:44-109", "web\\src\\components\\ui\\CopyButton.tsx:81-157"]
+    },
+    {
+      "name": "OrderedStepList / InlineCallout / EmptyState / FadeIn",
+      "owner": ["web\\src\\components\\data-display", "web\\src\\components\\feedback\\InlineCallout.tsx", "web\\src\\components\\feedback", "web\\src\\components\\motion\\FadeIn.tsx"],
+      "contract": "All three passive draft/copy/paste steps, manual-push disclaimer, localized clipboard success/warning/danger. InlineCallout non-action branch role=status. Catalog empty branches preserved although constants are nonempty. FadeIn delegates reduced-motion preferences.",
+      "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:377-413,431-438,467-474,504-510", "web\\src\\components\\feedback\\InlineCallout.tsx:106-109", "web\\src\\components\\motion\\FadeIn.tsx:23-36"],
+      "limits": "OrderedStepList implementation not independently inspected."
+    },
+    {
+      "name": "AINLGrafanaPanel / AIFeatureCard / AiOutputPanel / withAiFeature",
+      "owner": "web\\src\\components\\ai",
+      "contract": "Preserve feature gate, prompt, contextual Ask Helix label, streaming disabled/busy state, preview title/type/datasource/target-count/referenced-table list, explicit Apply, output/error/activity/usage. These existing shared owners must not be replaced by page-local AI controls.",
+      "evidence": ["web\\src\\components\\ai\\AINLGrafanaPanel.tsx:139-290", "web\\src\\components\\ai\\AIFeatureCard.tsx:265-350", "web\\src\\components\\ai\\AiOutputPanel.tsx:72-123"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+      "line": 72,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Frontend manually mirrors backend whitelist names, UIDs and column identities. Descriptions differ but identifiers/counts match the inspected catalog. Page comments point to an obsolete handler filename.",
+      "fix": "Retain all entries now; coordinate catalog metadata generation/ownership if another consumer establishes a shared need. Correct references during an authorized change, not by inventing a catalog endpoint.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["internal\\api\\ainlgrafana\\handler.go:446-552", "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:39-51"]
+    },
+    {
+      "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+      "line": 443,
+      "rule": "MDC-015 / mission 4",
+      "detail": "Three catalog renderers repeat bordered low-chrome list cards with differing content. One-page audit does not establish need for a new universal catalog component.",
+      "fix": "Prefer existing primitives and local typed renderer extraction only if useful; preserve nested column lists and datasource UID details.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Editor/workflow and panel-type/datasource grids stack until xl, then 2+1 columns: page 37,332-333,417-418.",
+      "Panel-type list uses 1/sm 2/3xl 3 columns; table catalog auto-fits min(100%,18rem): page 440,512.",
+      "min-w-0/max-w-full, wrapping actions/column rows, identifier overflow-wrap:anywhere and p-4/sm:p-5 retain readable content without intentional mobile deletion: page 334,352,447,483,527."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+        "line": 440,
+        "rule": "MDC-043",
+        "detail": "Viewport-driven sm and xl grids can be cramped inside a reduced allocated shell width; several catalog PanelTitle rows lack wrapping unlike editor/workflow headings. This is a source risk, not observed overflow.",
+        "fix": "Test ten contract widths, narrow allocated container, long translations/identifiers, RTL and 200% text; keep every catalog entry, column and action reachable.",
+        "owner": "page",
+        "confidence": "medium",
+        "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:419-420,455-456,494-495"]
+      }
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "runtimeStatus": "Unverified; no browser, viewport, drawer scrolling, overflow or touch-target measurements."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Editor and AI prompt have localized aria-labels; Textarea forwards native controls and generated stable IDs/focus tokens.",
+      "All direct page icons have aria-hidden; catalogs are semantic nested ul/li lists rather than inaccessible visual matrices.",
+      "OperationalBrief section uses aria-labelledby; Review details opens existing Drawer with title/description/status.",
+      "Clipboard callouts use role=status; AI error output uses role=alert; contextual Ask Helix action exposes disabled and aria-busy.",
+      "Shared FadeIn suppresses entrance motion when useMotionPreference requests reduction."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+        "line": 339,
+        "rule": "MDC-021 / MDC-040",
+        "detail": "Editor has an accessible name but no associated visible label/help or aria-describedby linking manual-copy/propose-only guidance. AI prompt similarly supplies aria-label without associating surrounding description.",
+        "fix": "Associate existing localized guidance using Textarea label/hint or explicit stable IDs/described-by. Preserve exact input and workflow semantics.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:339-350,383-413", "web\\src\\components\\ai\\AINLGrafanaPanel.tsx:201-212"]
+      },
+      {
+        "file": "web\\src\\components\\ai\\AINLGrafanaPanel.tsx",
+        "line": 220,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "AI Apply uses size=sm, as do shared Ask Helix and Review details controls. Effective 44px touch reachability, focus restoration and real screen-reader announcements are not measured.",
+        "fix": "Validate real open/closed drawer and AI states on mobile/keyboard; coordinate density/target changes with shared owners if measurements demonstrate a gap.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "runtimeStatus": "Keyboard, screen reader, target sizes, effective contrast, forced colors and reduced-motion runtime unverified."
+  },
+  "states": {
+    "manualEditor": "Available regardless of AI; blank editor is valid, not missing fleet data. Copy/Clear disabled for whitespace-only text, which remains persisted. Edit/clear/apply reset clipboard status; storage denial is silently ignored.",
+    "catalog": "Static reference explicitly identified in summary, freshness and provenance; three empty fallback branches exist but are unreachable with current nonempty constants.",
+    "settings": "Default AI off/empty flags hides optional AI section while manual content survives; no distinct page notice differentiates disabled AI from unavailable settings.",
+    "ai": "Idle prompt; streaming busy/disabled; output text/activity/usage; done with no text shows no-output message; error uses alert; draft stays separate until Apply. New generation clears prior candidate, whereas page editor remains intact.",
+    "clipboard": "Success instructs manual Grafana paste; unavailable API warning and rejected write danger both preserve editable text and allow manual copy/retry.",
+    "offlineStalePartial": "Static catalogs and already-restored editor do not represent live/stale/offline measurements. Shared settings/stream own network behavior; no page-owned DataState or automatic Grafana readiness signal.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+        "line": 182,
+        "rule": "MDC-026 / mission 24",
+        "detail": "localStorage write/remove failures are swallowed, so long-draft persistence is best-effort although explanatory comments imply navigation safety.",
+        "fix": "If authorized, disclose persistence unavailability non-destructively through existing feedback, retaining in-memory input and manual copy. Never claim durable save without success.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+      "line": 447,
+      "rule": "MDC-010 / MDC-012 / mission 5-8",
+      "detail": "Repeated fixed cyan/emerald text decorates ordinary catalog identifiers, UIDs and columns; five cyan section icons add another accent layer. Three list surfaces use bg-white/[0.02]. No literal neon/glow or pure-white text was found in page source, but fixed colors and white-alpha surfaces remain theme/visual-noise risks.",
+      "fix": "Use restrained primary/secondary/muted and surface tokens for ordinary metadata; reserve subdued semantic accent for actual meaning. Measure composed light/dark contrast; do not reset persisted theme IDs or remove catalog detail.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:443-447,479-487,516-528"]
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / MDC-020 / mission 7",
+      "detail": "Shared Ask Helix overrides outline button chrome with repeated cyan border/background/text/focus classes; page-specific AI preview also uses cyan border/background. These compete with the restrained neutral catalog treatment. Saturation/glow/effective contrast were not measured.",
+      "fix": "Coordinate restrained shared CTA/preview tokens without changing Ask Helix contextual names, streaming feedback, opt-in or explicit application. Do not create a competing page-local variant.",
+      "owner": "shared",
+      "confidence": "high",
+      "evidence": ["web\\src\\components\\ai\\AINLGrafanaPanel.tsx:244", "web\\src\\components\\ai\\AiOutputPanel.tsx:81"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+      "line": 460,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Page describes canonical datasource UIDs but backend explicitly calls them placeholders requiring user adjustment. Static catalog presence must not imply live installation/connectivity or Grafana-ready import compatibility.",
+      "fix": "Retain explicit static-reference provenance; clarify UID adjustment/compatibility limitations in existing localized guidance during an authorized integration change.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["internal\\api\\ainlgrafana\\handler.go:457-465", "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:315-319"]
+    },
+    {
+      "file": "web\\src\\components\\ai\\AINLGrafanaPanel.tsx",
+      "line": 106,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Parser comments promise strict whole-draft rejection, but malformed targets are dropped and missing targets become []; grid positions accept nonfinite numbers. Page serializes the narrowed snake_case envelope without a proven translation to Grafana native JSON fields.",
+      "fix": "Coordinate typed parser/backend/export-contract tests before changing mapping. Preserve all valid target fields and raw editor text; do not claim validation or import equivalence from a successful tool event.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["web\\src\\components\\ai\\AINLGrafanaPanel.tsx:70-79,106-138", "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:235-241"]
+    },
+    {
+      "file": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+      "line": 74,
+      "rule": "MDC-044",
+      "detail": "Static catalog English descriptions render directly, outside t(), while surrounding titles/workflow/errors are localized. Source column/type/UID identifiers are intentionally technical and must remain unchanged.",
+      "fix": "Localize descriptive prose through existing catalogs with stable identifiers as keys; retain SI names, types, PII notes and all 33 column descriptions.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx:449-450,489-490,521,535"]
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Working source-level manual workflow already uses existing foundations and explicit static trust. Highest risks are UID/import/parser trust boundaries, then metadata color/localization and mobile/open-state verification. No runtime failure is claimed.",
+    "order": ["Resolve source-backed compatibility/trust limitations without adding automatic push.", "Coordinate shared AI chrome and preserve all explicit review/application behavior.", "Subdue page metadata/surfaces and localize prose.", "Run actual ten-width, theme, keyboard, drawer and offline/error acceptance under parent validation ownership."]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained shared AI CTA and output/preview presentation",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "propsVariantsStates": "Existing outline CTA, canStart/stream/onAction, busy/disabled/focus, inputSlot, children and AiOutputPanel state/text/error/activity/usage; retain localized contextual aria-label.",
+      "usedBy": ["AINLGrafanaPanel on /power/grafana", "Other AIFeatureCard callers require owner inventory; not audited here"],
+      "dependsOn": ["MDC-010/012/020/040/042", "Existing Button/theme tokens", "AI feature owner and central visual acceptance"],
+      "status": "Report-only shared-owner coordination; no new primitive or global styling edit authorized."
+    },
+    {
+      "name": "Grafana typed draft/catalog compatibility and truthful reference guidance",
+      "existingOwnerFile": "web\\src\\components\\ai\\AINLGrafanaPanel.tsx",
+      "propsVariantsStates": "GrafanaPanelDraft/onApply, draft_grafana_panel tool-result parser, datasource UID placeholders, targets/ref_id/raw_sql/grid_pos, valid/invalid/partial candidate and explicit apply.",
+      "usedBy": ["GrafanaPanelPage", "internal\\api\\ainlgrafana\\handler.go catalog/validator integration"],
+      "dependsOn": ["Existing backend draft/validation contract", "Actual Grafana import schema evidence", "Preserved manual raw JSON/copy behavior", "Parent-owned targeted regression window"],
+      "status": "Do not change auth, execute SQL, call production Grafana, or introduce a push/proxy capability."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "relatedButNotEquivalent": ["Manual and optional AI workflows intentionally coexist; AI proposes, user applies and copies.", "No iframe, embedded dashboard, proxy URL or Grafana connection action exists in the inspected page/component trace. Do not invent one because of the route name."],
+    "limits": "One-page trace only; no app-wide search for other Grafana surfaces or claim that deployment proxies are absent."
+  },
+  "preservation": {
+    "sourceHash": "44973FE6712FA3D511697DD8327A7A8BF1964F2306DE95CD00B641EF6C92590B",
+    "hashAlgorithm": "SHA-256 of assigned root-relative source file bytes via Get-FileHash",
+    "currentLineCount": 548,
+    "sectionCounts": {"pageLevelBands":5,"alwaysVisibleNamedSections":6,"optionalAiSections":1,"pageGlassPanelOpenings":5,"pageChartContainerOpenings":0,"summaryMetrics":4,"workflowSteps":3,"panelTypes":8,"datasources":2,"tables":5,"columns":33},
+    "sections": [
+      {"name":"Curated catalog summary and details drawer","evidence":"GrafanaPanelPage.tsx:306-323","preserve":"4 raw counts, static-reference status/scope/freshness/provenance and read-only details."},
+      {"name":"Optional Helix drafter","evidence":"GrafanaPanelPage.tsx:325-328; AINLGrafanaPanel.tsx:184-281","preserve":"Feature gate, prompt, stream/output/error/activity/usage, proposed preview and explicit Apply."},
+      {"name":"Manual panel JSON editor","evidence":"GrafanaPanelPage.tsx:334-376","preserve":"14 rows, raw text/selection, monospaced native textarea, name, placeholder, Copy/Clear/status."},
+      {"name":"How it works","evidence":"GrafanaPanelPage.tsx:379-414","preserve":"All 3 passive instructions and never-push disclaimer."},
+      {"name":"Curated panel types","evidence":"GrafanaPanelPage.tsx:418-452","preserve":"All 8 sorted identifiers and descriptions, empty fallback."},
+      {"name":"Curated datasource types","evidence":"GrafanaPanelPage.tsx:454-492","preserve":"Both sorted names/UIDs/descriptions, placeholder caveat and empty fallback."},
+      {"name":"Curated table catalog","evidence":"GrafanaPanelPage.tsx:492-543","preserve":"5 sorted tables, all 33 ordered columns/types/descriptions, SI and PII notes, empty fallback."}
+    ],
+    "actions": [
+      {"name":"Edit/paste JSON","evidence":"GrafanaPanelPage.tsx:339-350","behavior":"Arbitrary raw text; persist verbatim and reset status; do not silently parse, execute or recase."},
+      {"name":"Copy to clipboard","evidence":"GrafanaPanelPage.tsx:354-362","behavior":"Only nonwhitespace; copy trimmed string, leave editor/persistence intact; shared pending-attempt invalidation and manual-copy recovery."},
+      {"name":"Clear","evidence":"GrafanaPanelPage.tsx:244-249,364-372","behavior":"Disabled for blank/whitespace, otherwise empty editor, remove storage key and clear status. Do not silently change this existing default."},
+      {"name":"Review details and close","evidence":"OperationalBrief.tsx:153-159,234-300; GrafanaPanelPage.test.tsx:227-247","behavior":"Inspect catalog provenance and counts; drawer close must retain editor/storage and never invoke clipboard or Apply."},
+      {"name":"Ask Helix / Draft panel","evidence":"AINLGrafanaPanel.tsx:148-176,184-212","behavior":"Opt-in only, trimmed prompt, clear previous candidate at new request, streaming guarded."},
+      {"name":"Apply to editor","evidence":"AINLGrafanaPanel.tsx:178-181,216-235; GrafanaPanelPage.tsx:235-241","behavior":"Explicitly replace editor with JSON.stringify(draft.panel,null,2); reset status. No automatic application or Grafana push."}
+    ],
+    "dataBehavior": ["ai.grafanaPanel.draft key/raw persistence unchanged; storage best-effort.", "Reference counts remain distinct from live connectivity/database measurements.", "Manual editing is independent of AI gate, provider failures and candidate state.", "Preserve current preferences, route SafeRoute/lazy mounting and shell ownership; no new vehicle/date selectors.", "Retain source SI identifiers and user JSON; no unit conversion, telemetry collection or auth changes.", "Embedded/proxy behavior is not present in the assigned source; preserve the actual manual-copy boundary rather than inventing an embed."],
+    "testEvidence": {
+      "inspected": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.test.tsx:153-181,195-285; test names at 286-406",
+      "sourceCoverage": "Manual denial/retry, catalog counts/completeness, details drawer retention, storage, whitespace disablement, copy/error/clear, explicit AI application and accessible controls.",
+      "limits": "Not executed; test names and read assertions are not acceptance. AI and clipboard mocks cannot prove real provider/Grafana/browser behavior."
+    },
+    "lineCountGate": "Future page plus same-feature extracted components must retain at least 384 lines (70% of 548) or document truly equivalent decomposition; never drop sections to meet modernization.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-164.json",".agent-status\\audit-page-164.txt"]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source audit; only assigned report and heartbeat written.",
+    "routeEvidence": ["web\\src\\App.tsx:289 lazy import", "web\\src\\App.tsx:730 SafeRoute at power/grafana; not navigated"],
+    "instructionsRead": ["docs\\frontend-worker-conventions.md", "docs\\frontend-design-contract.md:1-230,270-395", "docs\\frontend-mission.md:1-190,238-394,507-580,599-799,920-999"],
+    "scopedPatternCounts": {"target":"web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx","inlineStyleAttributes":0,"caseSensitiveRawButtonInputTextareaSelectTable":0,"directRechartsReactLeafletFramerMotionImports":0,"literalNeonOrGlowMatches":0,"fixedWhiteTextMatches":0,"fixedCyanEmeraldOrWhiteAlphaMatchedLines":13,"GlassPanelOpenings":5,"ChartContainerOpenings":0,"limits":"Literal counts only; inherited neon/glow/saturation/pure-white noise and effective contrast remain runtime-unverified."},
+    "commands": [
+      {"command":"Get-FileHash web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx -Algorithm SHA256; (Get-Content <same path>).Count; scoped Select-String -CaseSensitive counts","exitCode":0,"output":"44973FE6712FA3D511697DD8327A7A8BF1964F2306DE95CD00B641EF6C92590B; lines=548; inline=0; raw=0; direct-library=0; neon-glow=0; white-text=0; fixed-color=13; GlassPanel=5; ChartContainer=0"},
+      {"command":"Initial quoted-regex PowerShell count attempt","exitCode":1,"output":"ParserError: Unexpected token ']' in expression or statement. No scan ran; corrected command above succeeded."},
+      {"command":"Get-Content -Raw docs\\frontend-audits\\audit-page-164.json | ConvertFrom-Json -ErrorAction Stop; compare 19 required fields, exact page/routes and Get-FileHash against preservation.sourceHash","exitCode":0,"output":"JSON parse: PASS; required fields: 19/19; route/page: PASS; source unchanged: 44973FE6712FA3D511697DD8327A7A8BF1964F2306DE95CD00B641EF6C92590B; line count: 548"}
+    ],
+    "notRun": ["No Git, source edits, nested agents, auth changes, production requests, dependency installation, full-repository lint/build, TypeScript or tests.", "Skill audit script inspected but not run because it unconditionally invokes project-wide TypeScript; equivalent literal checks bounded to assigned page.", "No browser mount, screenshots, network call, keyboard/screen-reader/contrast measurement, viewport/RTL/theme/forced-color/open-state or motion acceptance.", "No SQL execution, AI provider invocation, Grafana import/embedded/proxy test or server runtime proof.", "Transitive Drawer, OrderedStepList, HelixEvidenceTrail, AIThinkingIndicator, global styles/theme and localization catalogs were not independently audited."],
+    "sourceDrift": "Root hash pins read snapshot; dependencies may change concurrently. Re-read affected sources before implementation/acceptance.",
+    "failedLookup": "useOperationalMetrics.ts did not exist; scoped glob resolved actual useOperationalMetrics.tsx, which was read.",
+    "runtimeStatus": "UNVERIFIED; this JSON is source evidence, not implementation or runtime acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-163.json",
+    "docs\\frontend-audits\\audit-page-166.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx",
+    "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.test.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\ai\\AINLGrafanaPanel.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\ui\\Textarea.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\feedback\\InlineCallout.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\Grid.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\api\\settings.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\ainlgrafana\\handler.go"
+  ]
+}
