@@ -1,0 +1,356 @@
+{
+  "item": "audit-page-160",
+  "page": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+  "routes": ["/ownership/subscription-roi"],
+  "purpose": "Compare recorded recurring subscriptions and one-time features against measured usage, benchmark-derived value, and confidence-qualified ROI; maintain the selected vehicle's local subscription register.",
+  "primaryGoal": "Understand subscription commitment, realised value, break-even usage, and candidate savings without treating an uncertain verdict as an instruction or transacting with a provider.",
+  "dataSources": [
+    {
+      "hook": "useSubscriptionROI",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 750,
+      "endpoint": "GET /api/v1/subscription-roi?vehicle_id={vehicleId}&window_days={windowDays}",
+      "owner": "internal\\handler\\v1\\ownershipintel\\handler.go",
+      "routeLine": 184,
+      "routerIntegration": "internal\\api\\router.go:3918 mounts ownershipIntelHandler.MountRoutes.",
+      "behavior": "Positive selected vehicle required; default page window is 180 days, options 30/90/180/365. Vehicle and window participate in the query key. Shared wrapper forwards AbortSignal and inherits query policy.",
+      "sourceOwnership": "Ownership intelligence service supplies the report; page derives chart rows only, filters null ROI, and formats money/percentages at presentation."
+    },
+    {
+      "hook": "useSubscriptions",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 758,
+      "endpoint": "GET /api/v1/subscription-roi/subscriptions?vehicle_id={vehicleId}",
+      "owner": "internal\\handler\\v1\\ownershipintel\\handler.go",
+      "routeLine": 185,
+      "behavior": "Independent selected-vehicle register query; items null normalizes to an empty array. No analysis-window parameter."
+    },
+    {
+      "hook": "useCreateSubscription",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 766,
+      "endpoint": "POST /api/v1/subscription-roi/subscriptions",
+      "owner": "internal\\handler\\v1\\ownershipintel\\handler.go",
+      "routeLine": 186,
+      "behavior": "Records local ownership data only; sends snake_case draft with current vehicle_id; invalidates ownership-intel queries and emits existing mutation toast. Success closes editor. Not invoked."
+    },
+    {
+      "hook": "useDeleteSubscription",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 784,
+      "endpoint": "DELETE /api/v1/subscription-roi/subscriptions/{id}",
+      "owner": "internal\\handler\\v1\\ownershipintel\\handler.go",
+      "routeLine": 187,
+      "behavior": "Local record removal after named danger confirmation; ownership-intel invalidation and existing toast. No provider cancellation. Not invoked."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 51,
+      "endpoint": "Indirect shared useVehicles dependency; vehicles endpoint was not independently audited.",
+      "owner": "Existing workspace vehicle store and URL selection",
+      "behavior": "URL/store/fleet fallback; no duplicate page vehicle picker. Workspace route source resolves vehicle=true and range=false for this route."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "usage": "Title, subtitle, context analysis-window action, independent query array; existing shell composition."},
+    {"name": "OwnershipPanel", "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx", "usage": "Domain adapter over LayoutCard, SourceContent and useDataState; four direct panels plus the EvidencePanel wrapper."},
+    {"name": "OwnershipBrief", "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx", "usage": "Existing OperationalBrief/useOperationalMetrics pipeline for five monetary/percentage metrics, scope, source bounds, unknown freshness and trust status."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "usage": "Ten-column verdict table and six-column register; persisted table IDs and register value filters."},
+    {"name": "ChartContainer and category chart exports", "owner": "@/components/charts", "usage": "ROI comparison bars, tooltip, responsive dimensions and accessible data columns."},
+    {"name": "Input, Select, Button, Badge, Text, ConfirmDialog", "owner": "@/components/ui", "usage": "Shared controls, typography and confirmation; decorative action icons have aria-hidden."},
+    {"name": "MoneyInput", "owner": "web\\src\\features\\ownership\\components\\MoneyInput.tsx", "usage": "Integer ISO currency minor-unit input with display-equivalent hint."},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx", "usage": "Three evidence subregions: quality, evidence sources, limitations/unsupported capabilities."},
+    {"name": "VerdictBadge and MutationError", "owner": "web\\src\\features\\ownership\\components", "usage": "Domain severity badge and mutation-failure AlertBanner."},
+    {"name": "FadeIn", "owner": "@/components/motion", "usage": "Five existing entrance wrappers; implementation/reduced-motion runtime not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 360,
+      "rule": "MDC-002 reuse existing owners",
+      "detail": "Benchmark formatting repeats identical rounding and currency formatting in filterValueLabel and renderer.",
+      "fix": "Reuse one feature-local display helper if this table is refactored; preserve rounding and canonical filter values.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 93,
+      "rule": "MDC-025/MDC-034 single semantic palette",
+      "detail": "Local VERDICT_FILL parallels VerdictBadge's existing keep/review/cancel/too_early/unknown severity mapping with literal rgba colors.",
+      "fix": "Consume existing restrained semantic/chart tokens without creating a new status registry or changing verdict meaning.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "observations": [
+      "Form reflows from one column to md two and xl three at page:583.",
+      "Chart uses ResponsiveContainer with fixed 280px height at page:506; many or long subscription names require actual narrow-width review.",
+      "EvidencePanel:58 reflows to three columns at lg.",
+      "DataTable:715-725 implements mobileColumns as hidden md:table-cell, not automatic full-detail cards."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+        "line": 545,
+        "rule": "MDC-023/MDC-043 preserve mobile information",
+        "detail": "Verdict mobile allow-list includes only name/verdict/roi; cost, spend/active days, usage, realised value, net, break-even/utilisation and reasoning are hidden below md. No mobilePresentation or expanded-detail contract is supplied.",
+        "fix": "Use the existing DataTable mobilePresentation/detail capability to keep every source field reachable, without adding a replacement table or dropping desktop columns.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+        "line": 705,
+        "rule": "MDC-023/MDC-043 preserve mobile actions",
+        "detail": "Register mobile allow-list omits metric, benchmark and actions; shared hidden-column CSS removes the row Remove action below md. Caller supplies no alternate mobile action/detail path.",
+        "fix": "Retain confirm-gated Remove plus all register detail through existing mobile table adapter or an explicit reachable detail presentation.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, focus, screen reader, contrast and touch-target behavior unverified",
+    "observations": [
+      "Analysis-window Select has a translated aria-label at page:424.",
+      "Shared form controls have translated visible labels; money requiredness and name/currency length constraints are supplied.",
+      "ChartContainer supplies descriptive ariaLabel and all three dataColumns at page:492-505.",
+      "Verdicts have text badges, not color alone; destructive confirmation names the record and explicitly warns about history loss at page:129-140.",
+      "Icons supplied by the page are aria-hidden; no raw button/input/select/table source matches in the root page."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+        "line": 575,
+        "rule": "MDC-040 stateful control semantics",
+        "detail": "The Add subscription/Cancel toggle reveals an editor but supplies neither aria-expanded nor aria-controls; the revealed form has no linked stable region identity.",
+        "fix": "Add expansion semantics and a stable editor-region identity; preserve existing shared Button and keyboard behavior.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "status": "source-inspected only",
+    "loading": "OwnershipPanel:39-47 derives per-source initial loading; preserveSummary retains real summary skeleton pipeline. Register editing can proceed without a successful first read.",
+    "empty": "Chart/verdict/register each have specific translated empty messages; null collections normalize to []. Summary preserves unknown metrics; EvidencePanel explains missing quality/evidence.",
+    "error": "OwnershipPanel uses fatalError with retry; report and register remain separately sourced. Create/delete errors use MutationError. Existing page tests describe source isolation but were not executed.",
+    "retained": "OwnershipPanel:46 maps stale to retained; OwnershipBrief:38-46 reports retained/refreshing source; shared deriveDataState preserves payload on refresh failure or pause.",
+    "offline": "Shared deriveDataState:165-169 models paused retained sources as stale; distinct offline presentation and actual recovery were not exercised.",
+    "unknownVersusZero": "Null ROI is excluded from bars and displays em dash; null monetary values go through formatCurrencyMinor's unavailable guard. Numeric zero remains a measured value. OwnershipBrief neutralizes tones for non-value metrics.",
+    "selection": "Queries require a positive selected vehicle. Summary identifies selection-required through OwnershipBrief; register save disables when vehicleId is null.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+        "line": 108,
+        "rule": "MDC-032/MDC-046 workspace-scoped editing",
+        "detail": "Draft/form state is not keyed to selected vehicle. Submit at page:160-166 combines the retained draft with whichever vehicleId is current; changing the header vehicle while the editor remains open can associate a draft with another vehicle without an explicit draft-scope cue.",
+        "fix": "Bind the editor to an explicit source vehicle or surface a deliberate scoped confirmation/recovery when selection changes. Do not silently discard the draft or add a second vehicle picker.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 93,
+      "rule": "MDC-010/MDC-034 restrained semantic chart palette",
+      "detail": "Verdict fills are local rgba literals rather than existing semantic/chart tokens; rendering does not follow saved palette/theme contracts through those literals.",
+      "fix": "Use existing muted semantic chart colors, retain every verdict, and verify effective contrast in both themes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 252,
+      "rule": "MDC-012/MDC-025 semantic financial emphasis",
+      "detail": "Net/ROI use fixed emerald-300/rose-300 classes (also page:267) and ROI zero is styled as negative; chart header uses decorative cyan at page:488. These are not neon, but fixed theme-independent financial colors require restrained semantic ownership and actual contrast review.",
+      "fix": "Use existing semantic tokens; preserve signed values and distinguish zero from negative. Keep decorative icon low emphasis.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 136,
+      "rule": "MDC-010/MDC-015 theme surfaces",
+      "detail": "Evidence source boxes use fixed border-white/background-white opacity decoration, while unsupported content at line 190 uses local amber surface classes.",
+      "fix": "Reuse existing neutral surface/border and warning tokens in this shared ownership component; preserve all explanatory content and subregions.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 193,
+      "rule": "MDC-013 typography roles",
+      "detail": "Confidence metadata uses raw text-xs styling; MoneyInput:47 similarly uses an ad-hoc text-xs suffix rather than the existing caption role.",
+      "fix": "Use existing Text/Caption typography contracts while retaining tabular alignment and currency suffix.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 647,
+      "rule": "MDC-044 localize domain labels",
+      "detail": "Usage metric options are generated from English snake_case enum identifiers; register cell/filter labels at page:347-352 do the same. VerdictBadge:68 falls back to untranslated enum text; EvidencePanel:73 displays raw quality.status.",
+      "fix": "Map known codes to canonical localized domain labels at existing ownership owners, preserving raw wire/filter keys. Pass a translated label to VerdictBadge where supported; do not add a second catalog.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 106,
+      "rule": "MDC-032 single workspace range owner",
+      "detail": "Page-owned windowDays and context Select bypass useRangeState. workspaceScope.ts:23-78 excludes this dated route, and useSubscriptionROI accepts only vehicle_id/window_days. Handler:991-998 parses only a day window, so simply adding a shell picker would not make custom bounds effective.",
+      "fix": "Treat range integration as coordinated shared/API work: preserve existing 30/90/180/365 behavior and register route only when typed hooks/server can honor both actual bounds, rolling/custom/timezone semantics. Do not invent endpoint support or filter only loaded rows.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 234,
+      "rule": "MDC-045 SI display boundary and explicit benchmark units",
+      "detail": "Usage and break-even show generic quantity plus server usage_unit unchanged (also page:283-288); benchmark form at page:660 names only 'minor / unit'. Page has no metric-aware physical conversion or visible canonical unit in the benchmark field. Backend metric-to-unit mappings were not inspected, so no numeric unit corruption is asserted.",
+      "fix": "Confirm actual source metric units before adoption; for physical metrics use existing useUnits display conversion and explicit canonical benchmark input hints while keeping raw SI/money/cache values unchanged. Counts and time must retain their distinct semantics.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "First preserve mobile detail/removal and workspace range/draft scope. Then localize domain labels and replace local fixed palette/surfaces without changing calculations or trust.",
+    "ordering": ["mobile full-detail/action reachability", "workspace date and draft scope", "domain localization and SI unit clarity", "restrained semantic presentation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Ownership evidence theme and label adoption",
+      "existingOwner": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Existing quality/evidence/limitations/unsupported/source/sourceEnabled props remain unchanged; neutral token-backed source boxes, warning token-backed unsupported content, localized known quality labels, absent quality/evidence states.",
+      "usedBy": ["/ownership/subscription-roi"],
+      "dependsOn": ["Existing neutral and semantic theme tokens", "Canonical ownership translations"],
+      "note": "Other ownership consumers are implied by component purpose but were not enumerated or audited."
+    },
+    {
+      "name": "Coordinated workspace analysis bounds",
+      "existingOwner": "web\\src\\lib\\workspaceScope.ts; web\\src\\api\\hooks\\useOwnership.ts; internal\\handler\\v1\\ownershipintel\\handler.go",
+      "propsVariantsStates": "Typed start/end bound support is not currently established; integrate existing useRangeState only after full-server report filtering can preserve rolling presets/custom ranges and returned bounds.",
+      "usedBy": ["/ownership/subscription-roi"],
+      "dependsOn": ["Server/service bound support and parity evidence", "Existing workspace range owner"],
+      "note": "Integration requirement, not authorization for this audit to change shared or backend files."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 106,
+      "detail": "Local analysis-window state competes with the established workspace date-owner model; header range is currently disabled here, so simultaneous duplicate controls were not observed.",
+      "existingOwner": "web\\src\\lib\\workspaceScope.ts",
+      "resolution": "Coordinate actual bound support before adopting shared range."
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+      "line": 93,
+      "detail": "Local verdict chart palette duplicates severity ownership; no new table, overlay, query client, surface library or formatter engine is proposed.",
+      "existingOwner": "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+      "resolution": "Reuse current semantic palette and status vocabulary."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "0934DE79E66FB3A0E9A97CA821A828BC9D7188EDB98D19EA71287BAFDB3174CB",
+    "hashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact root page bytes, not dependency aggregate.",
+    "currentLineCount": 740,
+    "sectionCount": 5,
+    "sections": ["Portfolio economics", "Return by subscription", "Per-subscription verdict", "Subscription register", "Evidence, quality, and limitations"],
+    "additionalContent": ["Value is what you would otherwise pay explanatory banner", "Conditional subscription editor", "Named destructive confirmation dialog"],
+    "sectionCounts": {"directOwnershipPanel": 4, "evidencePanel": 1, "chartContainer": 1, "dataTable": 2, "ownershipBrief": 1, "briefMetrics": 5, "evidenceSubregions": 3},
+    "actions": [
+      "Analysis windows 30/90/180/365, default 180",
+      "Add/Cancel editor toggle without deleting the draft",
+      "Name, kind, paired billing period, integer price minor units, currency, usage metric, benchmark, started date, optional ended date",
+      "Save local subscription with existing pending/disabled/error/toast behavior",
+      "Remove local record only after danger confirmation; cancel confirmation does not delete",
+      "Register value filters with canonical raw values and readable labels",
+      "Existing shared table menus/persistence/export semantics and chart accessible data",
+      "OperationalBrief detail review and per-source retry"
+    ],
+    "dataBehavior": [
+      "Vehicle URL/store selection and independently scoped report/register queries",
+      "Query key identities, AbortSignal propagation, enablement, inherited policies and mutation invalidation",
+      "Recurring monthly/annual versus one-time once pairing",
+      "Five summary metrics, all ten ROI columns and all six register columns",
+      "Known zero distinct from unavailable, null arrays normalized safely, null ROI omitted from chart without fabricating observations",
+      "Confidence, too-early caveat, narrative, break-even/utilisation, quality/evidence metadata and unsupported provider cancellation/intangible value",
+      "ISO-4217 minor units and SI wire/cache values unchanged; saved locale formatting and source-unit meaning preserved",
+      "UTC date input round-tripping remains explicit; independent started/ended business dates must not become workspace selectors",
+      "No provider purchase, subscription cancellation, or account action is implemented by this page"
+    ],
+    "tableIds": ["ownership-subscription-roi", "ownership-subscription-list"],
+    "scopeDefaults": {"windowDays": 180, "draftKind": "subscription", "billingPeriod": "monthly", "currency": "USD", "usageMetric": "driving_distance", "priceMinor": 0, "benchmarkMinorPerUnit": 0}
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source audit",
+    "runtime": "unverified; page not exercised",
+    "visual": "unverified; no screenshots or composed-theme review",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified at all required widths",
+    "tests": "Existing page test source inspected, not run; no borrowed acceptance.",
+    "typescript": "NOT RUN; full-project checks are disallowed during this bounded audit.",
+    "skillAuditScript": "Read but not executed because its final step runs whole-web npx tsc --noEmit; bounded read-only regex counts were used instead.",
+    "commands": [
+      {"command": "Get-FileHash -Algorithm SHA256 'web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx'; (Get-Content 'web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx').Count", "exitCode": 0, "output": "SHA256 0934DE79E66FB3A0E9A97CA821A828BC9D7188EDB98D19EA71287BAFDB3174CB; 740"},
+      {"command": "Page-only PowerShell regex count scan", "exitCode": 1, "output": "Initial command failed parsing quoted import regex: Missing ')' in method call. It did not execute its heartbeat or scan."},
+      {"command": "Corrected page-only PowerShell regex count scan", "exitCode": 0, "output": "{\"inlineStyles\":0,\"rawControls\":0,\"directLibraryImports\":0,\"oldApiImports\":0,\"legacyUnitHelpers\":0,\"ownershipPanels\":4,\"evidencePanels\":1,\"charts\":1,\"tables\":2}"}
+    ],
+    "backend": "Route mount and relevant handlers inspected only; no service/database calculation audit, endpoint request, currency aggregation proof or physical usage-unit mapping verification.",
+    "shared": "Shared DataTable inspected only for caller mobile visibility, column and export contracts; shell/layout/theme/motion internals not independently audited.",
+    "failedReads": [
+      "Assigned report did not exist initially; created with worker-convention schema.",
+      "Initial large contract/page reads required bounded ranges.",
+      "Guessed components\\layout\\reference\\PageLayout.tsx path did not exist; no contents inferred.",
+      "Subscription-named domain file glob yielded no match; backend metric units left unknown."
+    ],
+    "scopeSafety": "Only assigned report and heartbeat written. No source/shared/queue/Git/build/lint changes or provider/local record mutations."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx",
+    "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.test.tsx",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MoneyInput.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routeMeta.ts",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\components\\layout\\navSearchKeywords.ts",
+    "web\\src\\components\\layout\\sidebar\\sidebarIcons.ts",
+    "web\\src\\components\\layout\\sidebar\\collections.ts",
+    "web\\src\\features\\explore\\featureCatalog.ts",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go"
+  ]
+}
