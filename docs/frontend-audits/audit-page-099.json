@@ -1,0 +1,242 @@
+{
+  "item": "audit-page-099",
+  "phase": 0,
+  "page": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx",
+  "routes": [
+    {"path": "/anomaly-detection", "role": "canonical", "citation": "web\\src\\App.tsx:742"},
+    {"path": "/analytics/anomalies", "role": "same-page alias, not a redirect", "citation": "web\\src\\App.tsx:745-751"}
+  ],
+  "purpose": "Vehicle-scoped inferred anomaly detection dashboard with detector coverage, independent rolling counts, signal frequency, system category health, anomaly detail cards and optional Helix narration/baseline learning.",
+  "primaryGoal": "Understand which signals and systems require investigation without confusing unobserved, stale or inferred diagnostic results with measured health.",
+  "dataSources": [
+    {
+      "name": "Deterministic detector snapshot",
+      "hook": "useAnomalies(activeIdStr)",
+      "owner": "web\\src\\api\\hooks\\useAnomalies.ts",
+      "endpoint": "GET /api/v1/analytics/anomalies?vehicle_id=<encoded-id>&days=7",
+      "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:34-42", "web\\src\\api\\hooks\\useAnomalies.ts:15-24,36,51-68", "internal\\api\\router.go:3897"],
+      "behavior": "Disabled for null/blank vehicle; query key ['anomalies', vehicleId, windowDays]; default seven-day detection request; clamped integer window 1..30; forwards AbortSignal; STALE_TIMES.SLOW; no page override of retry policy. Response owns anomalies, health_summary, signals_monitored and independent 7d/24h counts.",
+      "trust": "useDataState provenance inferred; fatal errors replace panels only without retained data. Refresh failures/paused refresh retain content. Raw signal value and baseline units are unspecified in the inspected TS interface, so no physical unit interpretation is established.",
+      "limits": "Router registration verified, not handler SQL, detector coverage, backend freshness, signal unit metadata or runtime response validation."
+    },
+    {
+      "name": "Workspace vehicle identity",
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "endpoint": "Indirect useVehicles dependency; endpoint not traced in this bounded audit.",
+      "citations": ["web\\src\\hooks\\useSelectedVehicle.ts:7-26,50-82", "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:34-38"],
+      "behavior": "URL vehicle_id, persisted header selection and fleet fallback determine positive vehicle identity; page adds no competing selector. Fleet resolution can leave no selection; hook does not expose fleet loading/error to this page."
+    },
+    {
+      "name": "Optional anomaly explanation",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AIAnomalyExplanations.tsx",
+      "endpoint": "POST /api/v1/ai/anomalies/explain",
+      "body": {"vehicle_id": "selected numeric ID", "days": 30},
+      "citations": ["web\\src\\components\\ai\\AIAnomalyExplanations.tsx:17-43", "web\\src\\hooks\\useAiStream.ts:294-317,335-342", "internal\\api\\router.go:5057"],
+      "behavior": "User-started stream, canStart requires positive vehicle; scopeKey changes abort/reset output; feature-gated. Separate 30-day request does not match detector's seven-day default.",
+      "limits": "Frontend URL and router handler dispatch slot inspected; AI subrouter path registration, strategy queries, output accuracy and runtime eligibility not verified."
+    },
+    {
+      "name": "Optional learned baseline",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx",
+      "endpoint": "POST /api/v1/ai/ml/anomaly-baselines/train",
+      "body": {"vehicle_id": "selected numeric ID", "days": 14},
+      "citations": ["web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx:33-76", "internal\\api\\router.go:5085", "web\\src\\hooks\\useAiStream.ts:294-317,335-342"],
+      "behavior": "User-started baseline-training request, positive-vehicle guard, scope-safe stream reset and independent feature gate. Preserve action and 14-day body; do not reinterpret it as a harmless read or execute during audit.",
+      "limits": "Persistence, mutation/consent requirements and subrouter endpoint registration not proven by comments or router dispatch references."
+    },
+    {
+      "name": "Presentation derivations",
+      "owner": "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.ts",
+      "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:51-73", "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.ts:5-43", "web\\src\\hooks\\useOperationalMetrics.tsx:11-24"],
+      "behavior": "Frequency counts all returned entries by signal, descending top ten; timeline preserves source array order. Four typed count metrics preserve absent values, reported zero and separate periods. Shared preference-aware metric formatter is reused, not a new conversion engine."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "Existing shell/header, min-w-0, full width @container; query drives freshness metadata, not panel loading replacement.", "citations": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15", "web\\src\\components\\layout\\PageContainer.tsx:134-139,219-222,243-254"]},
+    {"name": "OperationalBrief", "kind": "composite", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "contract": "compact, translated title/description, four metrics, scope, statusLabel/statusTone, loading, anomaly-summary identity; Review details drawer retains per-metric context.", "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:89-104", "web\\src\\components\\data-display\\OperationalBrief.tsx:151-192,234-274"]},
+    {"name": "GlassPanel / PanelTitle / Text", "kind": "primitives", "owner": "existing @/components/ui category", "contract": "Three page panels; shared typography used in cards. Reuse surfaces, do not create an anomaly-specific theme or panel library.", "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:8,130-134,168-172,195-199", "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.tsx:34-72"]},
+    {"name": "EmbeddedChart / ChartContainer / ChartTooltip", "kind": "chart composite", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "contract": "fluid embedded frame; title, ariaLabel, exact plotted data and two dataColumns. Accessible/forced-color table inherited. Export/fullscreen default false; this page opts into neither.", "citations": ["web\\src\\components\\charts\\EmbeddedChart.tsx:18-39", "web\\src\\components\\charts\\ChartContainer.tsx:444-452,791-850", "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:145-162"]},
+    {"name": "Skeleton / EmptyState / QueryError / StaleRefreshWarning", "kind": "feedback", "owner": "existing @/components/feedback category", "contract": "Independent panel branches and shared retry; retained-data notice has polite live region and Refresh action.", "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:135-143,173-181,200-212", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:60-113"]},
+    {"name": "AnomalyTimelineCard / SystemHealthCard", "kind": "domain presentation", "owner": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard", "contract": "List items, shared SeverityBadge/icon+label, TimeStamp, locale number formatting, category/status fallback. Missing/unknown health must stay neutral info, never green normal.", "citations": ["web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\SystemHealthCard.tsx:23-58", "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\anomalyHelpers.ts:36-47", "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.tsx:24-75"]},
+    {"name": "AIAnomalyExplanations / AILearnedAnomalyBaselines / AIFeatureCard / AiOutputPanel", "kind": "optional AI domain + shared composites", "owner": "web\\src\\components\\ai", "contract": "withAiFeature preserves off-mode null rendering; positive-ID guard; Ask Helix visible action with action-specific accessible name; idle/streaming/done-empty/error text and evidence trail.", "citations": ["web\\src\\components\\ai\\withAiFeature.tsx:47-60", "web\\src\\components\\ai\\AIFeatureCard.tsx:278-309,342-349", "web\\src\\components\\ai\\AiOutputPanel.tsx:72-116"]},
+    {"name": "FadeIn", "kind": "motion owner", "owner": "existing @/components/motion category", "contract": "Four section entrances with delays 0/.04/.1/.2; preserve existing reduced-motion policy, not a new animation layer.", "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:87,113,124,194", "docs\\frontend-design-contract.md:184"]}
+  ],
+  "duplicatedPatterns": [
+    {"pattern": "Three loading/error/empty/content branches", "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:135-164,173-188,200-219"], "assessment": "Existing feedback components and stable shared retry already reused. Keep independent geometry and domain copy; SourceContent is an existing layout contract to evaluate before any extraction, not evidence for a new component."},
+    {"pattern": "Optional AI header/action/stream cards", "citations": ["web\\src\\components\\ai\\AIAnomalyExplanations.tsx:45-64", "web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx:65-80"], "assessment": "Already consolidated into AIFeatureCard; no competing local implementation justified."}
+  ],
+  "responsive": {
+    "status": "Source-only; no viewport exercised.",
+    "strategy": "AI stacks until xl two-column; overview stacks until xl three-column with frequency spanning two; timeline 1/md2/2xl3/3xl4 columns; panel padding p4/sm:p5; chart h72/sm:h80; shared compact summary reflows.",
+    "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:116,127,130,145,201,214", "web\\src\\components\\data-display\\OperationalBrief.tsx:165-169"],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx", "line": 157, "rule": "MDC-043 / mission 15-16", "detail": "Fixed 140px category axis plus chart margins consume substantial 320px plot width; 10px ticks and long signal identities may crowd or clip. This is a source-supported risk, not observed overflow.", "fix": "Review allocated chart width at ten required sizes, long IDs, RTL and 200% text; use existing chart sizing/tick contracts while retaining full identities in accessible data.", "owner": "page", "confidence": "medium"}
+    ],
+    "requiredChecks": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "200% text", "long signal/category/translated labels", "drawer open", "light/dark/custom theme", "RTL"]
+  },
+  "accessibility": {
+    "status": "Source semantics inspected; keyboard, assistive technology, focus, effective contrast and target size unverified.",
+    "strengths": ["Three named page section wrappers plus shared summary section; panel headings retained.", "Frequency passes localized ariaLabel, data and columns to inherited accessible table.", "Timeline/health use ul/li, severity icon plus text, and hidden decorative icons.", "Shared retry and AI Buttons retain accessible names, disabled/streaming busy states; stale notice is role=status aria-live=polite."],
+    "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:88,114-127,148-150,183-186,214-217", "web\\src\\components\\data-display\\SeverityBadge.tsx:44-61", "web\\src\\components\\ai\\AIFeatureCard.tsx:278-309"],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.tsx", "line": 35, "rule": "MDC-040 / MDC-043", "detail": "Signal name is truncate without an explicit full-name title or expansion mechanism, unlike health category title. Full DOM text is retained for assistive technology, but sighted long-ID access may be lost.", "fix": "Prefer wrapping with shared Text and min-width handling, or existing accessible full-identity disclosure; verify extreme IDs without removing source text.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx", "line": 83, "rule": "MDC-040 / MDC-026", "detail": "Page passes query but neither loading nor busy to PageLayout. PageContainer load announcements/aria-busy derive from those props, while actual loading remains panel-local. No page-level loading announcement is established by this wiring.", "fix": "Evaluate existing non-destructive busy prop and feedback semantics with screen reader; do not pass loading in a way that replaces all independently rendered sections.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "states": {
+    "initialLoading": "Summary suppresses metric values; frequency 300px skeleton, health 220px skeleton, four 148px timeline placeholders. Only queryLoading with no retained data activates these.",
+    "noVehicle": "No detector request; every data panel prompts selection and AI actions disabled. Page does not distinguish fleet-list pending/failure from genuinely absent vehicle.",
+    "empty": "Frequency waits for detection runs; health waits for telemetry; timeline announces all systems normal whenever anomalies fallback array is empty. This last assertion is not trustworthy for missing/partial detector data.",
+    "fatalError": "Three QueryError panels share refetch; summary remains with failed status and unknown metrics.",
+    "refreshError": "Data remains in summary/chart/health/timeline; StaleRefreshWarning plus retained-measurements summary status.",
+    "offline": "Paused retained query produces stale warning with offline message; initial paused query has no retained-data warning and may fall into empty panels because page uses isLoading rather than state.status.",
+    "unknown": "Summary raw values remain absent, not zero. Only exact health 'normal' maps success; unknown, null and info map neutral info. Signal value/baseline lack inspected unit metadata.",
+    "partial": "Shared DataState supports explicit partial/unavailable but this page supplies only inferred provenance; successful sparse response is not marked partial.",
+    "ai": "Feature off hides inner card; invalid vehicle disables action; streaming disables repeat start; stream error is alert; done without text has explicit empty output; switching vehicle resets output.",
+    "citations": ["web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:38-42,97-103,135-143,173-181,200-212", "web\\src\\api\\dataState.ts:184-250", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:60-82", "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.ts:19-41"],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx", "line": 211, "rule": "MDC-025 / MDC-026 / mission 0.3 and 25", "detail": "Empty or missing anomalies are normalized to [] at line 62; timeline then asserts 'all systems normal'. An empty list alone does not establish detector coverage or absence of unknown/partial health. Backend completeness was not inspected.", "fix": "Keep the empty timeline section but describe no detected anomalies without unsupported all-clear. Establish source completeness separately before any healthy assertion; retain genuine reported normal category statuses.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx", "line": 42, "rule": "MDC-026", "detail": "Initial paused query lacks retained content and has query isLoading false while shared state remains initial/isRefreshBlocked. Empty branches can imply detection waiting or normal instead of unavailable/offline. Vehicle-list unresolved/failure also collapses to select-vehicle messaging.", "fix": "Use the existing trust-state contract to expose initial refresh-blocked/unavailable behavior without fabricated zero or health. Preserve disabled no-selection behavior; integrate upstream fleet state only through its owner if needed.", "owner": "integration", "confidence": "medium"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx", "line": 158, "rule": "MDC-010 / MDC-012 / mission 6-8", "detail": "Tooltip cursor uses fixed white rgba(255,255,255,.04). Timeline type chip bg-white/.06 and health icon bg-white/.04 ring-white/.10 are similarly dark-theme-biased overlays, not pure-white text. Shared AiOutputPanel adds bg-white/.02.", "fix": "Use existing subdued control/surface/border tokens; preserve severity semantics and chart hover meaning. Delegate shared output surface to shared owner.", "owner": "page", "confidence": "high", "relatedCitations": ["web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.tsx:47", "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\SystemHealthCard.tsx:41", "web\\src\\components\\ai\\AiOutputPanel.tsx:83"]},
+    {"file": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx", "line": 159, "rule": "MDC-010 / MDC-034 / mission 7 and 43", "detail": "Frequency uses static CHART_COLORS[3], traced through chartUtils to CB-safe #F0E442 yellow. Strong yellow, cyan/emerald/amber heading cues and multiple severity-tinted cards may compete with diagnostic content. This is not a neon palette or observed glow; actual composed saturation/contrast not tested.", "fix": "Review restrained primary emphasis and existing chart palette/semantic tokens; keep user-selected neon palettes available and never reset preferences. Reduce decorative cues, not meaningful severity.", "owner": "page", "confidence": "medium", "relatedCitations": ["web\\src\\components\\charts\\chartUtils.tsx:5", "web\\src\\lib\\colors.ts:31-39,58-65", "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:132,170,197"]},
+    {"file": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 296, "rule": "MDC-010 / MDC-012 / MDC-013", "detail": "Shared AI action overrides Button with cyan border/background/text/ring and dark:text-cyan-100; badge also has fixed cyan chrome at line 214. This shared styling concentrates color emphasis on optional narration instead of detector evidence; rendered noise is unverified.", "fix": "Have shared owner use established semantic brand/control tokens and typography wrappers without changing action labels, eligibility, stream state or evidence trail.", "owner": "shared", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\components\\ai\\AIAnomalyExplanations.tsx", "line": 20, "rule": "MDC-026 / MDC-045 / preservation", "detail": "Comment claims 30-day explanation matches dashboard's default, but useAnomalies defaults to seven days. Description says explaining anomalies identified above, without exposing different time scope. Training independently uses 14 days. These are actual distinct request bodies, not proven equivalent sources.", "fix": "Preserve all existing requests/windows during presentation work; expose accurate source/window context. Integration owner must establish intended detector/explanation relationship before any behavioral alignment; do not silently change request days or add unsupported range filtering.", "owner": "integration", "confidence": "high", "relatedCitations": ["web\\src\\api\\hooks\\useAnomalies.ts:36,51", "web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx:43"]},
+    {"file": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx", "line": 38, "rule": "MDC-032 / MDC-033", "detail": "Page uses fixed detector window, not useRangeState; neither alias is range-enabled. This is a current snapshot/independent rolling-window contract, not evidence that arbitrary workspace bounds are supported.", "fix": "Keep one workspace vehicle owner and independent source windows. If product requires shared date scope, integration must first establish server bounds and register both aliases consistently; never add a second local picker or client-filter only returned rows.", "owner": "integration", "confidence": "high", "relatedCitations": ["web\\src\\lib\\workspaceScope.ts:23-77", "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.ts:12-15"]},
+    {"file": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.tsx", "line": 64, "rule": "MDC-045", "detail": "value and baseline render as locale numbers without signal unit identity. Inspected AnomalyEntry does not carry units. Treat semantic/unit equivalence as unknown, not permission to infer mph, SI conversion or generic zero.", "fix": "Preserve raw numeric display and message. Any later unit-aware presentation requires verified source metadata and existing display-boundary formatters, owned by integration rather than guessed in this page.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "overall": "high for diagnostic trust; medium for visual/responsive modernization",
+    "order": ["Remove unsupported all-clear inference while retaining timeline and known normal category semantics.", "Clarify independent detector/AI periods without altering requests.", "Preserve retained-data/offline/unknown presentation and review drawer.", "Replace fixed-white overlays and verify small-width chart/long identity access.", "Centralized browser/keyboard/contrast QA after authorized implementation."],
+    "noRuntimeAcceptance": true
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing AI card/output theme contract refinement",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "relatedOwnerFiles": ["web\\src\\components\\ai\\AiOutputPanel.tsx"],
+      "kind": "extend existing; no new composite",
+      "propsVariantsStates": "Retain title, description, buttonLabel, emptyHint, canStart, stream, placement; idle/streaming/done-empty/error, disabled and scope-reset semantics. Replace fixed cyan/white chrome with existing semantic theme tokens without weakening AI off-mode or evidence rendering.",
+      "usedBy": ["AIAnomalyExplanations", "AILearnedAnomalyBaselines"],
+      "dependsOn": ["MDC-010/MDC-012/MDC-013", "existing Button, GlassPanel, Text and theme tokens", "withAiFeature gate", "useAiStream lifecycle"],
+      "citations": ["web\\src\\components\\ai\\AIFeatureCard.tsx:214,278-309", "web\\src\\components\\ai\\AiOutputPanel.tsx:83"],
+      "owner": "shared",
+      "confidence": "medium"
+    },
+    {
+      "name": "Detector versus AI source-window explanation",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIAnomalyExplanations.tsx",
+      "relatedOwnerFiles": ["web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx", "web\\src\\api\\hooks\\useAnomalies.ts"],
+      "kind": "integration clarification, not an invented API",
+      "propsVariantsStates": "Current detector days=7, explanation days=30, training days=14; keep positive vehicle guard and scopeKey. Accurately state window and inferred provenance in existing descriptions/context. Any common window prop requires explicit verified backend/source semantics first.",
+      "usedBy": ["AnomalyDashboardPage at both aliases", "AIAnomalyExplanations", "AILearnedAnomalyBaselines"],
+      "dependsOn": ["existing anomalySummary independent period contract", "verified endpoint/strategy behavior not obtained in this audit", "localization owner if catalog copy changes"],
+      "citations": ["web\\src\\api\\hooks\\useAnomalies.ts:36,51", "web\\src\\components\\ai\\AIAnomalyExplanations.tsx:17-24", "web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx:43"],
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": {
+    "confirmedWithinScope": [],
+    "assessment": "Both aliases mount the same lazy page. Existing shared chart, AI scaffold, severity, data-state and operational metric contracts already own their patterns. Domain timeline and health cards are legitimate feature owners; do not replace them with duplicate global registries.",
+    "citations": ["web\\src\\App.tsx:215,742-751", "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\index.ts:1-8"],
+    "limits": "No whole-repository duplicate inventory; incidental search hits on unrelated pages were not semantically audited."
+  },
+  "preservation": {
+    "sourceSHA256": "46227afdf879f2a022cfcd85fb6f16a582df5b857d2104819e96f6954188d562",
+    "currentLineCount": 224,
+    "sections": [
+      {"name": "Coverage and anomaly windows summary", "count": 1, "citation": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:86-106", "mustKeep": ["Signals monitored", "Anomalies (7d)", "Anomalies (24h)", "Health categories", "separate period explanations", "Review details drawer"]},
+      {"name": "Optional AI insights", "count": 1, "childrenCount": 2, "citation": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:108-121", "mustKeep": ["Helix explanation", "Learn per-vehicle baseline", "off-mode and independent feature gates"]},
+      {"name": "Anomaly overview", "count": 1, "childrenCount": 2, "citation": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:123-191", "mustKeep": ["Most frequent anomalies chart", "System health category list"]},
+      {"name": "Anomaly timeline", "count": 1, "citation": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:193-221", "mustKeep": ["every returned anomaly", "signal/type/severity/timestamp/message/value/baseline", "positive z-score sigma when supplied", "source ordering"]}
+    ],
+    "counts": {"conceptualBands": 4, "explicitPageSectionElements": 3, "pageGlassPanels": 3, "embeddedCharts": 1, "operationalBriefs": 1, "summaryMetrics": 4, "optionalAiCards": 2, "fadeIns": 4, "fatalRetryBranches": 3},
+    "actions": [
+      {"name": "Review details and close summary drawer", "citation": "web\\src\\components\\data-display\\OperationalBrief.tsx:151-160,234-274"},
+      {"name": "Retry detector from frequency/health/timeline fatal error", "citation": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:46-48,138,176,207"},
+      {"name": "Refresh retained detector snapshot from stale notice", "citation": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:100-113"},
+      {"name": "Ask Helix · Generate explanation", "citation": "web\\src\\components\\ai\\AIAnomalyExplanations.tsx:54"},
+      {"name": "Ask Helix · Train baseline", "citation": "web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx:71"},
+      {"name": "Existing shell vehicle selection and URL scope", "citation": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx:34-38"}
+    ],
+    "dataBehavior": [
+      "Keep endpoint/query key/enablement/signal cancellation/stale policy and independent 7d/24h metrics.",
+      "Missing metrics are not zero; known zero remains displayable.",
+      "Retain all panels on refresh failure with warning; inferred diagnostics are not direct measurements.",
+      "Only explicit normal health yields success; info/unknown/null remain neutral.",
+      "Frequency top ten is derived only from returned list; timeline retains all returned entries.",
+      "Do not infer physical units for anomaly values/baselines.",
+      "Keep safe AI positive-ID guards, feature off gates, scope-reset semantics and current request bodies.",
+      "No chart export/fullscreen, custom date control, pagination or drillthrough action is enabled by this page; do not claim these as existing features.",
+      "Preserve localized labels, locale numbers and shared TimeStamp behavior; inherited preferences are not reset."
+    ],
+    "allowedCorrectionNotDataLoss": "Unsupported 'all systems normal' empty-state assertion is a trust issue to correct, not a detector measurement or capability to preserve.",
+    "sourceChangesMade": false
+  },
+  "evidenceLimits": {
+    "method": "Bounded source reading, targeted line searches and source hash/count checks only.",
+    "runtime": "UNVERIFIED: no browser, HTTP requests, AI training, live backend, fixture execution or production mutation.",
+    "visual": "UNVERIFIED: no rendered screenshots, viewport behavior, composed contrast, theme/RTL/forced-colors inspection.",
+    "accessibility": "UNVERIFIED: no keyboard/focus/drawer interaction, screen reader, touch target or reduced-motion exercise.",
+    "backend": "Only detector route registration and AI handler dispatch references inspected; backend detector coverage, SQL, actual units, AI route registration and mutation/training semantics remain unknown.",
+    "tests": "Test names inspected as intended coverage only; none executed. No TypeScript, full repository lint/build or Git run.",
+    "auditScript": "Skill audit.sh inspected but not executed because its seventh stage runs whole-frontend TypeScript, outside this assignment. Scoped source patterns were counted instead.",
+    "scopedPatternReceipt": {
+      "command": "PowerShell Select-String over AnomalyDashboardPage.tsx, AnomalyTimelineCard.tsx and SystemHealthCard.tsx with staticInline/rawControls/directLibraries/legacyApi/neonGlow/pureWhite patterns",
+      "exitCode": 0,
+      "rawOutput": "staticInline : 0\nrawControls : 0\ndirectLibraries : 0\nlegacyApi : 0\nneonGlow : 0\npureWhite : 3",
+      "interpretation": "Counts are pattern-match lines, not all-guideline compliance. pureWhite means fixed-white overlays, not white body text. Shared AI styling was reviewed separately. No glow/neon source match in those three inspected files is not rendered-noise acceptance."
+    },
+    "snapshot": "Hash pins the inspected page bytes only; other concurrent/shared sources are not frozen.",
+    "scope": "One mounted page and its presentation/data dependencies; not a foundation audit or complete graph. Missing .ts lookup candidates were corrected to actual .tsx files and are not counted as read."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx",
+    "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.test.tsx",
+    "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.tsx",
+    "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\SystemHealthCard.tsx",
+    "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\anomalyHelpers.ts",
+    "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\index.ts",
+    "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.ts",
+    "web\\src\\api\\hooks\\useAnomalies.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\ai\\AIAnomalyExplanations.tsx",
+    "web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartTooltip.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\SeverityBadge.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "readCoverage": "Full assigned page and domain card/helper/summary/hook source; required mission sections and full design contract. Shared files, tests, routing and tokens inspected in relevant ranges or line-search excerpts only; filesRead does not imply full semantic review of those files.",
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-099.json", ".agent-status\\audit-page-099.txt"]
+}
