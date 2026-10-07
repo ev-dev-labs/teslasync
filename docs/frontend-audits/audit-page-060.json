@@ -1,0 +1,369 @@
+{
+  "item": "audit-page-060",
+  "page": "web\\src\\features\\battery\\pages\\BatteryCarePage.tsx",
+  "routes": [
+    {
+      "path": "/battery-care",
+      "source": "web\\src\\App.tsx:140,842",
+      "mount": "Lazy BatteryCare import inside SafeRoute; source registration confirmed, browser reachability unverified",
+      "workspace": "Selected vehicle owned by shell; range control is not enabled for this route in web\\src\\lib\\workspaceScope.ts:23-78,100-135,156-165"
+    }
+  ],
+  "purpose": "Describe observed charging habits and arrival SoC from bounded returned histories, not battery health, damage, degradation, or time spent at a charge level.",
+  "primaryGoal": "Understand the descriptive care index, its evidence and limits, and review ranked habit opportunities without changing vehicle settings.",
+  "dataSources": [
+    {
+      "hook": "useChargingHistory",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "GET /charging?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "knownApiPath": "/api/v1/charging",
+      "routeEvidence": "internal\\api\\router.go:3167,3502-3503",
+      "sourceOwner": "chargingHandler.ListByVehicle, called through typed request<ChargingSession[]>; backend implementation and payload not inspected",
+      "queryContract": "Isolated chargingKeys.history(vehicleId ?? '', boundedLimit), enabled only with vehicle, STALE_TIMES.MODERATE, signal cancellation and safeArray select preserved (useCharging.ts:72-84)",
+      "consumerEvidence": "BatteryCarePage.tsx:37-44,49-52",
+      "limits": "One bounded request, no page-driven full-history pagination, no date bounds. Actual server cap, ordering, completeness and live response shape are not verified."
+    },
+    {
+      "hook": "useDriveHistory",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /drives?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "knownApiPath": "/api/v1/drives",
+      "routeEvidence": "internal\\api\\router.go:3167,3463-3464",
+      "sourceOwner": "driveHandler.ListByVehicle, typed request<Drive[]>; backend implementation and payload not inspected",
+      "queryContract": "drivingKeys.history(vehicleId, boundedLimit), enabled only with vehicle, STALE_TIMES.MODERATE, signal cancellation and safeArray select preserved (useDriving.ts:140-152)",
+      "consumerEvidence": "BatteryCarePage.tsx:45-48,53-56",
+      "limits": "No claim of lifetime coverage or full-server date filtering; no production API request performed."
+    },
+    {
+      "hook": "computeBatteryCare",
+      "file": "web\\src\\features\\battery\\lib\\batteryCare.ts",
+      "line": 658,
+      "endpoint": null,
+      "sourceOwner": "Battery feature pure evidence model",
+      "consumerEvidence": "BatteryCarePage.tsx:36,57-66",
+      "contract": "Frozen per-mount nowMs, 1000-row source limits, default six UTC months. Valid SoC observations, measured positive Wh and conservative charger metadata classification; unknown shares and uncalibrated score stay null.",
+      "unitEvidence": "batteryCare.ts:292-310,352-397; CareEnergy.tsx:19,46-50,63; BatteryCareMethodology.tsx:44,180",
+      "limits": "Runtime alias comment at batteryCare.ts:173-184 describes /charging-sessions, but mounted history hook actually uses /charging. Preserve accepted aliases; comment is not proof of the mounted backend response."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / CardGrid / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "role": "Existing full-width shell adapter, measured-container grid, descriptive card help",
+      "contracts": "PageLayout forwards PageContainer props including query; CardGrid accepts stable id/size/content items and label; LayoutCard takes title/description/actions/children and placement context",
+      "evidence": ["BatteryCarePage.tsx:91-158", "PageLayout.tsx:5-16", "CardGrid.tsx:8-42", "LayoutCard.tsx:8-60"]
+    },
+    {
+      "name": "CareSection / CareSourceNotices / SpecialistSlot / EvidenceBar",
+      "owner": "web\\src\\features\\battery\\components\\battery-care-modernization",
+      "role": "Existing feature-level trust and placement adapters, not replacements to recreate",
+      "contracts": "care + CareSectionState; always-mounted shell with independent notices; null EvidenceBar has explicit dash rather than zero; SpecialistSlot keeps inherited domain specialists",
+      "evidence": ["CareSection.tsx:8-52", "CareSourceNotices.tsx:10-39", "SpecialistSlot.tsx:8-16", "EvidenceBar.tsx:12-23"]
+    },
+    {
+      "name": "BatteryEvidenceBrief / OperationalBrief / useOperationalMetrics",
+      "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "role": "Four source-backed summary metrics with review-details drawer and existing preference-aware formatting",
+      "contracts": "id/title/metrics/period/loading/retained/secondary; StatMetric raw values and descriptions preserved",
+      "evidence": ["CareSummary.tsx:14-104", "BatteryEvidenceBrief.tsx:8-57", "OperationalBrief.tsx:151-160"]
+    },
+    {
+      "name": "ChartContainer / ChartLegend / ChartTooltip / DataTable",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "role": "Existing chart interaction/export and additive real monthly evidence table",
+      "contracts": "chartKey=battery-care-monthly; exportable/data/dataColumns; hiddenSeries render prop; DataTable tableId=battery-care-monthly-evidence, stable month key, embedded mobile cards, raw exportValue",
+      "evidence": ["CareMonthlyTrend.tsx:48-88,97-118,174-223", "ChartContainer.tsx:627-637"],
+      "limits": "DataTable implementation and chart export execution not audited; preserve supplied props and shared pipeline, do not substitute an EmbeddedChart."
+    },
+    {
+      "name": "RankedCareHabits / BatteryCareMethodology / BatteryCareSection",
+      "owner": "web\\src\\features\\battery\\components\\battery-care",
+      "role": "Inherited specialists deliberately retained by current migration",
+      "contracts": "CareScore plus readonly loading/error/retry state; methodology also takes sessionLimit and driveLimit",
+      "evidence": ["BatteryCarePage.tsx:131-150", "RankedCareHabits.tsx:76-171", "BatteryCareMethodology.tsx:26-201", "BatteryCareSection.tsx:10-78"]
+    },
+    {
+      "name": "MetricBar / typography / Badge / feedback / FadeIn / NoVehicleSelected",
+      "owner": "Existing category primitives and onboarding feature owner",
+      "role": "Named numerical tracks, semantic labels, independent recovery and reduced-motion entrance",
+      "contracts": "MetricBar already supports fill=solid, nullable value and ariaLabel; FadeIn preserves reduced-motion policy; no-vehicle CTA goes to governed onboarding target",
+      "evidence": ["MetricBar.tsx:8-27,42-101", "FadeIn.tsx:23-37", "NoVehicleSelected.tsx:43-81"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx",
+      "line": 35,
+      "rule": "MDC-002 / shared reuse / preservation",
+      "detail": "CareSection and inherited BatteryCareSection both implement loading/error/empty card shells. This is an existing migration bridge, not grounds to delete specialist content or build a third shell.",
+      "fix": "Retain both until exact specialist header, notice, placement and state parity is established; reuse LayoutCard and existing feedback rather than introducing another composite.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": "battery-care\\BatteryCareSection.tsx:40-77; SpecialistSlot.tsx:8-16"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx",
+      "line": 14,
+      "rule": "Mission section 7 visual intensity / MDC-026",
+      "detail": "Same source warnings can recur in summary, risk, individual evidence, trend and both specialists. Source ownership is valuable, but degraded mode could have substantial repeated notice height.",
+      "fix": "Evaluate real partial/offline view before consolidating; keep per-source identity and retry reachable and do not suppress a warning for a section that depends on it.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "sourceConfirmed": [
+      "PageLayout has w-full/min-w-0 and @container; CardGrid measures allocated width and delegates packing rather than duplicating viewport layout.",
+      "Risk and SoC evidence use container-dependent inner columns with min-w-0; energy uses @lg:grid-cols-2.",
+      "Monthly chart uses ResponsiveContainer, fixed 340px height and compact dual axes; real DataTable has mobile card roles for all four columns.",
+      "Inherited methodology uses viewport sm:grid-cols-4 inside a half-card, not measured-card width."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx",
+        "line": 112,
+        "rule": "MDC-043 / allocated container width",
+        "detail": "Four-column methodology tiles activate at viewport sm even if CardGrid allocates a narrow half-card; the two-column minimum may also be tight at 320px with long translated labels.",
+        "fix": "Use inherited container-aware layout strategy without removing the four counts or explanations; verify 320px and narrow desktop card allocations with long labels.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\components\\data-display\\MetricBar.tsx",
+        "line": 64,
+        "rule": "MDC-043 / long-content responsiveness",
+        "detail": "Known EvidenceBar values inherit a nowrap flex header with label and sublabel, while unknown rows wrap independently. Long SoC labels plus percentage/count text may overflow narrow cards; no rendered overflow observed.",
+        "fix": "Exercise narrow known-value tracks first; if confirmed, shared MetricBar owner should support wrapping headers or constrain text without hiding evidence.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "All ten required widths, allocated-container geometry, RTL, text zoom and real mobile scroll behavior unverified."
+  },
+  "accessibility": {
+    "sourceConfirmed": [
+      "Titles and sections carry translated labels; decorative icons have aria-hidden.",
+      "MetricBar has labelled progressbar range/value semantics; missing values use explicit visible dash.",
+      "Monthly chart provides ariaLabel and dataColumns plus an additive real captioned DataTable, so meaning need not rely solely on plot colors.",
+      "LayoutCard descriptions have existing Tooltip/Button keyboard composition; OperationalBrief review is an actual shared Button/Drawer path.",
+      "FadeIn and MetricBar call existing motion-preference hook, preserving OS/low-bandwidth policy."
+    ],
+    "issues": [],
+    "acceptanceRequired": [
+      "Keyboard/focus/escape/return focus for description help, Review details drawer, chart export and legend interactions.",
+      "Screen-reader behavior of nested summary regions, progressbar percentage versus point deductions, table cards and partial-source notices.",
+      "Composed text/UI contrast, light/dark/custom themes, forced colors and 44px touch reachability."
+    ],
+    "verification": "Source semantics only; no browser, screen reader, contrast measurement or keyboard session performed."
+  },
+  "states": {
+    "loading": "Query payload absent leads to contextual skeletons while titles remain mounted; CareSection.tsx:35-48, CareMonthlyTrend.tsx:88,107.",
+    "empty": "Resolved empty arrays count as received payload; eligibility guards choose section-specific EmptyState; no fake zero care index.",
+    "error": "Initial fatal failures replace only dependent body; retries route through existing source refetch. Mixed outcomes retain independent content via state.ts:15-44.",
+    "stale": "Retained data stays in computeBatteryCare and notices; BatteryEvidenceBrief status has retained flag based on source status=stale.",
+    "offline": "CareSourceNotices exposes paused-source unavailable message. Absent-payload skeletons still render beneath the notice.",
+    "partial": "Composite hasData is any received payload; combined partial state retains available observations; per-source fatal/paused/partial notices remain.",
+    "success": "Only calibrated score/components and eligible evidence appear; null score/unknown shares are not fabricated measurements.",
+    "disabled": "No selected vehicle disables both query hooks and renders governed onboarding recovery. Exportability is explicitly disabled during loading, fatal error or no monthly observations.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx",
+        "line": 40,
+        "rule": "MDC-026 / mission sections 22,25",
+        "detail": "Absent payload always selects Skeleton unless composite fatalError exists, including paused offline sources. Specialist state and monthly chart follow the same rule. A paused first fetch can therefore display indefinite loading geometry alongside a correct offline notice.",
+        "fix": "Distinguish initial actively pending from initial paused/unavailable in the feature presentation adapter while retaining source notice and recovery, titles and all section shells.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": "state.ts:38-43; CareMonthlyTrend.tsx:88,107; CareSourceNotices.tsx:20-30"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\state.ts",
+        "line": 16,
+        "rule": "MDC-026 / independent source failures",
+        "detail": "When no payload exists, one source fails and the other is pending/paused, combineDataStates supplies no aggregate fatalError; per-source QueryError also requires trust.hasData. Combined sections temporarily omit the failed source's retry, although its single-source section can expose it.",
+        "fix": "Surface per-source initial failure and retry independent of aggregate hasData; avoid converting mixed pending/failure into whole-page failure.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": "api\\dataState.ts:310-342; CareSourceNotices.tsx:17-18; CareSection.tsx:38-43"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\EvidenceBar.tsx",
+      "line": 21,
+      "rule": "MDC-010 / mission sections 7,43",
+      "detail": "Known risk, energy and SoC bars use arbitrary-index saturated series colors and inherit MetricBar's default gradient. Multiple non-time-series histograms can spend visual emphasis on decoration rather than risk meaning.",
+      "fix": "Use existing fill=solid and restrained canonical semantic/neutral colors for evidence tracks after preserving bin identity, ordering, labels and counts; retain saved user chart palette choices.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": "CareRisk.tsx:67; CareEnergy.tsx:61; SocEvidence.tsx:75; MetricBar.tsx:44,97; lib\\tokens.ts:401"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx",
+      "line": 141,
+      "rule": "MDC-010,012 / restrained semantic hierarchy",
+      "detail": "Three informational rows use fixed cyan, amber and indigo icon hues and a purple title icon despite being methodology rather than separate severity states. This is saturation noise, not proof of neon or contrast failure.",
+      "fix": "Use theme-aware muted/secondary decorative icon tokens; retain every explanation and actual semantic warning badge.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": "BatteryCareMethodology.tsx:92,158,173"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx",
+      "line": 2,
+      "rule": "MDC-002 / category barrel imports",
+      "detail": "Feature imports LayoutCard via layout-reference despite current layout category barrel exporting it. CareSummary likewise imports StatMetric via stat-reference though the data-display barrel exports it. SpecialistSlot's placement hook is not exported in the inspected layout barrel.",
+      "fix": "Use existing category exports for LayoutCard and StatMetric; coordinate a placement-hook export with the shared layout owner rather than duplicating grid placement.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": "CareSummary.tsx:4; SpecialistSlot.tsx:2; components\\layout\\index.ts:11; components\\data-display\\index.ts:4"
+    },
+    {
+      "file": "web\\src\\features\\battery\\lib\\batteryCare.ts",
+      "line": 173,
+      "rule": "Source ownership clarity / MDC-045",
+      "detail": "Model alias documentation describes hexagonal /charging-sessions while this mounted page's hook reads /charging. Documentation must not be treated as evidence that the actual endpoint emits those aliases.",
+      "fix": "Keep existing SI-equivalent alias support; align comment with verified source ownership during a separately authorized implementation review, without changing hook endpoint/cache/model inputs based on this audit.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Already source-migrated to PageLayout/CardGrid, OperationalBrief, data trust, display-only SI formatting and real mobile evidence table. Preserve these; address bounded presentation/state residuals rather than rebuild.",
+    "order": ["Independent source error/paused state clarity", "Narrow methodology/bar headers", "Restrain histogram/icon decoration", "Category import consistency"],
+    "notClaimed": "Runtime acceptance, backend correctness, visual compliance or completed modernization"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Expose existing placement hook through layout category barrel",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\CardPlacementContext.tsx",
+      "integrationFile": "web\\src\\components\\layout\\index.ts",
+      "propsVariantsStates": "Re-export existing useCardPlacement without modifying context return type, width/span/className, absent-placement fallback or CardGrid packing.",
+      "usedBy": ["web\\src\\features\\battery\\components\\battery-care-modernization\\SpecialistSlot.tsx:2,9-12"],
+      "dependsOn": ["Shared layout owner verification of current hook export and cycle-safe barrel integration"],
+      "evidence": "SpecialistSlot.tsx:2,9-12; targeted layout\\index.ts export search found LayoutCard but no useCardPlacement",
+      "limits": "Context implementation not inspected; proposal is existing API exposure, not a new component or unsupported feature."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Inherited battery-care versus battery-care-modernization",
+      "evidence": "battery-care\\index.ts:1-9; battery-care-modernization\\index.ts:1-7; BatteryCarePage.tsx:14-27",
+      "detail": "Old barrel exposes summary/risk/SoC/energy/trend equivalents; mounted page selects modernization equivalents and retains two original specialists via SpecialistSlot. Barrel names prove coexistence, not that old implementations are dead or visually interchangeable.",
+      "decision": "Preserve mounted migration; do not revert or bulk-delete older files. Unselected older components and their other consumers are outside this one-page audit."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "BD74A62923249F3D8753D19F3C2F2BF3F278CEEC61EC2497F7E1D232EFE7DD82",
+    "hashCommand": "(Get-FileHash 'web\\src\\features\\battery\\pages\\BatteryCarePage.tsx' -Algorithm SHA256).Hash",
+    "currentLineCount": 159,
+    "pageAndInspectedPresentationLineCount": 1415,
+    "lineCountScope": "Page + 11 production modernization .ts/.tsx files (excluding test) + RankedCareHabits + BatteryCareMethodology + BatteryCareSection + BatteryEvidenceBrief. Model and other shared owners excluded. Baseline only, no source edits or historical line-count comparison.",
+    "sectionCount": 8,
+    "topLevelGroupCount": 5,
+    "sectionNames": [
+      {"name": "Observed care summary", "evidence": "BatteryCarePage.tsx:99; CareSummary.tsx:29-104", "mustKeep": "Score and three percentage KPIs, disclaimers, periods, missing values, Review details"},
+      {"name": "Score & risk decomposition", "evidence": "BatteryCarePage.tsx:106; CareRisk.tsx:25-82", "mustKeep": "Index, ready count, four 30/30/20/20 deductions and null calibration"},
+      {"name": "Charging target evidence", "evidence": "BatteryCarePage.tsx:107; SocEvidence.tsx:22-85", "mustKeep": "Median end SoC, eligible count, four exact finish bins and denominator"},
+      {"name": "AC/DC energy evidence", "evidence": "BatteryCarePage.tsx:116; CareEnergy.tsx:21-73", "mustKeep": "Measured/classified energy totals, AC/DC/unknown buckets, classification coverage and denominator explanation"},
+      {"name": "Arrival-SoC evidence", "evidence": "BatteryCarePage.tsx:117; SocEvidence.tsx:22-85", "mustKeep": "Median arrival SoC, eligible drives, four exact arrival bins"},
+      {"name": "Monthly care trend", "evidence": "BatteryCarePage.tsx:123; CareMonthlyTrend.tsx:33-223", "mustKeep": "Six month rows, null score gaps, two count bars, index line, legend/tooltip, chart export and four-column mobile table"},
+      {"name": "Ranked habit opportunities", "evidence": "BatteryCarePage.tsx:135; RankedCareHabits.tsx:24-171", "mustKeep": "Ranking/threshold guards, all four guidance variants, deduction/sample details, calibrated-none versus not-yet-calibrated explanations"},
+      {"name": "Coverage & methodology", "evidence": "BatteryCarePage.tsx:144-150; BatteryCareMethodology.tsx:42-201", "mustKeep": "Four counts, cap warnings, observation dates, eligibility/classification/exclusions and habit-not-health caveat"}
+    ],
+    "sourceSectionMarkers": "Page itself has 0 GlassPanel and 0 ChartContainer calls because it is decomposed. Mounted CareSection used five times (SocEvidence twice), inherited BatteryCareSection twice and ChartContainer once = eight source-defined sections, not a browser rendered count.",
+    "actions": [
+      {"name": "Review details", "evidence": "BatteryEvidenceBrief.tsx:33-54; OperationalBrief.tsx:151-160", "preserve": "Shared source-metric drawer and full descriptions/context"},
+      {"name": "Read full card description", "evidence": "LayoutCard.tsx:38-51", "preserve": "Tooltip button, keyboard focus and Escape behavior"},
+      {"name": "Retry failed source", "evidence": "CareSection.tsx:39; CareSourceNotices.tsx:18; state.ts:24-29", "preserve": "Existing refetch and independent retained data"},
+      {"name": "Monthly plot exports and series visibility", "evidence": "CareMonthlyTrend.tsx:109-114,174-202; ChartContainer.tsx:627-635", "preserve": "PNG/SVG/copy-image shared pipeline, stable chartKey and series keys"},
+      {"name": "Monthly evidence table pipeline", "evidence": "CareMonthlyTrend.tsx:64-87,210-220", "preserve": "Stable tableId, all source rows/columns, raw exportValue, embedded mobile presentation; implementation controls not independently verified"},
+      {"name": "Set up TeslaSync", "evidence": "BatteryCarePage.tsx:69-76; NoVehicleSelected.tsx:69-74", "preserve": "Governed onboarding navigation when no vehicle selected"}
+    ],
+    "notPresent": "No charging command mutation, local vehicle/range picker, page-specific fullscreen prop, or all-history pagination is supplied; do not invent these capabilities.",
+    "dataBehavior": [
+      "Keep selected-vehicle scope, signal cancellation, query keys/enablement/stale policies, raw payload retention and display-only SI conversion.",
+      "Keep 1000-row requested cap, not a lifetime-history claim; initial timestamp is frozen for this mount including vehicle changes.",
+      "Model keeps 20-80% band, 95% high finish, below-10% arrival, 5/5/3 composite samples and 80% classified energy coverage; monthly guards remain 3/3/2.",
+      "DC inference only for unlabeled session peak >20000W; unknown classification remains explicit; score withheld until all components ready.",
+      "Energy proportions and DC KPI use different stated denominators; never replace null shares/penalties with zero.",
+      "Keep current source-alias acceptance and UTC monthly grouping; do not add legacy unit adapters or change wire/cache units.",
+      "Retain all inherited explanatory content and source-specific warnings through further modernization."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-060.json", ".agent-status\\audit-page-060.txt"]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source inspection and PowerShell SHA256/line/pattern counts. Only report and heartbeat written.",
+    "runtime": "NOT RUN: mounted browser, API requests, backend handler/repository verification, production mutation, screenshots, theme/contrast/keyboard/viewport/forced-colors acceptance.",
+    "validation": "NOT RUN: TypeScript, project tests, full-repository lint/build, Git or agents. Audit skill script inspected but not run because it unconditionally invokes project TypeScript; bounded source pattern counts used instead. Existing test content glimpsed by scoped search is not an executed receipt.",
+    "sourceScan": {
+      "scope": "The 16 production files enumerated by lineCountScope, excluding model/shared owners/unmounted barrel equivalents",
+      "command": "For each pattern: $matches=@(Select-String -Path $files -Pattern $p); \"PATTERN $p : $($matches.Count) matched lines\"",
+      "exitCode": 0,
+      "rawOutput": [
+        "PATTERN style= : 0 matched lines",
+        "PATTERN <(button|input|textarea|select|table)\\b : 0 matched lines",
+        "PATTERN from ['\\\"](recharts|react-leaflet|framer-motion)['\\\"] : 0 matched lines",
+        "PATTERN text-white|bg-white|border-white : 0 matched lines",
+        "PATTERN neon|glow : 0 matched lines"
+      ],
+      "interpretation": "No direct neon/glow/fixed-white or raw controls in bounded mounted production source. This is not zero overall violations or composed theme proof; inherited saturated gradients and decorative hue noise are flagged separately."
+    },
+    "unverifiedDependencies": "DataTable implementation, Tooltip/Drawer details, PageContainer aggregation, useOperationalMetrics internals, NoVehicleSelected guidance registry, complete locale catalogs and endpoint serialization not deeply audited.",
+    "concurrency": "Citations and SHA refer to the inspected source snapshot; other workers may change shared owners. Do not treat historical acceptance/design-contract checkboxes as runtime proof."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md (sections 0/1,6/7/8,14/15/16,22/23/24/25,30/31/32/33,43/44)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\BatteryCarePage.tsx",
+    "web\\src\\features\\battery\\lib\\batteryCare.ts",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\index.ts",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSummary.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\CareRisk.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\SocEvidence.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\CareEnergy.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\CareMonthlyTrend.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\SpecialistSlot.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\EvidenceBar.tsx",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\state.ts",
+    "web\\src\\features\\battery\\components\\battery-care\\index.ts",
+    "web\\src\\features\\battery\\components\\battery-care\\BatteryCareSection.tsx",
+    "web\\src\\features\\battery\\components\\battery-care\\RankedCareHabits.tsx",
+    "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts (history hook excerpt)",
+    "web\\src\\api\\hooks\\useDriving.ts (history hook excerpt)",
+    "internal\\api\\router.go (scoped route search only)",
+    "web\\src\\App.tsx (assigned lazy import/route search only)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\api\\dataState.ts (scoped trust derivation/combination excerpts)",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useUnits.ts (scoped SI formatter excerpts)",
+    "web\\src\\hooks\\useNumberFormatting.ts (search only, no matching excerpt returned)",
+    "web\\src\\lib\\numberFormat.ts (fmtPercent excerpt)",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\index.ts (scoped export search)",
+    "web\\src\\components\\data-display\\index.ts (scoped export search)",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx (scoped review/button/drawer search and excerpt)",
+    "web\\src\\components\\charts\\ChartContainer.tsx (scoped contract/control search and excerpt)",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\tokens.ts (scoped visual-token search and chart palette excerpt)",
+    "web\\src\\features\\battery\\components\\battery-care-modernization\\BatteryCarePage.mounted.test.tsx (incidental scoped search excerpts only; not executed)"
+  ]
+}
