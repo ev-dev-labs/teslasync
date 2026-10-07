@@ -1,0 +1,293 @@
+{
+  "item": "audit-page-135",
+  "phase": 0,
+  "page": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+  "routes": [
+    {
+      "path": "/geofences",
+      "file": "web\\src\\App.tsx",
+      "line": 633,
+      "detail": "SafeRoute mounts the lazy GeofencesPage import at line 174. Source registration confirmed; mounted runtime not exercised."
+    }
+  ],
+  "purpose": "Manage saved geofence boundaries and charging-place purpose, review independent visited-place evidence, optionally draft with Helix, and manage place-specific pricing and charging history.",
+  "primaryGoal": "Review a location and explicitly create or maintain its saved boundary without confusing an observed visited candidate, an AI proposal, and a persisted geofence.",
+  "dataSources": [
+    {
+      "name": "Saved geofence summary and CRUD",
+      "owner": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "line": 179,
+      "hooks": ["local useQuery(['geofences'])", "local createMut", "local updateMut", "local deleteMut"],
+      "endpoints": ["GET /geofences", "POST /geofences", "PUT /geofences/{id}", "DELETE /geofences/{id}"],
+      "routeEvidence": "internal\\api\\router.go:3614-3628",
+      "behavior": "Read receives cancellation signal. Success invalidates the geofences key prefix, reports localized toast and closes the relevant modal/dialog. Summary is fleet-wide, not selected-vehicle filtered. Legacy camelCase needsReview is used for summary counts."
+    },
+    {
+      "name": "Visited candidates and saved-name resolution",
+      "owner": "web\\src\\api\\hooks\\useLocations.ts",
+      "file": "web\\src\\api\\hooks\\useLocations.ts",
+      "line": 175,
+      "hooks": ["useVisitedPlaceCandidates", "resolveSavedPlaceName"],
+      "endpoints": ["GET /geofences/visited-candidates", "GET /geofences/resolve?lat&lon"],
+      "routeEvidence": "internal\\api\\router.go:3622-3623",
+      "behavior": "Independent candidate cache, safeArray selection and 30-second staleTime. Candidate IDs feed review and optional drafting; selecting or drafting does not persist a place. Saved names are preferred before reverse geocoding."
+    },
+    {
+      "name": "Directory, discovery queue and current rates",
+      "owner": "web\\src\\features\\maps\\components\\charging-places\\ChargingPlacesWorkspace.tsx",
+      "file": "web\\src\\features\\maps\\components\\charging-places\\ChargingPlacesWorkspace.tsx",
+      "line": 55,
+      "hooks": ["useGeofencesFull", "useGeofenceNeedsReview", "useGeofenceCurrentRates", "useBulkGeofencesDelete"],
+      "endpoints": ["GET /geofences?include_archived=true", "GET /geofences/needs-review", "GET /geofences/rates/current", "POST /geofences/bulk"],
+      "routeEvidence": "internal\\api\\router.go:3614-3624",
+      "behavior": "Full canonical snake_case cache is separate from summary cache. Active/archived keys remain separate. Directory sources poll every 30 seconds with 15-second staleTime. Search, pin ordering and selection are local presentation; bulk deletion explicitly confirms and uses a live-mode mutation."
+    },
+    {
+      "name": "Place detail lifecycle and pricing",
+      "owner": "web\\src\\api\\hooks\\useLocations.ts",
+      "file": "web\\src\\api\\hooks\\useLocations.ts",
+      "line": 214,
+      "hooks": ["useArchiveGeofence", "useUnarchiveGeofence", "useMarkGeofenceReviewed", "useRenameGeofence", "useUpdateGeofenceCategory", "useUpdateGeofencePurpose", "useGeofenceRates", "useCreateGeofenceRate", "useDeleteGeofenceRate", "useGeofenceRatePreview", "useApplyGeofenceRate", "useGeofenceChargingSummary", "useGeofenceChargingActivity", "useGeofenceFirstChargingSession"],
+      "endpoints": ["POST /geofences/{id}/archive", "POST /geofences/{id}/unarchive", "POST /geofences/{id}/reviewed", "PUT /geofences/{id}", "GET /geofences/{id}/rates", "POST /geofences/{id}/rates", "DELETE /geofences/{id}/rates/{rateId}", "GET /geofences/{id}/rates/{rateId}/preview?from&to", "POST /geofences/{id}/rates/{rateId}/apply?from&to", "GET /geofences/{id}/charging-summary", "GET /geofences/{id}/charging-activity?limit&offset", "GET /geofences/{id}/first-charging-session"],
+      "routeEvidence": "internal\\api\\router.go:3632-3652",
+      "behavior": "Queries are ID-enabled and cancellation-aware; writes opt into requiresLiveMode and invalidate/broadcast relevant sources. Currency/Wh stays on wire, currency/kWh is presentation/request boundary conversion. Preview and explicit apply are distinct. Backend cost-protection claims in UI comments were not independently verified."
+    },
+    {
+      "name": "Vehicle or browser coordinates",
+      "owner": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "line": 427,
+      "hooks": ["useSelectedVehicle", "imperative location acquisition"],
+      "endpoints": ["GET /vehicles/{vehicleId}/positions?limit=1", "GET /geocode/reverse?lat&lon"],
+      "routeEvidence": "internal\\api\\router.go:3332,4019",
+      "behavior": "Only location acquisition uses selected vehicle; no live-current guarantee is inferred from positions?limit=1. Browser acquisition requests high accuracy with 10-second timeout and handles unsupported/denied/error cases. User-entered name survives capture."
+    },
+    {
+      "name": "AI review-only draft",
+      "owner": "web\\src\\components\\ai\\AISuggestNewGeofences.tsx",
+      "file": "web\\src\\components\\ai\\AISuggestNewGeofences.tsx",
+      "line": 175,
+      "hooks": ["useAiEnabled('suggest-new-geofences')", "useAiStream"],
+      "endpoints": ["POST /ai/geofences/draft"],
+      "routeEvidence": "internal\\api\\router.go:5053 delegates mountAIRoutes; exact delegated leaf not inspected",
+      "behavior": "Feature-gated input and card; positive visited location_id required. Stream captures a typed envelope, rejects non-ok application, cancels and clears on scope/unmount. Apply to form only copies proposal fields; Create remains the persistence action."
+    },
+    {
+      "name": "Pins and map configuration",
+      "owner": "web\\src\\api\\hooks\\usePinned.ts; web\\src\\components\\maps\\MapTileLayer.tsx",
+      "file": "web\\src\\api\\hooks\\usePinned.ts",
+      "line": 60,
+      "hooks": ["usePinned('geofence')", "useTogglePin", "MapTileLayer map-config query"],
+      "endpoints": ["GET /pinned?type=geofence", "POST /pinned", "DELETE /pinned/{id}", "GET /system/map-config"],
+      "routeEvidence": "Map config: web\\src\\api\\settings.ts:133 and internal\\api\\router.go:4386. Pinned leaf routing not established in inspected router excerpts.",
+      "behavior": "Pins use user/context-aware keys and broadcast invalidation. Map provider and low-bandwidth tile policy belong to existing shared map owner. No tile-provider request or authentication was exercised."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / LayoutCard / SourceContent", "kind": "shared layout and trust composition", "owner": "@/components/layout", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 19, "contract": "MDC-026/031; preserve title, source receipts, actions, full width and independently retained sources."},
+    {"name": "MapsOperationalBrief", "kind": "domain summary adapter", "owner": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 552, "contract": "Existing OperationalBrief/useOperationalMetrics pipeline; four count metrics, scope, freshness and provenance."},
+    {"name": "ChargingPlacesWorkspace", "kind": "domain workspace", "owner": "web\\src\\features\\maps\\components\\charging-places\\ChargingPlacesWorkspace.tsx", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 613, "contract": "Review candidates, manage saved places, search/archive filter, multi-selection and bulk callbacks; do not replace with another directory."},
+    {"name": "DataTable", "kind": "shared table pipeline", "owner": "@/components/ui", "file": "web\\src\\features\\maps\\components\\charging-places\\PlacesTable.tsx", "line": 335, "contract": "MDC-023; tableId maps:places-zones, filters, sorting, pagination, column visibility, multi-selection and mobileColumns."},
+    {"name": "Modal / ConfirmDialog / Input / Select / Toggle / Tabs / Button / typography", "kind": "existing UI primitives", "owner": "@/components/ui", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 22, "contract": "MDC-020/021/024/040; primitive implementation acceptance is not inferred from call sites."},
+    {"name": "FormSection / CurrencyInput / SearchInput", "kind": "form composites", "owner": "@/components/forms", "file": "web\\src\\features\\maps\\components\\charging-places\\RateForm.tsx", "line": 7, "contract": "Existing identity, localized currency editing, rate effective dates and search history remain."},
+    {"name": "MapContainer / MapTileLayer / MapInvalidator / GeofenceDrawer", "kind": "shared map owners", "owner": "@/components/maps", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 688, "contract": "Circle-only draw/create with meter radius, controlled draft geometry, provider and resize policy."},
+    {"name": "AISuggestNewGeofences", "kind": "shared AI domain card", "owner": "web\\src\\components\\ai\\AISuggestNewGeofences.tsx", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 595, "contract": "Gated review-only stream; proposal is not a saved geofence."},
+    {"name": "FadeIn / QueryError / Skeleton / InlineCallout / TimeStamp", "kind": "shared motion, feedback and formatting", "owner": "@/components/motion; @/components/feedback; @/components/data-display", "file": "web\\src\\features\\maps\\components\\charging-places\\VisitedCandidates.tsx", "line": 3, "contract": "MDC-026/042/044; reuse, not parallel implementations."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 179, "rule": "MDC-002; mission 33", "detail": "Page embeds the geofence query already provided by useGeofences at useLocations.ts:86 and its own CRUD while adjacent domain mutations use shared live-mode/invalidation contracts.", "fix": "Reuse or extend the existing domain hooks without merging the intentionally distinct active-summary and archived-directory caches.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 547, "rule": "MDC-031; mission 7", "detail": "Header Add geofence/Refresh overlap directory Add place/Refresh at ChargingPlacesWorkspace.tsx:127-153. Refresh scopes differ: header refetches only the summary, directory refreshes places/review/rates.", "fix": "Clarify scope and hierarchy rather than silently deleting either action or assuming refresh equivalence.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "observed": [
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 569, "detail": "Helix stacks in one column until xl then uses a 1:2 grid; coordinates stack until sm."},
+      {"file": "web\\src\\features\\maps\\components\\charging-places\\ChargingPlacesWorkspace.tsx", "line": 177, "detail": "Search/filter stack then reflow at sm; action rows wrap."},
+      {"file": "web\\src\\features\\maps\\components\\charging-places\\PlacesTable.tsx", "line": 350, "detail": "Mobile columns show name, purpose, actions; full zone/review/rate/category availability depends on shared table detail behavior."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 642, "rule": "MDC-043/040", "detail": "Three localized location-source tabs, a fixed h-64 draw surface, and non-wrapping modal footer at line 801 need 320px/long-label/open-state checks. Source is insufficient to establish clipping or target failures.", "fix": "Verify ten contract widths, 200% text and modal scroll/action reachability; use existing wrapping primitives only if a failure is reproduced.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\maps\\components\\charging-places\\PlacesTable.tsx", "line": 350, "rule": "MDC-023/043 preservation", "detail": "Mobile primary columns omit meaningful category, radius, review and pricing evidence; no shared DataTable internals were audited to prove retained detail access.", "fix": "Integration QA must prove all columns and table capabilities remain accessible; never remove secondary data to achieve mobile fit.", "owner": "integration", "confidence": "medium"}
+    ],
+    "viewportAcceptance": "UNVERIFIED: 320/375/390/430/768/1024/1280/1440/1920/2560, shell allocated width, RTL and text zoom."
+  },
+  "accessibility": {
+    "observed": ["Localized section labels, field labels and error props; decorative icons are aria-hidden; refresh/edit/delete controls have accessible labels.", "Create modal uses shared Modal and ConfirmDialog; dirty-navigation logic uses existing useDirtyForm/useConfirm.", "PlaceDetailPanel.tsx:74-89 respects reduced-motion for preview scrolling and focuses a named region at lines 305-316."],
+    "issues": [
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 685, "rule": "MDC-040; mission 30", "detail": "Drawing container uses role=application with mouse click/drag guidance. Numeric latitude/longitude/radius fields are available alternatives, but Leaflet toolbar keyboard, announcements and map focus are unverified.", "fix": "Exercise keyboard-only creation through fields and map, document alternatives and retain primitive focus ownership; do not claim accessible drawing from an aria-label alone.", "owner": "integration", "confidence": "medium"},
+      {"file": "web\\src\\features\\maps\\schemas\\geofence.ts", "line": 15, "rule": "MDC-044; localized form errors", "detail": "Zod produces hardcoded English required/numeric/range messages, and page lines 494-497 forward issue.message directly into field errors. Name messages at schema lines 44-45 are also English.", "fix": "Use canonical localization-backed validation messages while keeping numeric bounds and field associations intact.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 540, "rule": "MDC-042", "detail": "Refresh applies animate-spin; actual reduced-motion suppression depends on shared CSS not inspected in this page audit.", "fix": "Verify OS and low-bandwidth motion preferences on refresh and FadeIn; reuse existing motion policy if a violation is confirmed.", "owner": "integration", "confidence": "medium"}
+    ],
+    "acceptance": "UNVERIFIED: actual keyboard order/trap/restoration, screen reader, AA contrast, forced colors, 44px target/spacing exceptions, open overlays and reduced-motion."
+  },
+  "states": {
+    "observed": [
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 182, "detail": "deriveDataState distinguishes retained geofence payload; metric inputs are null when source has no data, not fabricated zero."},
+      {"file": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx", "line": 23, "detail": "Independent sources produce retained/partial/unavailable/available summary with receipt-time fallback."},
+      {"file": "web\\src\\features\\maps\\components\\charging-places\\VisitedCandidates.tsx", "line": 29, "detail": "Candidate card owns initial loading skeleton, fatal retry, stale retained state and measured empty versus unavailable copy."},
+      {"file": "web\\src\\features\\maps\\components\\charging-places\\PlacesTable.tsx", "line": 319, "detail": "Directory retains panel shell, fatal retry, initial skeleton, filtered empty/unavailable and resolved Not set versus unresolved Rate unavailable."},
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 487, "detail": "Validation gates persistence; save pending disables/loading; success and failures toast; browser capture has guarded availability and finally-cleared loading."},
+      {"file": "web\\src\\features\\maps\\components\\charging-places\\PreviewApplyPanel.tsx", "line": 155, "detail": "Read-only preview retains data on refresh error and distinguishes matched/eligible/protected; explicit apply has confirmation, pending, success and error."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 163, "rule": "MDC-046 preservation of unsaved user input", "detail": "Dirty tracking includes chargingPlace only when reviewCandidate is non-null. Toggling charging purpose in an otherwise untouched ordinary Create form is not dirty, so Cancel can discard that change without the existing discard prompt.", "fix": "Snapshot charging purpose for every create/draft mode and include it in the dirty comparison; retain existing confirmation preference and navigation behavior.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 378, "rule": "MDC-045/046; candidate versus draft preservation", "detail": "applyAiDraftToForm initializes name/geometry/category but not chargingPlace or reviewCandidate; closeModal clears reviewCandidate but leaves chargingPlace. After a reviewed charging candidate closes, applying an AI draft can inherit the previous charging purpose and later POST it at line 507.", "fix": "Make draft initialization explicit and independent of prior candidate/create state; preserve existing review-before-Create path and do not auto-persist.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 580, "rule": "MDC-026 independent source recovery", "detail": "AI candidate picker uses data??[] but has no local loading/unavailable/error/retry cue. Candidate failures are separately exposed by the visited card/source composition, not this selector. Summary onRetry is supported by MapsOperationalBrief but not passed here.", "fix": "Reuse existing data-state/source UI and clearly connect candidate retry to the picker without replacing useful neighboring data or adding a new state engine.", "owner": "page", "confidence": "high"}
+    ],
+    "offlineStaleAcceptance": "UNVERIFIED. Source uses deriveDataState/SourceContent; shared PageLayout and global offline mechanics were not executed or exhaustively audited."
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 684, "rule": "MDC-010/012; mission 6/8", "detail": "The drawing surface has fixed border-white/[0.08] instead of theme-aware border token. This is the only fixed-white styling match in the page, not evidence of a page full of white text.", "fix": "Use existing semantic surface/border token; validate light/dark/custom and forced colors.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\maps\\GeofenceDrawer.tsx", "line": 76, "rule": "MDC-010/034; mission visual intensity", "detail": "Shared drawer defaults to saturated literal cyan #22d3ee with fillOpacity 0.15 at line 93; page supplies no color. No glow was found in the inspected page. Shape visibility is important, so contrast cannot be traded away merely to lower saturation.", "fix": "Have shared map owner review a restrained semantic geometry default/variant using the existing color prop; preserve shape meaning and measure against actual tiles.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 694, "rule": "MDC-011/034", "detail": "Page explicitly requests dark map style. Shared MapTileLayer respects provider/data-saver but this source choice is independent of application light theme. Actual contrast or mismatch is not visually proven.", "fix": "Review light/dark/custom map composition; retain current provider and saved-style semantics rather than force-resetting preferences.", "owner": "integration", "confidence": "medium"},
+    {"file": "web\\src\\components\\ai\\AISuggestNewGeofences.tsx", "line": 242, "rule": "MDC-013; mission 7/9", "detail": "AI proposal uses local text-xs/text-sm tracking/font-medium rather than role typography; cyan border/fill/label is subdued but cumulative intensity with directory badges requires visual review.", "fix": "AI owner should reuse existing typography roles and restrained semantic surfaces without dropping proposal fields or validation explanation.", "owner": "shared", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 193, "rule": "MDC-002/046", "detail": "Local CRUD requests omit requiresLiveMode and invalidate locally, whereas useLocations lifecycle/bulk writes opt into live mode and cross-tab broadcast. request() defaults requiresLiveMode=false at client.ts:373 and calls the operational guard at 378; guard implementation was not inspected, so no demo/auth bypass is alleged.", "fix": "Unify through existing typed domain mutation contracts while preserving success/error/modal behavior and query identity; verify actual demo/offline behavior centrally.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 48, "rule": "MDC-045 typed source ownership", "detail": "Summary consumes legacy Geofence (string ID, needsReview) while workspace uses canonical ApiGeofence (numeric ID, needs_review, charging purpose). Both types were inspected; runtime dual-casing behavior was not. Do not merge shapes or caches casually.", "fix": "Coordinate canonical typed hooks/summary adapter with useLocations owner and preserve origin/review semantics; avoid coercion-based compatibility inventions.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 28, "rule": "MDC-002 category-barrel imports", "detail": "useToast imports directly from @/components/feedback/Toast rather than the feedback category barrel.", "fix": "Use the existing feedback barrel if the hook is exported; report a barrel gap instead of changing shared exports from a page worker.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 139, "rule": "MDC-032 workspace ownership", "detail": "Vehicle selection is header-enabled by workspaceScope.ts:22-74,97-136,156-165; modal also renders a vehicle selector at page line 654 which changes the same setVehicleId. It serves location capture, not directory filtering, and selected-vehicle changes have global consequences.", "fix": "Coordinate capture-source selection with workspace owner; do not simply remove the needed location-source capability or add a second independent workspace store.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 696, "rule": "preserve actual capability, not comments", "detail": "Drawer receives onCreate only. GeofenceDrawer.tsx:115-117 disables edit/delete tools when callbacks are absent; page comment at line 277 about editing does not prove editable map geometry.", "fix": "Preserve existing circle creation and numeric editing; treat additional on-map edit/delete as a separate explicitly authorized capability, not an already working behavior.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "First protect charging-purpose initialization and dirty-form semantics, then align typed source/write contracts and localized validation. Presentation is already largely composed from shared owners; do not rebuild the directory.",
+    "runtimeAcceptance": "not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained semantic geofence geometry",
+      "existingOwnerFile": "web\\src\\components\\maps\\GeofenceDrawer.tsx",
+      "file": "web\\src\\components\\maps\\GeofenceDrawer.tsx",
+      "line": 76,
+      "rule": "MDC-010/034/040",
+      "detail": "Central default literal cyan is a shared visual-noise dependency of this page.",
+      "fix": "Review existing color default against semantic tokens and actual basemap contrast; no second drawer or palette.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": {"existing": ["color?: string", "fences", "onCreate", "optional onEdit/onDelete", "modes=['circle']"], "needed": ["theme-aware restrained geometry color resolved by existing owner", "draw/draft legibility on light/dark/custom tile compositions", "forced-colors and keyboard-alternative validation"], "newComponent": false},
+      "usedBy": ["GeofencesPage create/AI/candidate drawing modal"],
+      "dependsOn": ["MDC-010 semantic tokens", "MDC-034 map policy", "existing MapTileLayer provider/data-saver contract", "contrast and viewport validation"]
+    },
+    {
+      "name": "Canonical geofence source and mutation integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useLocations.ts",
+      "file": "web\\src\\api\\hooks\\useLocations.ts",
+      "line": 86,
+      "rule": "MDC-002/045/046",
+      "detail": "Page-only ownership cannot extend shared CRUD hooks, broadcast/write policy or localize the reused schema.",
+      "fix": "Integrate existing geofence hooks and typed mutations; preserve separate keys and every current form action.",
+      "owner": "integration",
+      "confidence": "high",
+      "propsVariantsStates": {"existing": ["active-summary query", "full active/archived directory query", "visited candidates", "requiresLiveMode", "invalidateAndBroadcast"], "needed": ["typed create/update/delete with existing body semantics", "fatal versus refresh error and retained payload", "localized field validation preserving bounds"], "newComponent": false},
+      "usedBy": ["GeofencesPage summary and create/edit/delete", "ChargingPlacesWorkspace and PlaceDetailPanel"],
+      "dependsOn": ["web\\src\\api\\client.ts operational guard", "web\\src\\api\\types.ts canonical Geofence", "web\\src\\features\\maps\\schemas\\geofence.ts", "canonical localization resources", "centralized query/demo/offline validation"]
+    },
+    {
+      "name": "AI proposal typography alignment",
+      "existingOwnerFile": "web\\src\\components\\ai\\AISuggestNewGeofences.tsx",
+      "file": "web\\src\\components\\ai\\AISuggestNewGeofences.tsx",
+      "line": 242,
+      "rule": "MDC-013",
+      "detail": "Page cannot edit this shared AI presentation owner.",
+      "fix": "Adopt existing role typography without changing streamed proposal/application semantics.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": {"existing": ["locationId", "currentName?", "onApplyDraft", "stream busy/paused/rejected/ok"], "needed": ["role-based proposal metadata and validation text", "long proposal name wrapping"], "newComponent": false},
+      "usedBy": ["GeofencesPage Helix draft section"],
+      "dependsOn": ["MDC-013 typography", "existing AIFeatureCard", "existing withAiFeature/useAiStream", "keyboard and long-content QA"]
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 179, "rule": "MDC-002", "detail": "Inline query/CRUD and existing useLocations query/lifecycle contracts overlap; intentional separate full-directory cache must not be mistaken for a competing implementation.", "fix": "Consolidate only equivalent hook behavior; keep independently scoped caches and UI-source receipts.", "owner": "integration", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceSHA256": "d1b4ad37462a1a4547861a49ae8f75de94b11c74ff0e38a59a8b062b83ea4d83",
+    "sourceHashAlgorithm": "SHA-256 over raw file bytes",
+    "currentLineCount": 838,
+    "sectionCounts": {"topLevelContentSections": 3, "pageLiteralSectionElements": 2, "pageGlassPanelOpenTags": 1, "pageChartContainerOpenTags": 0, "pageLayoutCardOpenTags": 1, "pageModalOpenTags": 1, "pageConfirmDialogOpenTags": 2, "directoryNestedCards": 3, "detailTabContentCards": 5},
+    "sections": [
+      {"name": "Location-evidence summary", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 550, "count": 1, "content": "Total, reviewed, awaiting review and visited candidates: four independently sourced count metrics; scope, freshness and provenance."},
+      {"name": "Optional Helix visited-location picker and draft assistant", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 563, "count": 1, "content": "Entire section is AI-gated; positive candidate ID, streamed typed proposal, rejected/ok state and apply-to-form."},
+      {"name": "Places and charging zones workspace", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 604, "count": 1, "content": "Needs setup, independent visited candidates, search/archive filter and saved directory."},
+      {"name": "Create/edit modal", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 628, "count": 1, "content": "Vehicle/browser/map capture for create only; name, coordinates, radius, category; candidate visit/charge evidence and charging-purpose confirmation; ordinary create charging toggle; Cancel/Create/Update and field errors."},
+      {"name": "Discard and single-delete confirmations", "file": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx", "line": 820, "count": 2, "content": "Discard-draft preference, keep editing, destructive named-place confirmation."},
+      {"name": "Place detail pricing/activity workspace", "file": "web\\src\\features\\maps\\components\\charging-places\\PlaceDetailPanel.tsx", "line": 146, "count": 1, "content": "Purpose, rename, category, reviewed/enable, archive/restore. Pricing tab: Add a rate, rate history, pricing preview. Activity tab: per-currency summary and paginated session activity."}
+    ],
+    "actions": [
+      "Header refresh saved-summary query; header Add geofence; directory refresh places/review/rates; directory Add place.",
+      "Search name/category/origin, clear search/history scope, show archived, pin/unpin, value filters, sort, column visibility and directory pagination.",
+      "Review existing discovered geofence versus review unmatched visited candidate; optional Use in template sets candidate ID without saving.",
+      "Suggest draft, stream cancellation/confirmation via existing AI owner, apply valid proposal to canonical form; explicit Create performs persistence.",
+      "Capture vehicle or browser location; choose global vehicle from modal; draw a new circle; edit numeric coordinates/radius/name/category.",
+      "Confirm charging purpose; preserve candidate visit/charge counts and follow-up rate hint.",
+      "Create, update, cancel, discard/keep editing, single delete and multi-select bulk delete with confirmations.",
+      "Manage place; rename/category/purpose; mark reviewed and enable; archive/restore; switch pricing/activity tabs.",
+      "Save time-versioned rate with currency/effective dates; select preview sessions; cancel unused future schedule with confirmation.",
+      "Refresh preview, optionally narrow business dates, explicitly apply pricing or assign protected-cost sessions with confirmation; see matched/eligible/protected/energy/cost/result.",
+      "Review per-currency summary; paginate charging history by 25 with timestamps, energy, cost and provenance."
+    ],
+    "dataBehavior": [
+      "Visited candidate is observed evidence, not a saved geofence. openCandidate prefills name/coordinates, radius 75 and charging purpose from charge_count; Create is still required.",
+      "Ordinary create begins empty with radius 100/custom and false charging purpose. AI proposal remains a draft, prefills geometry/name/custom and must be reviewed then explicitly created.",
+      "Current AI inherited charging-purpose risk and ordinary-create dirty tracking gap are flagged, not silently blessed or changed by this audit.",
+      "Editing preserves ID and category; update sends validated form payload, not server-managed origin/review flags. Charging purpose for saved places is maintained by the detail workspace.",
+      "Circle radius is meter-labeled and validated 10..50000; latitude -90..90, longitude -180..180, name trimmed 1..120. No new wire field or unit guess.",
+      "Map fallback center 37.7749,-122.4194 is only navigation context, not fake measured data; (0,0) is currently excluded from draft/center validity at lines 261,286 and must not be reinterpreted casually.",
+      "Selected vehicle affects capture only; directory/candidates are independent fleet-wide sources. /geofences has no workspace analysis range. Rate effective dates and preview bounds are independent business scope.",
+      "Raw rate_per_wh and energy_wh stay intact; helpers convert only price entry/display boundary, useUnits formats energy; summaries remain separated by currency.",
+      "Keep all cache keys, enablement, cancellation, staleTime/polling, mutation invalidation/broadcast, table IDs, pin context and saved preferences.",
+      "Do not invent backend deduplication, live-position freshness, charging discovery accuracy, cost-protection guarantees or successful mutation outcomes from route declarations/comments."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Source-only, read-only Phase 0 audit. Only owned JSON and heartbeat were written.",
+    "sourcePatternReceipt": {
+      "command": "PowerShell Select-String -CaseSensitive on only GeofencesPage.tsx; Get-FileHash -Algorithm SHA256 and Get-Content line count",
+      "exitCode": 0,
+      "output": ["SHA256=d1b4ad37462a1a4547861a49ae8f75de94b11c74ff0e38a59a8b062b83ea4d83", "LINES=838", "<(button|input|textarea|select|table)\\b : 0", "style=\\{\\{ : 0", "text-neon|bg-neon|shadow-neon|glow : 0", "text-white|border-white|bg-white : 1", "<GlassPanel\\b : 1", "<ChartContainer\\b : 0", "<section\\b : 2"],
+      "qualification": "Earlier case-insensitive diagnostic counted shared capitalized Input/Button names and MapTileLayer style prop; corrected case-sensitive patterns above are authoritative. Counts cover this page only, not the whole dependency graph."
+    },
+    "notRun": ["Git operations", "TypeScript", "lint", "build", "unit/component tests", "audit.sh (it runs project TypeScript and was incompatible with this source-only assignment)", "browser/runtime/API requests", "production mutations", "agents"],
+    "unverified": ["mounted route/reachability", "screenshots and visual hierarchy", "viewport/RTL/text zoom", "contrast/forced colors", "keyboard/focus/screen-reader behavior", "global CSS motion suppression", "backend implementations and real payload correctness", "offline/demo/auth guard outcomes", "exports or shared table mobile detail internals", "AI and pinned delegated leaf route registration"],
+    "dependencyBoundary": "Only this page's directly used map/domain/data dependencies and bounded route/workspace source excerpts were inspected. No broader maps-page audit or application foundation audit.",
+    "historicalAcceptance": "No historical receipt promoted to current proof.",
+    "contractCitations": ["docs\\frontend-worker-conventions.md:40-72 (Phase 0 schema and limits)", "docs\\frontend-design-contract.md:41-65 (one architecture), 178-230 (MDC-010..047), 342-379 (entry and preservation obligations)", "docs\\frontend-mission.md:19-104 (principles/inventory),309-394 (visual intensity),529-580 (responsive/mobile),704-776 (states),921-999 (a11y/motion/architecture),1416-1485 (visual and completion gates)"],
+    "snapshotDrift": "Page hash must be rechecked at release. Concurrent source changes are possible; this report is a read snapshot, not a source lock."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+    "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\ChargingPlacesWorkspace.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\VisitedCandidates.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\NeedsSetupQueue.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\PlacesTable.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\PlaceDetailPanel.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\RateForm.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\RateHistoryPanel.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\PreviewApplyPanel.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\ChargingSummaryPanel.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\ChargingActivityList.tsx",
+    "web\\src\\features\\maps\\components\\charging-places\\helpers.ts",
+    "web\\src\\features\\maps\\schemas\\geofence.ts",
+    "web\\src\\features\\maps\\geofenceCategories.ts",
+    "web\\src\\api\\hooks\\useLocations.ts",
+    "web\\src\\api\\hooks\\usePinned.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\location.ts",
+    "web\\src\\components\\ai\\AISuggestNewGeofences.tsx",
+    "web\\src\\components\\maps\\GeofenceDrawer.tsx",
+    "web\\src\\components\\maps\\MapTileLayer.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
