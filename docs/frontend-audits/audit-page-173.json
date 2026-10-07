@@ -1,0 +1,262 @@
+{
+  "item": "audit-page-173",
+  "phase": 0,
+  "page": "web\\src\\features\\settings\\pages\\PrivacyPage.tsx",
+  "routes": ["/account/privacy"],
+  "purpose": "Manage browser-local recent-page history and optional-reporting consent alongside deployment consent policy.",
+  "primaryGoal": "Understand local data scope, clear recent history safely, and accept, withdraw or reset the browser's consent choice.",
+  "dataSources": [
+    {
+      "name": "Deployment consent policy",
+      "hook": "useVersionInfo",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 364,
+      "endpoint": "GET /api/v1/system/version",
+      "requestPath": "/system/version",
+      "routeEvidence": "internal\\api\\router.go:4352,4393",
+      "clientEvidence": "web\\src\\api\\client.ts:93",
+      "typeEvidence": "web\\src\\api\\types.ts:1874,1882",
+      "behavior": "Query key ['version']; STANDARD stale time; abort signal forwarded; optional require_cookie_consent boolean is treated as unknown unless actually boolean. No backend handler implementation or live response verified."
+    },
+    {
+      "name": "Recent pages",
+      "owner": "web\\src\\lib\\recentPages.ts",
+      "line": 28,
+      "endpoint": null,
+      "storageKey": "teslasync:recent-pages:v1",
+      "behavior": "Browser-local LRU capped at 50; page initializes count from getRecentPages().length and subscribes to same-tab and storage events. Clear removes the key and notifies subscribers; no server mutation."
+    },
+    {
+      "name": "Consent",
+      "owner": "web\\src\\lib\\cookieConsent.ts",
+      "line": 25,
+      "endpoint": null,
+      "storageKey": "teslasync:consent:v1",
+      "behavior": "accepted/declined stored literally; unknown means missing/invalid/unavailable storage. Same-tab cookie-consent-changed plus cross-tab storage subscriptions. Reporting allowance depends on both deployment policy and persisted consent."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "Existing category-barrel adapter; full allocated width, min-w-0, shell-owned scope; query supplies freshness metadata, not a page-content gate."},
+    {"name": "PrivacyOperationalBrief / OperationalBrief", "owner": "web\\src\\features\\settings\\components\\statstrip-privacy\\PrivacyOperationalBrief.tsx", "line": 19, "contract": "Four metrics through useOperationalMetrics; count, consent, deployment policy, browser scope; unknown common period explicitly explained."},
+    {"name": "RecentPagesPanel", "owner": "web\\src\\features\\settings\\components\\privacy\\RecentPagesPanel.tsx", "line": 19, "contract": "GlassPanel, PanelTitle, Text, IconBox and Button; polite count status, zero-count hint, disabled clear when empty."},
+    {"name": "ConsentControlPanel", "owner": "web\\src\\features\\settings\\components\\privacy\\ConsentControlPanel.tsx", "line": 32, "contract": "GlassPanel, StatusPill, Skeleton, Button and typography; independent policy load/error while browser-local actions stay usable."},
+    {"name": "PrivacyGuaranteesPanel", "owner": "web\\src\\features\\settings\\components\\privacy\\PrivacyGuaranteesPanel.tsx", "line": 45, "contract": "Three localized tiles: stored locally, no cross-device sync, immediate control; heading association retained."},
+    {"name": "ConfirmDialog", "owner": "web\\src\\components\\ui\\ConfirmDialog.tsx", "line": 70, "contract": "warning variant, localized title/body/actions, clear-recent-pages silence key, cancellation and confirmation; existing Modal remains overlay owner."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 23, "contract": "Existing motion preference; reduced mode initial=false and safe delay; no replacement motion library."},
+    {"name": "deriveDataState", "owner": "web\\src\\api\\dataState.ts", "line": 185, "contract": "Retains payload on refresh error/paused fetch; fatal and refresh errors distinct."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\settings\\components\\privacy\\PrivacyKpiCards.tsx",
+      "line": 31,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Alternate four-card privacy summary remains exported by privacy/index.ts:1; mounted PrivacyPage uses PrivacyOperationalBrief instead. This is a competing source renderer, not proof of a second mounted summary.",
+      "fix": "Keep mounted OperationalBrief canonical; inspect remaining callers and tests before any separate cleanup. Do not remove capabilities or resurrect the alternate band during modernization.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "PrivacyPage.tsx:142-145 controls stack below xl and become two columns at xl.",
+      "PrivacyGuaranteesPanel.tsx:91 tiles reflow one/two/three columns at base/sm/xl.",
+      "RecentPagesPanel.tsx:35,46 and ConsentControlPanel.tsx:50,99,110 use min-w-0 and wrapping; all three consent actions remain rendered."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\components\\privacy\\ConsentControlPanel.tsx",
+        "line": 111,
+        "rule": "MDC-040/MDC-043",
+        "detail": "Action buttons use default md sizing (40px in Button.tsx:39); retry uses sm (36px). wrapLabel is not enabled. Source does not establish the stronger 44px mobile target or long-translation fit.",
+        "fix": "Use existing Button sizing/class composition and wrapLabel where necessary; verify 320px, long localized labels and non-overlapping target spacing without hiding actions.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "unverified; no browser exercised"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "RecentPagesPanel.tsx:53-55 has role=status and aria-live=polite.",
+      "ConsentControlPanel.tsx:98-104 has textual status with a colored pill, not color-only meaning.",
+      "PrivacyPage.tsx:143 labels controls; PrivacyGuaranteesPanel.tsx:87-89 associates explanatory heading.",
+      "Feature SVG icons are aria-hidden; shared Button supplies visible focus classes; FadeIn reuses reduced-motion handling."
+    ],
+    "issues": [],
+    "acceptance": "Keyboard traversal, modal focus/restoration, screen-reader announcements, composed contrast, forced colors and actual touch-target reachability are unverified."
+  },
+  "states": {
+    "initial": "Only policy text skeleton/loading reason; browser count, consent actions and guarantees remain mounted.",
+    "empty": "Zero recent pages shows helpful hint and disables clear. Unknown consent remains an explicit state; missing policy is null, never Optional by default in summary.",
+    "fatalError": "Policy-only retry in summary and consent panel; PageLayout receives query only, not loading/error replacement props.",
+    "retained": "Refresh failure preserves policy and browser-local neighbors; stale notice and retained-policy summary label remain.",
+    "offline": "deriveDataState marks retained paused fetch stale; initial paused fetch remains initial. Offline-versus-loading recovery is not separately exposed by this page.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\pages\\PrivacyPage.tsx",
+        "line": 127,
+        "rule": "MDC-026",
+        "detail": "Stale notice receives only state='stale'; summary receives fatalError, not refreshError, and no paused-fetch reason. Existing retry buttons appear only for fatal/missing policy. Retained-policy refresh failure lacks source-specific retry/context here.",
+        "fix": "Keep retained policy and independent local actions; expose existing refreshError/isRefreshBlocked with a nonfatal policy-scoped recovery action. Distinguish paused initial fetch from ordinary loading using existing trust primitives.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\privacy\\consentMeta.ts",
+        "line": 57,
+        "rule": "MDC-025/MDC-046",
+        "detail": "Declined copy claims 'only essential storage in use', but cookieConsent.ts:164 permits reporting whenever requireCookieConsent is false, regardless of the local declined choice. The consent description has no deployment-policy input.",
+        "fix": "Preserve existing reporting policy and browser choice; qualify status copy by known deployment policy and label policy-unknown honestly instead of promising effective reporting withdrawal when the consent gate is disabled.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\pages\\PrivacyPage.tsx",
+        "line": 101,
+        "rule": "MDC-026/MDC-046",
+        "detail": "Handlers display unconditional success and explicitly update consent state after helper writes. cookieConsent.ts:88-99 silently drops unavailable/failed writes yet dispatches requested state. recentPages.ts:238-242 similarly ignores clear failure; toast still says cleared. Storage failure can make UI success differ from persisted state.",
+        "fix": "Coordinate storage-owner result/evidence reporting, then surface unavailable/persistence failure without breaking local subscriptions, storage keys or consent gating. Preserve usable controls and avoid treating failed persistence as confirmed consent.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\settings\\components\\privacy\\PrivacyGuaranteesPanel.tsx",
+      "line": 56,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Three informational guarantee icons use cyan/blue/green; controls add cyan/amber. IconBox.tsx:26-32 maps these to neon-tinted backgrounds/rings in tokens.ts:21-26. These hues distinguish decorative topics rather than operational severity. No glow is applied by IconBox itself.",
+      "fix": "Prefer neutral token-based icon chrome for explanatory topics through the shared owner; reserve subdued semantic emphasis for actual consent/policy state and the clear confirmation. Preserve all explanatory tiles and user-selected themes.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\settings\\pages\\PrivacyPage.tsx",
+      "line": 31,
+      "rule": "MDC-002 component-first category imports",
+      "detail": "useToast imports the concrete shared Toast module while other page shared imports use category barrels.",
+      "fix": "Use the existing feedback category export if confirmed available; do not invent a new provider or wrapper. Barrel export availability was not inspected.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": "Correct policy-dependent consent claims and persistence-success evidence.",
+    "next": "Expose nonfatal refresh/offline recovery; reduce decorative multihue chrome using the existing design system; verify mobile targets.",
+    "notNeeded": "No SI conversion, date-range picker, vehicle selector, chart/table replacement or new query state store."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Neutral IconBox presentation",
+      "existingOwnerFile": "web\\src\\components\\ui\\IconBox.tsx",
+      "line": 5,
+      "propsVariantsStates": "Existing children/size/className/color API has only NeonColor variants. Evaluate an optional neutral semantic tone backed by current surface/text/border tokens, retaining existing color defaults and sizes.",
+      "usedBy": ["RecentPagesPanel", "ConsentControlPanel", "PrivacyGuaranteesPanel"],
+      "dependsOn": ["web\\src\\lib\\tokens.ts neutral surface/text contract", "MDC-010", "MDC-011"],
+      "owner": "shared",
+      "confidence": "high",
+      "implementationStatus": "proposal only; independent second production page need not established by this scoped audit"
+    },
+    {
+      "name": "Browser-storage mutation evidence",
+      "existingOwnerFile": "web\\src\\lib\\cookieConsent.ts",
+      "additionalOwnerFile": "web\\src\\lib\\recentPages.ts",
+      "line": 88,
+      "propsVariantsStates": "Coordinate a compatible mutation result distinguishing persisted, unavailable and failed writes, plus authoritative readback; retain consent event names, accepted/declined/unknown meanings, recent LRU cap and storage IDs.",
+      "usedBy": ["PrivacyPage consent handlers", "PrivacyPage clear handler", "existing consent/recent subscribers"],
+      "dependsOn": ["Existing privacy storage and reporting policy", "MDC-026", "MDC-046"],
+      "owner": "integration",
+      "confidence": "high",
+      "implementationStatus": "report only; no shared source changed"
+    }
+  ],
+  "competingImplementations": [
+    {"name": "PrivacyKpiCards versus PrivacyOperationalBrief", "file": "web\\src\\features\\settings\\components\\privacy\\index.ts", "line": 1, "detail": "Alternate summary exported, current page mounts only OperationalBrief. Unused across repository not established; no deletion recommended by audit."}
+  ],
+  "preservation": {
+    "sourceHash": "35F457395E005B96896FB9478E19A78D16EAA3BC9393EE3657AD460AE049CE7C",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 181,
+    "presentationLineCountIncludingExtractedComponents": 570,
+    "sourceInventory": [
+      {"file": "web\\src\\features\\settings\\pages\\PrivacyPage.tsx", "lines": 181, "sha256": "35F457395E005B96896FB9478E19A78D16EAA3BC9393EE3657AD460AE049CE7C"},
+      {"file": "web\\src\\features\\settings\\components\\privacy\\RecentPagesPanel.tsx", "lines": 81, "sha256": "73858744E05562D5E44620C2B6E9B69476FB8AD8CF837274713D41CA8D7E8CCC"},
+      {"file": "web\\src\\features\\settings\\components\\privacy\\ConsentControlPanel.tsx", "lines": 136, "sha256": "26D5AF828915C0FEC17C4CC8F66E1553B85F83B1D119D640CD0942370E0A37D1"},
+      {"file": "web\\src\\features\\settings\\components\\privacy\\PrivacyGuaranteesPanel.tsx", "lines": 101, "sha256": "C8D95FA50528CD21FBB6BBEADD9A2DFAE4930D61E65C388598D55109C6399D4F"},
+      {"file": "web\\src\\features\\settings\\components\\statstrip-privacy\\PrivacyOperationalBrief.tsx", "lines": 71, "sha256": "DDF4625258F55A44C85C16B2C7A3E4C9F74525061A77F13E292A0F169132E8ED"}
+    ],
+    "sections": [
+      {"name": "Privacy summary", "count": 1, "metrics": 4},
+      {"name": "Privacy controls", "count": 1, "panels": 2},
+      {"name": "How TeslaSync handles this data", "count": 1, "tiles": 3},
+      {"name": "Clear-history confirmation", "count": 1, "conditional": true}
+    ],
+    "sectionCount": 4,
+    "glassPanelSourceOccurrences": 3,
+    "chartContainerSourceOccurrences": 0,
+    "actions": ["Copy current link", "Open clear-history warning", "Confirm/cancel history clear", "Persist Don't ask again choice under clear-recent-pages", "Accept/re-grant consent", "Withdraw consent", "Reset consent", "Retry deployment policy"],
+    "dataBehavior": ["Single browser-local subscriptions per store with cleanup", "Cross-tab updates without server sync", "Recent-page maximum 50", "Consent tri-state", "Deployment boolean remains unknown if absent", "Retained policy survives refresh failure", "Local actions remain independent of policy query", "Localized title/toasts/explanations", "Safe reduced-motion FadeIn"],
+    "workspace": "Account route is not RANGE_ENABLED_PATHS and is covered by VEHICLE_DISABLED_PREFIXES '/account' (workspaceScope.ts:23-78,95-97). Do not introduce competing scope controls.",
+    "si": "No physical SI measurements on this page; count/status/text only. Preserve raw values and existing operational formatting preferences.",
+    "sourceChanged": false
+  },
+  "evidenceLimits": {
+    "method": "Bounded source-only read and line-pattern/hash inspection; no Git, production mutations, tests, build, lint or browser sessions.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "tests": "not run; existing test files enumerated only, not read",
+    "typescript": "not run under Phase0 scope",
+    "skillScript": "Read audit.sh but did not execute: it unconditionally runs project TypeScript outside the bounded source audit.",
+    "sourceOnlyChecks": {
+      "command": "Select-String over the five hashed presentation files; case-sensitive raw HTML regex",
+      "exitCode": 0,
+      "output": ["style= : 0", "Case-sensitive raw HTML matches: 0", "direct recharts/react-leaflet/framer-motion imports : 0", "old relative API imports : 0", "fixed white/gray/neon text patterns : 0"],
+      "limitation": "Regex counts are not runtime acceptance. Initial case-insensitive raw-element probe counted five shared Button tags; corrected case-sensitive probe found zero native tags."
+    },
+    "backend": "Router and frontend version type inspected; backend handler semantics, consent enforcement and live reporter delivery not exercised.",
+    "otherConsumers": "No application-wide dependency/caller audit; exported alternate renderer not proved globally unused."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\settings\\pages\\PrivacyPage.tsx",
+    "web\\src\\features\\settings\\components\\privacy\\RecentPagesPanel.tsx",
+    "web\\src\\features\\settings\\components\\privacy\\ConsentControlPanel.tsx",
+    "web\\src\\features\\settings\\components\\privacy\\PrivacyGuaranteesPanel.tsx",
+    "web\\src\\features\\settings\\components\\privacy\\PrivacyKpiCards.tsx",
+    "web\\src\\features\\settings\\components\\privacy\\consentMeta.ts",
+    "web\\src\\features\\settings\\components\\privacy\\index.ts",
+    "web\\src\\features\\settings\\components\\statstrip-privacy\\PrivacyOperationalBrief.tsx",
+    "web\\src\\lib\\cookieConsent.ts",
+    "web\\src\\lib\\recentPages.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "internal\\api\\router.go",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-173.json",
+    ".agent-status\\audit-page-173.txt"
+  ]
+}
