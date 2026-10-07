@@ -1,0 +1,192 @@
+{
+  "item": "audit-page-237",
+  "phase": 0,
+  "mode": "READ-ONLY source audit; report and heartbeat writes only",
+  "page": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx",
+  "routes": ["/vehicles/:id/access"],
+  "identity": {
+    "export": "VehicleAccessPage",
+    "mount": {"file": "web\\src\\App.tsx", "line": 582},
+    "lazyImport": {"file": "web\\src\\App.tsx", "line": 43},
+    "guard": "SafeRoute name=VehicleAccess",
+    "routeParameter": "id",
+    "sourceSHA256": "bdbb7e853e40c3128535f8d3d40e80e6ceee459ec80ce147a4027855be6e0256"
+  },
+  "purpose": "Manage the route vehicle's Tesla-shared drivers and vehicle share invitations using independent cached snapshots.",
+  "primaryGoal": "Inspect existing access, synchronize records, invite a driver, copy invitation links, and confirm removing driver access or revoking pending invitations.",
+  "dataSources": [
+    {
+      "hook": "useVehicle",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 86,
+      "endpoint": "GET /vehicles/{vehicleID}",
+      "routerEvidence": "internal\\api\\router.go:3319,3327-3329",
+      "usage": "Optional display_name breadcrumb; route id fallback remains visible.",
+      "policy": "Enabled for a nonempty id; queryKey vehicleKeys.detail(id); forwards AbortSignal.",
+      "limit": "Identity query errors/loading are not represented in page dataSources; no backend handler semantics inspected."
+    },
+    {
+      "hook": "useVehicleDrivers",
+      "owner": "web\\src\\api\\hooks\\useVehicleAccess.ts",
+      "line": 15,
+      "endpoint": "GET /vehicles/{vehicleID}/drivers",
+      "routerEvidence": "internal\\api\\router.go:3398-3401",
+      "sourceOwnership": "vehicleAccessHandler.ListDrivers; declared VehicleDriver shape at web\\src\\api\\types.ts:2811-2819",
+      "policy": "vehicleAccessKeys.drivers(id), enabled only with id, STALE_TIMES.STANDARD, select safeArray, AbortSignal forwarded.",
+      "mutationEndpoints": ["POST /vehicles/{vehicleID}/drivers/refresh", "DELETE /vehicles/{vehicleID}/drivers"],
+      "mutationEvidence": "web\\src\\api\\hooks\\useVehicleAccess.ts:37-48,65-79",
+      "payload": "DELETE sends share_user_id unchanged; successful mutations invalidate only driver query and use existing toast feedback."
+    },
+    {
+      "hook": "useVehicleInvitations",
+      "owner": "web\\src\\api\\hooks\\useVehicleAccess.ts",
+      "line": 25,
+      "endpoint": "GET /vehicles/{vehicleID}/invitations",
+      "routerEvidence": "internal\\api\\router.go:3403-3407",
+      "sourceOwnership": "vehicleAccessHandler.ListInvitations; declared VehicleInvitation shape at web\\src\\api\\types.ts:2821-2831",
+      "policy": "vehicleAccessKeys.invitations(id), enabled only with id, STALE_TIMES.STANDARD, select safeArray, AbortSignal forwarded.",
+      "mutationEndpoints": ["POST /vehicles/{vehicleID}/invitations", "POST /vehicles/{vehicleID}/invitations/refresh", "POST /vehicles/{vehicleID}/invitations/{invitationID}/revoke"],
+      "mutationEvidence": "web\\src\\api\\hooks\\useVehicleAccess.ts:51-62,82-106",
+      "payload": "Existing route vehicle id and invitation_id; successful mutations invalidate only invitations query and use existing toasts."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Existing PageContainer adapter; full-width container, page metadata, query freshness and source notices."},
+    {"name": "VehicleEvidenceBrief", "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx", "role": "Domain adapter for canonical OperationalBrief/useOperationalMetrics; four source counts, review drawer, provenance and scope."},
+    {"name": "AccessOverviewPanel", "owner": "web\\src\\features\\vehicles\\components\\vehicle-access\\AccessOverviewPanel.tsx", "role": "Feature-owned invitation distribution and driver roles; canonical MetricBar, Badge and typography."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "role": "Both stable table IDs; filtering, independent pagination, mobile visibility and persistence."},
+    {"name": "ConfirmDialog", "owner": "web\\src\\components\\ui\\ConfirmDialog.tsx", "role": "Two destructive confirmation overlays; loading prop already exists."},
+    {"name": "Button and CopyButton", "owner": "web\\src\\components\\ui\\Button.tsx; web\\src\\components\\ui\\CopyButton.tsx", "role": "Canonical actions and clipboard success/failure feedback."},
+    {"name": "TimeStamp", "owner": "web\\src\\components\\data-display\\TimeStamp.tsx", "role": "Expiry rendering with saved relative/absolute, timezone and locale preferences; invalid/missing dates show dash."},
+    {"name": "useDataState and StaleRefreshWarning", "owner": "web\\src\\hooks\\useDataState.ts; web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "role": "Independent fatal/retained-error/paused-source treatment."},
+    {"name": "GlassPanel, Badge, PanelTitle, Text, Skeleton, EmptyState, QueryError, FadeIn", "owner": "Existing ui/feedback/motion category barrels", "role": "Existing surfaces, semantics, localized states and entrance wrappers; transitive implementations not exhaustively inspected."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 323, "rule": "MDC-002 / mission shared architecture", "detail": "Driver and invitation bands repeat heading/count/refresh/state/table orchestration. Their actions and columns differ; no evidence that another universal panel is necessary.", "fix": "Prefer existing section/layout and data-state owners; retain clear domain orchestration rather than introducing another shared panel abstraction.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceBehavior": ["One-column stack below xl; drivers span two of three columns at xl (page:321-322).", "Panel padding changes at sm and headers/actions wrap (page:323-324,385-396).", "Refresh text hidden below sm while localized aria-label remains (page:338,402).", "Both tables independently paginate 25/50/100 rows (page:364,437)."],
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 360, "rule": "MDC-023 / MDC-043 / preservation", "detail": "Driver mobileColumns excludes email. Invitation mobileColumns at line 433 excludes createdBy and link, so the Copy invite link action disappears below md. DataTable.tsx:238-248,715-725 implements excluded columns as hidden md:table-cell. Neither caller supplies mobilePresentation or a row-details alternative.", "fix": "Reuse DataTable's existing opt-in mobile presentation/detail contract, or preserve all columns in a contained scroll strategy. Ensure email/creator and invitation Copy remain reachable on mobile without losing selection/filter/pagination behavior.", "owner": "page", "confidence": "high"}
+    ],
+    "viewportAcceptance": "UNVERIFIED at 320,375,390,430,768,1024,1280,1440,1920,2560; no mounted UI or allocated-container test."
+  },
+  "accessibility": {
+    "sourceStrengths": ["Localized action aria-labels; action SVGs explicitly aria-hidden.", "Invitation statuses include visible text, not color alone.", "Shared confirmations, table, timestamp and clipboard primitives reused."],
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 210, "rule": "MDC-040", "detail": "Driver remove and invitation revoke buttons use size=sm; shared Button.tsx:38-42 defines sm height 36px and md height 40px. No caller supplies a 44px touch target. Spacing exception compliance is not measured.", "fix": "Use existing supported sizing/class hooks to reach the mobile target without overlap; validate actual target spacing rather than declaring a WCAG failure from height alone.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 445, "rule": "MDC-024 / MDC-040 / mission stateful actions", "detail": "Neither destructive dialog supplies loading, although removeDriver/revokeInvitation remain pending until settlement. ConfirmDialog.tsx:23-25,130-147,185-202 already supports disabling confirmation/cancel while pending; without this prop repeat confirmation remains possible.", "fix": "Pass each existing mutation isPending to its dialog loading prop; retain danger confirmation, route ids, valid share_user_id=0, and settlement semantics. Validate one request per confirmation and focus restoration without performing real access mutations.", "owner": "page", "confidence": "high"}
+    ],
+    "acceptance": "Keyboard, focus trap/restoration, screen reader, contrast, forced colors, reduced motion and touch behavior UNVERIFIED."
+  },
+  "states": {
+    "initialLoading": "Each list has a 220px Skeleton; shared brief loading is driversLoading OR invitationsLoading.",
+    "empty": "Per-source explanatory EmptyState and always-present shells; overview empty only when both totals zero.",
+    "fatalError": "Each table uses its own fatalError/QueryError/retry; shared stale notices retain previously loaded records.",
+    "staleOffline": "useDataState retains payload; StaleRefreshWarning handles paused/offline vs refresh error at dependency:57-84.",
+    "mutations": "Refresh/create buttons show isPending; hooks emit success/error toast and scoped invalidation. Destructive confirmations omit pending-state binding.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 375, "rule": "MDC-026 / mission error isolation", "detail": "Overview uses combined loading and fatal-error booleans. AccessOverviewPanel.tsx:82-90 replaces its entire body when either source is loading/fatally failed, hiding the healthy neighbor's role or invitation breakdown even when available.", "fix": "Represent drivers and invitation subsections independently using the existing DataState contract; retain available breakdowns and provide source-specific skeleton/error/retry in the unavailable subsection.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 306, "rule": "MDC-026 / MDC-033 / source truth", "detail": "Brief maps every missing source to partial, including both sources failing or still unresolved; loading OR at line 308 also suppresses healthy metrics while the other source initially loads. VehicleEvidenceBrief already supports initial and initialFailure labels but they are never selected here. No freshness prop is passed despite source updatedAt and fetched_at metadata.", "fix": "Derive accurate aggregate trust with existing useCombinedDataState, retaining independently available counts. Supply truthful source freshness through existing freshness/provenance props; do not equate query fetch time with Tesla record fetched_at.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 47, "rule": "MDC-010 / MDC-012 / mission restrained palette", "detail": "Invitation status distribution defines five literal hex colors. AccessOverviewPanel.tsx:116-122 forwards them into MetricBar without opting into its solid fill, so shared default gradient is used. Action/icon classes at page:217,264,280,326,388 also hardcode rose/cyan shades rather than theme-aware semantic tokens.", "fix": "Reuse existing semantic severity/theme tokens for status and action presentation, and MetricBar fill=solid (already supported). Preserve status labels, distribution counts and user palette preferences; do not add a palette or reset themes.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 143, "rule": "MDC-045 / source-derived time behavior", "detail": "Seven-day expiry count captures Date.now inside useMemo keyed only to invitationsList. A retained unchanged list does not recompute as time crosses expiry/window boundaries, so the time-sensitive summary can become outdated.", "fix": "Use an existing shared clock/time refresh mechanism if available, or a bounded page-owned clock with cleanup; keep pending-only, future-only, finite timestamp and inclusive seven-day boundary semantics. No unit conversion or endpoint change.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "line": 203, "rule": "MDC-044 / data preservation", "detail": "Driver role table displays raw row.role, while overview localizes vehicleAccess.role.* with titleCase fallback (AccessOverviewPanel.tsx:133-135). Same role identity has inconsistent presentation.", "fix": "Apply existing localized role labels consistently at rendering/filter-label boundaries without changing raw role or filter identity, source casing, or unknown fallback.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Preserve mobile Copy capability and prevent repeated destructive confirmations; independently retain healthy overview/brief sources before palette polish.",
+    "orderedWork": ["Restore mobile details/actions with existing DataTable contract.", "Bind pending destructive dialogs.", "Correct independent source trust and freshness.", "Refresh time-sensitive expiry derivation.", "Unify localized role and restrained semantic styling."]
+  },
+  "requiredSharedChanges": [],
+  "sharedContracts": [
+    {"name": "DataTable mobile presentation/details", "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx", "propsVariantsStates": ["mobilePresentation", "mobileColumns", "tableId", "enableValueFilters", "pagination", "columns"], "usedBy": ["VehicleAccessPage drivers table", "VehicleAccessPage invitations table"], "dependsOn": ["Existing mobile presentation contract and source-preserving row adapter; no shared edit authorized"], "decision": "Reuse; evaluate exact presentation adapter during implementation, not a new table pipeline."},
+    {"name": "Pending destructive confirmation", "existingOwnerFile": "web\\src\\components\\ui\\ConfirmDialog.tsx", "propsVariantsStates": ["loading", "variant=danger", "open", "onConfirm", "onCancel", "details"], "usedBy": ["Remove driver", "Revoke invitation"], "dependsOn": ["Existing mutation isPending and canonical Modal"], "decision": "Reuse; caller binding only."},
+    {"name": "Source trust and brief freshness", "existingOwnerFile": "web\\src\\api\\dataState.ts", "propsVariantsStates": ["initial", "initialFailure", "partial", "stale", "unavailable", "ok", "fatalError", "refreshError", "updatedAt", "isRefreshBlocked"], "usedBy": ["VehicleAccessPage summary", "AccessOverviewPanel drivers subsection", "AccessOverviewPanel invitations subsection"], "dependsOn": ["useDataState/useCombinedDataState", "VehicleEvidenceBrief freshness/status", "Existing source snapshots"], "decision": "Reuse; page-specific overview interface may need independent DataState inputs."},
+    {"name": "Restrained status bars", "existingOwnerFile": "web\\src\\components\\data-display\\MetricBar.tsx", "propsVariantsStates": ["color accepts caller-prepared CSS color", "fill=solid", "value", "max", "label", "sublabel"], "usedBy": ["AccessOverviewPanel invitation status"], "dependsOn": ["Existing severity/theme tokens and number formatting"], "decision": "Reuse; no new palette/shared renderer."}
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-access\\AccessKpiBand.tsx", "line": 22, "detail": "Existing exported StatStrip-based four-count band duplicates the current page's VehicleEvidenceBrief count presentation. The assigned page does not import/render AccessKpiBand; usage elsewhere not established.", "decision": "Keep canonical current OperationalBrief and review drawer; do not restore a second KPI band or delete another consumer without investigation."}
+  ],
+  "preservation": {
+    "sourceSHA256": "bdbb7e853e40c3128535f8d3d40e80e6ceee459ec80ce147a4027855be6e0256",
+    "currentLineCount": 465,
+    "mountedFeatureLineCount": 653,
+    "mountedFeatureLineCountFormula": "465 page + 145 AccessOverviewPanel + 43 VehicleEvidenceBrief; excludes unmounted AccessKpiBand, barrel and tests.",
+    "sectionCount": 4,
+    "sectionNames": ["Access summary (four counts and review drawer)", "Drivers", "Access overview (invitation statuses and driver roles)", "Share invitations"],
+    "subsectionNames": ["Invitation status", "Driver roles"],
+    "sourceElementCounts": {"rootGlassPanel": 2, "dependencyGlassPanel": 1, "rootChartContainer": 0, "dependencyChartContainer": 0, "dataTables": 2, "confirmDialogs": 2, "fadeInWrappers": 3, "briefMetrics": 4},
+    "actions": ["Refresh drivers", "Refresh invitations", "Create invitation", "Copy existing invitation URL with feedback", "Open/cancel/confirm remove driver", "Open/cancel/confirm revoke pending invitation", "Independent source retries", "Brief details review", "Independent filtering/pagination and existing table controls"],
+    "stableIdentities": ["vehicles:access-drivers", "vehicles:access-invitations", "vehicle-access-summary", "data-tour=vehicle-access"],
+    "dataBehavior": ["Route id determines all page requests/mutations, not a newly introduced selector.", "share_user_id=0 remains valid and removable; only null/undefined prevent removal.", "Only pending invitations expose revoke; only existing invite_url exposes copy.", "Independent nullable arrays remain null-safe; missing summary inputs remain null, resolved empty arrays give real zero counts.", "Pending and expiring-soon counts derive from the same raw invitations as table/overview; seven days is 7*86400000 milliseconds, future finite expiry only.", "Sort status and role breakdowns descending by count; retain every source status/role identity including unknown.", "Retain source cache keys, enablement, abort signal, standard staleness, scoped invalidation and toast behavior.", "Expiry uses shared TimeStamp preferences; count metrics use existing formatting bridge; no physical-unit conversion required.", "Latest access snapshots are not historical date-scoped analytics; no extra workspace date/vehicle picker is introduced."],
+    "workspace": {"file": "web\\src\\lib\\workspaceScope.ts", "line": 156, "detail": "Range enablement is exact-path opt-in; page consumes route id and renders no competing scope controls. Selected-vehicle navigation coordination beyond this page was not runtime verified."},
+    "trust": "Keep per-source retained records visible on refresh failure/offline and fatal-only replacement. Never fabricate records, zero unknown values, or drop access-management capabilities.",
+    "sourceInventory": [
+      {"file": "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx", "sha256": "bdbb7e853e40c3128535f8d3d40e80e6ceee459ec80ce147a4027855be6e0256", "lineCount": 465},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-access\\AccessOverviewPanel.tsx", "sha256": "3c1ffd0db89cd5222ed0967f54a382552b5f4e88cbe3330429137a412147ef6d", "lineCount": 145},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-access\\index.ts", "sha256": "10e176bf4ebc5c6f9ecd713e2dd584cfa43eebc930c31e7f97c7b89324a26eb7", "lineCount": 6},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-access\\AccessKpiBand.tsx", "sha256": "e0dc81ed5b0ab595129017bd5aa16dde9a34cf8b7eb0c9fe15fb98375a6a1ed1", "lineCount": 48},
+      {"file": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx", "sha256": "c4621d24d68fb62c8dcf6dbbe6ea13535487346d578ceb2a4091604edf24d1d8", "lineCount": 43},
+      {"file": "web\\src\\api\\hooks\\useVehicleAccess.ts", "sha256": "58eb0fd43dbd73e1b88c05652ca77e7cced08c8482d0c32ccee96bdc0f265112", "lineCount": 108},
+      {"file": "web\\src\\hooks\\useDataState.ts", "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b", "lineCount": 65},
+      {"file": "web\\src\\components\\ui\\ConfirmDialog.tsx", "sha256": "3707ea7977bdfaccd40b9a7423725629489ad04419c44b7d956d2bca327fe7d5", "lineCount": 210}
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED; no browser, server, network request or production mutation used.",
+    "visual": "UNVERIFIED; findings are source-based, not screenshots or measured contrast.",
+    "keyboardViewportMotion": "UNVERIFIED; no actual keyboard, focus, viewport, forced-color or reduced-motion exercise.",
+    "tests": "NOT RUN. Existing page test names inspected as source only; they are not acceptance evidence.",
+    "fullGates": "NOT RUN by assignment: TypeScript, lint, build, full tests and Git forbidden. Loaded audit-violations script was read but not executed because it unconditionally invokes project TypeScript.",
+    "backend": "Router methods verified only; no handler/repository semantics, Tesla response freshness, cache completeness, permissions or live mutation outcome established.",
+    "dependencyCoverage": "Page-specific presentation and hook sources inspected; shared owners inspected only to establish actual used APIs. No recursive whole-app audit or new route/metric inventory.",
+    "concurrency": "Hashes identify read snapshot; other authorized workers may change shared sources. Final root hash recheck required.",
+    "checks": [
+      {"command": "PowerShell bounded regex counts over VehicleAccessPage.tsx, AccessOverviewPanel.tsx, VehicleEvidenceBrief.tsx", "exitCode": 0, "output": "Root: staticInlineVariable=0 rawControls=0 directLibraries=0 oldApi=0 neonBody=0 hexPalette=5 glassPanels=2 chartContainers=0. Overview: first six checks=0 glassPanels=1 chartContainers=0. Brief: all eight checks=0.", "scope": "Source only; no assertion that all engineering/accessibility checks pass."},
+      {"command": "Get-FileHash -Algorithm SHA256 assigned source inventory; Get-Content line counts", "exitCode": 0, "output": "Eight exact snapshot hashes and line counts recorded under preservation.sourceInventory."},
+      {"command": "rg endpoint declarations in internal\\api\\router.go and request definitions in page hooks", "exitCode": 0, "output": "Known GET/POST/DELETE page hook paths map to vehicle router declarations; no request double prefix or camelCase URL query parameter in useVehicleAccess.ts.", "scope": "Static contract matching only."},
+      {"command": "Initial PowerShell foreach pipeline for inventory", "exitCode": 1, "output": "ParserError: An empty pipe element is not allowed.", "resolution": "Corrected by assigning foreach output to $rows; rerun exit 0. No file written by failed command."}
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-access\\AccessOverviewPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-access\\index.ts",
+    "web\\src\\features\\vehicles\\components\\vehicle-access\\AccessKpiBand.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useVehicleAccess.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\TimeStamp.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\features\\vehicles\\pages\\VehicleAccessPage.test.tsx",
+    "internal\\api\\router.go"
+  ],
+  "filesReadNote": "filesRead includes actual full reads, bounded ranges and rg line evidence. RouteTransition.tsx, OnboardingGate.tsx and access test files other than the assigned page test appeared only as search hits and were not substantively audited. Nonexistent audit-page-236.json read returned not found and was not used as evidence.",
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-237.json", ".agent-status\\audit-page-237.txt"],
+  "release": {"sourceChanges": "none", "sharedChanges": "none", "accessMutations": "none", "gitCommands": "none", "runtimeAcceptance": "UNVERIFIED"}
+}
