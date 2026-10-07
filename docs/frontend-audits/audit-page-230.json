@@ -1,0 +1,448 @@
+{
+  "item": "audit-page-230",
+  "page": "web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx",
+  "routes": ["/digital-twin"],
+  "purpose": "Show the selected vehicle's physical state by merging security, vehicle-state and charging snapshots into a digital twin, summary and component details.",
+  "primaryGoal": "Understand reported openings, windows, security, activity and lights without confusing unknown or retained measurements with current facts; inspect the twin and customize its browser-local paint.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle + useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "endpoint": "GET /api/v1/vehicles",
+      "endpointEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-79; internal\\api\\router.go:3319-3320",
+      "owner": "Existing workspace selected-vehicle store/URL reconciliation and vehicle query",
+      "behavior": "URL vehicle_id, persisted selection and fleet fallback; the page does not introduce a local vehicle selector. The second useVehicles call shares the existing query key."
+    },
+    {
+      "hook": "useVehicleState",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 260,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/state; optional as_of",
+      "endpointEvidence": "web\\src\\api\\hooks\\useVehicles.ts:264-286; internal\\api\\router.go:3327-3333",
+      "owner": "Vehicle current-state API and existing typed response mapper",
+      "behavior": "Enabled for positive vehicle IDs; forwards AbortSignal; live query policy; page requests 5000ms polling. as_of disables polling and selects a separate historical query key. Mapper retains observedAt, freshness and verifiedFields, which this page does not consume.",
+      "backendLimits": "Route registration is confirmed. Actual signal freshness, historical reconstruction, payload completeness and runtime response units were not exercised."
+    },
+    {
+      "hook": "useSecurityLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 443,
+      "endpoint": "GET /api/v1/security/latest?vehicle_id={vehicleId}",
+      "endpointEvidence": "internal\\api\\router.go:4122-4125",
+      "owner": "Security API/query",
+      "behavior": "Enabled for positive ID; forwards AbortSignal; page requests 5000ms polling; no as_of parameter in this hook. Supplies doors, windows, lock, sentry, seat and lights."
+    },
+    {
+      "hook": "useChargingTelemetryLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 473,
+      "endpoint": "GET /api/v1/charging-telemetry/latest?vehicle_id={vehicleId}",
+      "endpointEvidence": "internal\\api\\router.go:4128-4131",
+      "owner": "Charging telemetry API/query",
+      "behavior": "Enabled for positive ID; forwards AbortSignal; page requests 5000ms polling; no as_of parameter in this hook. Supplies charging activity and charge-port state. Typed charger_power_w is SI watts.",
+      "backendLimits": "No claim that every optional legacy alias is populated by the backend."
+    },
+    {
+      "hook": "buildTwinState",
+      "file": "web\\src\\lib\\vehicleState.ts",
+      "line": 218,
+      "endpoint": null,
+      "owner": "Shared vehicle-state view-model/parser",
+      "behavior": "Merges security before vehicle lock/sentry fallback; parses compound doors and enum windows/turn signals; preserves nullable component states. Charging precedes port inference. Activity booleans currently collapse absence to false; lastUpdated comes only from security.created_at."
+    },
+    {
+      "hook": "useVehiclePaint",
+      "file": "web\\src\\hooks\\useVehiclePaint.ts",
+      "line": 118,
+      "endpoint": null,
+      "owner": "Existing per-vehicle paint preferences",
+      "behavior": "Browser-local teslasync:vehicle:{id}:paint, inferred exterior color and fallback paint; same-tab listeners, broadcast and storage-event synchronization; reset or selecting inferred paint clears override. No server mutation."
+    },
+    {
+      "hook": "buildCompositorUrl",
+      "file": "web\\src\\lib\\teslaCompositor.ts",
+      "line": 49,
+      "endpoint": "https://static-assets.tesla.com/configurator/compositor",
+      "owner": "Existing Tesla configurator image adapter",
+      "behavior": "Requests paint/model SIDE image, default size 1400; VehicleTwin falls back to SVG on image failure. No external request was made by this audit."
+    },
+    {
+      "hook": "useDataState + useOperationalMetrics + useDateFormat",
+      "file": "web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx",
+      "line": 65,
+      "endpoint": null,
+      "owner": "Existing trust, metric and date-format adapters",
+      "behavior": "Three independent live-provenance trust adapters and fatal-versus-refresh errors; six raw text/count metrics; existing date formatter. Operational metric/date adapter implementations were not exhaustively inspected."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Existing PageContainer adapter, full-width container and inherited shell scope", "evidence": "DigitalTwinPage.tsx:248-253; PageLayout.tsx:8-14"},
+    {"name": "Section + LayoutCard", "owner": "web\\src\\components\\layout\\index.ts", "role": "Canonical section/card category exports; component details reuse LayoutCard", "evidence": "index.ts:9,11; TwinDetailPanel.tsx:66"},
+    {"name": "OperationalBrief", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "role": "Compact six-metric summary, scope/freshness/provenance and existing details interaction", "evidence": "DigitalTwinPage.tsx:272-296; OperationalBrief.tsx:43-63,96"},
+    {"name": "VehicleTwin", "owner": "web\\src\\components\\vehicles\\VehicleTwin.tsx", "role": "Photo/SVG live overlays, inspectable hotspots, entry/driving animation and responsive measured width", "evidence": "DigitalTwinPage.tsx:305-314; VehicleTwin.tsx:1439-1458,1520-1581"},
+    {"name": "VehiclePaintPicker", "owner": "web\\src\\components\\vehicles\\VehiclePaintPicker.tsx", "role": "Five inferred/override paint choices and conditional reset", "evidence": "DigitalTwinPage.tsx:335-338; VehiclePaintPicker.tsx:46-109"},
+    {"name": "TwinDetailPanel", "owner": "web\\src\\features\\vehicles\\components\\TwinDetailPanel.tsx", "role": "Four page-domain cards with skeleton/error/retry/empty/ready branches and optional footer", "evidence": "DigitalTwinPage.tsx:351-395; TwinDetailPanel.tsx:58-86"},
+    {"name": "KVList", "owner": "web\\src\\components\\data-display\\KVList.tsx", "role": "Definition-list rows; already supports responsive/wrapping layout but caller uses inline default", "evidence": "TwinDetailPanel.tsx:55,83; KVList.tsx:18-25,45-49,76-109"},
+    {"name": "Badge + StatusBadge + typography", "owner": "web\\src\\components\\data-display\\StatusBadge.tsx", "role": "Text-paired status cues and current UI category typography; StatusBadge accepts nullish input", "evidence": "DigitalTwinPage.tsx:327-331; StatusBadge.tsx:9-11,23-46"},
+    {"name": "StaleRefreshWarning", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "role": "Three independent non-blocking retained/offline notices with retry", "evidence": "DigitalTwinPage.tsx:264-266; StaleRefreshWarning.tsx:57-115"},
+    {"name": "FadeIn + ambient motion", "owner": "web\\src\\components\\motion\\ambient.ts", "role": "Existing entrance/scene motion owners; no replacement motion engine", "evidence": "DigitalTwinPage.tsx:268,301,348; ambient.ts:46-66,81-93"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Four loading/error/empty/detail cards",
+      "evidence": "DigitalTwinPage.tsx:351-395",
+      "decision": "Already consolidated in TwinDetailPanel; extend this domain owner, not a new universal panel."
+    },
+    {
+      "pattern": "Status/freshness representation across summary, badge and detail footer",
+      "evidence": "DigitalTwinPage.tsx:82-89,232-244,327,383",
+      "decision": "Reuse trusted state derivation, DataState, OperationalBrief and existing StatusBadge. Do not create another status registry."
+    },
+    {
+      "pattern": "Physical-state labels in page rows and SVG hotspots",
+      "evidence": "DigitalTwinPage.tsx:91-112,165-191; VehicleTwin.tsx:255-271,572,581,801,809",
+      "decision": "Keep page-domain row models and existing twin; converge localized labels through the existing component API rather than duplicating an SVG."
+    }
+  ],
+  "responsive": {
+    "sourceObserved": [
+      "Hero stacks until xl, then uses three tracks with twin spanning two: DigitalTwinPage.tsx:303-304.",
+      "Detail cards use one/md-two/2xl-four tracks: DigitalTwinPage.tsx:350.",
+      "VehicleTwin clamps to available measured width using ResizeObserver and max-w-full: VehicleTwin.tsx:1442-1458,1524.",
+      "Paint picker wraps outer groups, but its swatch row is a single flex row: VehiclePaintPicker.tsx:40,46."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\TwinDetailPanel.tsx",
+        "line": 83,
+        "rule": "MDC-043 / MDC-031 allocated-width and long-label preservation",
+        "detail": "columns defaults to 2 and KVList receives no responsive layout/wrap. KVList inline rows use flex justify-between without wrapping and the list uses grid-cols-2. Narrow cards and translated labels can crowd the two-column details even though the outer page stacks.",
+        "fix": "Use the existing KVList layout=\"responsive\" or stacked/wrapping contract in TwinDetailPanel and verify all 19 rows at narrow allocated widths and 200% text; keep every value visible.",
+        "owner": "page",
+        "confidence": "high (source contract mismatch; actual overflow unverified)"
+      }
+    ],
+    "verification": "Unverified at 320/375/390/430/768/1024/1280/1440/1920/2560, container widths, RTL, long translations and 200% text. No rendered viewport test was performed."
+  },
+  "accessibility": {
+    "sourceObserved": [
+      "Localized overview label, Section IDs, decorative icon aria-hidden, named loading statuses, KVList dt/dd and text-paired badges are present.",
+      "Twin measures width and disables entry/driving motion when useMotionPreference.reduce is true.",
+      "Paint radios expose aria-checked and localized labels; selected glyph supplements color."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+        "line": 295,
+        "rule": "MDC-040 keyboard reachability and MDC-044 localization",
+        "detail": "InteractiveHotspot wraps a plain span with Tooltip, with no tabIndex or native focusable trigger. Tooltip documents the requirement for focusable children. Root role=\"img\" may also flatten descendants. Its root aria-label, SVG title/desc and hotspot state/part labels are English literals (1527,1578-1579,255-271,572,801). Detail rows provide an alternative, but the advertised interactive scene is not equivalently operable from source.",
+        "fix": "Extend the existing VehicleTwin owner with localized scene name/description and localized inspection triggers or an equivalent keyboard inspection list; choose non-flattening group semantics when interactive. Reuse Tooltip and existing focus primitives, retain noninteractive image mode.",
+        "owner": "shared",
+        "confidence": "high for missing focus/localization; assistive-technology outcome unverified"
+      },
+      {
+        "file": "web\\src\\components\\vehicles\\VehiclePaintPicker.tsx",
+        "line": 52,
+        "rule": "MDC-020 / MDC-040 radio keyboard and touch-target contract",
+        "detail": "Raw role=radio buttons are all in the default Tab sequence with no arrow-key/roving-tab implementation. Swatches are h-7 w-7 (28px); reset is a text-xs raw button without a target-size/focus contract. This falls below the design's 44px default target, although WCAG spacing exceptions require actual measurement.",
+        "fix": "Reuse existing radio/button primitives or implement the existing picker as a complete radio group: selected roving Tab stop, arrow/Home/End selection, visible focus and 44px hit area surrounding the unchanged paint swatch. Give reset shared Button behavior.",
+        "owner": "shared",
+        "confidence": "high (source sizing and keyboard handlers)"
+      },
+      {
+        "file": "web\\src\\components\\data-display\\StatusBadge.tsx",
+        "line": 46,
+        "rule": "MDC-044 localized domain labels",
+        "detail": "The page's summary localizes badgeStatus, but both StatusBadge instances render the raw status string, such as 'charging' or 'asleep'. Shared StatusBadge outputs label directly with no localized presentation-label prop.",
+        "fix": "Add an optional localized label to the existing StatusBadge while retaining status as the canonical FSM/style key and existing null placeholder. Pass the page's localized status text without recasing source data.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard, screen reader, actual focus visibility/order, tooltip clipping, touch spacing, effective contrast, forced colors and reduced-motion runtime behavior are unverified."
+  },
+  "states": {
+    "loading": "Fleet loading flows to PageLayout. Each detail card has its own 132px Skeleton. Combined summary loading stops when any source arrives; unrelated cards remain independent.",
+    "empty": "No vehicle displays a dedicated fleet EmptyState. Three security-only detail cards show source-specific empty messages. Security/status merges three streams; unknown component fields display em dash. No add-vehicle navigation action is provided.",
+    "error": "Independent detail QueryError retries and merged retry-all exist. fatalError is used rather than raw refresh errors, preserving retained payloads.",
+    "staleOffline": "Three StaleRefreshWarning instances retain values and show paused/refresh failure notice and retry. Summary labels retained snapshots when any source is stale. No per-signal age/verified-field gating is applied to status or twin overlays.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx",
+        "line": 82,
+        "rule": "MDC-025 / MDC-026 unknown and retained are not current activity",
+        "detail": "badgeStatus calls deriveVehicleStatus(null), then falls back to offline with no data; any truthy security/charging payload promotes online even if retained. activityChip falls back to Parked (158-162) and security rows show No for isDriving/isCharging (181-182), while EMPTY_TWIN_STATE sets both false. A failed/no-source or old response can therefore describe a definite physical/activity state. useVehicleState already exposes trust metadata and deriveTrustedVehicleStatus, but the page discards them.",
+        "fix": "Use existing trusted state helpers and nullable status/activity presentation; retain source-specific snapshots visibly but distinguish unknown/stale/verified activity. Do not infer parked/offline/no merely from absent fields or source-object presence. Keep valid explicit false/zero distinct from unknown.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx",
+        "line": 60,
+        "rule": "MDC-026 fleet failure versus empty",
+        "detail": "The page extracts only isLoading from useVehicles; when the fleet request initially fails, useSelectedVehicle resolves vehicle=null and the no-vehicle branch says 'No vehicles found. Add a vehicle' (254-261). Disabled downstream queries cannot recover this source. Fleet error is not a successful empty fleet.",
+        "fix": "Derive the fleet DataState and render the existing fatal QueryError/retry separately from resolved-empty fleet; keep retained fleet/selection on refresh failures.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx",
+        "line": 65,
+        "rule": "MDC-026 / MDC-046 coherent provenance",
+        "detail": "All three sources are marked live and the page says latest vehicle signals. useVehicleState honors URL as_of and disables its poll, but the two latest hooks do not honor as_of and continue polling. A /digital-twin?as_of=... URL can combine a historical vehicle snapshot with present-day security/charging and call the merged twin real-time.",
+        "fix": "Explicitly preserve existing time-machine semantics and distinguish historical versus live contributions. Coordinate with existing hook/integration owners before adding any historical capability; either obtain supported same-instant snapshots or clearly separate unsupported live neighbors without mislabeling provenance. Do not invent backend support or a second range selector.",
+        "owner": "integration",
+        "confidence": "high for hook/provenance mismatch; backend historical capabilities unverified"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+      "line": 325,
+      "rule": "MDC-010 / MDC-034 / MDC-042 restrained semantic scene",
+      "detail": "ChargingUnderglow combines green blurred under-car ellipses and infinite opacity/scale loops (330-343). Body reflections also loop (628-645); additional glows/pulses are embedded in lighting/port/security layers. The root page has no neon/glow/fixed-white text matches, but this dependency supplies visible noise. Actual paint and realistic reflections are domain imagery, not blanket palette violations.",
+      "fix": "Subdue or remove decorative underglow/reflection sweeps in the existing twin; retain physically meaningful light/turn/charging/door signals with quiet semantic accents and textual alternatives. Preserve genuine user-selected paint colors and photo/SVG fallback, rather than recoloring the car into a generic neutral silhouette.",
+      "owner": "shared",
+      "confidence": "high for source decoration; composed visual severity unverified"
+    },
+    {
+      "file": "web\\src\\components\\vehicles\\VehiclePaintPicker.tsx",
+      "line": 64,
+      "rule": "MDC-010 / MDC-012 / MDC-013 restrained controls",
+      "detail": "Selected paint chrome uses border-white, scale-110 and shadow-cyan-500/20; focus ring uses fixed cyan/slate and reset uses fixed cyan text. Several text-xs/tracking classes bypass typography role wrappers. The white check glyph over dynamic paint is intentionally contrasted, not the same issue as fixed-white body text.",
+      "fix": "Replace selection glow/scale and fixed white/slate chrome with existing control/border/focus semantic tokens and typography; retain the paint swatch's actual dynamic color and a measured contrasting selected check.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx",
+      "line": 323,
+      "rule": "MDC-010 icon hue should convey meaning",
+      "detail": "Activity and all four component-heading icons use identical text-cyan-300 (also 353,364,375,387). These are decorative headings rather than source severity. They are not neon text, but repeat a saturated accent without differentiated meaning.",
+      "fix": "Use existing muted/icon semantic color tokens for decorative headings; keep semantic Badge variants and data-bearing overlays meaningful.",
+      "owner": "page",
+      "confidence": "medium (rendered saturation/contrast unverified)"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\lib\\vehicleState.ts",
+      "line": 198,
+      "rule": "MDC-045 canonical SI field consumption",
+      "detail": "isChargingActive accepts and reads charger_power_kw (193,198), while ChargingTelemetry exposes charger_power_w (api/types.ts:2197-2198). The page passes this typed charging object into buildTwinState. A positive canonical power measurement alone is ignored when charging_state and vehicle-state evidence are unavailable.",
+      "fix": "Update the existing adapter to consume canonical charger_power_w in watts, retaining >0 charging inference without kW conversion or dual-shape legacy fallback. Coordinate SI owner and focused adapter tests; preserve raw SI wire/cache values.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\lib\\vehicleState.ts",
+      "line": 245,
+      "rule": "MDC-026 source-specific freshness",
+      "detail": "Merged lastUpdated is security.created_at only, even when vehicle/charging sources alone populate the twin or change later. The summary calls this singular 'Signal timestamp' (DigitalTwinPage.tsx:283-294); actual security/charging interfaces also expose ts. A single security timestamp cannot establish freshness of every overlay.",
+      "fix": "Keep per-source observed timestamps/trust in the existing merged-view contract or supply source-specific freshness separately to the summary; explicitly identify which source a timestamp describes. Do not fabricate a freshest timestamp or substitute fetch-success time for measurement time.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\motion\\ambient.ts",
+      "line": 62,
+      "rule": "MDC-042 existing OS-or-low-bandwidth motion preference",
+      "detail": "ambientLoop/ambientFrames only inspect matchMedia OS preference (46-54,62-64,84), but VehicleTwin's useMotionPreference returns OS OR low-bandwidth (useMotionPreference.ts:44-48). Root disables entry/wheel driving under low bandwidth, while scene loops still run when OS reduced motion is false.",
+      "fix": "Make the twin's ambient layers respect its already-derived reduce boolean through the existing helper/context contract; retain both OS and low-bandwidth policy and do not introduce a new motion engine. Verify default and reduced cases with focused owner tests.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "sequence": [
+      "Resolve unknown/current-status, fleet failure and mixed as_of provenance before presentation adoption.",
+      "Repair the shared SI charging-power adapter and source-specific timestamp contract.",
+      "Close shared twin keyboard/localization/motion and paint-picker target/radio behavior.",
+      "Adopt existing responsive KVList behavior and quiet semantic palette, without removing rows or interactions."
+    ],
+    "scope": "Audit only. Source changes are follow-up owner work, not authorized by this report."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "VehicleTwin restrained, localized and accessible inspection contract",
+      "existingOwnerFile": "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+      "propsVariantsStates": [
+        "Retain VehicleTwinState, size, interactive, driveIn, vehicleId, exteriorColor, paint and model.",
+        "Extend localized scene name/description and inspection labels without replacing the rendering owner.",
+        "Interactive variant needs keyboard/touch-accessible inspection; noninteractive image variant retains appropriate image semantics.",
+        "Keep unknown component overlays, photo loading/ready/failed SVG fallback, all body/door/window/charge/light/security layers.",
+        "Use existing reduced preference for decorative loops; subdued semantic activity indicators rather than ambient glow."
+      ],
+      "usedBy": ["/digital-twin: hero VehicleTwin at DigitalTwinPage.tsx:305"],
+      "dependsOn": [
+        "Existing Tooltip focusable-trigger behavior",
+        "Existing useMotionPreference and ambient motion owners",
+        "Existing paint/compositor and vehicle-state contracts"
+      ],
+      "limits": "Only assigned-page consumer inspected; no second independent consumer was established, so this is an extension of an existing owner, not justification for a new composite."
+    },
+    {
+      "name": "VehiclePaintPicker semantic radio and restrained selection contract",
+      "existingOwnerFile": "web\\src\\components\\vehicles\\VehiclePaintPicker.tsx",
+      "propsVariantsStates": [
+        "Keep vehicleId, exteriorColor and className; keep five paints, inferred and override states and conditional reset.",
+        "Arrow/Home/End radio navigation, roving focus, 44px target and localized selected/current paint announcements.",
+        "Tokenized focus/border with no selection glow; preserve actual swatch and contrasting check.",
+        "Reuse shared radio/button/typography capabilities without a second preference store."
+      ],
+      "usedBy": ["/digital-twin: live-status panel at DigitalTwinPage.tsx:335"],
+      "dependsOn": ["Existing UI control primitives", "useVehiclePaint localStorage/broadcast/in-tab synchronization"]
+    },
+    {
+      "name": "Existing twin-state adapter SI and source-trust correction",
+      "existingOwnerFile": "web\\src\\lib\\vehicleState.ts",
+      "propsVariantsStates": [
+        "Consume ChargingTelemetry.charger_power_w, not charger_power_kw; no legacy adapter or display-unit conversion.",
+        "Keep nullable physical component states and security/vehicle/charging precedence.",
+        "Carry source-specific observation metadata or explicitly distinguish timestamp source; absence cannot imply verified inactivity.",
+        "Preserve unknown, measured false/zero, retained and current states with focused merge tests."
+      ],
+      "usedBy": [
+        "/digital-twin: buildTwinState at DigitalTwinPage.tsx:74-77",
+        "/digital-twin: summary/twin/detail rows derived from the same state"
+      ],
+      "dependsOn": [
+        "Canonical ChargingTelemetry/vehicle-state types",
+        "Existing vehicle trust metadata/deriveTrustedVehicleStatus",
+        "SI owner and backend payload verification before freshness-contract expansion"
+      ]
+    },
+    {
+      "name": "StatusBadge localized label without changing FSM key",
+      "existingOwnerFile": "web\\src\\components\\data-display\\StatusBadge.tsx",
+      "propsVariantsStates": [
+        "Retain status, size and className and current FSM dot lookup.",
+        "Add optional presentation label for callers' localized text.",
+        "Preserve null/undefined placeholder and canonical source status; never translate the stored state key."
+      ],
+      "usedBy": [
+        "/digital-twin: live status at DigitalTwinPage.tsx:327",
+        "/digital-twin: security detail footer at DigitalTwinPage.tsx:383"
+      ],
+      "dependsOn": ["Existing FSM status definitions", "Page's existing localized status labels"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "evidence": "DigitalTwinPage.tsx:35-48",
+      "detail": "Unused STATUS_NEON/statusNeon helper remains a parallel page-local activity-color mapping, while rendered StatusBadge already uses canonical FSM definitions. No runtime use was found in the inspected page.",
+      "decision": "Do not adopt this helper for modernization. Follow-up removal requires reference verification outside this bounded read; keep persisted theme IDs and semantic FSM meanings."
+    },
+    {
+      "evidence": "DigitalTwinPage.tsx:82-89; useVehicles.ts:1018-1038",
+      "detail": "Page's untrusted status derivation competes with the existing trust-aware deriveTrustedVehicleStatus.",
+      "decision": "Adopt existing trusted status rather than invent another registry."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "6090a8349bf94d5c25cbf59a172ed6ed8205e2f773f92ca64ebb6170469f30f5",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Current repository-root-relative web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx bytes, not a Git commit hash",
+    "lineCount": 403,
+    "pageSpecificDependencies": [
+      {"file": "web\\src\\features\\vehicles\\components\\TwinDetailPanel.tsx", "lineCount": 88, "preserve": "Four independent cards, rows, heading/icon, Skeleton, QueryError/retry, EmptyState and ready-only footer"}
+    ],
+    "sections": [
+      {"name": "Overview / Physical-state summary", "line": 269, "count": 1, "contents": "Six metrics with explanations, known-state denominators, scope, freshness, status, provenance and existing details interaction"},
+      {"name": "Live overview", "line": 302, "count": 1, "contents": "Interactive twin and timestamp; live status, lock/sentry/activity chips and paint controls"},
+      {"name": "Component state", "line": 349, "count": 1, "contents": "Four detail panels: Doors & openings (6 rows), Windows (4), Security & status (6), Lights & signals (3)"}
+    ],
+    "sectionCounts": {
+      "majorSections": 3,
+      "namedSectionComponents": 2,
+      "overviewNativeSection": 1,
+      "detailPanels": 4,
+      "detailRows": 19,
+      "summaryMetrics": 6,
+      "rootGlassPanels": 3,
+      "rootChartContainers": 0,
+      "note": "Root GlassPanel includes the fleet-empty branch and two hero cards. Extracted LayoutCard/OperationalBrief surfaces are additional, not omitted content."
+    },
+    "actions": [
+      "Inspect frunk/trunk, windows, doors and charge-port state via existing twin hotspots; retain an accessible equivalent.",
+      "Choose one of five vehicle paint presets; selecting inferred paint clears override; reset appears when overridden.",
+      "Preserve browser-local per-vehicle paint key and same/cross-tab synchronization.",
+      "Retry security-only component panels; merged security/status retries all three queries.",
+      "Refresh each stale source independently through StaleRefreshWarning.",
+      "Retain OperationalBrief's existing details interaction and all explanations/provenance.",
+      "Keep header/workspace-selected vehicle and URL vehicle_id reconciliation, with no duplicate selector."
+    ],
+    "data": [
+      "All six opening states, four window states, lock, driving, charging, sentry, charge port, driver-seat occupancy, headlights, hazards and turn signal.",
+      "Known-state counts and partial availability; missing values stay unknown, not zero/closed/inactive.",
+      "Independent loading/fatal failure/empty/retained-refresh-failure/offline recovery and neighbor retention.",
+      "Three existing query keys, enabled conditions, cancellation, configured intervals and historical vehicle-state behavior; corrections must be deliberate integration work.",
+      "Raw canonical SI remains untouched on wire/cache; positive watts can inform activity without converting to display kW.",
+      "Selected vehicle name/model/exterior color, photo/SVG fallback, responsive measured geometry and saved paint preferences.",
+      "Existing localization/date/metric display owners and all section/row explanations survive modernization."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source inspection and scoped PowerShell pattern/hash/line-count checks. Only assigned report and heartbeat were written.",
+    "route": "App.tsx lazy import and Route registration confirm /digital-twin in source; route was not mounted or opened.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Only relevant router registration and frontend types inspected; no backend payload/runtime/unit/freshness acceptance claimed.",
+    "validation": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx; (Get-Content web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx).Count",
+        "exitCode": 0,
+        "output": "6090A8349BF94D5C25CBF59A172ED6ED8205E2F773F92CA64EBB6170469F30F5; 403"
+      },
+      {
+        "command": "Scoped Get-Content | Select-String pattern counts on DigitalTwinPage.tsx",
+        "exitCode": 0,
+        "output": "style=: 0; raw button/input/textarea/select/table: 0; direct recharts/react-leaflet/framer-motion imports: 0; text-neon-/glow/text-white: 0; Section case-insensitive: 3; GlassPanel: 3; TwinDetailPanel: 4; ChartContainer: 0",
+        "limits": "Simple textual patterns are not an exhaustive quality or rendered contrast audit. Case-insensitive Section includes one native section."
+      }
+    ],
+    "notRun": [
+      "audit.sh was inspected but not executed because it invokes project TypeScript; contract MDC-070 reserves project TypeScript/build/full gates for centralized stable-batch validation.",
+      "No TypeScript, full lint, build, tests, Git operations, browser session, screenshots, keyboard exercise, contrast measurement or production/API mutation.",
+      "No exhaustive component/caller/catalog inventory or claims about independent consumers outside the assigned page."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\DigitalTwinPage.tsx",
+    "web\\src\\features\\vehicles\\components\\TwinDetailPanel.tsx",
+    "web\\src\\components\\vehicles\\VehicleTwin.tsx",
+    "web\\src\\components\\vehicles\\VehiclePaintPicker.tsx",
+    "web\\src\\lib\\vehicleState.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useVehiclePaint.ts",
+    "web\\src\\hooks\\useAsOfDate.ts",
+    "web\\src\\hooks\\useMotionPreference.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\teslaCompositor.ts",
+    "web\\src\\components\\ui\\Tooltip.tsx",
+    "web\\src\\components\\data-display\\KVList.tsx",
+    "web\\src\\components\\data-display\\StatusBadge.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\ambient.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
