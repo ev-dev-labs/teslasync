@@ -1,0 +1,402 @@
+{
+  "item": "audit-page-170",
+  "page": "web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx",
+  "routes": [
+    {
+      "path": "/account/sessions",
+      "evidence": "web\\src\\App.tsx:638",
+      "mount": "SafeRoute named ActiveSessions; lazy import at App.tsx:328",
+      "runtimeVerified": false
+    }
+  ],
+  "purpose": "Account security surface for reviewing and revoking TeslaSync-issued browser/device sessions. This is not vehicle telemetry, charging sessions, historical account activity, Tesla account disconnection, or upstream identity-provider session management.",
+  "primaryGoal": "Recognize the current device and unfamiliar signed-in devices, inspect their network and activity metadata, and deliberately sign out another device or all other devices without signing out this tab.",
+  "dataSources": [
+    {
+      "hook": "useSessions",
+      "file": "web\\src\\api\\hooks\\useSessions.ts",
+      "line": 60,
+      "endpoint": "GET /api/v1/auth/sessions",
+      "hookPath": "/auth/sessions",
+      "routeEvidence": "internal\\api\\router.go:3297-3298",
+      "owner": "sessionHandler.List; handler constructed from authSessionsRepo in internal\\api\\router.go:739-740",
+      "behavior": [
+        "Query key ['sessions','list']; 30-second staleTime; refetchOnWindowFocus false; enabled defaults true.",
+        "Forwards query AbortSignal to request; normalizes missing payload sessions to an empty array.",
+        "AUTH_MODE_OPEN error code becomes successful discriminated union {mode:'open'}; other errors propagate.",
+        "ActiveSession fields: id, user_agent, ip, created_at, last_seen_at, optional revoked_at, current.",
+        "Account-wide latest list, not workspace vehicle or date scoped. Do not add date or vehicle selectors."
+      ],
+      "typeEvidence": "web\\src\\api\\types.ts:3326-3351",
+      "limits": "No HTTP request or repository/handler implementation execution. Router source confirms registration, not deployed reachability or database behavior."
+    },
+    {
+      "hook": "useRevokeSession",
+      "file": "web\\src\\api\\hooks\\useSessions.ts",
+      "line": 92,
+      "endpoint": "DELETE /api/v1/auth/sessions/{id}",
+      "hookPath": "/auth/sessions/${encodeURIComponent(id)}",
+      "routeEvidence": "internal\\api\\router.go:3302",
+      "owner": "sessionHandler.Revoke",
+      "behavior": [
+        "RequireNotImpersonating and RequireSudo gates are registered upstream.",
+        "No optimistic row removal; successful mutation invalidates/broadcasts sessions list and displays success toast; failure displays error toast.",
+        "Page closes confirmation onSettled, including failure or canceled reauthentication."
+      ],
+      "pageEvidence": "web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx:203-223",
+      "limits": "Hook comments describe idempotent 204 responses; handler was not inspected, so this is documented intent rather than independently established server behavior. No mutation executed."
+    },
+    {
+      "hook": "useRevokeAllOtherSessions",
+      "file": "web\\src\\api\\hooks\\useSessions.ts",
+      "line": 113,
+      "endpoint": "DELETE /api/v1/auth/sessions/all-others",
+      "hookPath": "/auth/sessions/all-others",
+      "routeEvidence": "internal\\api\\router.go:3300-3301",
+      "owner": "sessionHandler.RevokeAllOthers",
+      "behavior": [
+        "Registered before dynamic id route; RequireNotImpersonating and RequireSudo gates.",
+        "Successful mutation invalidates/broadcasts list and toasts returned revoked count, with nullish fallback zero.",
+        "Header action exists only in session mode with at least one non-current session.",
+        "Current-session exclusion based on inbound cookie is described in page comments, not independently verified in handler."
+      ],
+      "pageEvidence": "web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx:80-94,225-246",
+      "limits": "No mutation executed; no claim that provider cookies, Tesla credentials or another application's account are revoked."
+    },
+    {
+      "hook": "request interceptor and deriveDataState",
+      "file": "web\\src\\api\\client.ts",
+      "line": 368,
+      "endpoint": null,
+      "owner": "Shared request/query trust layer",
+      "behavior": [
+        "request normalizes /api/v1 prefix and rejects prohibited offline security writes before transport.",
+        "401 SUDO_REQUIRED invokes existing challenge provider and replays once after credential acquisition; canceled challenge rejects.",
+        "deriveDataState keeps retained data after refresh error or paused refresh; fatalError only replaces never-loaded source."
+      ],
+      "evidence": [
+        "web\\src\\api\\client.ts:75-93,368-461",
+        "web\\src\\api\\dataState.ts:126-177"
+      ],
+      "limits": "No credentials inspected, recorded or exercised; no auth prompt bypassed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "kind": "shared layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:5-16; web\\src\\components\\layout\\PageContainer.tsx:125-159,222-236",
+      "contract": "Existing category-barrel layout; forwards PageContainer props, min-w-0, full-width container, query freshness, destructiveActions and copyLink. No replacement header or width engine."
+    },
+    {
+      "name": "SessionsSummaryCards / SettingsSummaryBrief",
+      "kind": "feature presentation composed with shared OperationalBrief",
+      "owner": "web\\src\\features\\settings\\components\\sessions\\SessionsSummaryCards.tsx",
+      "evidence": "SessionsSummaryCards.tsx:52-86; web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx:19-43",
+      "contract": "Four typed StatMetric identities, missing source suppression, loading/unavailable/retained states; existing useOperationalMetrics bridge and shared brief. Keep account/latest-list scope and exact timestamp context."
+    },
+    {
+      "name": "SessionBreakdownPanel / MetricBar",
+      "kind": "feature panel / shared data-display",
+      "owner": "web\\src\\features\\settings\\components\\sessions\\SessionBreakdownPanel.tsx",
+      "evidence": "SessionBreakdownPanel.tsx:32-89; web\\src\\components\\data-display\\MetricBar.tsx:43-95",
+      "contract": "title/icon/items/total, independent loading/error/retry/empty, colorOffset. MetricBar exposes named progressbar, raw count and denominator, reduced motion, solid or gradient fill."
+    },
+    {
+      "name": "SessionsTable / DataTable",
+      "kind": "feature table / shared interaction pipeline",
+      "owner": "web\\src\\features\\settings\\components\\sessions\\SessionsTable.tsx",
+      "evidence": "SessionsTable.tsx:52-122,133-151; web\\src\\components\\ui\\DataTable.tsx:186-190,238-248,714-725",
+      "contract": "Five columns; stable id settings:active-sessions, row.id keys, loaded-row value filters, pagination and shared table preferences/export pipeline. Mobile currently keeps device/last_seen_at/actions. Current rows have This device badge and no revoke control."
+    },
+    {
+      "name": "SessionsOpenModeNotice",
+      "kind": "feature unavailable-state owner",
+      "owner": "web\\src\\features\\settings\\components\\sessions\\SessionsOpenModeNotice.tsx",
+      "evidence": "SessionsOpenModeNotice.tsx:14-39",
+      "contract": "Named region and localized forward-auth configuration explanation; intentionally no in-app enablement action."
+    },
+    {
+      "name": "Button / ConfirmDialog / feedback / FadeIn",
+      "kind": "shared primitives and composites",
+      "owner": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "evidence": "ConfirmDialog.tsx:97-146,168-211; web\\src\\components\\motion\\FadeIn.tsx:23-35; ActiveSessionsPage.tsx:24-28,203-247",
+      "contract": "Two distinct danger confirmations, no silenceKey. Pending disables cancel/confirm and suppresses Escape/backdrop dismissal. Reuse Modal focus owner; reduced-motion entrances reuse useMotionPreference. Skeleton/QueryError/EmptyState/DataStateNotice remain canonical."
+    },
+    {
+      "name": "computeSessionStats / describeDevice / useDateFormat",
+      "kind": "feature derivation and existing formatting",
+      "owner": "web\\src\\features\\settings\\components\\sessions\\sessionStats.ts",
+      "evidence": "sessionStats.ts:39-89; deviceLabel.ts:22-57; SessionsSummaryCards.tsx:45-53; SessionsTable.tsx:49-50",
+      "contract": "Pure counts, first current row, non-current count, maximum valid timestamp, descending-count then label sorting. Browser/OS heuristics are best effort; network groups by exact IP string, not geolocation or subnet."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx",
+      "line": 135,
+      "rule": "MDC-002 shared composition",
+      "detail": "Three sibling breakdown configurations use one SessionBreakdownPanel implementation; repeated loading/error/empty rendering is already centralized there. Separate destructive dialogs represent different security actions, not competing systems.",
+      "fix": "Retain shared panel and explicit action distinctions; do not extract another global breakdown or confirmation engine without independent consumer evidence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "ActiveSessionsPage.tsx:134 uses one column, md two columns, xl three columns.",
+      "SessionsTable.tsx:131-132 uses min-w-0 and responsive padding.",
+      "ActiveSessionsPage.tsx:84 enables wrapLabel on bulk action.",
+      "DataTable.tsx:238-248,714-725 applies hidden md:table-cell to columns outside mobileColumns."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\components\\sessions\\SessionsTable.tsx",
+        "line": 145,
+        "rule": "MDC-023/MDC-043 full mobile information preservation",
+        "detail": "mobileColumns excludes IP address and Signed in timestamp below md; this caller supplies neither mobilePresentation nor an expandable/detail renderer. Those security-relevant fields lose direct table-cell reachability on the mobile surface.",
+        "fix": "Use existing DataTable mobilePresentation with role/displayValue mappings, allDetails for all five columns and inlineActions preserving current-row exclusion; preserve 640-767 branch details too, or keep omitted fields reachable with the existing semantic table/scroll strategy. Do not remove columns, filters or timestamps.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtimeVerified": false,
+    "requiredChecks": "All contract widths 320/375/390/430/768/1024/1280/1440/1920/2560 plus allocated container widths, long browser/IP labels, dialog-open states and text zoom. No viewport or overflow measurement performed."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Named summary and table sections (SessionsSummaryCards.tsx:72-76; SessionsTable.tsx:131).",
+      "Breakdown heading aria-labelledby and decorative icon hiding (ActiveSessionsPage.tsx:130-133; SessionBreakdownPanel.tsx:60).",
+      "Device-specific localized revoke aria-label and This device text badge; not color-only (SessionsTable.tsx:62-69,112-118).",
+      "MetricBar named progressbar with numeric bounds and unknown reading text (MetricBar.tsx:56-63).",
+      "Danger dialogs suppress silencing and busy dismissal; shared Modal remains focus owner (ConfirmDialog.tsx:97-146).",
+      "FadeIn and MetricBar consult existing reduced-motion preference."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx",
+        "line": 104,
+        "rule": "MDC-040 asynchronous announcements",
+        "detail": "Page passes query, but not loading/error, to PageLayout. PageContainer's load announcement reads loading/error props rather than query; summary's aria-busy covers only its section. The page-level announcement transition is not wired to the sessions source.",
+        "fix": "During implementation verify announcement behavior; if absent, pass initial-loading and fatal-error through existing layout props while ensuring PageContainer's replacement branch does not hide the preserved sections, or use the existing status-announcement contract without duplicate announcements.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": [
+      "Keyboard order, focus restoration/trap and Escape behavior in actual dialogs.",
+      "Screen-reader announcements and table/filter/column-control semantics.",
+      "Effective light/dark/forced-colors contrast and 44px mobile action reachability.",
+      "RTL, 200% text and actual OS reduced-motion behavior."
+    ]
+  },
+  "states": {
+    "initialLoading": "deriveDataState initial drives summary suppression and 168px breakdown/240px table skeletons. All normal sections remain mounted.",
+    "successfulEmpty": "Session-mode empty array gives genuine zero total/other counts; breakdown EmptyStates and DataTable empty message remain. No all-others action.",
+    "openMode": "AUTH_MODE_OPEN becomes a successful unavailable capability notice, not an error or fabricated zero-session account. Normal summary/breakdown/table body is intentionally replaced by this mode-specific explanation.",
+    "fatalError": "Summary, each breakdown and table show QueryError with refetch callback, while metric source is unavailable rather than zero.",
+    "retainedRefreshError": "deriveDataState preserves data; page shows stale notice; summary retained status and existing rows/breakdowns/actions remain. FatalError false prevents whole-source replacement.",
+    "offlinePaused": "Retained paused query derives stale/isRefreshBlocked; page uses generic stale notice. request rejects prohibited offline security writes; no queued revocations. Actual offline UI not exercised.",
+    "pendingMutations": "Row id disabled during individual revoke; bulk button busy/disabled during bulk mutation. Corresponding dialog loading disables dismissal. No optimistic row removal.",
+    "successFailureCancel": "Hooks own success/error toast and list invalidation/broadcast. Page closes active confirmation onSettled for either outcome; cancel before confirmation just clears local target/state.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\components\\sessions\\SessionsSummaryCards.tsx",
+        "line": 50,
+        "rule": "MDC-026 unknown is not a measured absence",
+        "detail": "Null lastActive is rendered as Never even for non-empty lists whose timestamps are missing or invalid. sessionStats skips invalid timestamps at lines 69-74, so null cannot prove sessions have never been active.",
+        "fix": "Distinguish successful empty-list absence from unknown/invalid latest activity with existing localized unknown/unavailable presentation; keep valid relative and absolute timestamp context and do not alter raw API values.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "evidence": [
+      "ActiveSessionsPage.tsx:60-78,107-194,214-245",
+      "SessionsSummaryCards.tsx:50-86",
+      "SessionBreakdownPanel.tsx:65-88",
+      "SessionsTable.tsx:137-151",
+      "web\\src\\api\\dataState.ts:158-177",
+      "web\\src\\api\\hooks\\useSessions.ts:60-76,92-132"
+    ],
+    "runtimeVerified": false
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\settings\\components\\sessions\\SessionBreakdownPanel.tsx",
+      "line": 82,
+      "rule": "MDC-010/MDC-034; mission sections 7/43 restrained accent budget",
+      "detail": "Categorical rows cycle the eight saturated chart colors with offsets 0/2/4 across three panels. MetricBar defaults to gradient fill. This introduces rainbow/gradient emphasis to non-semantic account breakdowns, including red/amber/green with no risk meaning.",
+      "fix": "Reuse existing restrained theme accent and MetricBar fill='solid' for these non-semantic counts; preserve every group/count/denominator/order and all configured user theme identities. Do not change the shared chart palette globally.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": [
+        "ActiveSessionsPage.tsx:148,163,178",
+        "SessionBreakdownPanel.tsx:45,77-84",
+        "web\\src\\lib\\tokens.ts:396-401",
+        "web\\src\\components\\data-display\\MetricBar.tsx:45,93"
+      ]
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\sessions\\SessionBreakdownPanel.tsx",
+      "line": 60,
+      "rule": "MDC-012/MDC-016 theme-aware decorative cues",
+      "detail": "Decorative heading icons use fixed text-cyan-300, rather than neutral/theme semantic text. Their repeated bright emphasis is not account risk information; effective contrast across themes is unknown.",
+      "fix": "Use the existing muted/secondary or subdued theme-accent token while retaining decorative aria-hidden semantics.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [],
+  "priority": {
+    "level": "medium",
+    "first": "Preserve mobile security metadata and unknown-activity semantics.",
+    "next": "Subdue categorical rainbow/gradient noise and validate existing layout/announcement/security dialog contracts.",
+    "rationale": "Already decomposed into feature presentation, typed hooks and shared layout/table/brief/security primitives. No broad rewrite, account mutation or competing implementation is justified."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "DataTable mobile details presentation",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "changeNeeded": false,
+      "concreteContract": "Existing mobilePresentation roles, displayValue, allDetails, inlineActions and canShowField in MobileDataTableAdapter.types.ts:7-29; shared pipeline must retain filtering, row ordering, paging, exports and stable table preferences. Preserve IP and Signed in detail availability at every mobile branch.",
+      "usedBy": ["SessionsTable on /account/sessions"],
+      "dependsOn": ["Existing MobileDataTableAdapter contract", "Session row current flag", "useDateFormat", "Parent responsive validation"],
+      "note": "Page adoption/validation needed; no missing shared capability proven. Do not create a second table."
+    },
+    {
+      "name": "Restrained breakdown bar",
+      "existingOwnerFile": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "changeNeeded": false,
+      "concreteContract": "Existing color plus fill='solid', named numeric progressbar, reduced-motion and unknown behavior. Page provides raw count and total, not new percent calculations.",
+      "usedBy": ["By browser", "By platform", "By network"],
+      "dependsOn": ["Existing theme/tokens", "SessionBreakdownPanel", "Parent composed contrast validation"],
+      "note": "Existing API sufficient; no palette, global style or primitive change required."
+    },
+    {
+      "name": "Security confirmation and account data trust",
+      "existingOwnerFile": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "changeNeeded": false,
+      "concreteContract": "Keep danger/loading/onConfirm/onCancel without silenceKey; shared request step-up/offline protection, deriveDataState retained-vs-fatal semantics, existing Modal focus and OperationalBrief summary remain owners.",
+      "usedBy": ["Individual session sign-out", "All-other-session sign-out", "Session summary"],
+      "dependsOn": ["RequireSudo and RequireNotImpersonating router gates", "Existing request interceptor", "Existing query invalidation/broadcast", "Parent keyboard/runtime validation"],
+      "note": "No alternative auth, session store, overlay system or queued mutation implementation."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "evidence": "Scoped page uses existing PageLayout, DataTable, OperationalBrief bridge, MetricBar and ConfirmDialog. Barrel index re-exports existing session components; derivation is pure rather than duplicated server state.",
+    "limit": "No application-wide competitor search performed; absence is limited to assigned page and inspected dependencies."
+  },
+  "preservation": {
+    "sourceSha256": "90337266BB37E12DEAE38394B0757BAFF1CFA556B8BBB065874556C80E0DF216",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 251,
+    "pageAndSessionDependencyLineCount": 783,
+    "lineCountBreakdown": {
+      "ActiveSessionsPage.tsx": 251,
+      "SessionsSummaryCards.tsx": 90,
+      "SessionBreakdownPanel.tsx": 92,
+      "SessionsTable.tsx": 155,
+      "SessionsOpenModeNotice.tsx": 43,
+      "sessionStats.ts": 89,
+      "deviceLabel.ts": 57,
+      "index.ts": 6
+    },
+    "sections": [
+      {"name": "Session overview", "count": 1, "metrics": ["Active sessions", "This device", "Other devices", "Last active"], "evidence": "ActiveSessionsPage.tsx:115-126; SessionsSummaryCards.tsx:61-70"},
+      {"name": "Device breakdown", "count": 1, "panels": ["By browser", "By platform", "By network"], "panelCount": 3, "evidence": "ActiveSessionsPage.tsx:130-181"},
+      {"name": "Active devices", "count": 1, "columns": ["Device", "IP address", "Signed in", "Last seen", "Sign out action"], "evidence": "ActiveSessionsPage.tsx:185-193; SessionsTable.tsx:52-122"},
+      {"name": "Open-mode tracking unavailable notice", "count": 1, "conditional": "Only mode=open; intentional capability branch", "evidence": "ActiveSessionsPage.tsx:108-111; SessionsOpenModeNotice.tsx:24-39"},
+      {"name": "Security confirmations", "count": 2, "evidence": "ActiveSessionsPage.tsx:203-247"}
+    ],
+    "sectionCounts": {
+      "sessionModeMajorSections": 3,
+      "sessionModeBreakdownPanels": 3,
+      "sessionModeSummaryMetrics": 4,
+      "openModeMajorSections": 1,
+      "confirmationInstances": 2,
+      "sessionFeatureGlassPanelSourceOccurrences": 3,
+      "sessionModeRenderedFeatureGlassPanels": 4,
+      "chartContainerOccurrencesInPageAndSessionComponents": 0
+    },
+    "actions": [
+      "Page copy link and query freshness supplied through existing layout.",
+      "Local table value filtering, sorting/preferences, paging and inherited loaded-row export pipeline; do not silently disable or replace it. Actual export serialization and toolbar behavior not executed.",
+      "Retry/refetch from fatal-error and breakdown empty states.",
+      "Individual sign-out only for non-current sessions; device-specific accessible label and confirmation message.",
+      "All-other-device sign-out only when non-current sessions exist; preserve current tab exclusion semantics.",
+      "Each destructive confirmation has explicit cancel and confirm, remains nonsilenceable, and blocks dismissal while its mutation is pending.",
+      "Existing summary brief details/provenance context must remain available through shared owner; not independently exercised."
+    ],
+    "dataBehavior": [
+      "TeslaSync app cookie bindings only; upstream IdP cookie/session untouched according to types.ts:3328-3331 and router.go:730-738. Do not imply Tesla account or provider logout.",
+      "Keep open/session discriminant, current device flag, stable row id and list query key.",
+      "Do not expose session cookies, credential tokens or signing secrets in audit or UI. id is row identity; not a displayed credential.",
+      "Keep original snake_case payload fields and raw timestamps; display dates through existing locale/timezone formatting.",
+      "Keep best-effort device parser ordering (Edge/Opera before Chrome; iOS before macOS; Android before Linux) and unknown em-dash fallback.",
+      "Network grouping is exact IP; do not invent IP geolocation, reputation, subnet or security scores.",
+      "Retain total/non-current counts, maximum valid last_seen_at and deterministic breakdown ordering.",
+      "Successful empty lists are genuine zero counts; unknown source values must remain unavailable, not zero.",
+      "Retained refresh failures preserve rows and confirmed-only actions; no optimistic revoke or persisted/offline queue.",
+      "Retain success/error toasts, invalidation/broadcast and closing onSettled; do not change confirmation cancellation behavior.",
+      "No physical unit fields are involved; no SI conversion or wire/cache changes authorized.",
+      "No date range, selected vehicle or admin/account impersonation capabilities invented."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 source-only audit",
+    "runtime": "Unverified. No browser opened, account inspected, session revoked, credentials exposed or network mutation performed.",
+    "visual": "No screenshots, computed-style/contrast measurement, theme or viewport acceptance. Saturation and mobile issues are source evidence, not observed rendered proof.",
+    "tests": "No tests/typecheck/lint/build executed. Existing page test source at ActiveSessionsPage.test.tsx:297-387 covers empty/current-only and retained-refresh intent but is not a current passing receipt.",
+    "backend": "Router registration and comments read; SessionHandler/repository implementation not traced. Response status, cookie exclusion, idempotency and deployed authentication behavior remain unverified where only comments document intent.",
+    "shared": "Inspected only relevant shared APIs/ranges; Modal, OperationalBrief internals, DataFreshnessAuto internals, catalogs and full DataTable export adapter were not exhaustively reviewed.",
+    "scope": "Only assigned JSON report and heartbeat written. No UI/source changes, Git, agents, production mutation or full-repository validation.",
+    "auditScript": "Read .github\\skills\\audit-violations\\audit.sh; not executed because its unconditional project TypeScript gate conflicts with Phase 0/no full-repository validation assignment. Used bounded source scans instead.",
+    "sourcePatternScan": {
+      "command": "PowerShell Select-String -CaseSensitive against ActiveSessionsPage.tsx and the four non-test session TSX dependencies, patterns style=\\{\\{; <(button|input|textarea|select|table)\\b; direct recharts/react-leaflet/framer-motion imports; old relative API imports; text-neon|glow|text-white|#fff\\b",
+      "exitCode": 0,
+      "output": [
+        "style=\\{\\{: 0",
+        "<(button|input|textarea|select|table)\\b: 0",
+        "direct visual library imports: 0",
+        "old relative API imports: 0",
+        "neon/glow/fixed-white patterns: 0"
+      ],
+      "interpretation": "No direct neon/glow/pure-white styling in scoped feature files. Shared surfaces and actual computed theme appearance not certified. An initial case-insensitive PowerShell raw-control scan matched two shared <Button occurrences; corrected case-sensitive scan is zero. Saturated chart palette/gradient and fixed cyan cues are separately reported."
+    },
+    "sourceHashCommand": "Get-FileHash web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx -Algorithm SHA256",
+    "snapshot": "Source read during audit on 2026-10-07 UTC; concurrent shared-source drift remains possible.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-170.json", ".agent-status\\audit-page-170.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx",
+    "web\\src\\features\\settings\\pages\\ActiveSessionsPage.test.tsx",
+    "web\\src\\features\\settings\\components\\sessions\\index.ts",
+    "web\\src\\features\\settings\\components\\sessions\\SessionsSummaryCards.tsx",
+    "web\\src\\features\\settings\\components\\sessions\\SessionBreakdownPanel.tsx",
+    "web\\src\\features\\settings\\components\\sessions\\SessionsTable.tsx",
+    "web\\src\\features\\settings\\components\\sessions\\SessionsOpenModeNotice.tsx",
+    "web\\src\\features\\settings\\components\\sessions\\sessionStats.ts",
+    "web\\src\\features\\settings\\components\\sessions\\deviceLabel.ts",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useSessions.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "internal\\api\\router.go"
+  ]
+}
