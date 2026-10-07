@@ -1,0 +1,351 @@
+{
+  "item": "audit-page-024",
+  "page": "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+  "routes": ["/tesla-features"],
+  "purpose": "Read-only inspection of the latest Tesla account feature configuration, with an explicit server refresh action, summary counts, distribution gauge, composition chart and searchable feature details.",
+  "primaryGoal": "Inspect which Tesla account features are enabled or disabled, distinguish Boolean and configured entries, examine configuration details and refresh the account snapshot without losing retained data.",
+  "dataSources": [
+    {
+      "name": "useTeslaFeatureConfig",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 94,
+      "hookUrl": "/tesla/user/feature-config",
+      "endpoint": "GET /api/v1/tesla/user/feature-config",
+      "queryKey": ["tesla-feature-config"],
+      "ownership": "useUser.ts owns the query and TeslaConfigEnvelope; page derives presentation through feature-local pure helpers.",
+      "routeEvidence": "internal\\api\\router.go:3599-3601 mounts GET /feature-config and POST /feature-config/refresh under /tesla/user. web\\src\\App.tsx:260,723 lazy-loads and mounts TeslaFeatureFlagsPage at /tesla-features.",
+      "fields": ["data: Record<string, unknown>", "fetched_at: string | null"],
+      "behavior": "useUser.ts:89-99 defines the envelope, forwards AbortSignal and uses STALE_TIMES.EXTENDED. One account-level query feeds all four content units. No date/vehicle scope is supplied; account snapshots are not date-range totals.",
+      "backendLimit": "Router registration was inspected, but handler/cache implementation, upstream response guarantees, refresh atomicity, authentication and live responses were not exercised. No units or undocumented backend capabilities are inferred."
+    },
+    {
+      "name": "useRefreshTeslaFeatureConfig",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 102,
+      "hookUrl": "/tesla/user/feature-config/refresh",
+      "endpoint": "POST /api/v1/tesla/user/feature-config/refresh",
+      "ownership": "useUser.ts owns mutation, query invalidation and success/error toasts.",
+      "routeEvidence": "internal\\api\\router.go:3601 rate-limits this POST to 5 requests per minute per IP.",
+      "behavior": "useUser.ts:105-112 performs POST, invalidates userKeys.teslaFeatureConfig on success and uses localized mutation toasts. Page lines 59-69 disables Refresh while pending; section retries call GET refetch, not POST refresh.",
+      "backendLimit": "No production mutation was performed. The page comment describes re-pulling Tesla data; router/hook evidence proves the request path, not upstream operation success."
+    },
+    {
+      "name": "parseFeatureEntries / summarizeFeatureEntries / buildFeatureComposition",
+      "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\parseFeatureFlags.ts",
+      "line": 58,
+      "endpoint": null,
+      "ownership": "Feature-local pure presentation derivation; raw envelope remains in TanStack Query.",
+      "behavior": "Non-record payloads become an empty row array. Plain objects become configured entries; other values use Boolean coercion. Configured enabled is Boolean(value.enabled); remaining object properties become verbatim key plus JSON.stringify(value) details. Entries sort by key. Totals and enabled percentage derive from rows; zero-total percentage is 0 internally. Composition contains only present kinds, ordered flag then configured."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "category": "layout",
+      "detail": "Existing full-width min-w-0 adapter wraps PageContainer. Page passes title, subtitle, secondaryActions, query and one dataSources descriptor. PageContainer.tsx:194-222,253 owns compact subtitle help, freshness and source notice. Do not duplicate shell header or workspace selectors."
+    },
+    {
+      "name": "FeatureConfigOperationalBrief",
+      "owner": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\FeatureConfigOperationalBrief.tsx",
+      "line": 17,
+      "category": "domain",
+      "detail": "Existing OperationalBrief/useOperationalMetrics pipeline owns total, enabled, disabled and enabled-rate metrics, compact summary, snapshot scope and provenance. useAccountSnapshotPeriod.ts:5-16 uses preference-aware dates; useAccountBriefStatus.ts:5-20 maps actual DataStatus."
+    },
+    {
+      "name": "FeatureConfigDistribution",
+      "owner": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx",
+      "line": 30,
+      "category": "domain",
+      "detail": "Persistent GlassPanel/PanelTitle, LinearGauge percentage, enabled/disabled Badge counts, synced timestamp and independent Skeleton/QueryError/EmptyState."
+    },
+    {
+      "name": "FeatureConfigComposition",
+      "owner": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx",
+      "line": 29,
+      "category": "domain",
+      "detail": "Persistent GlassPanel, EmbeddedChart, responsive grouped bars, translated kind labels, integer count axis, ChartTooltip, ChartLegend, enabled/disabled series and accessible data columns. Existing chart key is admin-feature-config-composition."
+    },
+    {
+      "name": "FeatureConfigTable",
+      "owner": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx",
+      "line": 26,
+      "category": "domain",
+      "detail": "Existing DataTable pipeline with four columns, local search/status filter, deterministic sort, enableValueFilters, complete filterData, stable row keys, matching counts and pagination. Persistent tableId is admin:tesla-feature-flags."
+    },
+    {
+      "name": "Shared chart, table, motion and feedback owners",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "line": 19,
+      "category": "shared",
+      "detail": "EmbeddedChart forwards children to ChartContainer with no duplicate surface; export/fullscreen default false. DataTable.tsx:237-248,715-725,873-916,1385-1438 owns mobile visibility, exports and opt-in mobile adapter. FadeIn.tsx:24-34 honors useMotionPreference. Existing Button, Input, Select, Badge, GlassPanel, typography, Skeleton, EmptyState and QueryError should be reused, not reimplemented."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx",
+      "line": 22,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Distribution GAUGE_COLOR and composition ENABLED_COLOR independently define the same #10b981. Composition additionally defines #64748b at FeatureConfigComposition.tsx:21-22.",
+      "fix": "Reuse the existing shared semantic chart palette for enabled/disabled meaning rather than maintaining duplicate literal palettes; preserve legend text and series identity.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+      "line": 57,
+      "rule": "MDC-026 / mission 0.12",
+      "detail": "A single fatalError is passed to distribution, composition and table, each rendering its own recovery UI while PageContainer also owns the source notice. These are one source failure, not independent failures.",
+      "fix": "Coordinate one primary source explanation with concise local unavailable context while retaining all persistent sections and all existing refetch recovery paths. Do not delete repeated data views as cosmetic duplication.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source inspected; runtime unverified",
+    "widthsRequired": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "sourceBehavior": [
+      "TeslaFeatureFlagsPage.tsx:92-113 stacks overview panels until xl, then allocates distribution one column and composition two.",
+      "FeatureConfigTable.tsx:173-192 stacks filters below sm and uses a fixed sm:w-52 status control above sm.",
+      "FeatureConfigTable.tsx:145 uses min-w-0; PageLayout.tsx:12-13 provides full-width container-query-compatible layout.",
+      "Composition uses ResponsiveContainer; actual allocated chart height and small-screen legend/axis fit were not exercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx",
+        "line": 204,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "mobileColumns includes only key/enabled. DataTable.tsx:715-725 applies hidden md:table-cell to Type and Details. This caller supplies no mobilePresentation, expandable row or detail navigation; phone users therefore lose in-page access to configured type/details.",
+        "fix": "Adopt the existing DataTable mobilePresentation contract or an existing expanded-detail presentation preserving all four fields, full detail strings, sorting, value filters, pagination and export scope. Do not hide secondary content without an equivalent reachable view.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "source only; keyboard, focus, screen reader, touch targets, contrast and reduced-motion runtime unverified",
+    "sourceStrengths": [
+      "Page sections have translated aria-labels at TeslaFeatureFlagsPage.tsx:84,93.",
+      "Refresh has visible localized text and an aria-hidden decorative icon; Input and Select have localized aria-labels at FeatureConfigTable.tsx:182,189.",
+      "Status and kind badges retain visible text; composition has ariaLabel and dataColumns at FeatureConfigComposition.tsx:65,72-76.",
+      "FadeIn.tsx:24-34 uses reduced-motion preference; wrappers retain all children."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx",
+        "line": 100,
+        "rule": "MDC-040 / complete-data reachability",
+        "detail": "Feature keys and configuration details are visually truncated and exposed through native title attributes at lines 100 and 135. Full text remains in DOM, but title is not a reliable keyboard/touch detail mechanism; below md the details cell is hidden altogether.",
+        "fix": "Provide a keyboard/touch-reachable full-text row detail using the existing table presentation/overlay owners or wrapping text. Keep exact raw keys and JSON detail content; do not replace them with shortened values.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+        "line": 63,
+        "rule": "MDC-020 / MDC-040 / MDC-042",
+        "detail": "Refresh communicates pending through disabled plus animate-spin but does not pass Button.loading or aria-busy. The shared FadeIn motion path is inspected, but this icon relies on CSS reduced-motion behavior not exercised here.",
+        "fix": "Use existing Button loading/busy semantics while retaining the localized name and pending disable behavior; verify shared CSS suppresses decorative spin under reduced motion.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Page summary receives null plus loading for source.status initial. Distribution Skeleton, composition EmbeddedChart loading and table eight-row/four-column TableSkeleton preserve their shells.",
+    "empty": "Distribution total===0 uses EmptyState; composition absent kinds uses empty chart; table empty entries explains header Refresh recovery. An empty plain-object envelope still yields numeric zero metrics and an available summary status; null data yields unknown summary metrics. These distinctions need review, not invented replacement data.",
+    "fatalError": "deriveDataState.fatalError replaces only child content; panels remain. Every local retry forwards the GET refetch function; PageContainer also owns source notices.",
+    "refreshError": "Page passes only fatalError to children, keeping last-good entries, metrics and charts. Summary sourceStatus carries stale; header query/dataSources preserve nonblocking trust context.",
+    "offlineStale": "deriveDataState.ts:158-177 classifies retained paused/error sources as stale and exposes refresh blocking. Child widgets do not independently receive stale/offline flags; shared page source notice is the owner. Live offline behavior unverified.",
+    "mutation": "POST refresh disables its button while pending, invalidates GET on success and emits success/error toasts. GET retry and POST refresh must remain separate actions.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+        "line": 47,
+        "rule": "MDC-025 / MDC-026 / unknown is not zero",
+        "detail": "deriveDataState is called without unavailable/partial options. For {data:{},fetched_at:null}, hasData is true, the summary receives zero counts and zero percent at line 85, and useAccountBriefStatus labels it available; all detail panels show no data. A malformed non-record payload also parses to no entries without an explicit partial/unknown state.",
+        "fix": "Resolve the successful-empty versus unavailable payload contract with the existing dataState owner and actual API evidence. Use unavailable/partial and missing metric values where appropriate, preserving legitimate false flags and true measured zero counts. Do not change Boolean coercion or invent upstream states without evidence.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx",
+      "line": 21,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "Two hardcoded series colors and a repeated hardcoded gauge color bypass palette ownership. All three panel title icons independently apply text-cyan-300 (composition:58, distribution:53, table:148), adding accent to every section rather than reserving semantic emphasis for enabled status.",
+      "fix": "Use the existing palette and neutral/icon tokens; retain restrained enabled-versus-disabled meaning, distinct text labels and accessible data alternatives. Do not introduce neon, glow, new hex colors or a replacement surface.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx",
+      "line": 6,
+      "rule": "MDC-002 / category barrels",
+      "detail": "PanelTitle imports from @/components/ui/Typography rather than the UI category barrel. Distribution.tsx:5 does the same; the table already imports typography through @/components/ui.",
+      "fix": "Consolidate feature typography imports through @/components/ui; keep shared implementations on concrete internal imports to avoid barrel cycles.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx",
+      "line": 92,
+      "rule": "MDC-044 / shared locale and timezone owner",
+      "detail": "Distribution directly calls lib formatDateTime without options, which defaults to browser locale/timezone (dateFormat.ts:29-35,55-63). Summary snapshot uses useDateFormat through useAccountSnapshotPeriod.ts:7,13, honoring saved locale/tz (useDateFormat.ts:74-97). The same snapshot can display inconsistent date formatting.",
+      "fix": "Use existing useDateFormat in distribution while preserving fetched_at and both snapshot-context and synced-footer presentations. Never add a local date formatter or workspace date filter.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Mobile hides configured details/type without another in-page access path; resolve this preservation gap before decorative modernization.",
+    "orderedWork": [
+      "Preserve complete mobile details and long-text keyboard/touch reachability.",
+      "Align empty/unknown snapshot trust semantics using real API evidence.",
+      "Unify saved date preference handling, loading semantics and category imports.",
+      "Subdue decorative accents and reuse palette ownership; verify all four content units and controls in ten widths/themes."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "DataTable complete-detail mobile adoption",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "nameOfMissingOwner": null,
+      "propsVariantsStates": ["mobilePresentation", "allColumns", "row identity", "sort/filter controls", "pagination/load more", "loaded matching export scope", "full key/type/status/details", "empty state"],
+      "usedBy": ["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx"],
+      "dependsOn": ["Existing DataTable mobile presentation contract and preservation acceptance"],
+      "changeNeeded": "No new shared implementation demonstrated. Page adoption/integration is needed; escalate an actual unsupported adapter capability only after proving it. DataTable already exposes mobilePresentation and forwards allColumns at lines 1385-1390."
+    },
+    {
+      "name": "Shared chart palette adoption",
+      "existingOwnerFile": "web\\src\\lib\\colors.ts",
+      "nameOfMissingOwner": null,
+      "propsVariantsStates": ["enabled and disabled series colors", "gauge color", "theme/forced-colors compatibility", "visible semantic labels"],
+      "usedBy": ["FeatureConfigDistribution", "FeatureConfigComposition"],
+      "dependsOn": ["MDC-010", "MDC-034", "Existing palette contract; exact palette module implementation not inspected"],
+      "changeNeeded": "Reuse existing owner; no new palette/token engine or shared component extension is justified by this page-only evidence."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\index.ts",
+      "line": 1,
+      "rule": "MDC-002 / MDC-033",
+      "detail": "Barrel still exports FeatureConfigKpis while mounted page uses FeatureConfigOperationalBrief at page lines 36,85. The old KPI implementation was not inspected and no second mounted use is established.",
+      "fix": "Keep modernization on the current OperationalBrief metric pipeline. Do not reintroduce the older KPI component or remove an exported component without separate caller evidence.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx",
+      "line": 92,
+      "rule": "MDC-044",
+      "detail": "Direct default-browser date formatting competes with the preference-aware snapshot date owner used by the summary; this is the architecture issue already recorded, not a second requested shared formatter.",
+      "fix": "Adopt useDateFormat; retain both presentations and unchanged UTC source.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "B3C9ABF7C23BA3F36E65CB5903572F65325C6FF0B568B9BF7F7FF253CEE6FFF5",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 126,
+    "sectionCount": 3,
+    "sectionNames": ["Feature summary metrics", "Feature overview", "Feature flags table"],
+    "contentUnitCount": 4,
+    "contentUnitNames": ["Account feature configuration operational brief", "Distribution", "Enabled vs disabled by type", "Feature flags table"],
+    "counts": {
+      "pageSectionElements": 2,
+      "pageFadeInWrappers": 3,
+      "pageGlassPanelOrChartContainerElements": 0,
+      "mountedFeatureGlassPanels": 3,
+      "mountedEmbeddedCharts": 1,
+      "mountedLinearGauges": 1,
+      "summaryMetrics": 4,
+      "tableColumns": 4
+    },
+    "relatedLineCounts": {
+      "FeatureConfigOperationalBrief.tsx": 39,
+      "FeatureConfigDistribution.tsx": 98,
+      "FeatureConfigComposition.tsx": 108,
+      "FeatureConfigTable.tsx": 212,
+      "parseFeatureFlags.ts": 108,
+      "pageAndMountedPresentationTotal": 583,
+      "pageMountedPresentationAndParserTotal": 691
+    },
+    "actions": [
+      "Header Refresh POST, localized label, pending disable/spin, success/error toast and GET invalidation.",
+      "GET retry/refetch from distribution, composition and table fatal-error views; shared source notice recovery.",
+      "Free-text search of exact feature key and details; All/enabled/disabled status filter.",
+      "Feature, type and status sort toggles with stable key tie-break.",
+      "DataTable value filters on all four columns using complete safeEntries filterData.",
+      "DataTable pagination, page-size settings, persisted table layout/width state and matching loaded-row CSV/JSON export controlled by existing DataTable defaults.",
+      "Chart legend interaction and canonical accessible data alternative owned by ChartContainer; exact mounted legend persistence/toolbar capabilities unverified.",
+      "OperationalBrief shared details affordances, subject to actual source-backed shared implementation; no new domain mutation or toggle capability."
+    ],
+    "dataBehavior": [
+      "One account-level envelope query and one explicit POST refresh; no duplicated query, vehicle selector or date-range picker.",
+      "Keep raw Tesla keys and all configured non-enabled properties with JSON representations; never translate/recase source keys.",
+      "Retain Boolean coercion and kind classification pending explicit upstream-contract review; non-record parsing remains nonthrowing.",
+      "Keep total/enabled/disabled/enabledRate calculations, both count breakdowns, grouped series and observed fetched_at timestamp.",
+      "Preserve query key, AbortSignal forwarding, stale policy, invalidation/toast behavior and retained-data recovery.",
+      "Keep exact tableId admin:tesla-feature-flags and chartKey admin-feature-config-composition; exports include matching loaded data, not a fabricated server full-result fetch.",
+      "Unknown values must not become fabricated measurements. No SI physical conversions, backend fields or cache mutations are introduced.",
+      "Keep every panel visible through loading/empty/error; no gating whole page behind envelope availability.",
+      "Preserve current localized visible labels and accessible names, summary snapshot provenance, formatting precision/preferences and reduced-motion wrapper behavior.",
+      "Composition EmbeddedChart defaults exportable/fullscreen false; do not claim or invent existing chart export/fullscreen actions."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified at all ten required widths",
+    "scope": "Phase0 source-only page audit. No source edits, Git operations, tests, TypeScript, full lint/build or browser/production mutation were run.",
+    "tooling": "Audit skill script was read but not executed because it unconditionally runs project TypeScript; Phase0 conventions reserve integrated gates. Bounded source pattern checks and JSON/hash validation are not runtime acceptance.",
+    "sourceVerification": {
+      "method": "PowerShell ConvertFrom-Json; required-field/issue-field assertions; exact page/routes assertions; Get-FileHash -Algorithm SHA256; case-sensitive Select-String on the page only.",
+      "exitCode": 0,
+      "output": ["JSON parse: PASS", "Required fields: 19/19", "Issue schemas: PASS", "Exact page/routes: PASS", "SHA256 current/report: B3C9ABF7C23BA3F36E65CB5903572F65325C6FF0B568B9BF7F7FF253CEE6FFF5 / MATCH", "inlineStyle: 0", "rawControls: 0", "directLibrary: 0", "oldApiImport: 0"],
+      "limit": "Pattern counts apply only to the 126-line page orchestrator, not all feature dependencies or runtime. No claim of zero overall violations."
+    },
+    "sourceSnapshot": "Concurrent shared-owner edits are possible. Citations describe inspected source; preservation.sourceHash pins only this page snapshot.",
+    "unknowns": ["Backend payload guarantees and actual refresh/cache behavior", "Mounted export/legend/detail affordances and screen-reader output", "Saved theme contrast/forced colors", "Mobile source retention and row detail acceptance", "Long labels, RTL, 200% text and offline transitions"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+    "web\\src\\features\\admin\\components\\tesla-feature-flags\\index.ts",
+    "web\\src\\features\\admin\\components\\tesla-feature-flags\\parseFeatureFlags.ts",
+    "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx",
+    "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx",
+    "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\FeatureConfigOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts",
+    "web\\src\\api\\hooks\\useUser.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "internal\\api\\router.go",
+    "docs\\frontend-audits\\audit-page-020.json"
+  ]
+}
