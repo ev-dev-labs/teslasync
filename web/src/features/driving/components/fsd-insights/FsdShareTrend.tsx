@@ -18,11 +18,12 @@ import {
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { FsdInsights } from '@/types/fsd';
 
 import { hasAnyShare } from './helpers';
 import type { FsdSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FsdShareTrendProps {
   insights: FsdInsights | undefined;
@@ -38,6 +39,7 @@ interface FsdShareTrendProps {
  * telemetry never reported.
  */
 export function FsdShareTrend({ insights, state }: FsdShareTrendProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const days = useMemo(() => insights?.daily ?? [], [insights]);
@@ -100,7 +102,7 @@ export function FsdShareTrend({ insights, state }: FsdShareTrendProps) {
           {
             key: 'share',
             label: seriesName,
-            format: (value) => (typeof value === 'number' ? `${fmtNumber(value, 1)}%` : '—'),
+            format: (value) => (typeof value === 'number' ? `${fmtNumber(value)}%` : '—'),
           },
         ]}
       >
@@ -129,7 +131,7 @@ export function FsdShareTrend({ insights, state }: FsdShareTrendProps) {
               content={
                 <ChartTooltip
                   valueFormatter={(value) =>
-                    typeof value === 'number' ? `${fmtNumber(value, 1)}%` : '—'
+                    typeof value === 'number' ? `${fmtNumber(value)}%` : '—'
                   }
                 />
               }

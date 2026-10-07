@@ -8,9 +8,10 @@ import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion'
 import { formatDateTime } from '@/lib/dateFormat'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import type { Drive } from '@/api/types'
 import { durationStr } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RecentDrivesSectionProps {
   drives: Drive[] | undefined
@@ -20,6 +21,7 @@ interface RecentDrivesSectionProps {
 const EMPTY_DRIVES: Drive[] = []
 
 function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   return useMemo(
     () => [
@@ -30,17 +32,20 @@ function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
       },
       {
         key: 'distance',
+        align: 'right',
         header: t('common.distance', 'Distance'),
         render: (d) => `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit))} ${distanceUnit}`,
         sortable: true,
       },
       {
         key: 'duration',
+        align: 'right',
         header: t('common.duration', 'Duration'),
         render: (d) => durationStr((d.duration_s ?? 0) / 60),
       },
       {
         key: 'battery',
+        align: 'right',
         header: t('common.battery', 'Battery'),
         render: (d) =>
           d.start_soc_pct != null && d.end_soc_pct != null
@@ -48,7 +53,7 @@ function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
             : '—',
       },
     ],
-    [t, distanceUnit],
+    [t, distanceUnit, fmtNumber, displayPrecision, displayLocale],
   )
 }
 
@@ -72,7 +77,7 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
       <div className="mb-4 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('common.recentDrives', 'Recent Drives')}
+          {t('common.recentDrives', 'Recent drives')}
         </PanelTitle>
         <Link
           to="/drives"

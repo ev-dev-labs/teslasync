@@ -252,7 +252,7 @@ function InnerSection({
             <div className="space-y-1">
               <div
                 id={proposalLabelId}
-                className="text-xs uppercase tracking-wide text-cyan-300"
+                className="text-xs tracking-wide text-cyan-300"
               >
                 {t('geofences.aiSuggest.proposalLabel', 'Proposed geofence')}
               </div>

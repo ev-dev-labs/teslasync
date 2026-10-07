@@ -12,7 +12,8 @@
  * vehicle, Powerwall, or utility. See `PlanExportPanel` / `lib/planExport.ts`.
  */
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { DataStateNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHomeEnergyOrchestration } from '../hooks/useHomeEnergyOrchestration';
@@ -31,37 +32,63 @@ import {
 
 export default function WholeHomeEnergyPage() {
   const { t } = useTranslation();
-  usePageTitle(t('homeEnergy.page.title', 'Whole-Home Energy Orchestrator'));
+  usePageTitle(t('homeEnergy.page.title', 'Whole-home energy orchestrator'));
 
   const {
     isLoading,
     error,
     queries,
+    sourceStates,
     hasEnergySite,
     siteName,
     scenario,
     input,
     result,
+    startTimeIso,
     solarForecast,
     loadForecast,
     refreshNow,
     commitAsBaseline,
   } = useHomeEnergyOrchestration();
+  const sourceLabels: Record<string, string> = {
+    vehicles: t('homeEnergy.sources.vehicles', 'Vehicles'),
+    fleet: t('homeEnergy.sources.fleet', 'Vehicle live state'),
+    sites: t('homeEnergy.sources.sites', 'Energy sites'),
+    siteInfo: t('homeEnergy.sources.siteInfo', 'Energy site information'),
+    liveStatus: t('homeEnergy.sources.liveStatus', 'Energy live status'),
+    history: t('homeEnergy.sources.history', 'Energy history'),
+  };
 
   return (
-    <PageContainer
-      title={t('homeEnergy.page.title', 'Whole-Home Energy Orchestrator')}
+    <PageLayout
+      title={t('homeEnergy.page.title', 'Whole-home energy orchestrator')}
       subtitle={t(
         'homeEnergy.page.subtitle',
         'A local, deterministic recommendation across vehicles, solar, battery, and tariffs — never an autonomous command',
       )}
-      loading={isLoading}
-      error={error}
+      busy={isLoading || sourceStates.some(source => source.state.isRefreshing)}
       query={queries}
     >
+      {sourceStates.map(({ id, state }) => (
+        <div key={id} data-home-energy-source={id}>
+          <StaleRefreshWarning state={state} label={sourceLabels[id]}
+            message={state.status === 'partial'
+              ? t('homeEnergy.sources.partial', 'Some vehicle live readings are unavailable. The recommendation includes explicitly disclosed scenario assumptions.')
+              : undefined} />
+          {!state.hasData && state.isRefreshBlocked ? (
+            <DataStateNotice state="unavailable" title={sourceLabels[id]} role="status">
+              {t('homeEnergy.sources.waitingConnection', 'This source is waiting for a connection. Modeled recommendations remain visible with their assumptions.')}
+            </DataStateNotice>
+          ) : null}
+          {state.fatalError && <QueryError error={state.fatalError}
+            resourceName={sourceLabels[id]}
+            onRetry={state.retry ?? undefined} />}
+        </div>
+      ))}
       {/* 1 — headline outcome */}
       <FadeIn>
-        <KpiSummary result={result} />
+        <KpiSummary result={result} startTimeIso={startTimeIso} horizonHours={scenario.horizonHours}
+          loading={isLoading} unavailable={error != null} sourceStates={sourceStates} slotMinutes={scenario.slotMinutes} />
       </FadeIn>
 
       {/* 2 — scenario controls (horizon, tariff, grid, Powerwall, weight preset) */}
@@ -76,7 +103,7 @@ export default function WholeHomeEnergyPage() {
 
       {/* 4 — multi-series energy flow schedule */}
       <FadeIn delay={0.15}>
-        <EnergyFlowChart slots={result.slots} />
+        <EnergyFlowChart slots={result.slots} slotMinutes={scenario.slotMinutes} />
       </FadeIn>
 
       {/* 5 — per-vehicle readiness */}
@@ -106,6 +133,7 @@ export default function WholeHomeEnergyPage() {
           loadForecast={loadForecast}
           hasEnergySite={hasEnergySite}
           siteName={siteName}
+          historyState={sourceStates.find(({ id }) => id === 'history')?.state}
         />
       </FadeIn>
 
@@ -113,6 +141,6 @@ export default function WholeHomeEnergyPage() {
       <FadeIn delay={0.45}>
         <PlanExportPanel input={input} result={result} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

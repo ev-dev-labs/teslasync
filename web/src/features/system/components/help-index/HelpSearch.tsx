@@ -162,7 +162,7 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
                     <Text as="span" size="sm" weight="medium" color="primary">
                       {t(entry.titleKey, entry.titleFallback)}
                     </Text>
-                    <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs uppercase tracking-wide text-[var(--text-muted)]">
+                    <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs tracking-wide text-[var(--text-muted)]">
                       {t(kindLabel.key, kindLabel.fallback)}
                     </span>
                   </div>

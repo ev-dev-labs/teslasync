@@ -36,6 +36,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 // ── i18n stub: return the English fallback (2nd arg) or the key. ──
@@ -95,7 +96,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 // The four snapshot shapes below mirror the flat maps the *_latest handlers
 // emit (signal → field). The spread lets each test override individual fields,
 // including intentionally wrong-typed values (enum strings, Go "<nil>") to lock
-// in the hardening. Numeric values are SI: temps in °C and pressures in kPa.
+// in the hardening. Numeric values are SI: temps in °C and pressures in Pa.
 function makeMotor(over: Record<string, unknown> = {}): Record<string, unknown> {
   return { di_torque: 245, di_stator_temp: 60, gear: 'D', ...over };
 }
@@ -103,7 +104,7 @@ function makeClimate(over: Record<string, unknown> = {}): Record<string, unknown
   return { inside_temp: 20, outside_temp: 10, hvac_power: true, ...over };
 }
 function makeTires(over: Record<string, unknown> = {}): Record<string, unknown> {
-  return { front_left: 290, front_right: 300, rear_left: 280, rear_right: 260, ...over };
+  return { front_left: 290000, front_right: 300000, rear_left: 280000, rear_right: 260000, ...over };
 }
 function makeSecurity(over: Record<string, unknown> = {}): Record<string, unknown> {
   return { locked: true, sentry_mode: true, ...over };
@@ -142,6 +143,21 @@ beforeEach(() => {
 });
 
 describe('LiveSignalsWidget — rendering', () => {
+  it('retains all four source sections and rich status values in canonical responsive definition lists', () => {
+    setup();
+    const { container } = render(<LiveSignalsWidget size={STANDARD} />);
+    expect(container.querySelectorAll('dt')).toHaveLength(12);
+    expect(container.querySelectorAll('dd')).toHaveLength(12);
+    expect(container.querySelectorAll('dl')).toHaveLength(12);
+    for (const name of ['Motor', 'Climate', 'Tires', 'Security']) {
+      expect(screen.getByRole('heading', { name, level: 4 })).toBeInTheDocument();
+    }
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(Array.from(container.querySelectorAll('dl')).every(node =>
+      node.classList.contains('@container/kv-list'))).toBe(true);
+  });
+
   it('renders every section with SI readings in the default units (°C + bar)', () => {
     setup();
     render(<LiveSignalsWidget size={STANDARD} />);
@@ -153,20 +169,20 @@ describe('LiveSignalsWidget — rendering', () => {
     expect(screen.getByText('Security')).toBeInTheDocument();
 
     // Motor: torque, stator temp (°C), gear.
-    expect(screen.getByText('245 Nm')).toBeInTheDocument();
-    expect(screen.getByText('60°C')).toBeInTheDocument();
+    expect(screen.getByText('245.00 Nm')).toBeInTheDocument();
+    expect(screen.getByText('60.00°C')).toBeInTheDocument();
     expect(screen.getByText('D')).toBeInTheDocument();
 
     // Climate: cabin + outside temps (°C), HVAC state.
-    expect(screen.getByText('20°C')).toBeInTheDocument();
-    expect(screen.getByText('10°C')).toBeInTheDocument();
+    expect(screen.getByText('20.00°C')).toBeInTheDocument();
+    expect(screen.getByText('10.00°C')).toBeInTheDocument();
     expect(screen.getByText('On')).toBeInTheDocument();
 
-    // Tires: 290/300/280/260 kPa → bar (÷100).
-    expect(screen.getByText('2.9 bar')).toBeInTheDocument();
-    expect(screen.getByText('3.0 bar')).toBeInTheDocument();
-    expect(screen.getByText('2.8 bar')).toBeInTheDocument();
-    expect(screen.getByText('2.6 bar')).toBeInTheDocument();
+    // Tires: 290000/300000/280000/260000 Pa → bar (÷1000, then ÷100).
+    expect(screen.getByText('2.90 bar')).toBeInTheDocument();
+    expect(screen.getByText('3.00 bar')).toBeInTheDocument();
+    expect(screen.getByText('2.80 bar')).toBeInTheDocument();
+    expect(screen.getByText('2.60 bar')).toBeInTheDocument();
 
     // Security chips.
     expect(screen.getByText('Locked')).toBeInTheDocument();
@@ -174,26 +190,26 @@ describe('LiveSignalsWidget — rendering', () => {
   });
 
   it('converts SI readings to the user preference (°F + psi) and labels follow the preference', () => {
-    // 20°C→68°F, 10°C→50°F, 60°C→140°F; 290 kPa → 42.1 psi.
+    // 20°C→68°F, 10°C→50°F, 60°C→140°F; 290000 Pa → 42.06 psi.
     setup({ tempPref: '°F', pressurePref: 'psi' });
     render(<LiveSignalsWidget size={STANDARD} />);
 
-    expect(screen.getByText('68°F')).toBeInTheDocument();
-    expect(screen.getByText('50°F')).toBeInTheDocument();
-    expect(screen.getByText('140°F')).toBeInTheDocument();
-    expect(screen.getByText('42.1 psi')).toBeInTheDocument();
+    expect(screen.getByText('68.00°F')).toBeInTheDocument();
+    expect(screen.getByText('50.00°F')).toBeInTheDocument();
+    expect(screen.getByText('140.00°F')).toBeInTheDocument();
+    expect(screen.getByText('42.06 psi')).toBeInTheDocument();
 
     // The source unit never leaks once the preference flips.
-    expect(screen.queryByText('20°C')).not.toBeInTheDocument();
-    expect(screen.queryByText('2.9 bar')).not.toBeInTheDocument();
+    expect(screen.queryByText('20.00°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('2.90 bar')).not.toBeInTheDocument();
   });
 
   it('formats a large SI torque through fmtInt (locale-grouped), not a raw number', () => {
     setup({ motor: makeQuery({ data: makeMotor({ di_torque: 1234 }) }) });
     render(<LiveSignalsWidget size={STANDARD} />);
 
-    expect(screen.getByText('1,234 Nm')).toBeInTheDocument();
-    expect(screen.queryByText('1234 Nm')).not.toBeInTheDocument();
+    expect(screen.getByText('1,234.00 Nm')).toBeInTheDocument();
+    expect(screen.queryByText('1234.00 Nm')).not.toBeInTheDocument();
   });
 
   it('collapses non-numeric enum-string readings to "—" instead of "0" / "0.0 kW" / "0.0 bar"', () => {
@@ -226,11 +242,9 @@ describe('LiveSignalsWidget — rendering', () => {
     });
     render(<LiveSignalsWidget size={STANDARD} />);
 
-    // Ten placeholders: the nine numerics plus the cleanNil'd "<nil>" gear.
-    expect(screen.getAllByText('—')).toHaveLength(10);
-    // Nullish security booleans fall back to the locked/off default chips.
-    expect(screen.getByText('Unlocked')).toBeInTheDocument();
-    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(12);
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Off')).not.toBeInTheDocument();
   });
 
   it('renders the danger/neutral chips when the vehicle is unlocked with sentry off', () => {
@@ -248,17 +262,17 @@ describe('LiveSignalsWidget — rendering', () => {
     // loading. The grid renders (motor has data) and the other three sections
     // each show a skeleton rather than disappearing.
     setup({
-      climate: makeQuery({ data: null }),
-      security: makeQuery({ data: null }),
-      tires: makeQuery({ data: null }),
+      climate: makeQuery({ data: undefined, isLoading: true }),
+      security: makeQuery({ data: undefined, isLoading: true }),
+      tires: makeQuery({ data: undefined, isLoading: true }),
     });
     const { container } = render(<LiveSignalsWidget size={STANDARD} />);
 
-    expect(screen.getByText('245 Nm')).toBeInTheDocument();
+    expect(screen.getByText('245.00 Nm')).toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
     // The still-loading sections withhold their values but keep their headers.
     expect(screen.getByText('Climate')).toBeInTheDocument();
-    expect(screen.queryByText('20°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('20.00°C')).not.toBeInTheDocument();
   });
 
   it('shows the "No live signal data" empty state when every source is empty', () => {
@@ -286,6 +300,17 @@ describe('LiveSignalsWidget — rendering', () => {
     // The freshness indicator is exposed as an accessible "Refresh" button.
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockClimate.mock.results[0].value.refetch).toHaveBeenCalledTimes(1);
+    expect(mockTires.mock.results[0].value.refetch).toHaveBeenCalledTimes(1);
+    expect(mockSecurity.mock.results[0].value.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps healthy motor readings when an independent climate source fails', () => {
+    setup({ climate: makeQuery({ isError: true, error: new Error('climate unavailable') }) });
+    render(<MemoryRouter><LiveSignalsWidget size={STANDARD} /></MemoryRouter>);
+    expect(screen.getByText('245.00 Nm')).toBeInTheDocument();
+    expect(screen.getByText('Security')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /retry/i }).length).toBeGreaterThan(0);
   });
 });
 
@@ -299,7 +324,7 @@ describe('LiveSignalsWidget — vehicle resolution', () => {
     expect(mockSecurity).toHaveBeenCalledWith(7, 5000);
     expect(mockTires).toHaveBeenCalledWith(7, 5000);
     // The resolved data is what gets rendered.
-    expect(screen.getByText('245 Nm')).toBeInTheDocument();
+    expect(screen.getByText('245.00 Nm')).toBeInTheDocument();
   });
 
   it('falls back to the first vehicle id when no vehicleId prop is supplied', () => {

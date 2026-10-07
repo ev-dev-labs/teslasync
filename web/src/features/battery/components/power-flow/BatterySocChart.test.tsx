@@ -14,7 +14,7 @@
  *        `formatDateShort(new Date(v).toISOString())` pre-conversion threw on
  *        any non-finite `v` because `Date#toISOString` rejects an Invalid Date,
  *        defeating `formatDateShort`'s own guard.
- *      - `formatSocPercentTick` must be null-safe (`null` → "0%").
+ *      - `formatSocPercentTick` keeps unknown values distinct from real zero.
  *   2. the branch selection + `data ?? []` null-safety — a `data` prop that is
  *      `undefined` at runtime (a caller whose query hasn't resolved) must show
  *      the empty state, never crash on `data.length`.
@@ -201,9 +201,12 @@ describe('formatSocPercentTick', () => {
     expect(formatSocPercentTick(100)).toBe('100%');
   });
 
-  it('coerces null / undefined to a 0% label (null-safe)', () => {
-    expect(formatSocPercentTick(null)).toBe('0%');
-    expect(formatSocPercentTick(undefined)).toBe('0%');
+  it('keeps null / undefined / nonfinite readings distinct from measured 0%', () => {
+    expect(formatSocPercentTick(null)).toBe('—');
+    expect(formatSocPercentTick(undefined)).toBe('—');
+    expect(formatSocPercentTick(Number.NaN)).toBe('—');
+    expect(formatSocPercentTick(Number.POSITIVE_INFINITY)).toBe('—');
+    expect(formatSocPercentTick(0)).toBe('0%');
   });
 });
 

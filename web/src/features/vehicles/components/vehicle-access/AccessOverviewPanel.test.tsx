@@ -88,16 +88,16 @@ describe('AccessOverviewPanel', () => {
     });
 
     // Section headings.
-    expect(screen.getByText('Invitation Status')).toBeInTheDocument();
-    expect(screen.getByText('Driver Roles')).toBeInTheDocument();
+    expect(screen.getByText('Invitation status')).toBeInTheDocument();
+    expect(screen.getByText('Driver roles')).toBeInTheDocument();
 
     // titleCase-resolved bar labels.
     expect(screen.getByText('Pending')).toBeInTheDocument();
     expect(screen.getByText('Accepted')).toBeInTheDocument();
 
     // `${count} · ${fmtPercent(pct, 0)}` sublabels: 3/4 = 75%, 1/4 = 25%.
-    expect(screen.getByText(`3 ${MIDDOT} 75%`)).toBeInTheDocument();
-    expect(screen.getByText(`1 ${MIDDOT} 25%`)).toBeInTheDocument();
+    expect(screen.getByText(`3 ${MIDDOT} 75.00%`)).toBeInTheDocument();
+    expect(screen.getByText(`1 ${MIDDOT} 25.00%`)).toBeInTheDocument();
   });
 
   it('renders each driver-role as a chip with its resolved label and count', () => {
@@ -125,7 +125,7 @@ describe('AccessOverviewPanel', () => {
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     // Loading replaces the content — the section subheads must not render.
-    expect(screen.queryByText('Invitation Status')).toBeNull();
+    expect(screen.queryByText('Invitation status')).toBeNull();
   });
 
   it('prioritises the loading state over the error and empty flags', () => {
@@ -156,7 +156,7 @@ describe('AccessOverviewPanel', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     // Error UI replaces the content, it does not augment it.
-    expect(screen.queryByText('Invitation Status')).toBeNull();
+    expect(screen.queryByText('Invitation status')).toBeNull();
   });
 
   it('never renders a blank panel when isError is set without an error object', () => {
@@ -170,7 +170,7 @@ describe('AccessOverviewPanel', () => {
       totalDrivers: 1,
     });
 
-    expect(screen.getByText('Invitation Status')).toBeInTheDocument();
+    expect(screen.getByText('Invitation status')).toBeInTheDocument();
     expect(screen.getByText('Pending')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText(/server error/i)).toBeNull();
@@ -183,8 +183,8 @@ describe('AccessOverviewPanel', () => {
       screen.getByText('No access data to summarize yet.'),
     ).toBeInTheDocument();
     // Empty state replaces the section content.
-    expect(screen.queryByText('Invitation Status')).toBeNull();
-    expect(screen.queryByText('Driver Roles')).toBeNull();
+    expect(screen.queryByText('Invitation status')).toBeNull();
+    expect(screen.queryByText('Driver roles')).toBeNull();
   });
 
   it('shows the "no invitations" caption while still rendering role chips', () => {
@@ -211,7 +211,7 @@ describe('AccessOverviewPanel', () => {
 
     expect(screen.getByText('No drivers yet')).toBeInTheDocument();
     expect(screen.getByText('Expired')).toBeInTheDocument();
-    expect(screen.getByText(`5 ${MIDDOT} 100%`)).toBeInTheDocument();
+    expect(screen.getByText(`5 ${MIDDOT} 100.00%`)).toBeInTheDocument();
   });
 
   it('is null-safe against undefined breakdown arrays', () => {
@@ -239,8 +239,8 @@ describe('AccessOverviewPanel', () => {
     });
 
     // `count ?? 0` → "0"; without the guard this would render "null · 0%".
-    expect(screen.getByText(`0 ${MIDDOT} 0%`)).toBeInTheDocument();
-    expect(screen.queryByText(`null ${MIDDOT} 0%`)).toBeNull();
+    expect(screen.getByText(`0 ${MIDDOT} 0.00%`)).toBeInTheDocument();
+    expect(screen.queryByText(`null ${MIDDOT} 0.00%`)).toBeNull();
   });
 
   it('falls back to an em-dash label for a blank status via titleCase', () => {
@@ -250,6 +250,6 @@ describe('AccessOverviewPanel', () => {
     });
 
     expect(screen.getByText(EM_DASH)).toBeInTheDocument();
-    expect(screen.getByText(`1 ${MIDDOT} 100%`)).toBeInTheDocument();
+    expect(screen.getByText(`1 ${MIDDOT} 100.00%`)).toBeInTheDocument();
   });
 });

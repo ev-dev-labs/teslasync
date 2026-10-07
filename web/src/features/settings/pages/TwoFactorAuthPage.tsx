@@ -19,8 +19,10 @@
  * is null-safe; the shared status query drives the header freshness chip.
  */
 import { useTranslation } from 'react-i18next'
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
+import { DataStateNotice } from '@/components/feedback'
+import { deriveDataState } from '@/api/dataState'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useTOTPStatus } from '@/api/hooks/useTOTP'
 import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
@@ -36,9 +38,10 @@ export default function TwoFactorAuthPage() {
   usePageTitle(t('account.twoFactor.title', 'Two-factor authentication'))
 
   const status = useTOTPStatus()
+  const statusState = deriveDataState(status)
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('account.twoFactor.title', 'Two-factor authentication')}
       subtitle={t(
         'account.twoFactor.subtitle',
@@ -47,9 +50,10 @@ export default function TwoFactorAuthPage() {
       copyLink
       query={status}
     >
+      {statusState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       {/* 1 — KPI band: at-a-glance credential summary. */}
       <FadeIn>
-        <TotpKpiBand data={status.data} isLoading={status.isLoading} />
+        <TotpKpiBand data={status.data} isLoading={statusState.status === 'initial'} retained={statusState.status === 'stale'} />
       </FadeIn>
 
       {/* 2 — Hero enrollment flow (spans two columns) + setup guide. */}
@@ -77,6 +81,6 @@ export default function TwoFactorAuthPage() {
           <TotpRecoveryPanel />
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

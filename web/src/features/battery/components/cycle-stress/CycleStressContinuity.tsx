@@ -17,6 +17,7 @@ import type { CycleStressResult } from '../../lib/cycleStress';
 import { cycleStressNumber } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressContinuityProps {
   result: CycleStressResult;
@@ -29,6 +30,7 @@ export function CycleStressContinuity({
   state,
   locale,
 }: CycleStressContinuityProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const continuity = result.continuity;
 
@@ -65,7 +67,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.acceptedIntervals,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.afterAccounting',
@@ -82,7 +83,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.rawBoundaryPoints,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.twoPerInterval',
@@ -99,7 +99,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.retainedObservations,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.afterCoincident',
@@ -116,7 +115,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.turningPoints,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.extrema',
@@ -150,7 +148,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.timeGapBoundaries,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.gapThreshold',
@@ -159,7 +156,6 @@ export function CycleStressContinuity({
                   days: cycleStressNumber(
                     result.config.maxContinuityGapS / 86_400,
                     locale,
-                    1,
                   ),
                 },
               )}
@@ -174,7 +170,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.socJumpBoundaries,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.jumpThreshold',
@@ -183,7 +178,6 @@ export function CycleStressContinuity({
                   value: cycleStressNumber(
                     result.config.maxBoundaryJumpPct,
                     locale,
-                    1,
                   ),
                 },
               )}
@@ -198,7 +192,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.overlappingIntervals,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.conflictingIntervals',
@@ -215,7 +208,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.compactedPoints,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.notExtrema',
@@ -232,7 +224,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.coincidentBoundaryCollapses,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.laterObservation',

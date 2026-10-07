@@ -46,14 +46,14 @@ interface OrderBucketMeta {
 export const ORDER_BUCKET_META: Record<OrderStatusBucket, OrderBucketMeta> = {
   inProgress: {
     key: 'admin.teslaOrders.bucket.inProgress',
-    fallback: 'In Progress',
+    fallback: 'In progress',
     bar: 'bg-amber-500',
     dot: 'bg-amber-400',
     badge: 'warning',
   },
   ready: {
     key: 'admin.teslaOrders.bucket.ready',
-    fallback: 'Ready · In Transit',
+    fallback: 'Ready · in transit',
     bar: 'bg-sky-500',
     dot: 'bg-sky-400',
     badge: 'info',
@@ -116,13 +116,13 @@ export function orderStatusVariant(
   return ORDER_BUCKET_META[bucketOfStatus(status)].badge;
 }
 
-/** Human-friendly title-case rendering of a raw `SNAKE_CASE` status. */
+/** Human-friendly sentence-case rendering of a raw `SNAKE_CASE` status. */
 export function formatOrderStatus(status: string | null | undefined): string {
   if (!status) return '—';
   return status
     .replace(/_/g, ' ')
     .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/^\w/, (c) => c.toUpperCase());
 }
 
 export interface OrderBucketCount {

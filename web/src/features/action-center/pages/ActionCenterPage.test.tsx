@@ -13,9 +13,11 @@ const toastMock = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const setVehicleIdMock = vi.fn();
+const operationalMetricsInput = vi.fn();
 const operationalModeState = vi.hoisted(() => ({
   canWrite: true,
 }));
+const displayPreferences = vi.hoisted(() => ({ locale: 'en-US' }));
 
 vi.mock('@/api/hooks/useActionCenter', () => ({
   useActionCenter: (...args: unknown[]) => useActionCenterMock(...args),
@@ -43,7 +45,28 @@ vi.mock('@/components/feedback', async () => {
   };
 });
 vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ formatEnergy: (value: number) => `${value} Wh` }),
+  useUnits: () => ({
+    formatEnergy: (value: number) => `${value} Wh`,
+    unitPrefs: {
+      distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+      energy: 'Wh', duration: 's', power: 'W', locale: displayPreferences.locale, precision: 2,
+    },
+  }),
+}));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>(
+    '@/hooks/useOperationalMetrics',
+  );
+  return {
+    ...actual,
+    useOperationalMetrics: (...args: Parameters<typeof actual.useOperationalMetrics>) => {
+      operationalMetricsInput(...args);
+      return actual.useOperationalMetrics(...args);
+    },
+  };
 }));
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => ({
@@ -137,7 +160,9 @@ beforeEach(() => {
   toastSuccess.mockReset();
   toastError.mockReset();
   setVehicleIdMock.mockReset();
+  operationalMetricsInput.mockReset();
   operationalModeState.canWrite = true;
+  displayPreferences.locale = 'en-US';
   useHistoryMock.mockReset();
   useActionCenterMock.mockReturnValue(queryResult());
   useHistoryMock.mockReturnValue({
@@ -171,9 +196,34 @@ beforeEach(() => {
 });
 
 describe('ActionCenterPage', () => {
+  it('preserves recommendation actions and provider evidence on a failed background refresh', () => {
+    useActionCenterMock.mockReturnValue(queryResult({
+      isError: true, error: new Error('Refresh offline'),
+    }));
+    const { container } = renderPage();
+    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
+    expect(screen.getByText('Review active alert')).toBeInTheDocument();
+    expect(screen.getByText(/^available$/i)).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Retained summary')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
+    fireEvent.click(screen.getByRole('button', { name: /acknowledge/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('does not claim zero recommendation counts before summary evidence exists', () => {
+    useActionCenterMock.mockReturnValue(queryResult({ data: undefined }));
+    renderPage();
+    const summary = screen.getByLabelText('Action center summary');
+    expect(within(summary).getAllByText('—')).toHaveLength(6);
+    expect(within(summary).queryByText('0')).not.toBeInTheDocument();
+    expect(summary.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+  });
+
   it('renders prioritized evidence, confidence, impact transparency, and provider status', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Action Center' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Action center' })).toBeInTheDocument();
     expect(useActionCenterMock).toHaveBeenCalledWith(
       expect.objectContaining({ state: 'open', limit: 50, offset: 0 }),
     );
@@ -181,6 +231,83 @@ describe('ActionCenterPage', () => {
     expect(screen.getByText('80%')).toBeInTheDocument();
     expect(screen.getByText('No projected impact')).toBeInTheDocument();
     expect(screen.getByText(/^available$/i)).toBeInTheDocument();
+  });
+
+  it('retains all six raw counts in the real bridge without substituting the paginated list size', () => {
+    const summary = { open: 1200, critical: 3, high: 9, acknowledged: 4, snoozed: 2, dismissed: 0 };
+    useActionCenterMock.mockReturnValue(queryResult({ data: { ...data, summary } }));
+    const { container } = renderPage();
+    expect(operationalMetricsInput).toHaveBeenLastCalledWith([
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'open', rawValue: 1200 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'critical', rawValue: 3 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'high', rawValue: 9 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'acknowledged', rawValue: 4 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'snoozed', rawValue: 2 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'dismissed', rawValue: 0 }),
+    ]);
+    expect(container.querySelector('[data-operational-metric="open"] [data-operational-value]')).toHaveTextContent('1,200');
+    expect(container.querySelector('[data-operational-metric="dismissed"]')).toHaveAttribute('data-value-state', 'value');
+    expect(container.querySelector('[data-operational-metric="dismissed"] [data-operational-value]')).toHaveTextContent('0');
+    expect(screen.getByText('Orion · Before priority, source, state, and pagination filters')).toBeInTheDocument();
+    expect(screen.getByText(/^Generated (?!recommendations)/)).toBeInTheDocument();
+  });
+
+  it('opens and closes the actual Review details drawer with count semantics and bounded source context', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getByText('Generated recommendations with critical priority across all inbox states.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Generated recommendations with high priority across all inbox states.')).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Provider-specific evidence windows and limits apply; these counts are not an all-time total.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('Server-generated recommendation evidence')).toBeInTheDocument();
+    expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByText('Close'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'acknowledge' })).toBeEnabled();
+  });
+
+  it('uses saved display locale while retaining unitless integer count operands', () => {
+    displayPreferences.locale = 'de-DE';
+    useActionCenterMock.mockReturnValue(queryResult({
+      data: { ...data, summary: { ...data.summary, open: 1200 } },
+    }));
+    const { container } = renderPage();
+    expect(container.querySelector('[data-operational-metric="open"] [data-operational-value]')).toHaveTextContent('1.200');
+    expect(operationalMetricsInput).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'open', rawValue: 1200 }),
+    ]));
+  });
+
+  it('keeps partial provider coverage distinct from zero counts and retains provider limitations', () => {
+    useActionCenterMock.mockReturnValue(queryResult({
+      data: {
+        ...data,
+        summary: { open: 0, critical: 0, high: 0, acknowledged: 0, snoozed: 0, dismissed: 0 },
+        provider_status: [{
+          source_feature: 'active_alerts', status: 'unavailable',
+          item_count: 0, limitations: ['Persisted alert source unavailable.'],
+        }],
+      },
+    }));
+    const { container } = renderPage();
+    expect(screen.getByText('Partial source coverage')).toBeInTheDocument();
+    expect(screen.getByText('Persisted alert source unavailable.')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.')).toBeInTheDocument();
+  });
+
+  it('does not render invalid count operands as measured zero', () => {
+    useActionCenterMock.mockReturnValue(queryResult({
+      data: { ...data, summary: { ...data.summary, open: Number.NaN, high: -1 } },
+    }));
+    const { container } = renderPage();
+    for (const key of ['open', 'high']) {
+      const metric = container.querySelector(`[data-operational-metric="${key}"]`);
+      expect(metric).toHaveAttribute('data-value-state', 'invalid');
+      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    }
   });
 
   it('updates snake_case filters', async () => {
@@ -199,10 +326,12 @@ describe('ActionCenterPage', () => {
       isLoading: true,
       isFetching: true,
     }));
-    renderPage();
+    const { container } = renderPage();
     expect(screen.getByLabelText('Loading recommendations')).toBeInTheDocument();
-    expect(screen.getByLabelText('Action Center summary')).toBeInTheDocument();
+    expect(screen.getByLabelText('Action center summary')).toBeInTheDocument();
     expect(screen.getByText('Source coverage')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('confirmation-gates state actions', async () => {
@@ -231,7 +360,7 @@ describe('ActionCenterPage', () => {
       screen.getByRole('button', { name: /acknowledge/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole('button', { name: /open source/i }),
+      screen.getByRole('button', { name: /Open source/i }),
     ).not.toBeDisabled();
   });
 

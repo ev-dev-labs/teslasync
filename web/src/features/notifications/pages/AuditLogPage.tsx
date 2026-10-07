@@ -11,12 +11,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, AlertTriangle } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { PanelTitle } from '@/components/ui';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { PageLayout } from '@/components/layout';
+import { Button, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
+import { Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
   SearchInput,
   FilterBar,
@@ -25,14 +23,19 @@ import {
 } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { useAuditLogs } from '@/api/hooks/useAdmin';
 import type { AuditLogEntry } from '@/types/admin';
 
 export default function AuditLogPage() {
   const { t } = useTranslation();
-  usePageTitle(t('audit.title', 'Audit Log'));
-  const { data: auditLogs, isLoading, error } = useAuditLogs();
+  usePageTitle(t('audit.title', 'Audit log'));
+  const auditQuery = useAuditLogs();
+  const auditState = useDataState(auditQuery);
+  const { data: auditLogs } = auditQuery;
+  const isLoading = !auditState.hasData && auditQuery.isLoading;
+  const error = auditState.fatalError;
 
   const [search, setSearch] = useState('');
   const searchFields = useMemo(
@@ -52,28 +55,28 @@ export default function AuditLogPage() {
         key: 'time',
         header: t('audit.time', 'Time'),
         render: (log) => (
-          <span className="text-xs font-mono whitespace-nowrap text-[var(--text-muted)]">
+          <Text variant="caption" mono className="whitespace-normal break-words">
             {formatDateTime(log.createdAt)}
-          </span>
+          </Text>
         ),
       },
       {
         key: 'action',
         header: t('audit.action', 'Action'),
-        render: (log) => <span className="text-[var(--text-primary)]">{log.action ?? '—'}</span>,
+        render: (log) => <Text variant="bodySm" className="break-words">{log.action ?? '—'}</Text>,
       },
       {
         key: 'resource',
         header: t('audit.resource', 'Resource'),
-        render: (log) => <span className="font-mono text-cyan-300">{log.resource ?? '—'}</span>,
+        render: (log) => <Text variant="bodySm" mono className="break-words">{log.resource ?? '—'}</Text>,
       },
       {
         key: 'details',
         header: t('audit.details', 'Details'),
         render: (log) => (
-          <span className="text-xs truncate max-w-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="secondary" className="whitespace-pre-wrap break-words">
             {log.details ?? '—'}
-          </span>
+          </Text>
         ),
       },
     ],
@@ -81,15 +84,16 @@ export default function AuditLogPage() {
   );
 
   return (
-    <PageContainer
-      title={t('audit.title', 'Audit Log')}
+    <PageLayout
+      title={t('audit.title', 'Audit log')}
       subtitle={t('audit.subtitle', 'Recent system-level changes recorded by the audit subsystem')}
     >
+      <StaleRefreshWarning state={auditState} label={t('audit.title', 'Audit log')} />
       <FadeIn>
         <GlassPanel className="p-6">
           <PanelTitle className="mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-neon-cyan" aria-hidden="true" />
-            {t('audit.recentActivity', 'Recent Activity')}
+            {t('audit.recentActivity', 'Recent activity')}
           </PanelTitle>
 
           {isLoading ? (
@@ -99,12 +103,17 @@ export default function AuditLogPage() {
               ))}
             </div>
           ) : error ? (
-            <span role="alert" className="text-sm text-rose-300 flex items-center gap-2 mt-4">
-              <AlertTriangle className="h-4 w-4" aria-hidden="true" />{' '}
-              {t('audit.loadFailed', 'Failed to load audit logs')}:{' '}
-              {(error instanceof Error && error.message) ||
-                t('audit.loadError.unknown', 'Unknown error')}
-            </span>
+            <div className="mt-4 space-y-3">
+              <Text role="alert" variant="bodySm" className="flex items-start gap-2 break-words text-rose-300">
+                <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />{' '}
+                {t('audit.loadFailed', 'Failed to load audit logs')}:{' '}
+                {(error instanceof Error && error.message) ||
+                  t('audit.loadError.unknown', 'Unknown error')}
+              </Text>
+              <Button wrapLabel size="sm" variant="secondary" onClick={() => { void auditQuery.refetch(); }}>
+                {t('common.retry', 'Retry')}
+              </Button>
+            </div>
           ) : (auditLogs as AuditLogEntry[])?.length ? (
             <div className="mt-4">
               <FilterBar className="mb-3">
@@ -139,7 +148,7 @@ export default function AuditLogPage() {
                 <DataTable
                   tableId="audit-logs"
                   columns={columns}
-                  mobileColumns={['time', 'action', 'resource']}
+                  mobileColumns={['time', 'action', 'resource', 'details']}
                   data={filtered}
                   keyExtractor={(log) => String(log.id)}
                   compact
@@ -148,18 +157,18 @@ export default function AuditLogPage() {
                   pagination={{ defaultPageSize: 50 }}
                 />
               ) : (
-                <span className="text-sm text-[var(--text-muted)] block">
+                <Text variant="bodySm" color="muted" className="block">
                   {t('audit.noMatches', 'No audit entries match your search.')}
-                </span>
+                </Text>
               )}
             </div>
           ) : (
-            <span className="text-sm text-[var(--text-muted)] mt-4 block">
+            <Text variant="bodySm" color="muted" className="mt-4 block">
               {t('audit.noEntries', 'No audit entries found')}
-            </span>
+            </Text>
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

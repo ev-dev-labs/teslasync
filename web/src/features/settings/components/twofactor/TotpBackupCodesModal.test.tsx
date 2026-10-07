@@ -129,6 +129,21 @@ describe('TotpBackupCodesModal — interactions', () => {
     expect(writeText).toHaveBeenCalledTimes(1)
   })
 
+  it('retains every one-time code and download when clipboard access is denied', async () => {
+    writeText.mockRejectedValueOnce(new Error('Clipboard denied'))
+    const { onDownload, onClose } = setup()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(await screen.findByText(
+      'Clipboard unavailable. Select the displayed text and copy it manually.',
+    )).toBeInTheDocument()
+    for (const code of CODES) expect(screen.getByText(code)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Copied' })).toBeNull()
+    fireEvent.click(screen.getByTestId('totp-backup-download'))
+    expect(onDownload).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
+    expect(writeText).toHaveBeenCalledWith(CODES.join('\n'))
+  })
+
   it('fires onDownload (and not onClose) from the download button', () => {
     const { onDownload, onClose } = setup()
     fireEvent.click(screen.getByTestId('totp-backup-download'))

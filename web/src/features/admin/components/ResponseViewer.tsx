@@ -5,6 +5,8 @@ import { cn } from '@/lib/cn';
 import { GlassPanel, Button as UiButton, CopyButton, Text } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 /* ─── types ───────────────────────────────────────────────────────────── */
 
@@ -42,8 +44,8 @@ function formatBytes(bytes: number): string {
   // nonsensical negative size instead of a neutral value.
   if (!Number.isFinite(bytes) || bytes < 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
+  return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
 }
 
 function statusColor(status: number): string {
@@ -161,7 +163,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
-        {t('playground.codeSnippet', 'Code Snippet')}
+        {t('playground.codeSnippet', 'Code snippet')}
       </UiButton>
       {open && (
         <div className="mt-2 rounded-lg border border-white/[0.06] bg-[var(--surface-overlay)] overflow-hidden">
@@ -224,7 +226,7 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
-        {t('playground.responseHeaders', 'Response Headers')} ({entries.length})
+        {t('playground.responseHeaders', 'Response headers')} ({entries.length})
       </UiButton>
       {open && (
         <div className="mt-1 rounded-lg border border-white/[0.04] bg-[var(--surface-overlay)] p-2 text-2xs font-mono text-[var(--text-muted)] space-y-0.5 max-h-40 overflow-y-auto">
@@ -249,8 +251,8 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
 
   return (
     <GlassPanel className="p-3">
-      <Text as="h4" size="2xs" weight="semibold" color="muted" className="uppercase tracking-wider mb-2">
-        {t('playground.history', 'Recent Requests')}
+      <Text as="h4" size="2xs" weight="semibold" color="muted" className="tracking-wider mb-2">
+        {t('playground.history', 'Recent requests')}
       </Text>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {items.map((h, i) => (
@@ -260,7 +262,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
             variant="ghost"
             onClick={() => onReplay(h)}
             className="!h-auto flex-shrink-0 gap-1.5 !rounded-md border border-white/[0.04] !bg-white/[0.03] !px-2 !py-1 font-mono text-2xs hover:!bg-white/[0.06]"
-            title={`${h.method} ${h.path} → ${h.status} (${h.duration}ms)`}
+            title={`${h.method} ${h.path} → ${h.status} (${fmtNumber(h.duration)}ms)`}
           >
             <span
               className={cn(
@@ -277,7 +279,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
             <span className={cn('font-bold', statusColor(h.status))}>
               {h.status}
             </span>
-            <span className="text-[var(--text-muted)]">{h.duration}ms</span>
+            <span className="text-[var(--text-muted)]">{fmtNumber(h.duration)}ms</span>
           </UiButton>
         ))}
       </div>
@@ -288,6 +290,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
 /* ─── main component ──────────────────────────────────────────────────── */
 
 export default function ResponseViewer({ response, loading, history, onReplay }: ResponseViewerProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
 
   // Pretty-printing a large JSON body is non-trivial — memoise so it only
@@ -298,7 +301,7 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
     <div className="space-y-3">
       {/* Response */}
       <GlassPanel className="p-4">
-        <Text as="h4" size="xs" weight="semibold" color="secondary" className="uppercase tracking-wider mb-3">
+        <Text as="h4" size="xs" weight="semibold" color="secondary" className="tracking-wider mb-3">
           {t('playground.response', 'Response')}
         </Text>
 
@@ -321,7 +324,7 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
                 {response.status} {response.statusText}
               </Text>
               <Text variant="caption">
-                {response.duration}ms · {formatBytes(response.size)}
+                {fmtNumber(response.duration)}ms · {formatBytes(response.size)}
               </Text>
             </div>
 

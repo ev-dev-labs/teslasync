@@ -5,15 +5,15 @@ import { useTranslation } from 'react-i18next';
 import {
   Badge,
   DataTable,
-  GlassPanel,
-  PanelTitle,
   Text,
   type Column,
 } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { LayoutCard } from '@/components/layout';
+import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportFieldDirectoryProps {
   analysis: BatteryPassportAnalysis;
@@ -29,7 +29,7 @@ interface FieldRow {
 
 function finiteSummary(
   value: unknown,
-  decimals: number,
+  decimals = getGlobalPrecision(),
 ): string {
   return typeof value === 'number' && Number.isFinite(value)
     ? fmtNumber(value, decimals)
@@ -40,6 +40,7 @@ export function BatteryPassportFieldDirectory({
   analysis,
   state,
 }: BatteryPassportFieldDirectoryProps) {
+  const { fmtPercent, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const passport = state.passport;
   const rawTrend = Array.isArray(passport?.degradation_trend)
@@ -91,7 +92,7 @@ export function BatteryPassportFieldDirectory({
       },
       {
         field: t('batteryPassport.fields.soh', 'soh_pct'),
-        summary: finiteSummary(passport?.soh_pct, 1),
+        summary: finiteSummary(passport?.soh_pct),
         source: t(
           'batteryPassport.fields.sohSource',
           'Server-derived estimate from reported capacity and the server-selected reference.',
@@ -103,7 +104,7 @@ export function BatteryPassportFieldDirectory({
           'batteryPassport.fields.capacity',
           'capacity_kwh',
         ),
-        summary: finiteSummary(passport?.capacity_kwh, 2),
+        summary: finiteSummary(passport?.capacity_kwh),
         source: t(
           'batteryPassport.fields.capacitySource',
           'Median-derived reported capacity estimate in kWh.',
@@ -117,7 +118,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.original_capacity_kwh,
-          1,
         ),
         source: t(
           'batteryPassport.fields.originalCapacitySource',
@@ -132,7 +132,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.equivalent_full_cycles,
-          1,
         ),
         source: t(
           'batteryPassport.fields.efcSource',
@@ -148,7 +147,7 @@ export function BatteryPassportFieldDirectory({
         summary:
           typeof passport?.fast_charge_ratio === 'number'
           && Number.isFinite(passport.fast_charge_ratio)
-            ? fmtPercent(passport.fast_charge_ratio * 100, 2)
+            ? fmtPercent(passport.fast_charge_ratio * 100)
             : '—',
         source: t(
           'batteryPassport.fields.fastRatioSource',
@@ -164,7 +163,7 @@ export function BatteryPassportFieldDirectory({
         summary:
           typeof passport?.avg_charge_limit_pct === 'number'
           && Number.isFinite(passport.avg_charge_limit_pct)
-            ? fmtPercent(passport.avg_charge_limit_pct, 1)
+            ? fmtPercent(passport.avg_charge_limit_pct)
             : '—',
         source: t(
           'batteryPassport.fields.avgLimitSource',
@@ -181,7 +180,7 @@ export function BatteryPassportFieldDirectory({
           ? t(
               'batteryPassport.fields.thermalSummary',
               '{{sum}} total across 3 bands',
-              { sum: fmtPercent(analysis.thermal.sumPct, 1) },
+              { sum: fmtPercent(analysis.thermal.sumPct) },
             )
           : '—',
         source: t(
@@ -197,7 +196,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.thermal_exposure?.cold_pct,
-          1,
         ),
         source: t(
           'batteryPassport.fields.thermalColdSource',
@@ -212,7 +210,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.thermal_exposure?.nominal_pct,
-          1,
         ),
         source: t(
           'batteryPassport.fields.thermalNominalSource',
@@ -227,7 +224,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.thermal_exposure?.hot_pct,
-          1,
         ),
         source: t(
           'batteryPassport.fields.thermalHotSource',
@@ -341,7 +337,7 @@ export function BatteryPassportFieldDirectory({
       passport,
       rawRecommendations.length,
       rawTrend.length,
-      t,
+      t, fmtPercent, displayPrecision, displayLocale,
     ],
   );
   const columns = useMemo<Column<FieldRow>[]>(
@@ -422,23 +418,13 @@ export function BatteryPassportFieldDirectory({
 
   return (
     <section data-testid="battery-passport-field-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.fields.title',
             'Certificate field directory',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.fields.subtitle',
             'Every top-level response field plus nested thermal and trend fields, with source, meaning, and hash relationship.',
-          )}
-        </Text>
+          )} actions={<ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <DataTable
             tableId="battery:passport-fields"
@@ -446,6 +432,27 @@ export function BatteryPassportFieldDirectory({
             data={rows}
             keyExtractor={(row) => row.field}
             mobileColumns={['field', 'summary']}
+            mobilePresentation={{
+              variant: 'keyValue',
+              roles: { field: 'title', summary: 'primary', source: 'meta', binding: 'badge' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'field': return row.field;
+                  case 'summary': return row.summary;
+                  case 'source': return row.source;
+                  case 'binding':
+                    return row.binding === 'value'
+                      ? t('batteryPassport.fields.boundValue', 'Bound value')
+                      : row.binding === 'utc_day'
+                        ? t('batteryPassport.fields.boundDay', 'Bound UTC day')
+                        : row.binding === 'digest'
+                          ? t('batteryPassport.fields.digest', 'Digest output')
+                          : t('batteryPassport.fields.notBound', 'Not bound');
+                  default: return null;
+                }
+              },
+            }}
+            rowLabel={(row) => row.field}
             density="compact"
             emptyMessage={t(
               'batteryPassport.fields.empty',
@@ -453,7 +460,7 @@ export function BatteryPassportFieldDirectory({
             )}
           />
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

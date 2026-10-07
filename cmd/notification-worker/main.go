@@ -29,6 +29,7 @@ import (
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
@@ -366,7 +367,11 @@ func main() {
 			case <-ticker.C:
 				tickCtx, span := workerTracer().Start(ctx, "notification.computed_metric_tick",
 					oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
-				runComputedMetricTick(tickCtx, alertRuleRepo, vehicleRepo, notifRepoForCM, computedEval, mqttClient, span)
+				prefs, err := alertmsg.LoadPreferences(tickCtx, settingsdb.NewSettingsRepo(db))
+				if err != nil {
+					log.Warn().Err(err).Msg("computed-metric: formatting settings unavailable; using defaults")
+				}
+				runComputedMetricTick(tickCtx, alertRuleRepo, vehicleRepo, notifRepoForCM, computedEval, mqttClient, span, prefs)
 				span.End()
 			}
 		}
@@ -481,6 +486,7 @@ func runComputedMetricTick(
 	evaluator computedMetricEvaluator,
 	mqttClient pahomqtt.Client,
 	span oteltrace.Span,
+	preferences ...alertmsg.Preferences,
 ) {
 	rules, err := alertRuleRepo.GetEnabledByKind(ctx, "computed_metric")
 	if err != nil {
@@ -535,8 +541,13 @@ func runComputedMetricTick(
 			// falling back silently when the vehicle is missing — the
 			// renderer is tolerant of an empty VehicleName.
 			vehicleName := ""
+			prefs := alertmsg.PreferencesFromSettings(nil)
+			if len(preferences) > 0 {
+				prefs = preferences[0]
+			}
 			for _, v := range allVehicles {
 				if v != nil && v.ID == vid {
+					prefs = prefs.WithVehicleTimezone(v.Timezone)
 					if v.DisplayName != "" {
 						vehicleName = v.DisplayName
 					} else {
@@ -545,7 +556,7 @@ func runComputedMetricTick(
 					break
 				}
 			}
-			dispatchComputedMetricNotification(ctx, rule, vid, vehicleName, result, channels, mqttClient, notifRepo)
+			dispatchComputedMetricNotification(ctx, rule, vid, vehicleName, result, channels, mqttClient, notifRepo, prefs)
 		}
 	}
 	span.SetAttributes(attribute.Int("notification.computed_metric.triggered", triggered))
@@ -594,16 +605,22 @@ func dispatchComputedMetricNotification(
 	channels []*notificationmodel.NotificationChannel,
 	mqttClient pahomqtt.Client,
 	logStore notification.EventRecorder,
+	preferences ...alertmsg.Preferences,
 ) {
 	// Route computed-metric dispatch through the shared alertmsg package so it
 	// renders identically to telemetry alerts. Without this, custom msg_template
 	// and IncludeTitle settings would not reach the transports.
+	prefs := alertmsg.PreferencesFromSettings(nil)
+	if len(preferences) > 0 {
+		prefs = preferences[0]
+	}
+	prefs = computed.MessagePreferences(prefs, rule)
 	msgCtx := alertmsg.BuildContext(rule, vehicleName, nil, map[string]any{
 		"Severity":        rule.Severity,
 		"MetricValue":     result.Value,
 		"MetricPrevValue": result.PreviousValue,
 		"MetricChangePct": result.PercentChange,
-	})
+	}, prefs)
 	title := alertmsg.RenderTitle(rule, msgCtx)
 	body := alertmsg.RenderBody(rule, msgCtx)
 	if !rule.IncludeTitle && body == "" {

@@ -27,11 +27,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CalendarClock, AlertTriangle, X } from 'lucide-react'
 import { GlassPanel, Button, ConfirmDialog, Input, Badge, PanelTitle, Text } from '@/components/ui'
-import { OperationalWriteNotice, useToast } from '@/components/feedback'
+import { OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning, useToast } from '@/components/feedback'
 import { useMaintenanceState, useUpdateMaintenance } from '@/api/hooks/useAdmin'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import { useOperationalMode } from '@/hooks/useOperationalMode'
+import { useDataState } from '@/hooks/useDataState'
 import { cn } from '@/lib/cn'
 
 interface ScheduledMaintenanceCardProps {
@@ -49,7 +50,9 @@ function interpolateCopy(template: string, values: Record<string, string | numbe
 
 export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps) {
   const { t } = useTranslation()
-  const { data: state } = useMaintenanceState()
+  const query = useMaintenanceState()
+  const { data: state } = query
+  const sourceState = useDataState(query)
   const mutation = useUpdateMaintenance()
   const operationalMode = useOperationalMode()
   const toast = useToast()
@@ -175,21 +178,24 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
 
   return (
     <GlassPanel className={cn('p-4 ring-1', ringClass)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <CalendarClock className={cn('h-4 w-4', isActive ? 'text-blue-300' : 'text-[var(--text-secondary)]')} aria-hidden />
           <PanelTitle>{t('systemStatus.maintenance.title', 'Scheduled maintenance')}</PanelTitle>
           {isActive && <Badge variant="info">{t('systemStatus.maintenance.active', 'Maintenance active')}</Badge>}
           {within24h && (
-            <span className="inline-flex items-center gap-1 text-xs text-amber-200">
+            <Text size="xs" className="inline-flex items-center gap-1 text-amber-300">
               <AlertTriangle className="h-3 w-3" aria-hidden />
               {t('systemStatus.maintenance.within24h', 'Within 24h')}
-            </span>
+            </Text>
           )}
         </div>
       </div>
 
-      <div className="mt-3 space-y-3 text-sm">
+      <div className="mt-3 space-y-3">
+        <StaleRefreshWarning state={sourceState} label={t('systemStatus.maintenance.title', 'Scheduled maintenance')} />
+        {sourceState.fatalError && <QueryError error={sourceState.fatalError} onRetry={() => { void query.refetch(); }} />}
+        {query.isLoading && !sourceState.hasData && <Skeleton height={44} />}
         <OperationalWriteNotice
           title={t(
             'systemStatus.maintenance.readOnly',
@@ -200,7 +206,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
           <Text variant="bodySm">{state.maintenance_message}</Text>
         )}
         {isActive && untilTs != null && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" variant="caption">
             {minutesToStart != null && minutesToStart > 0
               ? interpolateCopy(
                 t(
@@ -216,15 +222,15 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
                 t('systemStatus.maintenance.until', 'Until {{time}}'),
                 { time: formatDateTime(new Date(untilTs)) },
               )}
-          </p>
+          </Text>
         )}
         {!isActive && !showSchedule && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" variant="caption">
             {t(
               'systemStatus.maintenance.description',
               'Schedule a window for upgrades or hardware moves. The status banner will switch to blue “Maintenance” instead of red “Down”.',
             )}
-          </p>
+          </Text>
         )}
 
         {!isActive && !showSchedule && (
@@ -236,6 +242,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
             disabled={!operationalMode.canWrite}
             title={operationalMode.writeBlockReason ?? undefined}
             className="gap-1.5"
+            wrapLabel
           >
             <CalendarClock className="h-3.5 w-3.5" aria-hidden />
             {t('systemStatus.maintenance.scheduleAction', 'Schedule a window')}
@@ -244,7 +251,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
 
         {!isActive && showSchedule && (
           <form onSubmit={handleSchedule} className="space-y-3 border-t border-[var(--border-subtle)] pt-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Input
                 label={t('systemStatus.maintenance.start', 'Start (local)')}
                 type="datetime-local"
@@ -281,8 +288,8 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
               maxLength={500}
               disabled={!operationalMode.canWrite}
             />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={requestClose} disabled={mutation.isPending}>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" wrapLabel onClick={requestClose} disabled={mutation.isPending}>
                 {t('common.cancel', 'Cancel')}
               </Button>
               <Button
@@ -292,6 +299,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
                 loading={mutation.isPending}
                 disabled={!operationalMode.canWrite}
                 title={operationalMode.writeBlockReason ?? undefined}
+                wrapLabel
               >
                 {mutation.isPending
                   ? t('systemStatus.maintenance.scheduling', 'Scheduling…')
@@ -310,7 +318,8 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
             loading={mutation.isPending}
             disabled={!operationalMode.canWrite}
             title={operationalMode.writeBlockReason ?? undefined}
-            className="gap-1.5 text-amber-200"
+            className="gap-1.5 text-amber-300"
+            wrapLabel
           >
             <X className="h-3.5 w-3.5" aria-hidden />
             {mutation.isPending

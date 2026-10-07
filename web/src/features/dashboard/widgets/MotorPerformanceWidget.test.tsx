@@ -7,7 +7,7 @@
  * vehicle, else none/0), the `useMotorLatest` query result, and the widget
  * `size`:
  *
- *   - size.cols <= 1 → compact tile: gear + torque only, no title.
+ *   - size.cols <= 1 → compact tile: heading + gear + torque.
  *   - otherwise      → full tile: titled header + a signed torque BipolarBar +
  *                      a 2×2 StatCard grid (stator temp / gear / lateral +
  *                      longitudinal G).
@@ -86,7 +86,7 @@ interface MotorQuery {
   refetch: () => void;
 }
 
-const NOW = Date.parse('2026-07-05T12:00:00.000Z');
+const NOW = Date.now();
 const FULL: WidgetSize = { cols: 2, rows: 2 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 
@@ -183,6 +183,11 @@ beforeEach(() => {
   mockUseMotorLatest.mockClear();
 });
 
+it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Motor performance', level: 3 })).toBeVisible();
+});
+
 afterEach(() => {
   cleanup();
 });
@@ -224,23 +229,23 @@ describe('MotorPerformanceWidget — full view', () => {
     });
 
     // Full tile shows the header title.
-    expect(screen.getByText('Motor Performance')).toBeInTheDocument();
+    expect(screen.getByText('Motor performance')).toBeInTheDocument();
 
     // The torque bar renders the reading once and carries the "Nm" unit.
     expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute(
       'aria-valuenow',
       '150',
     );
-    expect(screen.getByText('150')).toBeInTheDocument();
+    expect(screen.getByText('150.00')).toBeInTheDocument();
     expect(screen.getByText('Nm')).toBeInTheDocument();
 
     // Stator temp: 30 °C stays 30 under a °C preference, tagged with the unit.
-    const stator = within(statCardOf('Stator Temp'));
-    expect(stator.getByText('30')).toBeInTheDocument();
+    const stator = within(statCardOf('Stator temp'));
+    expect(stator.getByText('30.00')).toBeInTheDocument();
     expect(stator.getByText('°C')).toBeInTheDocument();
 
     // Gear state echoes the reported gear.
-    expect(within(statCardOf('Gear State')).getByText('D')).toBeInTheDocument();
+    expect(within(statCardOf('Gear state')).getByText('D')).toBeInTheDocument();
 
     // G-forces are formatted to two decimals and share the "g" unit.
     expect(within(statCardOf('Lateral G')).getByText('0.35')).toBeInTheDocument();
@@ -255,8 +260,8 @@ describe('MotorPerformanceWidget — full view', () => {
     });
 
     // 30 °C → 86 °F, tagged with the Fahrenheit unit, never the Celsius one.
-    const stator = within(statCardOf('Stator Temp'));
-    expect(stator.getByText('86')).toBeInTheDocument();
+    const stator = within(statCardOf('Stator temp'));
+    expect(stator.getByText('86.00')).toBeInTheDocument();
     expect(stator.getByText('°F')).toBeInTheDocument();
     expect(screen.queryByText('°C')).toBeNull();
   });
@@ -273,8 +278,8 @@ describe('MotorPerformanceWidget — full view', () => {
       }),
     });
 
-    expect(within(statCardOf('Stator Temp')).getByText('45')).toBeInTheDocument();
-    expect(within(statCardOf('Gear State')).getByText('R')).toBeInTheDocument();
+    expect(within(statCardOf('Stator temp')).getByText('45.00')).toBeInTheDocument();
+    expect(within(statCardOf('Gear state')).getByText('R')).toBeInTheDocument();
   });
 
   it('renders an em-dash placeholder for every missing datum (null-safety)', () => {
@@ -282,9 +287,9 @@ describe('MotorPerformanceWidget — full view', () => {
     // G-forces each render the "—" placeholder — four in total.
     renderWidget(FULL, { query: makeQuery({ data: makeMotor() }) });
 
-    expect(screen.getAllByText('—')).toHaveLength(4);
-    // Torque coalesces to a real 0 in the bar rather than a dash.
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
   it('renders regen as a signed reading rather than clamping the sign away', () => {
@@ -295,10 +300,10 @@ describe('MotorPerformanceWidget — full view', () => {
 
     const meter = screen.getByRole('meter', { name: 'Torque' });
     expect(meter).toHaveAttribute('aria-valuenow', '-150');
-    expect(screen.getByText('-150')).toBeInTheDocument();
+    expect(screen.getByText('-150.00')).toBeInTheDocument();
     // The unsigned magnitude must NOT also be on screen — that was the
     // confusing double readout.
-    expect(screen.queryByText('150')).toBeNull();
+    expect(screen.queryByText('150.00')).toBeNull();
   });
 
   it('scales regen and drive independently and labels both directions', () => {
@@ -340,46 +345,76 @@ describe('MotorPerformanceWidget — compact view', () => {
     expect(screen.getByText('Gear')).toBeInTheDocument();
     expect(screen.getByText('D')).toBeInTheDocument();
     expect(screen.getByText('Torque')).toBeInTheDocument();
-    expect(screen.getByText('150 Nm')).toBeInTheDocument();
-    // A 1×1 tile suppresses the header title entirely.
-    expect(screen.queryByText('Motor Performance')).toBeNull();
+    expect(screen.getByText('150.00 Nm')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Motor performance', level: 3 })).toBeVisible();
   });
 
   it('shows an accessible empty state when there is no motor data', () => {
     renderWidget(COMPACT, { query: makeQuery({ data: null }) });
 
     expect(screen.getByText('No motor data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('Gear')).toBeNull();
+    expect(screen.getByText('Gear')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
   });
 });
 
 describe('MotorPerformanceWidget — lifecycle states', () => {
+  it('uses the nullable canonical signed scale without turning an unknown reading into a meter', () => {
+    const { container } = renderWidget(FULL, { query: makeQuery({ data: makeMotor({ di_torque: null }) }) });
+    const scale = screen.getByRole('group', { name: 'Torque' });
+    expect(scale).not.toHaveAttribute('aria-valuenow');
+    expect(scale).not.toHaveAttribute('aria-valuemin');
+    expect(scale).not.toHaveAttribute('aria-valuemax');
+    expect(container.querySelector('[data-bipolar-fill]')).toBeNull();
+    expect(screen.getByText('Regen')).toBeInTheDocument();
+    expect(screen.getByText('Drive')).toBeInTheDocument();
+  });
+
+  it.each([650, -300])('preserves the full physical reading %s outside the displayed scale', (torque) => {
+    renderWidget(FULL, { query: makeQuery({ data: makeMotor({ di_torque: torque }) }) });
+    expect(screen.getByText(`${torque.toFixed(2)}`)).toBeInTheDocument();
+    expect(screen.getByText('Nm')).toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: 'Torque' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Reading outside displayed scale/)).toBeInTheDocument();
+    expect(screen.getByText('Regen')).toBeInTheDocument();
+    expect(screen.getByText('Drive')).toBeInTheDocument();
+  });
+
+  it('retains measured torque and temperatures after a background failure', () => {
+    const { container } = renderWidget(FULL, {
+      query: makeQuery({ data: makeMotor({ di_torque: 0, di_stator_temp: 0 }), isError: true, error: new Error('refresh failed') }),
+    });
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute('aria-valuenow', '0');
+    expect(within(statCardOf('Stator temp')).getByText('0.00')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+  });
+
   it('renders only a skeleton while loading', () => {
-    const { container } = renderWidget(FULL, { query: makeQuery({ isLoading: true }) });
+    const { container } = renderWidget(FULL, { query: makeQuery({ isLoading: true, data: undefined }) });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Motor Performance')).toBeNull();
+    expect(screen.queryByText('Motor performance')).toBeInTheDocument();
     expect(screen.queryByText('No motor data')).toBeNull();
   });
 
   it('surfaces a query error instead of the gauge', () => {
     renderWidget(FULL, {
-      query: makeQuery({ error: new Error('boom'), isError: true }),
+      query: makeQuery({ data: undefined, error: new Error('boom'), isError: true }),
     });
 
     // jsdom reports navigator.onLine === true → QueryError's network branch.
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Motor Performance')).toBeNull();
-    expect(screen.queryByText('Stator Temp')).toBeNull();
+    expect(screen.queryByText('Motor performance')).toBeInTheDocument();
+    expect(screen.queryByText('Stator temp')).toBeNull();
   });
 
   it('shows an accessible empty state (not a gauge) when data is null', () => {
     renderWidget(FULL, { query: makeQuery({ data: null }) });
 
     expect(screen.getByText('No motor data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('Stator Temp')).toBeNull();
+    expect(screen.getByText('Stator temp')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 });
 

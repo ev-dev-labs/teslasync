@@ -64,14 +64,14 @@ describe('Speed', () => {
     const { container } = render(<Speed mph={60} precision={0} />);
     // Title always renders the raw mph value to one decimal, independent of the
     // display precision.
-    expect(span(container)?.getAttribute('title')).toBe('60.0 mph');
+    expect(span(container)?.getAttribute('title')).toBe('60 mph');
   });
 
   it('renders a km/h input in metric with a 1-decimal hover title', () => {
     setUnits('metric');
     const { container } = render(<Speed kmh={100} precision={0} />);
     expect(container.textContent).toBe('100 km/h');
-    expect(span(container)?.getAttribute('title')).toBe('100.0 km/h');
+    expect(span(container)?.getAttribute('title')).toBe('100 km/h');
   });
 
   it('converts an mph input to km/h when the user prefers metric', () => {
@@ -95,14 +95,14 @@ describe('Speed', () => {
     const { container } = render(<Speed mph={50} kmh={9999} precision={0} />);
     expect(container.textContent).toBe('50 mph');
     // Title proves the mph branch (not km/h) produced the value.
-    expect(span(container)?.getAttribute('title')).toBe('50.0 mph');
+    expect(span(container)?.getAttribute('title')).toBe('50 mph');
   });
 
   it('falls back to the km/h branch when mph is null but km/h is finite', () => {
     setUnits('metric');
     const { container } = render(<Speed mph={null} kmh={80} precision={0} />);
     expect(container.textContent).toBe('80 km/h');
-    expect(span(container)?.getAttribute('title')).toBe('80.0 km/h');
+    expect(span(container)?.getAttribute('title')).toBe('80 km/h');
   });
 
   it('falls through a non-finite mph to the km/h branch', () => {
@@ -110,7 +110,7 @@ describe('Speed', () => {
     const { container } = render(<Speed mph={NaN} kmh={50} precision={0} />);
     // NaN mph does not satisfy Number.isFinite, so the km/h branch wins.
     expect(container.textContent).toBe('50 km/h');
-    expect(span(container)?.getAttribute('title')).toBe('50.0 km/h');
+    expect(span(container)?.getAttribute('title')).toBe('50 km/h');
   });
 
   it('renders an em dash for null mph', () => {
@@ -138,7 +138,7 @@ describe('Speed', () => {
     const { container } = render(<Speed mph={0} precision={0} />);
     expect(container.textContent).toBe('0 mph');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0.0 mph');
+    expect(span(container)?.getAttribute('title')).toBe('0 mph');
   });
 
   it('renders negative speeds (deltas) with their sign preserved', () => {
@@ -185,7 +185,7 @@ describe('Speed', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('42.0 mph');
+    expect(el?.getAttribute('title')).toBe('42 mph');
   });
 
   it('recomputes the display when the user switches unit systems', () => {

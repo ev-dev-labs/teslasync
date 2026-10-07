@@ -100,7 +100,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
 
   if (items.length === 0) {
     return (
-      <EmptyState /* no-action: the only caller (OnboardingPage) always supplies a fixed 3-step checklist built with useMemo; this guards the shared component against a hypothetical empty `steps` array, not a reachable product state. */
+      <EmptyState /* no-action: OnboardingPage and FleetSetupProgress supply fixed checklists; this guards missing input rather than introducing another setup action. */
         icon={<ListChecks className="h-8 w-8" aria-hidden="true" />}
         message={t('onboarding.stepper.empty', 'No setup steps to show right now.')}
       />
@@ -108,7 +108,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
   }
 
   return (
-    <ol className="flex flex-col gap-5 sm:gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
+    <ol className="flex min-w-0 max-w-full flex-col gap-5 sm:gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
       {items.map((step, idx) => {
         const state = stepStateFor(step.done, idx, currentIndex);
         const showCta = state === 'current' && step.cta;
@@ -117,23 +117,23 @@ export function Stepper({ steps, renderCta }: StepperProps) {
           <li
             key={step.key}
             id={`onboarding-step-${step.key}`}
-            className="flex gap-3 sm:gap-4"
+            className="flex min-w-0 max-w-full gap-3 sm:gap-4"
             aria-current={state === 'current' ? 'step' : undefined}
           >
-            <div className="relative flex flex-col items-center">
+            <div className="relative flex shrink-0 flex-col items-center">
               <span
                 aria-hidden="true"
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition-colors',
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
                   indicatorClasses[state],
                 )}
               >
                 {state === 'done' ? (
                   <Check className="h-4 w-4" />
                 ) : state === 'current' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
                 ) : (
-                  <span>{idx + 1}</span>
+                  <Text as="span" size="sm" weight="semibold">{idx + 1}</Text>
                 )}
               </span>
               {!isLast && (
@@ -147,7 +147,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
               )}
             </div>
 
-            <div className="flex-1 pb-1">
+            <div className="min-w-0 flex-1 break-words pb-1 [overflow-wrap:anywhere]">
               <VisuallyHidden>{statusLabel[state]}</VisuallyHidden>
               <Heading level="panel" className={titleClasses[state]}>
                 {step.title}
@@ -156,13 +156,14 @@ export function Stepper({ steps, renderCta }: StepperProps) {
                 {step.description}
               </Text>
               {showCta && (
-                <div className="mt-3">
+                <div className="mt-3 min-w-0 max-w-full [&>*]:max-w-full">
                   {renderCta ? (
                     renderCta(step)
                   ) : (
                     <Button
                       variant="primary"
                       size="sm"
+                      wrapLabel
                       onClick={step.cta?.onClick}
                       disabled={step.cta?.disabled}
                       icon={<ArrowRight className="h-4 w-4" />}

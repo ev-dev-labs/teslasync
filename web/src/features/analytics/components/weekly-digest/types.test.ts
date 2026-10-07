@@ -371,7 +371,7 @@ describe('useWeeklyDigest → FunFact (the optional headline contract)', () => {
     // 150 km → nearest CITY_PAIRS entry is New York→Boston (350 km); 150/350≈0.4.
     expect(fact.from).toBe('New York');
     expect(fact.to).toBe('Boston');
-    expect(fact.times).toBe('0.4');
+    expect(fact.times).toBe('0.43'); // 150 / 350, formatted only at the display boundary
   });
 });
 

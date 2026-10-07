@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Lock, Unlock, Shield, ShieldCheck, DoorOpen, AppWindow } from 'lucide-react';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { asBoolean, asNonEmptyString } from '@/lib/typeGuards';
+import { useDataState } from '@/hooks/useDataState';
 import { WidgetStatusGrid, type StatusCell } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -13,6 +14,7 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const query = useSecurityLatest(id, 5_000);
   const {
     data: securityData,
     isLoading,
@@ -22,7 +24,8 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useSecurityLatest(id, 5_000);
+  } = query;
+  const trust = useDataState(query, { provenance: 'cached', maxAgeMs: 120_000 });
 
   // While no explicit vehicle is pinned and the vehicle list is still
   // resolving, the security query is disabled (id === 0) and returns no data.
@@ -99,7 +102,7 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
         value: !doorKnown
           ? DASH
           : openDoors.length === 0
-            ? t('widget.allClosed', 'All Closed')
+            ? t('widget.allClosed', 'All closed')
             : `${openDoors.length} ${t('widget.open', 'Open')}`,
         icon: <DoorOpen className="h-3.5 w-3.5" />,
       },
@@ -110,7 +113,7 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
         value: !windowsKnown
           ? DASH
           : openWindows.length === 0
-            ? t('widget.allClosed', 'All Closed')
+            ? t('widget.allClosed', 'All closed')
             : `${openWindows.length} ${t('widget.open', 'Open')}`,
         icon: <AppWindow className="h-3.5 w-3.5" />,
       },
@@ -120,9 +123,10 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.security', 'Security')}
-      icon={<Shield className="h-3.5 w-3.5 text-neon-green" />}
+      icon={<Shield className="h-3.5 w-3.5 text-emerald-300" />}
       loading={isLoading || resolvingVehicle}
-      error={error && !securityData ? String(error) : null}
+      dataState={securityData != null || isLoading || isError || error ? trust : undefined}
+      error={trust.fatalError ? String(trust.fatalError) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}

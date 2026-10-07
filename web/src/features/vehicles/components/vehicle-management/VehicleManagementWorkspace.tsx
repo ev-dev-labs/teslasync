@@ -34,7 +34,7 @@ export function VehicleManagementWorkspace({
                 <Heading level="section" as="h2" id="vehicle-management-title">
                   {t(
                     'vehicleManagement.title',
-                    'Vehicle Management workspace',
+                    'Vehicle management workspace',
                   )}
                 </Heading>
                 <Text variant="bodySm" as="p">

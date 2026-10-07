@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Flag, Navigation2 } from 'lucide-react';
+import { MapPin, Navigation2 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -12,14 +12,15 @@ import {
   type MapStyle,
 } from '@/components/maps';
 import { useUnits } from '@/hooks/useUnits';
-import { formatTime, formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { formatDateTime } from '@/lib/dateFormat';
+
 import { hasMeaningfulRoute, firstValidIndex } from '@/lib/geo';
 import type { DriveDetail } from '@/types/driving';
 import type { FsdEvidenceInterval } from '@/types/fsd';
 import type { RoutePoint, SpeedSegment } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* Auto-fit map bounds to trail. Special-cases two cluster degeneracies that
  * leaflet otherwise zooms past the maxZoom for: (1) trail with N identical
@@ -75,6 +76,7 @@ export function RouteMapSection({
   routePoints,
   fsdEvidence,
 }: RouteMapSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
@@ -115,11 +117,12 @@ export function RouteMapSection({
    * within ~10 m of the first. Render a single anchor marker + an overlay
    * banner instead of a polyline that collapses to a single dot at maxZoom. */
   const positionLatLngs = useMemo(
-    () => (drive.positions ?? []).map((p) => ({
-      latitude: typeof p.latitude === 'number' ? p.latitude : Number(p.latitude),
-      longitude: typeof p.longitude === 'number' ? p.longitude : Number(p.longitude),
-    })),
-    [drive.positions],
+    () => (routePoints?.length ? routePoints.map((point) => ({
+      latitude: point.lat, longitude: point.lng,
+    })) : (drive.positions ?? []).map((p) => ({
+      latitude: p.latitude, longitude: p.longitude,
+    }))),
+    [drive.positions, routePoints],
   );
   const hasRoute = useMemo(() => hasMeaningfulRoute(positionLatLngs), [positionLatLngs]);
   const anchorIdx = useMemo(() => firstValidIndex(positionLatLngs), [positionLatLngs]);
@@ -201,10 +204,9 @@ export function RouteMapSection({
                 )}
               </div>
             )}
-            <div className="flex items-center justify-between px-4 py-3 text-xs">
-              <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startTs)}</span>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs">
               {hasRoute && safeTrail.length > 1 && (
-                <div className="flex items-center gap-3 text-[var(--text-muted)]">
+                <div className="flex flex-wrap items-center gap-3 text-[var(--text-muted)]">
                   <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
                   <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>
                   <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
@@ -212,9 +214,7 @@ export function RouteMapSection({
                   <span>{speedUnit}</span>
                 </div>
               )}
-              {drive.endTs && (
-                <span className="flex items-center gap-1.5 text-red-400"><Flag className="h-3 w-3" /> {t('driveDetail.end', 'End')}: {formatTime(drive.endTs)}</span>
-              )}
+              <a href="#journey" className="text-[var(--text-secondary)] underline underline-offset-4">{t('driveDetail.journeyDetails', 'Journey details')}</a>
             </div>
           </>
         ) : (

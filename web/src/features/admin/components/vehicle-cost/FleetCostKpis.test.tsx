@@ -110,8 +110,8 @@ describe('FleetCostKpis', () => {
       expect(screen.getByText('Avg rows / vehicle')).toBeInTheDocument();
 
       // Bytes formatted at the display boundary; rate keeps one decimal.
-      expect(screen.getByText('2.0 KB')).toBeInTheDocument();
-      expect(screen.getByText('12.3')).toBeInTheDocument();
+      expect(screen.getByText('2.000 KB')).toBeInTheDocument();
+      expect(screen.getByText('12.340')).toBeInTheDocument();
 
       // Derived: avgRowsPerVehicle(1_234_567, 8) = 154_320.875 → "154,321".
       expect(screen.getByText('154,321')).toBeInTheDocument();
@@ -223,7 +223,7 @@ describe('FleetCostKpis', () => {
       // Several cards read "0", so assert at least one plus the shaped values.
       expect(screen.getAllByText('0').length).toBeGreaterThan(0);
       expect(screen.getByText('0 B')).toBeInTheDocument();
-      expect(screen.getByText('0.0')).toBeInTheDocument();
+      expect(screen.getByText('0.000')).toBeInTheDocument();
     });
 
     it('coerces individually-nullish total fields to 0', () => {
@@ -237,7 +237,7 @@ describe('FleetCostKpis', () => {
       renderKpis({ totals: partial, vehicleCount: 4 });
 
       expect(screen.getByText('0 B')).toBeInTheDocument();
-      expect(screen.getByText('0.0')).toBeInTheDocument();
+      expect(screen.getByText('0.000')).toBeInTheDocument();
       // avgRowsPerVehicle(0, 4) = 0; vehicles prop passes through verbatim.
       expect(screen.getByText('4')).toBeInTheDocument();
     });

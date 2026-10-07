@@ -25,7 +25,7 @@ function MqttTestTool() {
     <ToolCard
       icon={Radio}
       color="amber"
-      title={t('devtools.infra.mqtt', 'Mqtt')}
+      title={t('devtools.infra.mqtt', 'MQTT')}
       description={t('devtools.infra.mqttDesc', 'Publish a test message to the MQTT broker')}
     >
       <div className="space-y-3">
@@ -50,11 +50,11 @@ function MqttTestTool() {
           onClick={() => mutation.mutate()}
           icon={<Play className="h-3.5 w-3.5" aria-hidden="true" />}
         >
-          {t('devtools.infra.sendTest', 'Send Test')}
+          {t('devtools.infra.sendTest', 'Send test')}
         </Button>
         {mutation.data && (
           <ResultPanel
-            title={t('devtools.infra.mqtt', 'Mqtt')}
+            title={t('devtools.infra.mqtt', 'MQTT')}
             data={mutation.data.error ? undefined : mutation.data}
             error={typeof mutation.data.error === 'string' ? mutation.data.error : undefined}
           />
@@ -75,7 +75,7 @@ export function InfrastructureSection() {
       <BackendTool
         icon={Database}
         color="cyan"
-        title={t('devtools.infra.dbStats', 'Db Stats')}
+        title={t('devtools.infra.dbStats', 'DB stats')}
         description={t('devtools.infra.dbStatsDesc', 'Inspect TimescaleDB table sizes and row counts')}
         endpoint="db-stats"
       />
@@ -90,7 +90,7 @@ export function InfrastructureSection() {
       <BackendTool
         icon={Shield}
         color="purple"
-        title={t('devtools.infra.envCheck', 'Env Check')}
+        title={t('devtools.infra.envCheck', 'Env check')}
         description={t('devtools.infra.envCheckDesc', 'Verify required environment variables are configured')}
         endpoint="env-check"
       />

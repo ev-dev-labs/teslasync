@@ -216,6 +216,16 @@ beforeEach(() => {
 });
 
 describe('DestinationTransitionsPage', () => {
+  it('retains the transition matrix, directory and temporal evidence through a paused refresh', () => {
+    h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
+    renderPage();
+    expectEverySection();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent('offline');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all twelve shells with the capped hook and vehicle timezone', () => {
     renderPage();
 
@@ -237,7 +247,7 @@ describe('DestinationTransitionsPage', () => {
     );
     expect(
       quality.getByText('Visit recency (days)').parentElement,
-    ).toHaveTextContent('0.1');
+    ).toHaveTextContent('0.06');
 
     vi.mocked(Date.now).mockReturnValue(
       FROZEN_NOW + 10 * 86_400_000,
@@ -254,7 +264,7 @@ describe('DestinationTransitionsPage', () => {
       within(screen.getByTestId('destination-evidence-quality'))
         .getByText('Visit recency (days)')
         .parentElement,
-    ).toHaveTextContent('0.1');
+    ).toHaveTextContent('0.06');
   });
 
   it('keeps every shell visible with one live loading status', () => {
@@ -398,8 +408,7 @@ describe('DestinationTransitionsPage', () => {
       screen.getByTestId('destination-transitions-kpis'),
     );
     expect(
-      kpis.getByText('Supported origin states').parentElement
-        ?.parentElement?.parentElement,
+      kpis.getByText('Supported origin states').closest('[data-operational-metric="origins"]'),
     ).toHaveTextContent('0');
   });
 

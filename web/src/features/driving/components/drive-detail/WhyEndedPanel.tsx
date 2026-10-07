@@ -5,10 +5,8 @@
  * `end_ts` (or `now()` while live), so an operator can correlate
  * state changes with what the vehicle was reporting at the moment.
  *
- * Lazy by default — the panel starts collapsed and only fires the
- * `useDriveWhyEnded` query when expanded. This keeps Drive Detail's
- * default render cheap for the common case where nobody is debugging
- * a session.
+ * Evidence is visible on arrival; independently collapsing this disclosure
+ * pauses its query without hiding any other section of the report.
  *
  * Server validates `window` ∈ {30s, 60s, 5m, 15m} and rejects anything
  * else with 400.
@@ -24,8 +22,8 @@ import {
   Select,
   type Column,
   type SelectOption,
+  PanelTitle,
 } from '@/components/ui';
-import { PanelTitle } from '@/components/ui/Typography';
 import { Timeline, TimeStamp } from '@/components/data-display';
 import { EmptyState, ListSkeleton, TableSkeleton } from '@/components/feedback';
 import { useDriveWhyEnded } from '@/api/hooks/useDriving';
@@ -63,7 +61,7 @@ export function formatTransitionTime(ts: string | null | undefined): string {
 
 export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [windowSel, setWindowSel] = useState<DriveDiagnosticWindow>('60s');
   // Ties the disclosure toggle to the region it expands so assistive tech
   // announces the relationship (aria-controls ⇄ id).
@@ -91,18 +89,21 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
     () => [
       {
         key: 'ts',
+        filterValue: (row) => row.ts,
         header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'),
         visibleOnMobile: true,
         render: (row) => <TimeStamp value={row.ts} format="absolute" />,
       },
       {
         key: 'field',
+        filterValue: (row) => row.field,
         header: t('driveDetail.whyEnded.signal.cols.field', 'Field'),
         visibleOnMobile: true,
         render: (row) => <span className="font-mono text-xs">{row.field}</span>,
       },
       {
         key: 'value',
+        filterValue: (row) => row.value,
         header: t('driveDetail.whyEnded.signal.cols.value', 'Value'),
         visibleOnMobile: true,
         render: (row) => (
@@ -250,9 +251,11 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
                   </PanelTitle>
                 </div>
                 <DataTable<KeyedSignal>
+                  variant="embedded"
                   tableId="drive:why-ended-signals"
                   name="why-ended-signals"
                   columns={signalColumns}
+                  enableValueFilters
                   data={keyedSignals}
                   keyExtractor={(row) => `${row.ts}-${row.field}-${row.__idx}`}
                   emptyMessage={t(

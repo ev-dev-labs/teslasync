@@ -11,8 +11,8 @@
  * they are exercised transitively through the page render.
  *
  * What is covered:
- *   1. SHELL       — page-level loading (Spinner) / error (message) gate
- *                    everything; the empty "select a vehicle" state.
+ *   1. SHELL       — independent fleet loading/failure does not hide usable
+ *                    navigation; the empty "select a vehicle" state.
  *   2. READY       — metrics band derives SI→display values, the nav hero
  *                    shows the active route, every a11y region is labelled,
  *                    and the header actions render.
@@ -204,10 +204,10 @@ vi.mock('@/components/charts', async (importOriginal) => {
       <div data-testid="responsive-container">{children}</div>
     ),
     AreaChart: ({ data }: { data?: unknown[] }) => (
-      <div data-testid="area-chart" data-points={Array.isArray(data) ? data.length : 0} />
+      <div data-testid="area-chart" data-points={Array.isArray(data) ? data.length : 0} data-values={JSON.stringify(data)} />
     ),
     LineChart: ({ data }: { data?: unknown[] }) => (
-      <div data-testid="line-chart" data-points={Array.isArray(data) ? data.length : 0} />
+      <div data-testid="line-chart" data-points={Array.isArray(data) ? data.length : 0} data-values={JSON.stringify(data)} />
     ),
   };
 });
@@ -405,32 +405,82 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('NavigationRoutePage — shell gating', () => {
-  it('shows the page-level spinner and hides all content while vehicles load', () => {
+describe('NavigationRoutePage — independent source posture', () => {
+  it('preserves unknown measurement gaps and false/zero facts without changing history order or complete tables', async () => {
+    h.latest = { ...baseLatest(), miles_to_arrival: undefined, minutes_to_arrival: undefined, route_traffic_delay_s: undefined };
+    h.history = [
+      { ...baseHistory()[0], speed_mph: undefined, miles_to_arrival: undefined, minutes_to_arrival: undefined, located_at_home: undefined, located_at_work: undefined, homelink_nearby: undefined },
+      { ...baseHistory()[1], speed_mph: 0, miles_to_arrival: 0, minutes_to_arrival: 0, located_at_home: false, located_at_work: true, homelink_nearby: false },
+    ];
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '2'));
+    const speedRows = JSON.parse(screen.getByTestId('area-chart').getAttribute('data-values')!) as { speed: number | null; miles: number | null }[];
+    expect(speedRows.map(({ speed, miles }) => ({ speed, miles }))).toEqual([
+      { speed: null, miles: null }, { speed: 0, miles: 0 },
+    ]);
+    const presence = JSON.parse(screen.getByTestId('line-chart').getAttribute('data-values')!) as { home: number | null; work: number | null; homelink: number | null }[];
+    expect(presence.map(({ home, work, homelink }) => ({ home, work, homelink }))).toEqual([
+      { home: null, work: null, homelink: null }, { home: 0, work: 1, homelink: 0 },
+    ]);
+    const nav = screen.getByRole('region', { name: 'Navigation status' });
+    expect(within(nav).getByText('Unknown')).toBeInTheDocument();
+    expect(within(nav).queryByText('0s delay')).not.toBeInTheDocument();
+    const destinations = screen.getByTestId('maps:navigation-recent-destinations');
+    expect(within(destinations).getAllByText('—')).toHaveLength(2);
+    expect(within(destinations).getByText('0.00 km')).toBeInTheDocument();
+    expect(within(destinations).getByText('0.00 min')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Route metrics' })).getByText('0.00 km/h')).toBeInTheDocument();
+    expect(within(screen.getByTestId('maps:navigation-location-history')).getAllByRole('row')).toHaveLength(3);
+  });
+
+  it('shows unknown average speed when history has no measured speed and retains known zero route metrics', async () => {
+    h.latest = { ...baseLatest(), miles_to_arrival: 0, minutes_to_arrival: 0, route_traffic_delay_s: 0 };
+    h.history = [{ ...baseHistory()[0], speed_mph: undefined }];
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '1'));
+    const metrics = screen.getByRole('region', { name: 'Route metrics' });
+    expect(within(metrics).getByText('0.00 km')).toBeInTheDocument();
+    expect(within(metrics).getByText('0.00 min')).toBeInTheDocument();
+    expect(within(metrics).getByText('0s')).toBeInTheDocument();
+    expect(within(metrics).queryByText('0.00 km/h')).not.toBeInTheDocument();
+    expect(within(metrics).getByText('—')).toBeInTheDocument();
+  });
+  it('keeps the active route while the fleet and history are loading', () => {
     h.vehiclesLoading = true;
     h.historyMode = 'pending';
 
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /Navigation & Route/i }),
+      screen.getByRole('heading', { level: 1, name: /Navigation & route/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument();
-    // Body regions are gated out behind the spinner.
-    expect(screen.queryByRole('region', { name: 'Route metrics' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Navigation status' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Route metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Navigation status' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
-  it('renders the vehicles error message instead of the page body', () => {
+  it('keeps usable navigation visible when the independent fleet source fails', () => {
     h.vehiclesError = new Error('vehicles down');
     h.historyMode = 'pending';
 
     renderPage();
 
-    // ErrorDisplay renders production-safe structured copy rather than the
-    // raw error.message — status-less errors fall into the network branch.
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Route metrics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Route metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Navigation status' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+  });
+
+  it('keeps a retained route and arrival telemetry during a latest-source refresh failure', () => {
+    h.latestError = new Error('latest refresh failed');
+    h.historyMode = 'pending';
+    renderPage();
+
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Route metrics' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
   it('prompts to select a vehicle and never fetches history when none is active', () => {
@@ -448,16 +498,27 @@ describe('NavigationRoutePage — shell gating', () => {
 });
 
 describe('NavigationRoutePage — ready state', () => {
+  it('opens real mixed-source details while retaining route navigation and history controls', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText('72.00 km/h')).toBeInTheDocument());
+    const band = screen.getByRole('region', { name: 'Route metrics' });
+    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Route metrics details' });
+    expect(within(drawer).getByText('Expected arrival percentage comes from independent charging telemetry, not a calculation from the route history.')).toBeInTheDocument();
+    expect(within(drawer).getByText('85.00%')).toBeInTheDocument();
+    expect(screen.getByTestId('maps:navigation-location-history')).toBeInTheDocument();
+    expect(getHeaderRefresh()).toBeInTheDocument();
+  });
   it('derives the KPI band, shows the active route, and labels every region', () => {
     h.historyMode = 'pending'; // focus on latest-driven, synchronous content
 
     renderPage();
 
     // KPI band: 5000 m → 5.0 km, 12 min, 600 s (echoed), 85 %.
-    expect(screen.getAllByText('5.0 km').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('12 min').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('5.00 km').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('12.00 min').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText(/600s/).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
 
     // Navigation-status hero: active badge + destination.
     expect(screen.getByText('Active')).toBeInTheDocument();
@@ -492,7 +553,7 @@ describe('NavigationRoutePage — ready state', () => {
     expect(screen.getByText('37.5000, -122.2500')).toBeInTheDocument();
     expect(screen.getByText('locked')).toBeInTheDocument();
     expect(screen.getByText('N (0°)')).toBeInTheDocument();
-    expect(screen.getByText('At Work')).toBeInTheDocument();
+    expect(screen.getByText('At work')).toBeInTheDocument();
     expect(screen.getByText('Away')).toBeInTheDocument();
   });
 
@@ -505,7 +566,7 @@ describe('NavigationRoutePage — ready state', () => {
     expect(screen.getByTestId('line-chart')).toHaveAttribute('data-points', '3');
 
     // Avg speed: (10+20+30)/3 = 20 m/s → 72.0 km/h.
-    expect(screen.getByText('72.0 km/h')).toBeInTheDocument();
+    expect(screen.getByText('72.00 km/h')).toBeInTheDocument();
 
     // Recent-destinations table dedupes to the two named stops.
     const recent = screen.getByTestId('maps:navigation-recent-destinations');
@@ -608,8 +669,11 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     expect(screen.getByText('No presence history available.')).toBeInTheDocument();
     expect(screen.getByText('No destination history available.')).toBeInTheDocument();
     expect(screen.getByText('No location snapshots recorded yet.')).toBeInTheDocument();
-    // No moving speeds → avg speed collapses to 0.0 km/h (never NaN).
-    expect(screen.getByText('0.0 km/h')).toBeInTheDocument();
+    // An empty history has no measured average, not a measured stationary speed.
+    const metrics = within(screen.getByRole('region', { name: 'Route metrics' }));
+    const average = metrics.getByText('Avg speed').closest('[data-operational-metric]');
+    expect(average?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(metrics.queryByText('0.00 km/h')).not.toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 

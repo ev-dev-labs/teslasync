@@ -50,6 +50,11 @@ import { MemoryRouter } from 'react-router-dom';
 import type { LocationSnapshot } from '@/api/types';
 import DestinationETAWidget from './DestinationETAWidget';
 
+it.each([1, 2, 3])('identifies destination ETA at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
+});
+
 // jsdom lacks matchMedia; AnimatedNumber (ETA countdown) and DataFreshness read
 // it during render. Report reduced-motion = true so AnimatedNumber skips its
 // rAF tween and lands on the target value synchronously — making the ETA
@@ -136,11 +141,13 @@ function renderWidget(
   size: { cols: number; rows: number } = { cols: 2, rows: 2 },
   vehicleId?: number,
 ) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <DestinationETAWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Destination ETA');
+  return view;
 }
 
 beforeEach(() => {
@@ -182,6 +189,20 @@ describe('DestinationETAWidget — presence badge (standard, not navigating)', (
 });
 
 describe('DestinationETAWidget — navigating layout (standard)', () => {
+  it('keeps unknown ETA and distance distinct from genuine arrival at zero', () => {
+    useLocationSnapshotLatestMock.mockReturnValue(makeQuery({
+      data: makeSnapshot({ destination_name: 'Home' }),
+    }));
+    const view = renderWidget();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+    useLocationSnapshotLatestMock.mockReturnValue(makeQuery({
+      data: makeSnapshot({ destination_name: 'Home', minutes_to_arrival: 0, miles_to_arrival: 0 }),
+    }));
+    view.rerender(<MemoryRouter><DestinationETAWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
+    expect(screen.getAllByText('0.00').length).toBeGreaterThanOrEqual(2);
+  });
   it('renders destination, ETA minutes, SI→mi distance, and an accessible progress bar', () => {
     useLocationSnapshotLatestMock.mockReturnValue(
       makeQuery({
@@ -197,9 +218,9 @@ describe('DestinationETAWidget — navigating layout (standard)', () => {
 
     expect(screen.getByText('Destination ETA')).toBeInTheDocument();
     expect(screen.getByText('Tesla Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('90')).toBeInTheDocument(); // AnimatedNumber minutes
+    expect(screen.getByText('90.00')).toBeInTheDocument(); // AnimatedNumber minutes
     expect(screen.getByText('1h 30m')).toBeInTheDocument(); // etaDisplay
-    expect(screen.getByText('10.0')).toBeInTheDocument(); // 16093.44 m → 10.0 mi
+    expect(screen.getByText('10.00')).toBeInTheDocument(); // 16093.44 m → 10 mi
     expect(screen.getByText('mi')).toBeInTheDocument();
     expect(screen.getByText('Remaining')).toBeInTheDocument();
 
@@ -222,7 +243,7 @@ describe('DestinationETAWidget — navigating layout (standard)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('16.1')).toBeInTheDocument();
+    expect(screen.getByText('16.09')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
     // The mi label must NOT appear once the preference is km.
     expect(screen.queryByText('mi')).not.toBeInTheDocument();
@@ -243,12 +264,12 @@ describe('DestinationETAWidget — navigating layout (standard)', () => {
 
     expect(screen.getByText('45m')).toBeInTheDocument();
     expect(screen.queryByText('0h 45m')).not.toBeInTheDocument();
-    expect(screen.getByText('2.0')).toBeInTheDocument();
+    expect(screen.getByText('2.00')).toBeInTheDocument();
   });
 });
 
 describe('DestinationETAWidget — compact layout', () => {
-  it('renders the ETA big number with a "min" unit and no section title', () => {
+  it('identifies the ETA big number and its "min" unit', () => {
     useLocationSnapshotLatestMock.mockReturnValue(
       makeQuery({
         data: makeSnapshot({
@@ -261,14 +282,14 @@ describe('DestinationETAWidget — compact layout', () => {
 
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByText('45')).toBeInTheDocument();
+    expect(screen.getByText('45.00')).toBeInTheDocument();
     expect(screen.getByText('min')).toBeInTheDocument();
     expect(screen.getByText('ETA')).toBeInTheDocument();
     // Compact mode drops the header title.
-    expect(screen.queryByText('Destination ETA')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
   });
 
-  it('renders the presence badge (accessible emoji) with no section title when parked', () => {
+  it('identifies the presence badge and accessible emoji when parked', () => {
     useLocationSnapshotLatestMock.mockReturnValue(
       makeQuery({ data: makeSnapshot({ located_at_work: true }) }),
     );
@@ -277,7 +298,7 @@ describe('DestinationETAWidget — compact layout', () => {
 
     expect(screen.getByRole('img', { name: 'Work' })).toHaveTextContent('🏢');
     expect(screen.getByText('Work')).toBeInTheDocument();
-    expect(screen.queryByText('Destination ETA')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
   });
 
   it('shows an EmptyState (never a blank panel) when there is no snapshot', () => {
@@ -286,18 +307,18 @@ describe('DestinationETAWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('No location data')).toBeInTheDocument();
-    expect(screen.queryByText('Destination ETA')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
   });
 });
 
 describe('DestinationETAWidget — query states', () => {
-  it('renders a skeleton while loading with no title or empty message', () => {
+  it('retains its heading above a loading skeleton without an empty message', () => {
     useLocationSnapshotLatestMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Destination ETA')).not.toBeInTheDocument();
+    expect(screen.queryByText('Destination ETA')).toBeInTheDocument();
     expect(screen.queryByText('No location data')).not.toBeInTheDocument();
   });
 
@@ -310,7 +331,7 @@ describe('DestinationETAWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Destination ETA')).not.toBeInTheDocument();
+    expect(screen.queryByText('Destination ETA')).toBeInTheDocument();
   });
 
   it('renders the titled shell with an EmptyState placeholder when snapshot is absent', () => {
@@ -322,14 +343,19 @@ describe('DestinationETAWidget — query states', () => {
     expect(screen.getByText('No location data')).toBeInTheDocument();
   });
 
-  it('degrades a partial navigating snapshot to zeros without throwing (null-safety)', () => {
+  it('degrades a partial navigating snapshot to unknown values without throwing', () => {
     useLocationSnapshotLatestMock.mockReturnValue(
       makeQuery({ data: makeSnapshot({ destination_name: 'Home Depot' }) }),
     );
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
     expect(screen.getByText('Home Depot')).toBeInTheDocument();
-    expect(screen.getByText('0.0')).toBeInTheDocument(); // missing miles_to_arrival → 0
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    const track = screen.getByRole('progressbar', { name: 'Trip progress' });
+    expect(track).not.toHaveAttribute('aria-valuenow');
+    expect(track.querySelector('[data-metric-fill]')).toBeNull();
+    expect(screen.queryByRole('slider')).toBeNull();
   });
 });
 

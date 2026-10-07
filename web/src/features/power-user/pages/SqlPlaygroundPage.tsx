@@ -44,8 +44,8 @@ import { Database, Info, Play, TerminalSquare, Trash2 } from 'lucide-react';
 import {
   AINLSqlPlayground,
   type ReadonlySQLDraft,
-} from '@/components/ai/AINLSqlPlayground';
-import { PageContainer } from '@/components/layout';
+} from '@/components/ai';
+import { Grid, PageLayout } from '@/components/layout';
 import {
   Button,
   CopyButton,
@@ -67,6 +67,7 @@ import { CURATED_CATALOG } from '../components/sqlCatalog';
 // Canonical localStorage key for the SQL draft. Persisted across navigation
 // so a user typing a long query doesn't lose progress on accidental reload.
 const SQL_PLAYGROUND_DRAFT_KEY = 'ai.sqlPlayground.draft';
+const WORKSPACE_COLUMNS = { default: 1, xl: 3 } as const;
 
 function loadPersistedSql(): string {
   if (typeof window === 'undefined') return '';
@@ -92,10 +93,11 @@ function persistSql(value: string): void {
 
 export default function SqlPlaygroundPage() {
   const { t } = useTranslation();
-  usePageTitle(t('powerSql.title', 'SQL Playground'));
+  usePageTitle(t('powerSql.title', 'SQL playground'));
 
   const [sql, setSql] = useState<string>(() => loadPersistedSql());
   const [runMessage, setRunMessage] = useState<string>('');
+  const [copyFailed, setCopyFailed] = useState(false);
 
   // Persist the SQL textarea contents so a long query survives a navigation
   // away + back. Synchronous setItem in the effect is fine — modern browsers
@@ -110,6 +112,7 @@ export default function SqlPlaygroundPage() {
     // Textarea never flips to an uncontrolled `undefined` value.
     setSql(draft.sql ?? '');
     setRunMessage('');
+    setCopyFailed(false);
   }, []);
 
   // Editing the query invalidates any run guidance shown for the *previous*
@@ -119,11 +122,13 @@ export default function SqlPlaygroundPage() {
   const handleSqlChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setSql(e.target.value);
     setRunMessage('');
+    setCopyFailed(false);
   }, []);
 
   const handleClear = useCallback(() => {
     setSql('');
     setRunMessage('');
+    setCopyFailed(false);
   }, []);
 
   const handleRun = useCallback(() => {
@@ -163,8 +168,8 @@ export default function SqlPlaygroundPage() {
   const canRun = sql.trim().length > 0;
 
   return (
-    <PageContainer
-      title={t('powerSql.title', 'SQL Playground')}
+    <PageLayout
+      title={t('powerSql.title', 'SQL playground')}
       subtitle={t(
         'powerSql.subtitle',
         'Compose read-only SELECT / WITH queries against the curated schema catalog. Queries never execute in the browser — copy them into your database client.',
@@ -172,7 +177,7 @@ export default function SqlPlaygroundPage() {
     >
       <div className="space-y-6" data-testid="power-sql-playground-root">
         {/* 1 — KPI band: real catalog stats, reflows 2 → 4 columns */}
-        <FadeIn>
+        <FadeIn className="min-w-0 max-w-full">
           <CatalogKpiBand tableCount={tableCount} columnCount={columnCount} />
         </FadeIn>
 
@@ -180,14 +185,15 @@ export default function SqlPlaygroundPage() {
         <AINLSqlPlayground onApply={handleApplyAiDraft} />
 
         {/* 3 — Query workspace: editor hero + reference panel */}
-        <FadeIn delay={0.1}>
+        <FadeIn delay={0.1} className="min-w-0 max-w-full">
           <section
             aria-label={t('powerSql.workspace.label', 'Query workspace')}
-            className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+            className="min-w-0"
           >
-            <GlassPanel className="space-y-3 p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="flex items-center gap-2">
-                <TerminalSquare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Grid cols={WORKSPACE_COLUMNS} gap={4} className="min-w-0">
+            <GlassPanel className="min-w-0 max-w-full space-y-3 p-4 sm:p-5 xl:col-span-2">
+              <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
+                <TerminalSquare className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
                 {t('powerSql.editor.title', 'Manual SQL editor')}
               </PanelTitle>
               <Textarea
@@ -205,6 +211,7 @@ export default function SqlPlaygroundPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="primary"
+                  wrapLabel
                   onClick={handleRun}
                   disabled={!canRun}
                   aria-disabled={!canRun ? 'true' : 'false'}
@@ -214,6 +221,7 @@ export default function SqlPlaygroundPage() {
                 </Button>
                 <Button
                   variant="secondary"
+                  wrapLabel
                   onClick={handleClear}
                   disabled={!canRun}
                   icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
@@ -226,6 +234,8 @@ export default function SqlPlaygroundPage() {
                   size="md"
                   disabled={!canRun}
                   label={t('powerSql.editor.copy', 'Copy query')}
+                  onCopy={() => setCopyFailed(false)}
+                  onCopyError={() => setCopyFailed(true)}
                   title={t(
                     'powerSql.editor.copyTitle',
                     'Copy the query to paste into your database client',
@@ -241,15 +251,24 @@ export default function SqlPlaygroundPage() {
                   {runMessage}
                 </InlineCallout>
               )}
+              {copyFailed && (
+                <InlineCallout variant="warning">
+                  {t(
+                    'powerSql.editor.copyFailed',
+                    'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
+                  )}
+                </InlineCallout>
+              )}
             </GlassPanel>
 
             <QueryReferencePanel />
+            </Grid>
           </section>
         </FadeIn>
 
         {/* 4 — Curated schema catalog: auto-fit bento of table cards */}
-        <FadeIn delay={0.2}>
-          <section aria-label={t('powerSql.catalog.title', 'Curated schema catalog')}>
+        <FadeIn delay={0.2} className="min-w-0 max-w-full">
+          <section className="min-w-0" aria-label={t('powerSql.catalog.title', 'Curated schema catalog')}>
             <div className="mb-1 flex items-center gap-2">
               <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               <SectionTitle>
@@ -262,7 +281,7 @@ export default function SqlPlaygroundPage() {
                 'These tables are the only tables the curated catalog exposes. The Helix natural-language drafter refuses any query referencing tables outside this list.',
               )}
             </Text>
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">
+            <div className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr))]">
               {sortedTables.map((table) => (
                 <SchemaCatalogCard key={table.name} table={table} />
               ))}
@@ -270,6 +289,6 @@ export default function SqlPlaygroundPage() {
           </section>
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

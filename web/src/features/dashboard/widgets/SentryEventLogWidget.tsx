@@ -1,13 +1,12 @@
 import { useMemo, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Shield, Lock, Unlock, Eye, EyeOff, DoorOpen, DoorClosed } from 'lucide-react';
-import { useVehicles } from '@/api/hooks/useVehicles';
-import { request } from '@/api/client';
+import { useSentryEvents, useVehicles } from '@/api/hooks/useVehicles';
 import type { SecurityEvent } from '@/api/types';
 import { asNonEmptyString } from '@/lib/typeGuards';
 import { parseEnumBool } from '@/lib/parseEnums';
+import { useDataState } from '@/hooks/useDataState';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
@@ -42,9 +41,11 @@ export function deriveEvent(ev: SecurityEvent, t: TFunction): DerivedEvent {
     .map((s) => s.trim())
     .filter((s) => s.toLowerCase().includes('open'));
 
-  const lockPresent = ev.locked != null;
+  const lockPresent = typeof ev.locked === 'boolean';
   const isLocked = ev.locked === true;
-  const sentryPresent = typeof ev.sentry_mode === 'boolean' || asNonEmptyString(ev.sentry_mode) !== null;
+  const sentryRaw = asNonEmptyString(ev.sentry_mode);
+  const sentryPresent = typeof ev.sentry_mode === 'boolean' ||
+    (sentryRaw !== null && !/unknown$/i.test(sentryRaw));
   const sentryOn = parseEnumBool(ev.sentry_mode);
 
   const parts: string[] = [];
@@ -58,8 +59,8 @@ export function deriveEvent(ev: SecurityEvent, t: TFunction): DerivedEvent {
   if (sentryPresent) {
     parts.push(
       sentryOn
-        ? t('widget.sentryLog.sentryOnChip', '🛡️ Sentry On')
-        : t('widget.sentryLog.sentryOffChip', 'Sentry Off'),
+        ? t('widget.sentryLog.sentryOnChip', '🛡️ Sentry on')
+        : t('widget.sentryLog.sentryOffChip', 'Sentry off'),
     );
   }
   const subtitle = parts.join(' · ') || '—';
@@ -76,12 +77,12 @@ export function deriveEvent(ev: SecurityEvent, t: TFunction): DerivedEvent {
     severity = 'warning';
   } else if (sentryPresent && sentryOn) {
     icon = <Eye className="h-3.5 w-3.5" aria-hidden="true" />;
-    title = t('widget.sentryLog.sentryActivated', 'Sentry Mode activated');
+    title = t('widget.sentryLog.sentryActivated', 'Sentry mode activated');
     color = '#06b6d4';
     severity = 'info';
   } else if (sentryPresent) {
     icon = <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />;
-    title = t('widget.sentryLog.sentryDeactivated', 'Sentry Mode deactivated');
+    title = t('widget.sentryLog.sentryDeactivated', 'Sentry mode deactivated');
     color = '#6b7280';
     severity = 'info';
   } else if (isLocked) {
@@ -106,19 +107,19 @@ export function deriveEvent(ev: SecurityEvent, t: TFunction): DerivedEvent {
 
 export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehicleQuery = useVehicles();
+  const { data: vehicles } = vehicleQuery;
+  const vehicleState = useDataState(vehicleQuery);
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
   const eventLimit = isWide ? 10 : isTall ? 7 : 4;
 
-  const { data: events, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
-    queryKey: ['security-events', id, `sentry-log-${eventLimit}`],
-    queryFn: () => request<SecurityEvent[]>(`/security?vehicle_id=${id}&limit=${eventLimit}`),
-    enabled: id > 0,
-    refetchInterval: 30_000,
-  });
+  const query = useSentryEvents(id, eventLimit);
+  const { data: events, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const state = useDataState(query, { provenance: 'historical' });
+  const displayState = id === 0 && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
 
   const feedItems = useMemo<EventFeedItem[]>(() => {
     return (events ?? []).map((ev) => {
@@ -131,6 +132,7 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
         timestamp: ev.created_at ?? ev.ts,
         color: derived.color,
         severity: derived.severity,
+        wrap: true,
       };
     });
   }, [events, isWide, t]);
@@ -141,9 +143,10 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.sentryEventLog', 'Sentry Event Log')}
-      icon={<Shield className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
+      title={t('widget.sentryEventLog', 'Sentry event log')}
+      icon={<Shield className="h-3.5 w-3.5" aria-hidden="true" />}
       loading={isLoading}
+      dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -153,11 +156,7 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
       <WidgetEventFeed
         items={feedItems}
         maxItems={eventLimit}
-        emptyMessage={
-          isError
-            ? t('widget.sentryEventsError', 'Failed to load security events')
-            : t('widget.noSentryEvents', 'No security events recorded')
-        }
+        emptyMessage={t('widget.noSentryEvents', 'No security events recorded')}
         emptyIcon={<Shield className="h-5 w-5" aria-hidden="true" />}
       />
     </WidgetShell>

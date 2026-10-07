@@ -6,11 +6,12 @@ import {
   Badge, DataTable, GlassPanel, PanelTitle, Text, type Column,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { SweetSpotResult } from '../../lib/speedSweetSpot';
 import { SpeedSweetSpotSectionBody } from './SpeedSweetSpotSectionBody';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ScorecardRow {
   key: string;
@@ -33,6 +34,7 @@ interface SpeedBandScorecardProps {
 export function SpeedBandScorecard(
   { summary, state, className }: SpeedBandScorecardProps,
 ) {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     formatBand, formatDistance, formatEfficiency, formatSignedEfficiency,
@@ -50,10 +52,10 @@ export function SpeedBandScorecard(
           key: band.key,
           rank: band.rank,
           band: formatBand(band.fromKph, band.toKph),
-          consumption: formatEfficiency(band.whPerKm, 1),
+          consumption: formatEfficiency(band.whPerKm),
           distance: formatDistance(band.distanceM),
           drives: band.drives,
-          distanceShare: `${fmtNumber(band.distanceShare * 100, 1)}%`,
+          distanceShare: `${fmtNumber(band.distanceShare * 100)}%`,
           qualification: band.qualified
             ? t('sweetSpot.qualified', 'Qualified')
             : t('sweetSpot.unqualified', 'Below sample floor'),
@@ -63,7 +65,7 @@ export function SpeedBandScorecard(
         })),
     [
       formatBand, formatDistance, formatEfficiency, formatSignedEfficiency,
-      summary.bands, t,
+      summary.bands, t, fmtNumber, displayPrecision, displayLocale,
     ],
   );
   const columns = useMemo<Column<ScorecardRow>[]>(

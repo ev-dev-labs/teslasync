@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
-import { ChartContainer } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 
-type ChartContainerProps = ComponentProps<typeof ChartContainer>;
+type ChartContainerProps = ComponentProps<typeof ChartCard>;
 
 type AnalyticsChartPanelProps = Omit<
   ChartContainerProps,
@@ -9,6 +9,7 @@ type AnalyticsChartPanelProps = Omit<
 > & {
   loading?: boolean;
   isEmpty?: boolean;
+  className?: string;
 };
 
 /**
@@ -24,10 +25,14 @@ export function AnalyticsChartPanel({
   exportData,
   ariaLabel,
   fullscreen = true,
+  exportable = true,
+  size = 'standard',
+  className,
   ...props
 }: AnalyticsChartPanelProps) {
   return (
-    <ChartContainer
+    <div className={className}>
+    <ChartCard
       {...props}
       loading={loading}
       empty={isEmpty}
@@ -36,6 +41,9 @@ export function AnalyticsChartPanel({
       exportData={exportData ?? data}
       ariaLabel={ariaLabel}
       fullscreen={fullscreen}
+      exportable={exportable}
+      size={size}
     />
+    </div>
   );
 }

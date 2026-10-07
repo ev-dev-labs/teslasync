@@ -5,8 +5,9 @@ import {
   ReferenceArea, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis,
   axisTick,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { SweetSpotBand } from '../../lib/speedSweetSpot';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DriveScatterRow
   extends Record<string, string | number | null> {
@@ -42,6 +43,7 @@ export function DriveEvidencePlot({
   isHidden: externalIsHidden,
   ariaLabel,
 }: DriveEvidencePlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -107,10 +109,10 @@ export function DriveEvidencePlot({
                   <ChartTooltip
                     valueFormatter={(value, name) =>
                       name === speedName
-                        ? `${fmtNumber(value, 1)} ${speedUnit}`
+                        ? `${fmtNumber(value)} ${speedUnit}`
                         : name === distanceName
-                          ? `${fmtNumber(value, 1)} ${distanceUnit}`
-                          : `${fmtNumber(value, 1)} ${efficiencyUnit}`
+                          ? `${fmtNumber(value)} ${distanceUnit}`
+                          : `${fmtNumber(value)} ${efficiencyUnit}`
                     }
                   />
                 }

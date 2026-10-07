@@ -61,6 +61,11 @@ describe('FSM_TYPE_OPTIONS', () => {
       'telemetry_connection',
     ])
     expect(FSM_TYPE_OPTIONS).toHaveLength(3)
+    expect(FSM_TYPE_OPTIONS.map((o) => o.label)).toEqual([
+      'All FSMs',
+      'Vehicle',
+      'Telemetry connection',
+    ])
   })
 
   it('gives every option a non-empty value, label and i18nKey', () => {

@@ -273,7 +273,7 @@ vi.mock('../feedback/InstallPrompt', () => ({ default: () => <div data-testid="i
 vi.mock('../feedback/OfflineBanner', () => ({ OfflineBanner: () => null }))
 vi.mock('../feedback/NewVersionBanner', () => ({ NewVersionBanner: () => null }))
 vi.mock('../feedback/TeslaReauthBanner', () => ({ TeslaReauthBanner: () => null }))
-vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => null }))
+vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => <div data-testid="rate-limit-banner-stub" /> }))
 vi.mock('../feedback/MaintenanceBanner', () => ({ MaintenanceBanner: () => null }))
 vi.mock('../feedback/ImpersonationBanner', () => ({ ImpersonationBanner: () => null }))
 vi.mock('../feedback/TopProgress', () => ({ TopProgress: () => null }))
@@ -507,7 +507,7 @@ describe('navSections (data export)', () => {
 
   it('exposes the Action Center decision inbox from Home', () => {
     const actionCenter = navSections[0].items.find((i) => i.to === '/action-center')
-    expect(actionCenter?.label).toBe('Action Center')
+    expect(actionCenter?.label).toBe('Action center')
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
   })
 
@@ -516,7 +516,7 @@ describe('navSections (data export)', () => {
     const management = vehiclesSection?.items.find(
       (item) => item.to === '/vehicle-management',
     )
-    expect(management?.label).toBe('Vehicle Management')
+    expect(management?.label).toBe('Vehicle management')
     expect(navSearchKeywords['/vehicle-management']).toContain('enterprise roles')
   })
 
@@ -704,7 +704,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/share-card', '/analytics/carbon', '/benchmarks/privacy',
     ])
     expect(reports?.items.slice(0, 3).map(item => item.label)).toEqual([
-      'Fleet Insights', 'Driving Efficiency', 'Costs',
+      'Fleet insights', 'Driving efficiency', 'Costs',
     ])
     // Flat rows key off the real location, not the group primary.
     expect(props.pathname).toBe('/analytics')
@@ -720,7 +720,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/system-status', '/db-health', '/anomaly-detection',
       '/signals', '/admin/flags', '/admin/vehicle-cost', '/signal-correlation',
     ])
-    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
+    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry troubleshooting')
     expect(props.pathname).toBe('/admin/ingest-xray')
     expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
     expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
@@ -745,9 +745,9 @@ describe('Layout — grouped sidebar sections', () => {
       'Automation',
       'Notifications',
       'Security',
-      'Advanced Intelligence',
-      'Ownership Intelligence',
-      'Tesla Physics',
+      'Advanced intelligence',
+      'Ownership intelligence',
+      'Tesla physics',
       'Data',
       'Diagnostics',
       'Account',
@@ -768,6 +768,24 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
+  it('keeps rate-limit notices inside the report column instead of consuming horizontal page space', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+    expect(main?.parentElement).toContainElement(screen.getByTestId('rate-limit-banner-stub'))
+  })
+
+  it('keeps the outer shell out of native anchor scrolling', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+
+    expect(main?.parentElement).toHaveClass(
+      'min-h-0',
+      'min-w-0',
+      'overflow-hidden',
+      'supports-[overflow:clip]:overflow-clip',
+    )
+  })
+
   it('places the install affordance in the scrollable page flow, not over page content', () => {
     const { container } = renderLayout('/')
     const main = container.querySelector('[data-role="main-content"]')
@@ -1018,6 +1036,84 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it('contains keyboard focus and hides the background while keeping the backdrop usable', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const lastLink = await within(aside).findByRole('link', { name: 'Current page' })
+    const firstLink = aside.querySelector<HTMLAnchorElement>('a[href="/"]')
+    expect(firstLink).not.toBeNull()
+
+    lastLink.focus()
+    fireEvent.keyDown(lastLink, { key: 'Tab' })
+    expect(firstLink).toHaveFocus()
+    fireEvent.keyDown(firstLink!, { key: 'Tab', shiftKey: true })
+    expect(lastLink).toHaveFocus()
+    expect(main.closest('[inert]')).not.toBeNull()
+    expect(screen.queryByRole('main')).toBeNull()
+
+    const backdrop = aside.previousElementSibling
+    expect(backdrop).not.toBeNull()
+    expect(backdrop).not.toHaveAttribute('inert')
+    fireEvent.click(backdrop!)
+    await waitFor(() => expect(main.closest('[inert]')).toBeNull())
+    expect(screen.getByRole('main')).toBe(main)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
+  })
+
+  it('releases the mobile overlay guard when the desktop breakpoint becomes active', async () => {
+    const desktopMedia = window.matchMedia('(min-width: 1280px)')
+    vi.mocked(window.matchMedia).mockReturnValue(desktopMedia)
+    const listen = vi.spyOn(desktopMedia, 'addEventListener')
+    const unlisten = vi.spyOn(desktopMedia, 'removeEventListener')
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    await waitFor(() => expect(main.closest('[inert]')).not.toBeNull())
+    const listener = listen.mock.calls.find(([type]) => type === 'change')?.[1]
+    expect(typeof listener).toBe('function')
+
+    Object.defineProperty(desktopMedia, 'matches', { value: true, configurable: true })
+    act(() => {
+      if (typeof listener === 'function') listener(new Event('change'))
+    })
+
+    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+    expect(main.closest('[inert]')).toBeNull()
+    expect(screen.getByRole('main')).toBe(main)
+    expect(unlisten).toHaveBeenCalledWith('change', listener)
+  })
+
+  it('provides a 44px mobile drawer close target', async () => {
+    renderLayout('/')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(await screen.findByRole('button', { name: 'Close sidebar' })).toHaveClass('h-11', 'w-11')
+  })
+
+  it('does not restore the drawer trigger over a newly focused portaled modal', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
+    const action = document.createElement('button')
+    action.textContent = 'Dialog action'
+    dialog.append(action)
+    document.body.append(dialog)
+    try {
+      action.focus()
+      fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+      await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+      expect(action).toHaveFocus()
+    } finally {
+      dialog.remove()
+    }
+  })
+
   it('opens and closes the sidebar drawer from the mobile header controls', async () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })

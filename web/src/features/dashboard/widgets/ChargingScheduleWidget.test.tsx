@@ -48,6 +48,11 @@ import ChargingScheduleWidget, {
   modeLabel,
   modeBadgeVariant,
 } from './ChargingScheduleWidget';
+
+it.each([1, 2, 3])('identifies charging schedules at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Charging schedule' })).toBeInTheDocument();
+});
 import type { WidgetSize } from './types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -86,7 +91,8 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicleState: (id: number) => useVehicleStateMock(id),
 }));
 
-vi.mock('@/api/client', () => ({
+vi.mock('@/api/client', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/client')>(),
   request: (...args: unknown[]) => requestMock(...args),
 }));
 
@@ -162,11 +168,13 @@ function makeStateResult(over: Partial<StateResult> = {}): StateResult {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <ChargingScheduleWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charging schedule');
+  return view;
 }
 
 /** Options object the widget passed to the mocked `useQuery` on last render. */
@@ -177,7 +185,7 @@ interface CapturedQuery {
   staleTime: number;
 }
 function lastQueryOptions(): CapturedQuery {
-  return useQueryMock.mock.calls.at(-1)?.[0] as CapturedQuery;
+  return useQueryMock.mock.calls[useQueryMock.mock.calls.length - 1]?.[0] as CapturedQuery;
 }
 
 beforeEach(() => {
@@ -275,8 +283,8 @@ describe('modeLabel', () => {
   const tt = (_key: string, fallback: string) => fallback;
 
   it('maps the known modes to their English labels', () => {
-    expect(modeLabel('StartAt', tt)).toBe('Start At');
-    expect(modeLabel('DepartBy', tt)).toBe('Depart By');
+    expect(modeLabel('StartAt', tt)).toBe('Start at');
+    expect(modeLabel('DepartBy', tt)).toBe('Depart by');
     expect(modeLabel('Off', tt)).toBe('Off');
   });
 
@@ -352,17 +360,19 @@ describe('ChargingScheduleWidget — vehicle resolution', () => {
 
 describe('ChargingScheduleWidget — states', () => {
   it('renders a loading skeleton while the signals query is pending', () => {
+    useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
     useQueryMock.mockReturnValue(makeSignalsResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No schedule data')).toBeNull();
-    expect(screen.queryByText('Charging Schedule')).toBeNull();
+    expect(screen.queryByText('Charging schedule')).toBeInTheDocument();
   });
 
-  it('also shows the skeleton while the vehicle-state query is pending', () => {
+  it('does not replace an answered schedule with a skeleton while vehicle state is pending', () => {
     useVehicleStateMock.mockReturnValue(makeStateResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByText('No schedule data')).toBeInTheDocument();
   });
 
   it('shows the empty state (never a blank panel) when there is no schedule data', () => {
@@ -370,18 +380,19 @@ describe('ChargingScheduleWidget — states', () => {
     renderWidget();
     expect(screen.getByText('No schedule data')).toBeInTheDocument();
     // The panel shell + title still render around the empty state.
-    expect(screen.getByText('Charging Schedule')).toBeInTheDocument();
+    expect(screen.getByText('Charging schedule')).toBeInTheDocument();
   });
 
   it('surfaces an error affordance (red freshness dot + Refresh) on failure', () => {
+    useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
     useQueryMock.mockReturnValue(
       makeSignalsResult({ isError: true, dataUpdatedAt: 0, data: undefined }),
     );
     const { container } = renderWidget();
     expect(container.querySelector('.bg-red-400')).not.toBeNull();
-    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
-    // No data yet → an empty panel, never a blank one.
-    expect(screen.getByText('No schedule data')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /refresh/i })).toHaveLength(2);
+    expect(screen.getByText('Charging schedule unavailable')).toBeInTheDocument();
+    expect(screen.getByText('64%')).toBeInTheDocument();
   });
 
   it('refetches the live signals when the freshness control is activated', () => {
@@ -403,7 +414,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
       makeSignalsResult({ data: { ScheduledChargingMode: sig('StartAt') } }),
     );
     renderWidget({ cols: 2, rows: 1 });
-    expect(screen.getByText('Start At')).toBeInTheDocument();
+    expect(screen.getByText('Start at')).toBeInTheDocument();
     expect(screen.queryByText('Pending')).toBeNull();
     // No scheduled times were provided → the timeline placeholder shows.
     expect(screen.getByText('No scheduled times set')).toBeInTheDocument();
@@ -433,9 +444,9 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     );
     renderWidget({ cols: 2, rows: 1 });
 
-    expect(screen.getByText('Start Charging')).toBeInTheDocument();
+    expect(screen.getByText('Start charging')).toBeInTheDocument();
     expect(screen.getByText('Departure')).toBeInTheDocument();
-    expect(screen.getByText('Target Limit')).toBeInTheDocument();
+    expect(screen.getByText('Target limit')).toBeInTheDocument();
 
     // Times pass through the (mocked) formatter; the limit renders as a %.
     expect(screen.getByText('time:08:00')).toBeInTheDocument();
@@ -467,7 +478,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     renderWidget({ cols: 2, rows: 1 });
     expect(screen.getByText('Off')).toBeInTheDocument();
     expect(screen.getByText('No scheduled times set')).toBeInTheDocument();
-    expect(screen.queryByText('Target Limit')).toBeNull();
+    expect(screen.queryByText('Target limit')).toBeNull();
   });
 
   it('renders the tall detail row with the current level and charging status', () => {
@@ -479,13 +490,13 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     );
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Current Level')).toBeInTheDocument();
+    expect(screen.getByText('Current level')).toBeInTheDocument();
     expect(screen.getByText('55%')).toBeInTheDocument();
     expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('Charging')).toBeInTheDocument();
   });
 
-  it('reads "Not Charging" and floors a missing battery level to 0% in the tall row', () => {
+  it('keeps a missing battery level unknown in the tall row', () => {
     useVehicleStateMock.mockReturnValue(
       makeStateResult({
         data: {
@@ -499,36 +510,52 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     );
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Not Charging')).toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('Not charging')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
     expect(screen.queryByText('NaN%')).toBeNull();
   });
 
-  it('omits the tall detail row when no vehicle snapshot has landed', () => {
+  it('keeps the tall detail row with placeholders when no vehicle snapshot has landed', () => {
     useVehicleStateMock.mockReturnValue(makeStateResult({ data: { state: undefined, live: false } }));
     useQueryMock.mockReturnValue(
       makeSignalsResult({ data: { ScheduledChargingMode: sig('StartAt') } }),
     );
     renderWidget({ cols: 2, rows: 2 });
     // Primary content still renders; the supplementary detail row does not.
-    expect(screen.getByText('Start At')).toBeInTheDocument();
-    expect(screen.queryByText('Current Level')).toBeNull();
+    expect(screen.getByText('Start at')).toBeInTheDocument();
+    expect(screen.getByText('Current level')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
   });
 });
 
 // ── Compact (1×1) variant ────────────────────────────────────────────────────
 
 describe('ChargingScheduleWidget — compact', () => {
+  it('preserves a departure-only schedule and a real zero limit on a failed refresh', () => {
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: { ScheduledDepartureTime: sig('09:30') },
+    }));
+    const { rerender } = renderWidget({ cols: 2, rows: 1 });
+    expect(screen.getByText('Departure')).toBeInTheDocument();
+    expect(screen.getByText('time:09:30')).toBeInTheDocument();
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: { ChargeLimitSoc: sig(0) }, isError: true,
+    }));
+    rerender(<MemoryRouter><ChargingScheduleWidget size={{ cols: 1, rows: 1 }} /></MemoryRouter>);
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
   it('renders the charge-limit hero and its label', () => {
     useQueryMock.mockReturnValue(
       makeSignalsResult({ data: { ChargeLimitSoc: sig(85) } }),
     );
     renderWidget({ cols: 1, rows: 1 });
     expect(screen.getByText('85%')).toBeInTheDocument();
-    expect(screen.getByText('Charge Limit')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit')).toBeInTheDocument();
     // Compact drops the header title + timeline.
-    expect(screen.queryByText('Charging Schedule')).toBeNull();
-    expect(screen.queryByText('Target Limit')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Charging schedule' })).toBeInTheDocument();
+    expect(screen.queryByText('Target limit')).toBeNull();
   });
 
   it('shows an em-dash when there is schedule data but no charge limit', () => {
@@ -537,7 +564,7 @@ describe('ChargingScheduleWidget — compact', () => {
     );
     renderWidget({ cols: 1, rows: 1 });
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('Charge Limit')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit')).toBeInTheDocument();
   });
 
   it('renders the empty state in compact mode when there is no data', () => {

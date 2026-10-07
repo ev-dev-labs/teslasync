@@ -13,11 +13,12 @@ import {
 } from '@/api/hooks/useFleetOps';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { Button } from '@/components/ui';
-import { Grid, PageContainer } from '@/components/layout';
-import { OperationalWriteNotice } from '@/components/feedback';
+import { Grid, PageLayout } from '@/components/layout';
+import { OperationalWriteNotice, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useDataState } from '@/hooks/useDataState';
 import {
   AssignmentRoster,
   CancelReservationDialog,
@@ -60,6 +61,14 @@ export default function FleetOperationsPage() {
   const policiesQuery = useFleetChargingPolicies({ limit: 100 });
   const workOrdersQuery = useFleetWorkOrders({ limit: 100 });
   const forecastQuery = useFleetUtilizationForecast(undefined, window.from, window.to);
+  const vehiclesState = useDataState(vehiclesQuery);
+  const driversState = useDataState(driversQuery);
+  const assignmentsState = useDataState(assignmentsQuery);
+  const reservationsState = useDataState(reservationsQuery);
+  const costCentersState = useDataState(costCentersQuery);
+  const policiesState = useDataState(policiesQuery);
+  const workOrdersState = useDataState(workOrdersQuery);
+  const forecastState = useDataState(forecastQuery, { provenance: 'inferred' });
 
   const drivers = driversQuery.data?.items ?? [];
   const assignments = assignmentsQuery.data?.items ?? [];
@@ -97,10 +106,10 @@ export default function FleetOperationsPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('fleetOps.title', 'Fleet operations')}
       subtitle={t('fleetOps.subtitle', 'Coordinate drivers, bookings, charging, costs, maintenance, and capacity.')}
-      actions={(
+      primaryAction={(
         <Button
           type="button"
           icon={<CalendarPlus className="h-4 w-4" />}
@@ -126,8 +135,16 @@ export default function FleetOperationsPage() {
       ]}
     >
       <OperationalWriteNotice
-        title={t('fleetOps.readOnly.title', 'Fleet Operations is read-only')}
+        title={t('fleetOps.readOnly.title', 'Fleet operations is read-only')}
       />
+      <StaleRefreshWarning state={vehiclesState} label={t('nav.vehicles', 'Fleet')} />
+      <StaleRefreshWarning state={driversState} label={t('fleetOps.drivers.title', 'Fleet drivers')} />
+      <StaleRefreshWarning state={assignmentsState} label={t('fleetOps.assignments.title', 'Assignment roster')} />
+      <StaleRefreshWarning state={reservationsState} label={t('fleetOps.reservations.title', 'Reservation calendar')} />
+      <StaleRefreshWarning state={costCentersState} label={t('fleetOps.costCenters.title', 'Cost-center allocation')} />
+      <StaleRefreshWarning state={policiesState} label={t('fleetOps.policies.title', 'Charging policy matrix')} />
+      <StaleRefreshWarning state={workOrdersState} label={t('fleetOps.workOrders.title', 'Maintenance work-order board')} />
+      <StaleRefreshWarning state={forecastState} label={t('fleetOps.forecast.title', 'Utilization forecast')} />
 
       <FadeIn>
         <FleetKpis
@@ -136,14 +153,33 @@ export default function FleetOperationsPage() {
           workOrders={workOrders}
           forecast={forecastPoints}
           loading={kpiLoading}
+          availability={{
+            reservations: reservationsState.hasData,
+            assignments: assignmentsState.hasData,
+            workOrders: workOrdersState.hasData,
+            forecast: forecastState.hasData,
+          }}
+          sources={{
+            reservations: reservationsState,
+            assignments: assignmentsState,
+            workOrders: workOrdersState,
+            forecast: forecastState,
+          }}
+          coverage={{
+            reservations: reservationsQuery.data,
+            assignments: assignmentsQuery.data,
+            workOrders: workOrdersQuery.data,
+          }}
+          forecastSource={forecastQuery.data}
         />
       </FadeIn>
 
       <FadeIn delay={0.03}>
         <ReservationPanel
           items={reservations}
+          enableValueFilters={reservationsQuery.data?.offset === 0 && reservationsQuery.data.total === reservations.length}
           loading={reservationsQuery.isLoading}
-          error={reservationsQuery.error}
+          error={reservationsState.fatalError}
           onRetry={() => void reservationsQuery.refetch()}
           onAdd={() => setEditor({ kind: 'reservation', item: null })}
           onEdit={(item) => setEditor({ kind: 'reservation', item })}
@@ -158,8 +194,9 @@ export default function FleetOperationsPage() {
         <FadeIn delay={0.05}>
           <DriverRoster
             items={drivers}
+            enableValueFilters={driversQuery.data?.offset === 0 && driversQuery.data.total === drivers.length}
             loading={driversQuery.isLoading}
-            error={driversQuery.error}
+            error={driversState.fatalError}
             onRetry={() => void driversQuery.refetch()}
             onAdd={() => setEditor({ kind: 'driver', item: null })}
             onEdit={(item) => setEditor({ kind: 'driver', item })}
@@ -171,8 +208,9 @@ export default function FleetOperationsPage() {
         <FadeIn delay={0.06}>
           <AssignmentRoster
             items={assignments}
+            enableValueFilters={assignmentsQuery.data?.offset === 0 && assignmentsQuery.data.total === assignments.length}
             loading={assignmentsQuery.isLoading}
-            error={assignmentsQuery.error}
+            error={assignmentsState.fatalError}
             onRetry={() => void assignmentsQuery.refetch()}
             onAdd={() => setEditor({ kind: 'assignment', item: null })}
             onEdit={(item) => setEditor({ kind: 'assignment', item })}
@@ -187,7 +225,7 @@ export default function FleetOperationsPage() {
             reservations={reservations}
             workOrders={workOrders}
             loading={costCentersQuery.isLoading || reservationsQuery.isLoading || workOrdersQuery.isLoading}
-            error={costCentersQuery.error ?? reservationsQuery.error ?? workOrdersQuery.error}
+            error={costCentersState.fatalError ?? reservationsState.fatalError ?? workOrdersState.fatalError}
             onRetry={() => {
               void costCentersQuery.refetch();
               void reservationsQuery.refetch();
@@ -205,8 +243,9 @@ export default function FleetOperationsPage() {
       <FadeIn delay={0.09}>
         <ChargingPolicyMatrix
           items={policies}
+          enableValueFilters={policiesQuery.data?.offset === 0 && policiesQuery.data.total === policies.length}
           loading={policiesQuery.isLoading}
-          error={policiesQuery.error}
+          error={policiesState.fatalError}
           onRetry={() => void policiesQuery.refetch()}
           onAdd={() => setEditor({ kind: 'charging_policy', item: null })}
           onEdit={(item) => setEditor({ kind: 'charging_policy', item })}
@@ -220,7 +259,7 @@ export default function FleetOperationsPage() {
         <WorkOrderBoard
           items={workOrders}
           loading={workOrdersQuery.isLoading}
-          error={workOrdersQuery.error}
+          error={workOrdersState.fatalError}
           onRetry={() => void workOrdersQuery.refetch()}
           onAdd={() => setEditor({ kind: 'work_order', item: null })}
           onEdit={(item) => setEditor({ kind: 'work_order', item })}
@@ -234,7 +273,7 @@ export default function FleetOperationsPage() {
         <UtilizationForecastChart
           forecast={forecastQuery.data}
           loading={forecastQuery.isLoading}
-          error={forecastQuery.error}
+          error={forecastState.fatalError}
           onRetry={() => void forecastQuery.refetch()}
         />
       </FadeIn>
@@ -272,6 +311,6 @@ export default function FleetOperationsPage() {
           onRefresh={refreshAndCloseEditor}
         />
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -163,14 +163,14 @@ describe('LifetimeSummary — populated', () => {
 
     // coreStats-sourced tiles.
     expect(screen.getByText('$1,234.50')).toBeInTheDocument(); // totalCost via formatCurrency(_, 2)
-    expect(screen.getByText('456.7 kWh')).toBeInTheDocument(); // totalEnergy via fmtWithUnit(_, 'kWh', 1)
+    expect(screen.getByText('456.70 kWh')).toBeInTheDocument(); // totalEnergy via fmtWithUnit(_, 'kWh', 1)
     expect(screen.getByText('128')).toBeInTheDocument(); // count via fmtInt
 
     // lifetimeMetrics-sourced tiles.
     expect(screen.getByText('$9.64')).toBeInTheDocument(); // avgSessionCost
-    expect(screen.getByText('12.3 kWh')).toBeInTheDocument(); // avgSessionEnergy
-    expect(screen.getByText('42 min')).toBeInTheDocument(); // avgDuration via fmtNumber(_, 0) + ' min'
-    expect(screen.getByText('7 (88.8 kWh)')).toBeInTheDocument(); // freeCount (freeEnergy)
+    expect(screen.getByText('12.30 kWh')).toBeInTheDocument(); // avgSessionEnergy
+    expect(screen.getByText('42.40 min')).toBeInTheDocument(); // avgDuration via fmtNumber(_, 0) + ' min'
+    expect(screen.getByText('7 (88.80 kWh)')).toBeInTheDocument(); // freeCount (freeEnergy)
   });
 
   it('exposes the title as an h3 whose accessible name excludes the decorative icon', () => {
@@ -207,8 +207,8 @@ describe('LifetimeSummary — populated', () => {
 
     // Both the total-spent and avg-session-cost tiles zero out to "$0.00".
     expect(screen.getAllByText('$0.00')).toHaveLength(2);
-    expect(screen.getByText('0 min')).toBeInTheDocument();
-    expect(screen.getByText('0 (0.0 kWh)')).toBeInTheDocument();
+    expect(screen.getByText('0.00 min')).toBeInTheDocument();
+    expect(screen.getByText('0 (0.00 kWh)')).toBeInTheDocument();
   });
 });
 

@@ -18,13 +18,14 @@
  *     sorted newest-first in a semantic list.
  *   - compact layout: list capped at 3 rows, average-duration stat hidden.
  *   - null-safety: a missing timestamp collapses to "—" and a null duration
- *     to "0s" without crashing.
+ *     to "—" without inventing a zero-duration outage.
  *   - refresh: the freshness control refetches sites + events (standard) and
  *     sites only (no-site branch).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import type { TeslaBackupEvent, TeslaEnergySite } from '@/types/energy';
 
 // ── i18n stub: return the English fallback (2nd arg) or the key ──
@@ -51,7 +52,7 @@ const mockSites = useTeslaEnergySites as unknown as ReturnType<typeof vi.fn>;
 const mockEvents = useTeslaBackupHistory as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -97,7 +98,7 @@ function makeEvent(over: Partial<TeslaBackupEvent> = {}): TeslaBackupEvent {
 }
 
  
-function setup(opts: { sites?: any; events?: any } = {}) {
+function setup(opts: { sites?: ReturnType<typeof makeQuery>; events?: ReturnType<typeof makeQuery> } = {}) {
   mockSites.mockReturnValue(opts.sites ?? makeQuery({ data: [SITE] }));
   mockEvents.mockReturnValue(opts.events ?? makeQuery({ data: [] }));
 }
@@ -107,6 +108,33 @@ const COMPACT = { cols: 1, rows: 2 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+it('reviews measured backup counts and durations with the actual site and open-ended source window', () => {
+  setup({ events: makeQuery({ data: [makeEvent({ duration_seconds: 3600 }), makeEvent({ id: 2, duration_seconds: 1800 })] }) });
+  render(<BackupHistoryWidget size={STANDARD} />);
+  const brief = screen.getByTestId('backup-history-operational-brief');
+  expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getByText('2')).toBeInTheDocument();
+  expect(within(drawer).getByText('45m')).toBeInTheDocument();
+  expect(within(drawer).getByText(/Energy site 100/)).toBeInTheDocument();
+  expect(within(drawer).getByText(/no explicit exclusive end bound/)).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('keeps an accessible heading and events at %s columns', cols => {
+  setup({ events: makeQuery({ data: [makeEvent()] }) });
+  render(<BackupHistoryWidget size={{ cols, rows: 4 }} />);
+  expect(screen.getByRole('heading', { name: 'Backup history', level: 3 })).toBeVisible();
+  expect(screen.getAllByRole('listitem')).toHaveLength(1);
+});
+
+it.each([1, 2, 3])('keeps its heading with the no-site state at %s columns', cols => {
+  setup({ sites: makeQuery({ data: [] }) });
+  render(<BackupHistoryWidget size={{ cols, rows: 4 }} />);
+  expect(screen.getByRole('heading', { name: 'Backup history', level: 3 })).toBeVisible();
+  expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
 });
 
 describe('fmtDuration', () => {
@@ -119,6 +147,50 @@ describe('fmtDuration', () => {
     expect(fmtDuration(8100)).toBe('2h 15m');
   });
 
+  describe('BackupHistoryWidget trust and recovery', () => {
+    it('does not confuse a failed history request with a successful site lookup or zero outages', () => {
+      const refetchEvents = vi.fn();
+      const refetchSites = vi.fn();
+      setup({
+        sites: makeQuery({ data: [SITE], refetch: refetchSites }),
+        events: makeQuery({ isError: true, error: new Error('History unavailable'), refetch: refetchEvents }),
+      });
+      const { container } = render(<BackupHistoryWidget size={STANDARD} />, { wrapper: MemoryRouter });
+      expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initialFailure');
+      expect(screen.queryByText('No backup events in the last 30 days')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetchEvents).toHaveBeenCalledOnce();
+      expect(refetchSites).toHaveBeenCalledOnce();
+    });
+
+    it('retains events after a refresh failure and recovers all contributing sources', () => {
+      const refetchEvents = vi.fn();
+      const refetchSites = vi.fn();
+      setup({
+        sites: makeQuery({ data: [SITE], refetch: refetchSites }),
+        events: makeQuery({ data: [makeEvent()], isError: true, refetch: refetchEvents }),
+      });
+      render(<BackupHistoryWidget size={STANDARD} />);
+      expect(screen.getAllByRole('listitem')).toHaveLength(1);
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      expect(refetchEvents).toHaveBeenCalledOnce();
+      expect(refetchSites).toHaveBeenCalledOnce();
+    });
+
+    it('retries only discovery while no site has resolved', () => {
+      const refetchSites = vi.fn();
+      const refetchEvents = vi.fn();
+      setup({
+        sites: makeQuery({ isError: true, error: new Error('Sites unavailable'), refetch: refetchSites }),
+        events: makeQuery({ refetch: refetchEvents }),
+      });
+      render(<BackupHistoryWidget size={STANDARD} />, { wrapper: MemoryRouter });
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetchSites).toHaveBeenCalledOnce();
+      expect(refetchEvents).not.toHaveBeenCalled();
+    });
+  });
+
   it('rounds at the 60s boundary instead of rendering "60s"', () => {
     // Regression: rounding used to happen *after* the sub-minute check, so
     // 59.6s rendered the nonsensical "60s". It must roll over to "1m".
@@ -127,9 +199,9 @@ describe('fmtDuration', () => {
   });
 
   it('guards non-finite and negative input', () => {
-    expect(fmtDuration(Number.NaN)).toBe('0s');
-    expect(fmtDuration(Number.POSITIVE_INFINITY)).toBe('0s');
-    expect(fmtDuration(-42)).toBe('0s');
+    expect(fmtDuration(Number.NaN)).toBe('—');
+    expect(fmtDuration(Number.POSITIVE_INFINITY)).toBe('—');
+    expect(fmtDuration(-42)).toBe('—');
   });
 });
 
@@ -152,7 +224,7 @@ describe('BackupHistoryWidget', () => {
     setup({ sites: makeQuery({ data: [] }), events: makeQuery({ data: [] }) });
     render(<BackupHistoryWidget size={STANDARD} />);
 
-    expect(screen.getByText('No Tesla Energy site linked')).toBeInTheDocument();
+    expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
     expect(screen.queryByText('Outages (30d)')).not.toBeInTheDocument();
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
@@ -166,7 +238,7 @@ describe('BackupHistoryWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Outages (30d)')).not.toBeInTheDocument();
-    expect(screen.queryByText('No Tesla Energy site linked')).not.toBeInTheDocument();
+    expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
   });
 
   it('renders the "no backup events" empty state for a site with no outages', () => {
@@ -188,7 +260,7 @@ describe('BackupHistoryWidget', () => {
     render(<BackupHistoryWidget size={STANDARD} />);
 
     expect(screen.getByText('Outages (30d)')).toBeInTheDocument();
-    expect(screen.getByText('Avg Duration')).toBeInTheDocument();
+    expect(screen.getByText('Avg duration')).toBeInTheDocument();
     // count = 3, avg = (3600 + 90 + 45) / 3 = 1245s → "20m"
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('20m')).toBeInTheDocument();
@@ -217,7 +289,7 @@ describe('BackupHistoryWidget', () => {
     expect(screen.getByText('Outages (30d)')).toBeInTheDocument();
     // Full count still reported even though the list is capped.
     expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.queryByText('Avg Duration')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg duration')).not.toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
   });
 
@@ -230,9 +302,8 @@ describe('BackupHistoryWidget', () => {
 
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(1);
-    expect(within(rows[0]).getByText('—')).toBeInTheDocument();
-    // null duration → 0 → "0s" badge inside the row.
-    expect(within(rows[0]).getByText('0s')).toBeInTheDocument();
+    expect(within(rows[0]).getAllByText('—')).toHaveLength(2);
+    expect(within(rows[0]).queryByText('0s')).not.toBeInTheDocument();
   });
 
   it('refetches both sites and events when refreshing the populated widget', () => {

@@ -99,6 +99,20 @@ describe('RateHistoryPanel — loading/error/empty', () => {
 });
 
 describe('RateHistoryPanel — rows', () => {
+  it('retains future/current interval meanings, selected rate identity and zero rate after refresh failure', () => {
+    const current = makeRate({ id: 42, rate_per_wh: 0, effective_from: pastIso(), effective_to: null });
+    const scheduled = makeRate({ id: 9, effective_from: futureIso(), effective_to: null });
+    const onSelectRate = vi.fn();
+    const onDelete = vi.fn();
+    renderPanel({ rates: [current, scheduled], error: new Error('refresh'), selectedRateId: 42, onSelectRate, onDelete });
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled')).toBeInTheDocument();
+    expect(screen.getByText('$0.000')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Preview sessions' })[1]);
+    expect(onSelectRate).toHaveBeenCalledWith(current);
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('button', { name: 'Cancel scheduled rate' })).toHaveLength(1);
+  });
   it('renders rate/kWh and currency for a closed historical row', () => {
     renderPanel({ rates: [makeRate({ rate_per_wh: 0.0001, currency: 'USD' })] });
 
@@ -177,7 +191,7 @@ describe('RateHistoryPanel — delete flow', () => {
     expect(onDelete).not.toHaveBeenCalled();
 
     const dialog = screen.getByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel Rate' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel rate' }));
 
     await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
     expect(onDelete).toHaveBeenCalledWith(rate);

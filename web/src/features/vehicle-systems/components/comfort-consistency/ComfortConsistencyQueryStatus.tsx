@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, EmptyState, QueryError } from '@/components/feedback';
+import { VehicleSourcePause } from '../VehicleSourcePause';
 import { Button, Text } from '@/components/ui';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import type { ComfortConsistencyQueryState } from './types';
@@ -55,6 +56,11 @@ export function ComfortConsistencyQueryStatus({
         </Text>
       </AlertBanner>
     );
+  }
+  if (state.isPaused && !state.error && !state.refreshError) {
+    const label = t('comfortConsistency.title', 'Comfort consistency');
+    const paused = t('comfortConsistency.states.paused', 'Climate history loading is paused while the network is unavailable; no empty response is inferred.');
+    return <VehicleSourcePause label={label} message={paused} retained={state.isResolved} onRetry={state.onRetry} />;
   }
   if (state.error) {
     return (

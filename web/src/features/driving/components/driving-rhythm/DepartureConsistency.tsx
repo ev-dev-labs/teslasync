@@ -112,7 +112,6 @@ export function DepartureConsistency({
                       {profile.consistencyDeviationS != null
                         ? `±${formatDuration(
                             profile.consistencyDeviationS,
-                            { precision: 2 },
                           )}`
                         : '—'}
                     </MetricValue>

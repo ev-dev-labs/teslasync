@@ -227,13 +227,13 @@ describe('ChartDataPoint contract (via useDriveDetailData.chartData)', () => {
     expect(imperialPt.tireFl).toBeCloseTo(convertPressureFromSI(100, 'psi'), 6);
   });
 
-  it('coalesces absent required fields to 0 and absent optionals to null', () => {
+  it('preserves all absent signal fields as null', () => {
     const p = render(makeDrive({ telemetry: [makeTele()] })).current.chartData[0];
 
-    expect(p.speed).toBe(0);
-    expect(p.battery).toBe(0);
-    expect(p.elevation).toBe(0);
-    expect(p.power).toBe(0);
+    expect(p.speed).toBeNull();
+    expect(p.battery).toBeNull();
+    expect(p.elevation).toBeNull();
+    expect(p.power).toBeNull();
     const nullable: Array<keyof ChartDataPoint> = [
       'outsideTemp', 'insideTemp', 'driverTemp', 'passengerTemp',
       'idealRange', 'ratedRange', 'estRange', 'odometer', 'soc', 'usableSoc',
@@ -303,7 +303,7 @@ describe('DriveStats contract (via useDriveDetailData.stats)', () => {
     expect(s.energyWh).toBe(7200);
     expect(s.regenWh).toBe(900);
     expect(s.consumptionWhKm).toBeCloseTo(200, 6); // 7200 Wh / 36 km
-    expect(s.efficiencyPctPer100).toBeCloseTo(12 / 36 * 10, 6);
+    expect(s.efficiencyPctPer100).toBeCloseTo(12 / 36 * 100, 6);
   });
 
   it('accumulates elevation gain/loss and temperature / climate / fan aggregates', () => {

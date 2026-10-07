@@ -83,10 +83,10 @@ function metricValue(label: string): string {
 }
 
 const ALL_LABELS = [
-  'Total Flags',
-  'Boolean Toggles',
+  'Total flags',
+  'Boolean toggles',
   'Structured',
-  'Recent Changes',
+  'Recent changes',
   'Deletes',
   'Contributors',
 ];
@@ -99,7 +99,7 @@ describe('FlagStatsBand — loading', () => {
     expect(skeletonGrid).not.toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBe(6);
     // The KPI cards must not render yet.
-    expect(screen.queryByText('Total Flags')).toBeNull();
+    expect(screen.queryByText('Total flags')).toBeNull();
   });
 
   it('keeps showing stats (not a skeleton) when refetching over existing data', () => {
@@ -111,8 +111,8 @@ describe('FlagStatsBand — loading', () => {
     // Guard `(flags?.length ?? 0) === 0` means non-empty data suppresses the
     // skeleton so the band updates progressively instead of flashing empty.
     expect(container.querySelector('[aria-hidden="true"]')).toBeNull();
-    expect(metricValue('Total Flags')).toBe('1');
-    expect(metricValue('Boolean Toggles')).toBe('1');
+    expect(metricValue('Total flags')).toBe('1');
+    expect(metricValue('Boolean toggles')).toBe('1');
   });
 });
 
@@ -121,7 +121,7 @@ describe('FlagStatsBand — error', () => {
     const { onRetry } = renderBand({ error: new Error('boom') });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Total Flags')).toBeNull();
+    expect(screen.queryByText('Total flags')).toBeNull();
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
@@ -137,7 +137,7 @@ describe('FlagStatsBand — error', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Total Flags')).toBeNull();
+    expect(screen.queryByText('Total flags')).toBeNull();
   });
 });
 
@@ -161,10 +161,10 @@ describe('FlagStatsBand — stats derivation', () => {
 
     renderBand({ flags, changes });
 
-    expect(metricValue('Total Flags')).toBe('7');
-    expect(metricValue('Boolean Toggles')).toBe('2');
+    expect(metricValue('Total flags')).toBe('7');
+    expect(metricValue('Boolean toggles')).toBe('2');
     expect(metricValue('Structured')).toBe('2'); // object + array
-    expect(metricValue('Recent Changes')).toBe('4');
+    expect(metricValue('Recent changes')).toBe('4');
     expect(metricValue('Deletes')).toBe('2');
     expect(metricValue('Contributors')).toBe('2'); // alice, bob
   });
@@ -172,7 +172,7 @@ describe('FlagStatsBand — stats derivation', () => {
   it('exposes the grid as a labelled region for assistive tech', () => {
     renderBand({ flags: [{ key: 'x', value: true }] });
     expect(
-      screen.getByRole('region', { name: /feature flag summary metrics/i }),
+      screen.getByRole('region', { name: /Feature flag Summary metrics/i }),
     ).toBeInTheDocument();
   });
 });
@@ -182,7 +182,7 @@ describe('FlagStatsBand — empty & null-safety', () => {
     renderBand({ flags: [], changes: [] });
 
     expect(
-      screen.getByRole('region', { name: /feature flag summary metrics/i }),
+      screen.getByRole('region', { name: /Feature flag Summary metrics/i }),
     ).toBeInTheDocument();
     for (const label of ALL_LABELS) {
       expect(metricValue(label)).toBe('0');
@@ -195,7 +195,7 @@ describe('FlagStatsBand — empty & null-safety', () => {
       changes: undefined as unknown as FeatureFlagChange[],
     });
 
-    expect(metricValue('Total Flags')).toBe('0');
+    expect(metricValue('Total flags')).toBe('0');
     expect(metricValue('Contributors')).toBe('0');
   });
 
@@ -211,9 +211,9 @@ describe('FlagStatsBand — empty & null-safety', () => {
       ],
     });
 
-    expect(metricValue('Total Flags')).toBe('2'); // length counts both
-    expect(metricValue('Boolean Toggles')).toBe('1'); // only the real boolean
-    expect(metricValue('Recent Changes')).toBe('2');
+    expect(metricValue('Total flags')).toBe('2'); // length counts both
+    expect(metricValue('Boolean toggles')).toBe('1'); // only the real boolean
+    expect(metricValue('Recent changes')).toBe('2');
     expect(metricValue('Deletes')).toBe('1');
     expect(metricValue('Contributors')).toBe('1'); // 'zoe' only
   });

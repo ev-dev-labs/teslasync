@@ -8,6 +8,7 @@ import {
 import { Button, ConfirmDialog, Input, Modal, Toggle } from '@/components/ui';
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import { MutationErrorDialog } from './MutationErrorDialog';
+import { FormSection } from '@/components/forms';
 
 interface CostCenterDialogProps {
   item: FleetCostCenter | null;
@@ -96,6 +97,7 @@ export function CostCenterDialog({
           : t('fleetOps.costCenterDialog.createTitle', 'Add cost center')}
       >
         <form onSubmit={submit} className="space-y-4">
+          <FormSection title={t('fleetOps.costCenters.resource', 'Cost centers')}>
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label={t('fleetOps.costCenterDialog.code', 'Code')}
@@ -125,6 +127,7 @@ export function CostCenterDialog({
             onChange={setActive}
             label={t('fleetOps.costCenterDialog.active', 'Available for new fleet activity')}
           />
+          </FormSection>
           <div className="flex justify-between gap-2">
             <div>
               {item && (

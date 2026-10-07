@@ -6,9 +6,10 @@ import { GlassPanel, Badge, DataTable, PanelTitle, Text, type Column } from '@/c
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import { formatRelative } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { Automation } from '@/api/types';
 import { VisuallyHidden } from '@/components/a11y';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type RowKey = string | number;
 
@@ -49,6 +50,7 @@ export function AutomationListTable({
   onRetry,
   totalCount,
 }: AutomationListTableProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive null-safety: the page contract passes null-safe values, but a
@@ -108,6 +110,8 @@ export function AutomationListTable({
       {
         key: 'name',
         header: t('automationList.col.name', 'Name'),
+        filterValue: (a) => a.id,
+        filterValueLabel: (_value, a) => a.name ?? t('automationList.unnamed', 'Untitled automation'),
         sortable: true,
         render: (a) => (
           <Link
@@ -121,6 +125,7 @@ export function AutomationListTable({
       {
         key: 'description',
         header: t('automationList.col.desc', 'Description'),
+        filterValue: (a) => a.description ?? null,
         render: (a) => (
           <Text as="span" color="secondary" className="block max-w-[18rem] truncate">
             {a.description ?? '—'}
@@ -130,6 +135,10 @@ export function AutomationListTable({
       {
         key: 'vehicle',
         header: t('automationList.col.vehicle', 'Vehicle'),
+        filterValue: (a) => a.vehicle_id ?? null,
+        filterValueLabel: (_value, a) => a.vehicle_id != null
+          ? lookup.get(a.vehicle_id) ?? t('automationList.vehicleUnknown', 'Vehicle #{{id}}', { id: a.vehicle_id })
+          : t('automationList.allVehicles', 'All vehicles'),
         sortable: true,
         render: (a) => (
           <Text as="span" color="secondary">
@@ -143,6 +152,9 @@ export function AutomationListTable({
       {
         key: 'runs',
         header: t('automationList.col.runs', 'Runs'),
+        filterValue: (a) => a.execution_count ?? null,
+        filterValueLabel: (value) => value == null ? '—' : fmtInt(Number(value)),
+        groupStart: true,
         sortable: true,
         align: 'right',
         render: (a) => (
@@ -154,6 +166,8 @@ export function AutomationListTable({
       {
         key: 'failures',
         header: t('automationList.col.failures', 'Failures'),
+        filterValue: (a) => a.failure_count ?? null,
+        filterValueLabel: (value) => value == null ? '—' : fmtInt(Number(value)),
         sortable: true,
         align: 'right',
         render: (a) => {
@@ -175,6 +189,8 @@ export function AutomationListTable({
       {
         key: 'lastTriggered',
         header: t('automationList.col.lastTriggered', 'Last triggered'),
+        filterValue: (a) => a.last_triggered_at ?? null,
+        filterValueLabel: (_value, a) => a.last_triggered_at ? formatRelative(a.last_triggered_at) : '—',
         sortable: true,
         render: (a) => (
           <Text as="span" color="secondary">
@@ -185,6 +201,11 @@ export function AutomationListTable({
       {
         key: 'status',
         header: t('automationList.col.status', 'Status'),
+        filterValue: (a) => a.auto_disabled ? 'auto_disabled' : a.enabled == null ? null : a.enabled ? 'enabled' : 'disabled',
+        filterValueLabel: (_value, a) => a.auto_disabled
+          ? t('automationList.status.autoDisabled', 'Auto-disabled')
+          : a.enabled == null ? '—' : a.enabled ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+        groupStart: true,
         sortable: true,
         render: (a) => {
           if (a.auto_disabled) {
@@ -206,7 +227,7 @@ export function AutomationListTable({
         },
       },
     ],
-    [t, lookup],
+    [t, lookup, fmtInt],
   );
 
   return (
@@ -253,6 +274,7 @@ export function AutomationListTable({
           tableId="automations:bulk-list"
           columns={columns}
           data={sorted}
+          enableValueFilters
           keyExtractor={(row) => row.id}
           selectable="multi"
           rowLabel={(row) => row.name ?? t('automationList.unnamed', 'Untitled automation')}

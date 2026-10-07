@@ -1,7 +1,7 @@
-import { Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, Table, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -15,26 +15,25 @@ export function ShareCardSourceScopeLedger({
   return (
     <section
       data-testid="share-card-source-scope"
-      aria-label={t('shareCard.source.aria', 'Share Card source query and scope ledger')}
+      aria-label={t('shareCard.source.aria', 'Share card source query and scope ledger')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Database className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.source.title', 'Source, query, and scope ledger')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.source.title', 'Source, query, and scope ledger')}>
         <ShareCardSectionBody state={state} showCachedStatus>
-          <div className="grid gap-3 lg:grid-cols-2">
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+          <Table aria-label={t('shareCard.source.title', 'Source, query, and scope ledger')}>
+
+            <tbody>
+            <tr>
+              <th scope="row">
                 <Text as="p" variant="label">
                   {t('shareCard.source.endpoint', 'GET /drives')}
                 </Text>
+              </th>
+              <td>
                 <Badge variant={state.cachedRefreshError ? 'warning' : 'success'}>
                   {state.cachedRefreshError
                     ? t('shareCard.source.cached', 'Cached')
                     : t('shareCard.source.resolved', 'Resolved')}
                 </Badge>
-              </div>
               <Text as="p" variant="caption" className="mt-2">
                 {t(
                   'shareCard.source.contract',
@@ -42,11 +41,15 @@ export function ShareCardSourceScopeLedger({
                   { limit: 1_000 },
                 )}
               </Text>
-            </div>
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">
               <Text as="p" variant="label">
                 {t('shareCard.source.calendarScope', 'Selected calendar scope')}
               </Text>
+              </th>
+              <td>
               <Text as="p" variant="caption" className="mt-2">
                 {t(
                   'shareCard.source.calendarRange',
@@ -58,11 +61,15 @@ export function ShareCardSourceScopeLedger({
                   },
                 )}
               </Text>
-            </div>
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">
               <Text as="p" variant="label">
                 {t('shareCard.source.apiWindow', 'Half-open API window')}
               </Text>
+              </th>
+              <td>
               <Text as="p" variant="code" className="mt-2 break-all">
                 {t(
                   'shareCard.source.apiBounds',
@@ -73,29 +80,34 @@ export function ShareCardSourceScopeLedger({
                   },
                 )}
               </Text>
-            </div>
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">
               <Text as="p" variant="label">
                 {t('shareCard.source.runtimeScope', 'Runtime accounting')}
               </Text>
+              </th>
+              <td className="text-right">
               <Text as="p" variant="caption" className="mt-2">
                 {t(
                   'shareCard.source.runtimeCounts',
                   '{{returned}} returned · {{eligible}} eligible · {{rejected}} rejected',
                   {
-                    returned: display.formatNumber(analysis.returnedRows, 0),
-                    eligible: display.formatNumber(analysis.eligibleRows, 0),
+                    returned: display.formatNumber(analysis.returnedRows),
+                    eligible: display.formatNumber(analysis.eligibleRows),
                     rejected: display.formatNumber(
                       analysis.returnedRows - analysis.eligibleRows,
-                      0,
                     ),
                   },
                 )}
               </Text>
-            </div>
-          </div>
+              </td>
+            </tr>
+            </tbody>
+          </Table>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

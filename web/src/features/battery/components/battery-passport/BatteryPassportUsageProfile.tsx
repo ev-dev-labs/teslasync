@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportUsageProfileProps {
   analysis: BatteryPassportAnalysis;
@@ -18,28 +20,19 @@ export function BatteryPassportUsageProfile({
   analysis,
   state,
 }: BatteryPassportUsageProfileProps) {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const metrics = analysis.metrics;
 
   return (
     <section data-testid="battery-passport-usage-profile">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Activity
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.usage.title',
             'Usage-factor profile',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.usage.subtitle',
             'Neutral descriptions of server rollups used by the certificate; no causal attribution or charging prescription.',
-          )}
-        </Text>
+          )} actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <MetricCard
@@ -48,7 +41,7 @@ export function BatteryPassportUsageProfile({
                 'Equivalent-full-cycle proxy',
               )}
               value={metrics.equivalentFullCycles != null
-                ? fmtNumber(metrics.equivalentFullCycles, 1)
+                ? fmtNumber(metrics.equivalentFullCycles)
                 : '—'}
               subtitle={t(
                 'batteryPassport.usage.efcHint',
@@ -63,7 +56,7 @@ export function BatteryPassportUsageProfile({
                 'Fast-charge session share',
               )}
               value={metrics.fastChargeRatio != null
-                ? fmtPercent(metrics.fastChargeRatio * 100, 1)
+                ? fmtPercent(metrics.fastChargeRatio * 100)
                 : '—'}
               subtitle={t(
                 'batteryPassport.usage.fastHint',
@@ -78,7 +71,7 @@ export function BatteryPassportUsageProfile({
                 'Average charge-end SoC',
               )}
               value={metrics.avgChargeLimitPct != null
-                ? fmtPercent(metrics.avgChargeLimitPct, 1)
+                ? fmtPercent(metrics.avgChargeLimitPct)
                 : '—'}
               subtitle={t(
                 'batteryPassport.usage.endSocHint',
@@ -97,7 +90,7 @@ export function BatteryPassportUsageProfile({
             </Text>
           </AlertBanner>
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

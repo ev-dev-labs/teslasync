@@ -1,4 +1,4 @@
-import { forwardRef, useId } from 'react';
+import { forwardRef, useId, useMemo } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -13,6 +13,8 @@ import { chartTokens } from '@/lib/tokens';
 import { ChartTooltip } from './ChartTooltip';
 import { ChartLegend } from './ChartLegend';
 import { resolveChartHeights } from './chartSizing';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useMeasuredAxisWidth } from './useMeasuredAxisWidth';
 
 export interface SeriesConfig {
   key: string;
@@ -27,6 +29,8 @@ export interface AreaChartWrapperProps {
   height?: number;
   xFormatter?: (value: string) => string;
   yFormatter?: (value: number) => string;
+  /** Numeric Y-axis/tooltip semantics; count preserves integer tick labels. */
+  kind?: 'measurement' | 'count';
   className?: string;
   /**
    * Accessible name for the chart. When provided the wrapper exposes
@@ -58,13 +62,30 @@ export function resolveAreaTooltip(
 
 export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps>(
   function AreaChartWrapper(
-    { data, xKey, series, height = 300, xFormatter, yFormatter, className, ariaLabel },
+    { data, xKey, series, height = 300, xFormatter, yFormatter, kind, className, ariaLabel },
     ref,
   ) {
     const safeSeries = series ?? [];
+    const { fmtNumber, fmtInt } = useNumberFormatting();
+    const formatY = yFormatter ?? (kind === 'count'
+      ? (value: number) => fmtInt(value)
+      : kind === 'measurement' ? (value: number) => fmtNumber(value) : undefined);
     const safeData = data ?? [];
     const instanceId = useId().replace(/:/g, '');
     const chartHeight = resolveChartHeights('standard', height).desktop;
+    const axisLabels = useMemo(() => {
+      const labels = new Set([formatY ? formatY(0) : '0']);
+      for (const row of safeData) {
+        for (const item of safeSeries) {
+          const value = row?.[item.key];
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            labels.add(formatY ? formatY(value) : String(value));
+          }
+        }
+      }
+      return [...labels];
+    }, [safeData, safeSeries, formatY]);
+    const axisWidth = useMeasuredAxisWidth({ labels: axisLabels, fontSize: 11, minWidth: 60, padding: 24 });
 
     return (
       <div
@@ -74,7 +95,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
         aria-label={ariaLabel}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
-          <AreaChart data={safeData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          <AreaChart data={safeData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>
               {safeSeries.map((s) => (
                 <linearGradient
@@ -103,16 +124,17 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
               tickFormatter={xFormatter}
             />
             <YAxis
+              width={axisWidth}
               tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
-              tickFormatter={yFormatter}
+              tickFormatter={formatY}
             />
 
             <Tooltip
               content={(
                 <ChartTooltip
                   valueFormatter={
-                    yFormatter
-                      ? (value) => yFormatter(Number(value))
+                    formatY
+                      ? (value) => value == null || !Number.isFinite(Number(value)) ? '—' : formatY(Number(value))
                       : undefined
                   }
                   labelFormatter={

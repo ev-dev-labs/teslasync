@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type {
   DestinationTransitionResult,
   TransitionMatrixCell,
@@ -11,6 +11,7 @@ import type {
 import { destinationPercent } from './labels';
 import { DestinationTransitionsSectionBody } from './DestinationTransitionsSectionBody';
 import type { DestinationTransitionsQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TopTransitionMatrixProps {
   model: DestinationTransitionResult;
@@ -23,6 +24,7 @@ export function TopTransitionMatrix({
   state,
   locale,
 }: TopTransitionMatrixProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = model.topMatrix;
   const destinations = rows.map((row) => ({

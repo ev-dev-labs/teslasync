@@ -37,23 +37,23 @@ export function DistanceBandsChart({
   const labelFor = (band: DistanceBand): string => {
     if (band.key === 'local' && band.maxM != null) {
       return t('explorer.distanceBands.local', 'Under {{max}}', {
-        max: formatDistance(band.maxM, { precision: 0 }),
+        max: formatDistance(band.maxM),
       });
     }
     if (band.key === 'near' && band.maxM != null) {
       return t('explorer.distanceBands.near', '{{min}}–{{max}}', {
-        min: formatDistance(band.minM, { precision: 0 }),
-        max: formatDistance(band.maxM, { precision: 0 }),
+        min: formatDistance(band.minM),
+        max: formatDistance(band.maxM),
       });
     }
     if (band.key === 'regional' && band.maxM != null) {
       return t('explorer.distanceBands.regional', '{{min}}–{{max}}', {
-        min: formatDistance(band.minM, { precision: 0 }),
-        max: formatDistance(band.maxM, { precision: 0 }),
+        min: formatDistance(band.minM),
+        max: formatDistance(band.maxM),
       });
     }
     return t('explorer.distanceBands.far', '{{min}} and beyond', {
-      min: formatDistance(band.minM, { precision: 0 }),
+      min: formatDistance(band.minM),
     });
   };
 
@@ -70,7 +70,7 @@ export function DistanceBandsChart({
           'explorer.distanceBands.radiusSubtitle',
           'Visit-weighted p90 radius: {{radius}}',
           {
-            radius: formatDistance(summary.radiusM, { precision: 0 }),
+            radius: formatDistance(summary.radiusM),
           },
         )
       : t(

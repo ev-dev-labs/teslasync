@@ -187,9 +187,9 @@ describe('WeatherAtCarWidget — standard (≥2 col) layout', () => {
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByRole('heading', { name: 'Weather at Car' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
     expect(screen.getByText(`20${DEG}C`)).toBeInTheDocument();
-    expect(screen.getByText('Outside Temperature')).toBeInTheDocument();
+    expect(screen.getByText('Outside temperature')).toBeInTheDocument();
     // Coordinates are rendered to two decimals.
     expect(screen.getByText(`37.42${DEG}, -122.08${DEG}`)).toBeInTheDocument();
   });
@@ -220,8 +220,8 @@ describe('WeatherAtCarWidget — compact (1×1) layout', () => {
     expect(screen.getByText(`18${DEG}C`)).toBeInTheDocument();
     // Compact chrome is stripped: no header title, no descriptive label,
     // no coordinate line.
-    expect(screen.queryByRole('heading', { name: 'Weather at Car' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Outside Temperature')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Weather at car' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Outside temperature')).not.toBeInTheDocument();
     expect(screen.queryByText(`37.42${DEG}, -122.08${DEG}`)).not.toBeInTheDocument();
   });
 });
@@ -320,7 +320,7 @@ describe('WeatherAtCarWidget — loading / empty / error', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No weather data')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Weather at Car' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
   });
 
   it('shows the labelled empty state (not a blank panel) when no state has arrived', () => {
@@ -328,7 +328,7 @@ describe('WeatherAtCarWidget — loading / empty / error', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Title still renders; the body degrades to a labelled empty state.
-    expect(screen.getByRole('heading', { name: 'Weather at Car' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
     expect(screen.getByText('No weather data')).toBeInTheDocument();
   });
 
@@ -374,6 +374,36 @@ describe('WeatherAtCarWidget — loading / empty / error', () => {
 });
 
 describe('WeatherAtCarWidget — refresh + vehicle resolution', () => {
+  it('retries failed discovery, not the disabled vehicle-state endpoint', () => {
+    const discoveryRetry = vi.fn();
+    const stateRetry = vi.fn();
+    mockUseVehicles.mockReturnValue(makeQuery({ isError: true, error: new Error('vehicles'), refetch: discoveryRetry }));
+    mockUseVehicleState.mockReturnValue(makeQuery({ isPending: true, refetch: stateRetry }));
+    renderWidget();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry/ }));
+    expect(discoveryRetry).toHaveBeenCalledOnce();
+    expect(stateRetry).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1, 2.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('disables invalid identity %s', (vehicleId) => {
+    renderWidget({ vehicleId });
+    expect(mockUseVehicleState).toHaveBeenCalledWith(0, { refetchInterval: 30_000 });
+  });
+
+  it('reacts to temperature preference changes with unchanged raw data', () => {
+    const state = makeState({ outside_temp: 20 });
+    mockUseVehicleState.mockReturnValue(stateQuery(state));
+    const client = new QueryClient();
+    const tree = () => <MemoryRouter><QueryClientProvider client={client}><WeatherAtCarWidget size={{ cols: 2, rows: 2 }} /></QueryClientProvider></MemoryRouter>;
+    const view = render(tree());
+    expect(screen.getByText('20°C')).toBeInTheDocument();
+    unitsState.temperature = '°F';
+    view.rerender(tree());
+    expect(screen.getByText('68°F')).toBeInTheDocument();
+    expect(state.outside_temp).toBe(20);
+  });
+
   it('refetches vehicle state when the refresh control is activated', () => {
     const refetch = vi.fn();
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ outside_temp: 20 }), { refetch }));

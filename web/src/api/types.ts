@@ -125,6 +125,9 @@ export interface Drive {
   duration_s: number
   /** Distance travelled in meters (SI canonical). */
   distance_m: number
+  /** Recorded drive endpoint odometers in meters (SI). */
+  start_odometer_m?: number | null
+  end_odometer_m?: number | null
   start_address: string | null
   end_address: string | null
   start_lat: number | null
@@ -620,6 +623,7 @@ export interface VehicleState {
   longitude: number
   heading?: number | null
   speed: number
+  /** Signed pack power in watts (SI). */
   power: number
   battery_level: number
   rated_range: number
@@ -635,6 +639,13 @@ export interface VehicleState {
   is_locked: boolean
   sentry_mode: boolean
   software_version: string
+}
+
+/** Client readings preserve absent fields without inventing measurements or flags. */
+export type VehicleStateReadings = {
+  [Field in keyof VehicleState]: Field extends 'vehicle_id'
+    ? VehicleState[Field]
+    : VehicleState[Field] | null
 }
 
 export interface AuthStatus {
@@ -900,6 +911,16 @@ export interface AlertTestTarget {
 }
 
 export interface AlertTestRequest {
+  name?: string
+  signal_name?: string
+  op?: AlertRuleOp
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  vehicle_name?: string
+  vehicle_timezone?: string
   message?: string
   target?: AlertTestTarget | null
   /**
@@ -934,6 +955,7 @@ export interface AlertMessagePreset {
   name: string
   description?: string
   template: string
+  example?: string
   kind?: '' | 'signal' | 'computed_metric'
   tags?: string[]
 }
@@ -944,6 +966,7 @@ export interface AlertMessagePreset {
  * the same inputs the production dispatch path uses.
  */
 export interface AlertMessagePreviewRequest {
+  vehicle_timezone?: string
   name?: string
   kind?: AlertRuleKind
   component_name?: string | null
@@ -1240,7 +1263,13 @@ export type VehicleStatus = _VehicleState
 export const VEHICLE_STATUSES = VEHICLE_STATES as unknown as VehicleStatus[]
 
 /** Derives a display-friendly status from live vehicle state. */
-export function deriveVehicleStatus(state?: VehicleState | null): VehicleStatus {
+export type VehicleStatusInput = {
+  state?: string | null
+  is_charging?: boolean | null
+  speed?: number | null
+}
+
+export function deriveVehicleStatus(state?: VehicleStatusInput | null): VehicleStatus {
   if (!state) return 'offline'
   if (state.is_charging) return 'charging'
   if (state.speed && state.speed > 0) return 'driving'

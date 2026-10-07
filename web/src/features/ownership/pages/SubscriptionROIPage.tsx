@@ -25,7 +25,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -34,7 +34,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   BillingPeriod,
   Subscription,
@@ -47,9 +47,10 @@ import {
   MoneyInput,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   formatCurrencyMinor,
   formatPct,
@@ -57,6 +58,7 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WINDOW_OPTIONS = [30, 90, 180, 365];
 
@@ -97,6 +99,7 @@ const VERDICT_FILL: Record<string, string> = {
 };
 
 export default function SubscriptionROIPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -187,7 +190,7 @@ export default function SubscriptionROIPage() {
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.verdict} />
           <span className="tabular-nums text-xs text-[var(--text-muted)]">
-            {formatPct(row.confidence * 100, 0)}
+            {formatPct(row.confidence * 100)}
           </span>
         </div>
       ),
@@ -195,12 +198,14 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'monthly',
+      align: 'right',
       header: t('ownership.subscription.row.monthly', 'Monthly cost'),
       render: (row) => <span className="tabular-nums">{money(row.monthly_cost_minor)}</span>,
       sortable: true,
     },
     {
       key: 'spend',
+      align: 'right',
       header: t('ownership.subscription.row.spend', 'Spent to date'),
       render: (row) => (
         <div>
@@ -215,16 +220,17 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'usage',
+      align: 'right',
       header: t('ownership.subscription.row.usage', 'Measured usage'),
       render: (row) => (
         <div>
           <span className="tabular-nums">
-            {row.usage_quantity != null ? fmtNumber(row.usage_quantity, 1) : '—'} {row.usage_unit}
+            {row.usage_quantity != null ? fmtNumber(row.usage_quantity) : '—'} {row.usage_unit}
           </span>
           <Text as="p" variant="caption">
             {row.usage_per_month != null
               ? t('ownership.subscription.row.perMonth', '{{value}} / month', {
-                  value: fmtNumber(row.usage_per_month, 1),
+                  value: fmtNumber(row.usage_per_month),
                 })
               : '—'}
           </Text>
@@ -233,11 +239,13 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'value',
+      align: 'right',
       header: t('ownership.subscription.row.value', 'Realised value'),
       render: (row) => <span className="tabular-nums">{money(row.realised_value_minor)}</span>,
     },
     {
       key: 'net',
+      align: 'right',
       header: t('ownership.subscription.row.net', 'Net'),
       render: (row) => (
         <span
@@ -250,6 +258,7 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'roi',
+      align: 'right',
       header: t('ownership.subscription.row.roi', 'ROI'),
       render: (row) =>
         row.roi_pct != null ? (
@@ -265,18 +274,19 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'breakEven',
+      align: 'right',
       header: t('ownership.subscription.row.breakEven', 'Break-even usage'),
       render: (row) => (
         <div>
           <span className="tabular-nums">
             {row.break_even_usage_per_month != null
-              ? `${fmtNumber(row.break_even_usage_per_month, 1)} ${row.usage_unit}`
+              ? `${fmtNumber(row.break_even_usage_per_month)} ${row.usage_unit}`
               : '—'}
           </span>
           <Text as="p" variant="caption">
             {row.utilisation_pct != null
               ? t('ownership.subscription.row.utilisation', '{{value}} of break-even', {
-                  value: formatPct(row.utilisation_pct, 0),
+                  value: formatPct(row.utilisation_pct),
                 })
               : '—'}
           </Text>
@@ -298,6 +308,8 @@ export default function SubscriptionROIPage() {
     {
       key: 'name',
       header: t('ownership.subscription.list.name', 'Subscription'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => row.name,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -311,6 +323,9 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'price',
+      align: 'right',
+      filterValue: (row) => `${row.currency}:${row.price_minor}`,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(row.price_minor, row.currency, units.unitPrefs.locale),
       header: t('ownership.subscription.list.price', 'Price'),
       render: (row) => (
         <span className="tabular-nums">
@@ -321,6 +336,8 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'metric',
+      filterValue: (row) => row.usage_metric,
+      filterValueLabel: (_value, row) => row.usage_metric.replace(/_/g, ' '),
       header: t('ownership.subscription.list.metric', 'Value metric'),
       render: (row) => (
         <Badge variant={row.usage_metric === 'none' ? 'neutral' : 'info'}>
@@ -330,6 +347,13 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'benchmark',
+      align: 'right',
+      filterValue: (row) => `${row.currency}:${row.benchmark_minor_per_unit}`,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(
+        Math.round(row.benchmark_minor_per_unit * 100) / 100,
+        row.currency,
+        units.unitPrefs.locale,
+      ),
       header: t('ownership.subscription.list.benchmark', 'Benchmark rate'),
       render: (row) => (
         <span className="tabular-nums">
@@ -371,15 +395,14 @@ export default function SubscriptionROIPage() {
   ];
 
   return (
-    <PageContainer
-      title={t('ownership.subscription.title', 'Subscription & Feature ROI')}
+    <PageLayout
+      title={t('ownership.subscription.title', 'Subscription & feature ROI')}
       subtitle={t(
         'ownership.subscription.subtitle',
         'Price every recurring charge against the usage it actually delivered, express the break-even in units you can act on, and see exactly how much cancelling the weak ones would return.',
       )}
-      loading={roiQuery.isLoading}
-      error={roiQuery.error as Error | null}
-      actions={
+      query={[roiQuery, subsQuery]}
+      contextActions={
         <div className="flex items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}
@@ -404,40 +427,48 @@ export default function SubscriptionROIPage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.subscription.summary.title', 'Portfolio economics')}>
-          <StatGrid
-            stats={[
+        <OwnershipPanel title={t('ownership.subscription.summary.title', 'Portfolio economics')}
+          source={roiQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.subscription.brief.title', 'Subscription commitment and realised value')}
+            description={t('ownership.subscription.notice.body', 'Realised value is measured usage multiplied by the benchmark rate you set — what the same usage would have cost without the subscription. A subscription active for under 30 days is reported as too early to judge, never as a loss.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={roiQuery} enabled={vehicleId != null}
+            window={report?.window}
+            metrics={[
               {
-                key: 'monthly',
+                occurrenceId: 'monthly', metricId: 'currency',
                 label: t('ownership.subscription.stat.monthly', 'Monthly commitment'),
-                value: money(report?.total_monthly_cost_minor),
+                rawValue: report?.total_monthly_cost_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'spend',
+                occurrenceId: 'spend', metricId: 'currency',
                 label: t('ownership.subscription.stat.spend', 'Spent to date'),
-                value: money(report?.total_spend_to_date_minor),
+                rawValue: report?.total_spend_to_date_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'value',
+                occurrenceId: 'value', metricId: 'currency',
                 label: t('ownership.subscription.stat.value', 'Realised value'),
-                value: money(report?.total_realised_value_minor),
+                rawValue: report?.total_realised_value_minor,
+                display: specialistDisplay(money),
                 tone: 'positive',
               },
               {
-                key: 'roi',
+                occurrenceId: 'roi', metricId: 'percent',
                 label: t('ownership.subscription.stat.roi', 'Portfolio ROI'),
-                value:
-                  report?.portfolio_roi_pct != null
-                    ? formatSignedPct(report.portfolio_roi_pct)
-                    : '—',
+                rawValue: report?.portfolio_roi_pct,
+                display: specialistDisplay(formatSignedPct),
                 tone: (report?.portfolio_roi_pct ?? 0) >= 0 ? 'positive' : 'critical',
               },
               {
-                key: 'saving',
+                occurrenceId: 'saving', metricId: 'currency',
                 label: t('ownership.subscription.stat.saving', 'Cancel-candidate saving'),
-                value: money(report?.cancel_candidate_saving_minor),
+                rawValue: report?.cancel_candidate_saving_minor,
+                display: specialistDisplay(money),
                 tone: (report?.cancel_candidate_saving_minor ?? 0) > 0 ? 'warning' : 'default',
-                hint: t('ownership.subscription.stat.savingHint', 'per month, if all cancelled'),
+                context: t('ownership.subscription.stat.savingHint', 'per month, if all cancelled'),
               },
             ]}
           />
@@ -447,6 +478,8 @@ export default function SubscriptionROIPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.subscription.chart.title', 'Return by subscription')}
+          source={roiQuery}
+          sourceEnabled={vehicleId != null}
           empty={roiChartData.length === 0}
           emptyMessage={t(
             'ownership.subscription.chart.empty',
@@ -466,7 +499,7 @@ export default function SubscriptionROIPage() {
               {
                 key: 'roi',
                 label: t('ownership.subscription.chart.col.roi', 'Return on spend'),
-                format: (v) => formatPct(v as number, 1),
+                format: (v) => formatPct(v as number),
               },
               { key: 'verdict', label: t('ownership.subscription.chart.col.verdict', 'Verdict') },
             ]}
@@ -495,6 +528,8 @@ export default function SubscriptionROIPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.subscription.roi.title', 'Per-subscription verdict')}
+          source={roiQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.subscription.roi.subtitle',
             'Confidence falls when the active period is short or the usage metric has sparse data — a low-confidence "cancel" is a prompt to look, not to act.',
@@ -518,6 +553,9 @@ export default function SubscriptionROIPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.subscription.list.title', 'Subscription register')}
+          source={subsQuery}
+          sourceEnabled={vehicleId != null}
+          editing={formOpen}
           empty={subscriptions.length === 0 && !formOpen}
           emptyMessage={t(
             'ownership.subscription.list.empty',
@@ -664,6 +702,7 @@ export default function SubscriptionROIPage() {
 
           <DataTable
             columns={subscriptionColumns}
+            enableValueFilters
             mobileColumns={['name', 'price', 'period']}
             data={subscriptions}
             keyExtractor={(row) => row.id}
@@ -679,6 +718,8 @@ export default function SubscriptionROIPage() {
 
       <FadeIn delay={0.2}>
         <EvidencePanel
+          source={roiQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -694,6 +735,6 @@ export default function SubscriptionROIPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

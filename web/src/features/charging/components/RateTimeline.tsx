@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import { Text } from '@/components/ui';
 import { typography } from '@/lib/tokens';
 import type { HourlyRate } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RateTimelineProps {
   rates: HourlyRate[];
@@ -48,6 +49,7 @@ function formatHour(h: number): string {
 }
 
 export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive: callers already pass `hourly_rates ?? []`, but guard here too so
@@ -129,7 +131,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
             : rate.tier || t('chargePlanner.unknownTier', 'Unknown');
           const labelVars = {
             hour: formatHour(rate.hour),
-            rate: fmtNumber(rate.rate_cents, 1),
+            rate: fmtNumber(rate.rate_cents),
             tier: tierName,
           };
           const barLabel = inWindow
@@ -154,7 +156,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
                     size="xs"
                     className={cn(tierTextColors[rate.tier] ?? typography.color.secondary)}
                   >
-                    {fmtNumber(rate.rate_cents, 1)}¢/kWh
+                    {fmtNumber(rate.rate_cents)}¢/kWh
                   </Text>
                 </div>
               </div>

@@ -1,0 +1,30 @@
+{
+  "watch": {
+    "noVehicle": "No vehicle found",
+    "timeToFull": "{{minutes}}m to full",
+    "sentryOn": "Sentry mode on",
+    "sentryOff": "Sentry mode off",
+    "action": {
+      "lock": "Lock vehicle",
+      "unlock": "Unlock vehicle",
+      "climateOn": "Turn climate on",
+      "climateOff": "Turn climate off"
+    },
+    "cached": "Cached",
+    "batteryGauge": "Battery {{battery}}; range {{range}}",
+    "timeToFullUnknown": "Time to full unknown",
+    "updated": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "state": {
+      "driving": "driving",
+      "charging": "charging",
+      "asleep": "asleep",
+      "online": "online",
+      "offline": "offline"
+    }
+  }
+}

@@ -8,14 +8,8 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
-
-// ── Source → badge variant mapping ───────────────────────────────────
-
-function sourceLabel(source: string): string {
-  const lower = source.toLowerCase();
-  if (lower === 'usb') return 'USB';
-  return source.charAt(0).toUpperCase() + source.slice(1);
-}
+import { useDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 // ── Compact layout (1×2) ─────────────────────────────────────────────
 
@@ -38,7 +32,7 @@ function CompactView({
     <div className="flex items-center gap-2 min-h-[44px]">
       <Music className="h-4 w-4 flex-shrink-0 text-neon-cyan" aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-[var(--text-primary)] truncate">{label}</p>
+        <p className={dashboardTokens.metricLabel} title={label}>{label}</p>
       </div>
     </div>
   );
@@ -48,20 +42,28 @@ function CompactView({
 
 export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehicleQuery = useVehicles();
+  const { data: vehicles } = vehicleQuery;
+  const vehicleState = useDataState(vehicleQuery);
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vidStr = vid != null ? String(vid) : undefined;
 
+  const query = useMediaHistory(vidStr ?? '');
   const {
     data: history,
     isLoading,
     isFetching,
     isStale,
     isError,
-    error,
     dataUpdatedAt,
     refetch,
-  } = useMediaHistory(vidStr ?? '');
+  } = query;
+  const state = useDataState({ ...query, data: history ?? undefined }, { provenance: 'historical' });
+  const displayState = vid === undefined && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
+  const recover = () => {
+    if (vid === undefined) void vehicleQuery.refetch();
+    else void refetch();
+  };
 
   const isCompact = size.cols <= 1;
   const list = useMemo(() => history ?? [], [history]);
@@ -78,10 +80,11 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
           id: item.id,
           icon: <Music className="h-3.5 w-3.5" />,
           title: `🎵 ${trackTitle} — ${artist}`,
-          subtitle: source ? sourceLabel(source) : undefined,
-          timestamp: item.created_at ?? new Date(0).toISOString(),
+          subtitle: source || undefined,
+          timestamp: item.created_at ?? '',
           color: isPlaying ? '#22c55e' : '#6b7280',
           severity: 'info' as const,
+          wrap: true,
         };
       }),
     [list],
@@ -91,15 +94,15 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.mediaHistory', 'Media History')}
+      title={t('widget.mediaHistory', 'Media history')}
       icon={<ListMusic className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={recover}
     >
       {isCompact ? (
         lastTrack ? (

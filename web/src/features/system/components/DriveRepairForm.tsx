@@ -118,7 +118,7 @@ export function DriveRepairForm({
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         <Input
-          label={t('dataRepair.field.endedAt', 'End Date/Time (ISO)')}
+          label={t('dataRepair.field.endedAt', 'End date/time (ISO)')}
           value={form.ended_at}
           placeholder="2026-03-30T04:00:00Z"
           onChange={set('ended_at')}
@@ -144,14 +144,14 @@ export function DriveRepairForm({
           disabled={disabled}
         />
         <Input
-          label={t('dataRepair.field.endSoc', 'End Battery (%)')}
+          label={t('dataRepair.field.endSoc', 'End battery (%)')}
           type="number"
           value={form.end_soc_pct}
           onChange={set('end_soc_pct')}
           disabled={disabled}
         />
         <Input
-          label={t('dataRepair.field.maxSpeedMps', 'Max Speed (m/s)')}
+          label={t('dataRepair.field.maxSpeedMps', 'Max speed (m/s)')}
           type="number"
           value={form.max_speed_mps}
           onChange={set('max_speed_mps')}
@@ -159,7 +159,7 @@ export function DriveRepairForm({
           disabled={disabled}
         />
         <Input
-          label={t('dataRepair.field.avgSpeedMps', 'Avg Speed (m/s)')}
+          label={t('dataRepair.field.avgSpeedMps', 'Avg speed (m/s)')}
           type="number"
           value={form.avg_speed_mps}
           onChange={set('avg_speed_mps')}

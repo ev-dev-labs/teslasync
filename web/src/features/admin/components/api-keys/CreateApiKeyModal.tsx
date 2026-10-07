@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { Modal, Button, Input, Select, Checkbox, GlassPanel, CopyButton, MaskedValue, Text, HelperText } from '@/components/ui';
+import { FormSection } from '@/components/forms';
 import { useCreateApiKey } from '@/api/hooks/useAdmin';
 import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { PERMISSION_ORDER, type ApiKeyPermission } from './constants';
@@ -70,7 +71,7 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
           value === 'read'
             ? t('apiKeys.perm.read', 'Read')
             : value === 'read-write'
-              ? t('apiKeys.perm.readWrite', 'Read-Write')
+              ? t('apiKeys.perm.readWrite', 'Read-write')
               : t('apiKeys.perm.admin', 'Admin'),
       })),
     [t],
@@ -80,7 +81,7 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
     <Modal
       open
       onClose={handleClose}
-      title={generatedKey ? t('apiKeys.keyCreated', 'API Key Created') : t('apiKeys.newKey', 'New API Key')}
+      title={generatedKey ? t('apiKeys.keyCreated', 'API key created') : t('apiKeys.newKey', 'New API key')}
     >
       {generatedKey ? (
         <div className="space-y-4">
@@ -114,32 +115,34 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
         </div>
       ) : (
         <div className="space-y-4">
-          <Input
-            label={t('apiKeys.name', 'Name')}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t('apiKeys.namePlaceholder', 'My Application')}
-          />
-          <Select
-            label={t('apiKeys.permissions', 'Permissions')}
-            value={perm}
-            onChange={(e) => setPerm(e.target.value as ApiKeyPermission)}
-            options={permissionOptions}
-            disabled={appToken}
-          />
-          {canBindApp && (
-            <div className="space-y-1">
-              <Checkbox
-                label={t('apiKeys.appToken', 'App sign-in')}
-                checked={appToken}
-                onChange={(checked) => {
-                  setAppToken(checked);
-                  setPerm(checked ? 'admin' : 'read');
-                }}
-              />
-              <HelperText>{t('apiKeys.appTokenHint', 'Signs in as you with full admin access. Treat this key like a password.')}</HelperText>
-            </div>
-          )}
+          <FormSection title={t('apiKeys.details', 'Key details')}>
+            <Input
+              label={t('apiKeys.name', 'Name')}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('apiKeys.namePlaceholder', 'My Application')}
+            />
+            <Select
+              label={t('apiKeys.permissions', 'Permissions')}
+              value={perm}
+              onChange={(e) => setPerm(e.target.value as ApiKeyPermission)}
+              options={permissionOptions}
+              disabled={appToken}
+            />
+            {canBindApp && (
+              <div className="space-y-1">
+                <Checkbox
+                  label={t('apiKeys.appToken', 'App sign-in')}
+                  checked={appToken}
+                  onChange={(checked) => {
+                    setAppToken(checked);
+                    setPerm(checked ? 'admin' : 'read');
+                  }}
+                />
+                <HelperText>{t('apiKeys.appTokenHint', 'Signs in as you with full admin access. Treat this key like a password.')}</HelperText>
+              </div>
+            )}
+          </FormSection>
           <div className="flex gap-2">
             <Button
               variant="primary"
@@ -149,7 +152,7 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
               disabled={!name.trim()}
               loading={createMut.isPending}
             >
-              {t('apiKeys.generate', 'Generate Key')}
+              {t('apiKeys.generate', 'Generate key')}
             </Button>
             <Button variant="secondary" size="sm" onClick={handleClose}>
               {t('apiKeys.cancel', 'Cancel')}

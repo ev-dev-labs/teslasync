@@ -52,11 +52,11 @@ const INPUT_UNIX_MILLIS = '1700000000000'
 const INPUT_ISO = '2023-11-14T22:13:20.000Z'
 
 function unixInput(): HTMLInputElement {
-  return screen.getByLabelText('Unix Timestamp') as HTMLInputElement
+  return screen.getByLabelText('Unix timestamp') as HTMLInputElement
 }
 
 function isoInput(): HTMLInputElement {
-  return screen.getByLabelText('ISO Timestamp') as HTMLInputElement
+  return screen.getByLabelText('ISO timestamp') as HTMLInputElement
 }
 
 function type(input: HTMLInputElement, value: string): void {

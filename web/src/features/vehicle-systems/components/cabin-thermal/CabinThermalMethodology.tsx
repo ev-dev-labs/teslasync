@@ -9,7 +9,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
+import { Heading, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 
 interface CabinThermalMethodologyProps {
@@ -79,11 +80,7 @@ export function CabinThermalMethodology({
 
   return (
     <section data-testid="cabin-thermal-methodology">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <FlaskConical className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.method.title', 'Methodology and limitations')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.method.title', 'Methodology and limitations')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.method.subtitle',
@@ -113,7 +110,7 @@ export function CabinThermalMethodology({
             )}
           </Text>
         </AlertBanner>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

@@ -179,7 +179,7 @@ function InnerSection({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <div className="text-xs uppercase tracking-wide text-cyan-300">
+              <div className="text-xs tracking-wide text-cyan-300">
                 {t('locations.aiAutoName.proposalLabel', 'Proposed name')}
               </div>
               <div className="font-medium text-[var(--text-primary)]">

@@ -16,13 +16,15 @@ import {
   Skeleton,
 } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { SleepEfficiencySectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SleepEvidenceBand({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rangeValue =
     analysis.range.status === 'valid'

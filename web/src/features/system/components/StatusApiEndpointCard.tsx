@@ -71,7 +71,7 @@ export function StatusApiEndpointCard({
 
       {query && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <Caption className="uppercase tracking-wider">{t('statusApi.query', 'Query')}</Caption>
+          <Caption className="tracking-wider">{t('statusApi.query', 'Query')}</Caption>
           <Text as="code" mono size="xs" color="secondary" className="break-all">
             ?{query}
           </Text>

@@ -21,6 +21,8 @@ import {
 import SignalConfigModal from '@/components/ui/SignalConfigModal'
 import { AlertBanner, EmptyState } from '@/components/feedback'
 import { KVList } from '@/components/data-display'
+import { SourceContent } from '@/components/layout'
+import { deriveDataState } from '@/api/dataState'
 import { useVehicles, useWakeVehicle } from '@/api/hooks/useVehicles'
 import {
   telemetryConfigSummary,
@@ -35,8 +37,12 @@ import { TELEMETRY_FIELDS } from '@/features/admin/components/devtools/constants
 
 export function FleetSetupSubscribePanel() {
   const { t } = useTranslation('settings')
-  const { data: auth } = useAuthStatus()
-  const { data: vehicles } = useVehicles()
+  const authQuery = useAuthStatus()
+  const vehiclesQuery = useVehicles()
+  const authState = deriveDataState(authQuery)
+  const vehiclesState = deriveDataState(vehiclesQuery)
+  const auth = authState.data
+  const vehicles = vehiclesState.data
   const items = vehicles ?? []
   const [vin, setVin] = useState('')
   const [hostname, setHostname] = useState('')
@@ -48,6 +54,8 @@ export function FleetSetupSubscribePanel() {
 
   const configQuery = useFleetTelemetryConfig(vin)
   const errorsQuery = useFleetTelemetryErrors(vin)
+  const configState = deriveDataState(configQuery)
+  const errorsState = deriveDataState(errorsQuery)
   const subscribe = useSubscribeFleetTelemetry()
   const unsubscribe = useUnsubscribeFleetTelemetry()
   const wake = useWakeVehicle()
@@ -133,6 +141,16 @@ export function FleetSetupSubscribePanel() {
         </div>
       </div>
 
+      <SourceContent
+        state={authState.fatalError || (connected && vehiclesState.fatalError) ? 'error' : authState.status === 'initial' || (connected && vehiclesState.status === 'initial') ? 'loading' : authState.status === 'stale' || (connected && vehiclesState.status === 'stale') ? 'retained' : auth ? 'ready' : 'empty'}
+        label={!authState.hasData ? t('tesla.title', 'Tesla account') : t('fleetSetup.subscribe.vehicle', 'Vehicle')}
+        emptyMessage={t('tesla.statusUnavailable', 'Tesla account status unavailable.')}
+        errorMessage={authState.fatalError
+          ? t('tesla.statusUnavailable', 'Tesla account status unavailable.')
+          : t('fleetSetup.subscribe.vehiclesUnavailable', 'Vehicle list unavailable.')}
+        error={authState.fatalError ?? vehiclesState.fatalError}
+        errorRecovery={{ onRetry: () => void (authState.fatalError || authState.refreshError || !authState.hasData ? authQuery.refetch() : vehiclesQuery.refetch()) }}
+      >
       {!connected ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Radio className="h-8 w-8" aria-hidden="true" />}
@@ -159,8 +177,17 @@ export function FleetSetupSubscribePanel() {
           onChange={(e) => setVin(e.target.value)}
         />
       )}
+      </SourceContent>
 
       {vin ? (
+        <SourceContent
+          state={configState.fatalError ? 'error' : configState.status === 'initial' ? 'loading' : configState.status === 'stale' ? 'retained' : summary.hostname ? 'ready' : 'empty'}
+          label={t('fleetSetup.subscribe.currentHost', 'Configured host')}
+          emptyMessage={t('fleetSetup.subscribe.configEmpty', 'No fleet_telemetry_config on this VIN yet.')}
+          errorMessage={t('fleetSetup.subscribe.configUnavailable', 'Telemetry configuration unavailable.')}
+          error={configState.fatalError}
+          errorRecovery={{ onRetry: () => void configQuery.refetch() }}
+        >
         <KVList
           emptyMessage={t(
             'fleetSetup.subscribe.configEmpty',
@@ -185,6 +212,7 @@ export function FleetSetupSubscribePanel() {
               : []
           }
         />
+        </SourceContent>
       ) : (
         <Text variant="bodySm" as="p">
           {t(
@@ -197,6 +225,7 @@ export function FleetSetupSubscribePanel() {
       <div className="space-y-2">
         <Button
           variant="secondary"
+          wrapLabel
           icon={<SlidersHorizontal className="h-4 w-4" />}
           onClick={() => setSignalModalOpen(true)}
         >
@@ -219,6 +248,7 @@ export function FleetSetupSubscribePanel() {
       <div className="flex flex-wrap gap-2">
         <Button
           variant="secondary"
+          wrapLabel
           icon={<Power className="h-4 w-4" />}
           onClick={handleWake}
           loading={wake.isPending}
@@ -228,6 +258,7 @@ export function FleetSetupSubscribePanel() {
         </Button>
         <Button
           variant="primary"
+          wrapLabel
           icon={<Satellite className="h-4 w-4" />}
           onClick={handleSubscribe}
           loading={subscribe.isPending}
@@ -241,6 +272,7 @@ export function FleetSetupSubscribePanel() {
         </Button>
         <Button
           variant="danger"
+          wrapLabel
           icon={<Trash2 className="h-4 w-4" />}
           onClick={() => void handleRemove()}
           loading={unsubscribe.isPending}
@@ -257,6 +289,15 @@ export function FleetSetupSubscribePanel() {
       </HelperText>
 
       {vin ? (
+        <SourceContent
+          state={errorsState.fatalError ? 'error' : errorsState.status === 'initial' ? 'loading' : errorsState.status === 'stale' ? 'retained' : 'ready'}
+          label={t('fleetSetup.subscribe.errorsLabel', 'Tesla telemetry errors')}
+          emptyMessage={t('fleetSetup.subscribe.errorsEmpty', 'No Tesla-side telemetry errors for this VIN.')}
+          errorMessage={t('fleetSetup.subscribe.errorsUnavailable', 'Tesla telemetry error status unavailable.')}
+          error={errorsState.fatalError}
+          errorRecovery={{ onRetry: () => void errorsQuery.refetch() }}
+        >
+        {
         teslaErrors.length > 0 ? (
           <div className="space-y-2">
             {teslaErrors.slice(0, 3).map((err, i) => (
@@ -278,6 +319,8 @@ export function FleetSetupSubscribePanel() {
             )}
           </HelperText>
         )
+        }
+        </SourceContent>
       ) : null}
 
       <Accordion title={t('fleetSetup.subscribe.advanced', 'Override host, port, or CA')}>

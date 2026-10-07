@@ -73,20 +73,21 @@ vi.mock('@/components/charts', () => ({
   Bar: () => null,
   BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
-  ChartContainer: ({
+  EmbeddedChart: ({
     children,
     title,
     ariaLabel,
   }: {
-    children: ReactNode;
+    children: ReactNode | ((context: { hiddenSeries?: undefined }) => ReactNode);
     title: string;
     ariaLabel: string;
   }) => (
     <div>
       <h4>{title}</h4>
-      <div role="img" aria-label={ariaLabel}>{children}</div>
+      <div role="img" aria-label={ariaLabel}>{typeof children === 'function' ? children({}) : children}</div>
     </div>
   ),
+  ChartLegend: () => null,
   ChartTooltip: () => null,
   Legend: () => null,
   Line: () => null,
@@ -204,11 +205,14 @@ describe('CabinThermalPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Cabin Thermal Model',
+      name: 'Cabin thermal model',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.historyHook).toHaveBeenLastCalledWith('7');
-    expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: 'Line chart of the accepted-fit worked cabin scenario approaching ambient temperature',
+    })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Accepted median τ: 90\.0 min$/)).toBeInTheDocument();
   });
 
   it('keeps every shell visible without a vehicle or duplicate control', () => {
@@ -263,6 +267,7 @@ describe('CabinThermalPage', () => {
       'Climate history could not refresh. Showing the most recently loaded thermal evidence.',
     )).toBeInTheDocument();
     expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Accepted median τ: 90\.0 min$/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -319,8 +324,11 @@ describe('CabinThermalPage', () => {
     h.history = query({ data: soak() });
     renderPage();
 
-    expect(screen.getByText(/113°F cabin/)).toBeInTheDocument();
-    expect(screen.getByText(/5\.4°F/)).toBeInTheDocument();
+    expectEverySection();
+    expect(within(screen.getByTestId('cabin-thermal-prediction'))
+      .getByText(/113\.0°F cabin, 71\.6°F ambient/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('cabin-thermal-thresholds'))
+      .getByText(/≥ 5\.4(?:0)?°F/)).toBeInTheDocument();
     expect(screen.getAllByText(/°F/).length).toBeGreaterThan(1);
   });
 });

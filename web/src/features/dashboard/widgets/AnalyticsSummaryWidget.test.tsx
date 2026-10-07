@@ -35,10 +35,11 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * dashboard tests.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 
 // jsdom lacks matchMedia; framer-motion (useReducedMotion, read by the
 // freshness chip) + <AnimatedNumber> read it at module load. Report reduced
@@ -103,6 +104,11 @@ vi.mock('@/hooks/useUnits', () => ({ useUnits: () => useUnitsMock() }));
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => useFormattingMock() }));
 
 import AnalyticsSummaryWidget from './AnalyticsSummaryWidget';
+
+it.each([1, 2, 3, 4])('identifies analytics at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Analytics summary' })).toBeInTheDocument();
+});
 import type { WidgetSize } from './types';
 import type { AnalyticsSummary } from '@/types/analytics';
 
@@ -153,14 +159,18 @@ function setUnits(distance: 'km' | 'mi') {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <AnalyticsSummaryWidget size={size} />
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Analytics summary');
+  return view;
 }
 
 beforeEach(() => {
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
   analyticsMock.mockReset();
   useUnitsMock.mockReset();
   useFormattingMock.mockReset();
@@ -168,34 +178,70 @@ beforeEach(() => {
   analyticsMock.mockReturnValue(makeQuery({ data: SUMMARY }));
   setUnits('km');
   useFormattingMock.mockReturnValue({
+    currencySymbol: '$',
     formatCurrency: (amount: number, decimals?: number) =>
       `$${Number(amount ?? 0).toFixed(decimals ?? 2)}`,
+  });
+  afterEach(() => {
+    setGlobalPrecision(2);
+    setGlobalLocale('en-US');
   });
 });
 
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('AnalyticsSummaryWidget', () => {
+  it('updates the compact headline for authoritative precision and locale without refetching', () => {
+    renderWidget({ cols: 1, rows: 2 });
+    act(() => {
+      setGlobalPrecision(3);
+      setGlobalLocale('de-DE');
+    });
+    const expected = new Intl.NumberFormat('de-DE', {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    }).format(1000);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.getByText('km')).toBeInTheDocument();
+    expect(analyticsMock.mock.results[0].value.refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains the complete grid and exposes offline trust after a paused refresh', () => {
+    analyticsMock.mockReturnValue({ ...makeQuery({ data: SUMMARY }), fetchStatus: 'paused' });
+    renderWidget();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+    expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+  });
+
+  it('keeps known zero measurements visible instead of reporting no qualifying data', () => {
+    analyticsMock.mockReturnValue(makeQuery({
+      data: { ...SUMMARY, totalDistanceKm: 0, totalEnergyKwh: 0, avgEfficiencyWhKm: 0 },
+    }));
+    renderWidget();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(screen.queryByText('No analytics data')).not.toBeInTheDocument();
+  });
   it('renders the four KPI cards with km-unit conversions + currency formatting', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Analytics Summary')).toBeInTheDocument();
+    expect(screen.getByText('Analytics summary')).toBeInTheDocument();
 
     // Every stat label is present (each is unique).
-    for (const label of ['Total Distance', 'Avg Efficiency', 'Energy Consumed', 'Cost / km']) {
+    for (const label of ['Total distance', 'Avg efficiency', 'Energy consumed', 'Cost / km']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
     // Distance 1000 km → identity → "1,000"; efficiency 150 Wh/km identity.
-    expect(screen.getByText('1,000')).toBeInTheDocument();
-    expect(screen.getByText('150')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
     // Energy formats to one decimal; unit label present.
-    expect(screen.getByText('200.0')).toBeInTheDocument();
-    expect(screen.getByText('kWh')).toBeInTheDocument();
+    expect(screen.getByText('200.00 kWh')).toBeInTheDocument();
     // Cost per km: 250 / 1000 = 0.250 → formatCurrency(0.25, 3).
-    expect(screen.getByText('$0.250')).toBeInTheDocument();
+    expect(screen.getByText('$0.25')).toBeInTheDocument();
   });
 
   it('applies the mi branch: real km→mi distance + Wh/km→Wh/mi efficiency', () => {
@@ -203,43 +249,42 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget();
 
     // 1000 km * 1000 / 1609.344 ≈ 621.4 → fmtNumber(_, 0) → "621".
-    expect(screen.getByText('621')).toBeInTheDocument();
-    expect(screen.getByText('mi')).toBeInTheDocument();
+    expect(screen.getByText('621.37 mi')).toBeInTheDocument();
     // 150 Wh/km * 1.60934 = 241.4 → "241" Wh/mi.
-    expect(screen.getByText('241')).toBeInTheDocument();
-    expect(screen.getByText('Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument();
     expect(screen.getByText('Cost / mi')).toBeInTheDocument();
     // Cost per mi: 250 / 621.37 ≈ 0.402 → "$0.402".
-    expect(screen.getByText('$0.402')).toBeInTheDocument();
+    expect(screen.getByText('$0.40')).toBeInTheDocument();
 
     // The km-identity strings must be gone once converted.
-    expect(screen.queryByText('1,000')).not.toBeInTheDocument();
+    expect(screen.queryByText('1,000.00')).not.toBeInTheDocument();
     expect(screen.queryByText('Wh/km')).not.toBeInTheDocument();
   });
 
-  it('renders an em dash for cost when there is no positive spend', () => {
+  it('renders genuine zero spend as zero currency rather than unknown', () => {
     analyticsMock.mockReturnValue(
       makeQuery({ data: { ...SUMMARY, totalCost: 0 } }),
     );
     renderWidget();
 
     // costPerDist collapses to 0 → the "—" placeholder, never "$0.000".
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('$0.000')).not.toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
     // The other cards still render their values.
-    expect(screen.getByText('1,000')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
   });
 
   it('compact layout shows the animated distance headline + caption only', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     // Single headline (value + unit in one node), reduced-motion settled.
-    expect(screen.getByText(/^1,000\s*km$/)).toBeInTheDocument();
-    expect(screen.getByText('Total Distance')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00')).toBeInTheDocument();
+    expect(screen.getByText('km')).toBeInTheDocument();
+    expect(screen.getByText('Total distance')).toBeInTheDocument();
 
-    // Compact never renders the stat grid or the titled header.
-    expect(screen.queryByText('Avg Efficiency')).not.toBeInTheDocument();
-    expect(screen.queryByText('Analytics Summary')).not.toBeInTheDocument();
+    // Compact keeps its identity without adding the full stat grid.
+    expect(screen.queryByText('Avg efficiency')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Analytics summary' })).toBeInTheDocument();
   });
 
   it('compact layout shows the empty state when there is no data', () => {
@@ -257,7 +302,7 @@ describe('AnalyticsSummaryWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     // No KPI content while loading.
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 
   it('surfaces an error panel (and hides the KPI grid) when the query fails', () => {
@@ -268,22 +313,22 @@ describe('AnalyticsSummaryWidget', () => {
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
     // The freshness/refresh control lives in the header, which the error
     // branch replaces entirely.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('shows the no-data empty state (standard) while keeping the titled shell', () => {
     analyticsMock.mockReturnValue(makeQuery({ data: undefined }));
     renderWidget();
 
-    expect(screen.getByText('Analytics Summary')).toBeInTheDocument();
+    expect(screen.getByText('Analytics summary')).toBeInTheDocument();
     expect(screen.getByText('No analytics data')).toBeInTheDocument();
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 
-  it('is null-safe: a partial payload renders zeros and an em dash for cost', () => {
+  it('is null-safe: a partial payload preserves unknown efficiency energy and cost', () => {
     // Backend contract says every field is present, but the widget must not
     // assume it — a `{ totalDistanceKm }`-only payload must degrade cleanly.
     analyticsMock.mockReturnValue(
@@ -291,12 +336,11 @@ describe('AnalyticsSummaryWidget', () => {
     );
     expect(() => renderWidget()).not.toThrow();
 
-    expect(screen.getByText('500')).toBeInTheDocument();
-    // avgEfficiencyWhKm missing → 0; totalEnergyKwh missing → "0.0".
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.getByText('500.00 km')).toBeInTheDocument();
+    // Both missing efficiency and energy default to zero measurements.
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     // totalCost missing → costPerDist 0 → "—".
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
   });
 
   it('refreshes the summary when the freshness control is activated', () => {
@@ -325,12 +369,12 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget({ cols: 4, rows: 2 });
 
     // The stat grid still renders alongside the trends.
-    expect(screen.getByText('1,000')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
 
     // Each sparkline is an accessible image labelled from its metric.
     const trends = screen.getAllByRole('img', { name: /trend$/ });
     expect(trends).toHaveLength(4);
-    expect(screen.getByRole('img', { name: 'Total Distance trend' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Total distance trend' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Cost / km trend' })).toBeInTheDocument();
   });
 
@@ -339,7 +383,7 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget({ cols: 4, rows: 2 });
 
     // Grid renders, but there are no trend series to plot.
-    expect(screen.getByText('1,000')).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
     expect(screen.queryAllByRole('img', { name: /trend$/ })).toHaveLength(0);
   });
 
@@ -363,7 +407,19 @@ describe('AnalyticsSummaryWidget', () => {
     // Only the one valid series survives coercion.
     const trends = screen.getAllByRole('img', { name: /trend$/ });
     expect(trends).toHaveLength(1);
-    expect(screen.getByRole('img', { name: 'Avg Efficiency trend' })).toBeInTheDocument();
-    expect(screen.getByText('1,000')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Avg efficiency trend' })).toBeInTheDocument();
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+  });
+
+  it('reviews the actual normalized measurements, source window limitations and cost denominator', () => {
+    renderWidget();
+    const brief = screen.getByTestId('analytics-summary-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('1,000.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText('$0.25')).toBeInTheDocument();
+    expect(within(drawer).getByText(/source currency per metre/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Exact bounds and completeness are not supplied/).length).toBeGreaterThan(0);
   });
 });

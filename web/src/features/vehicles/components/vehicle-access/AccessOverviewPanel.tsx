@@ -6,7 +6,8 @@ import { GlassPanel, Badge, PanelTitle, Subhead, Caption, Text } from '@/compone
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
-import { fmtPercent } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** One invitation-status slice with a resolved display color for its bar. */
 export interface AccessStatusSlice {
@@ -52,6 +53,7 @@ export function AccessOverviewPanel({
   error,
   onRetry,
 }: AccessOverviewPanelProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safe views of the breakdown arrays — the contract types them as
@@ -74,7 +76,7 @@ export function AccessOverviewPanel({
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <PieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicleAccess.overview.title', 'Access Overview')}
+        {t('vehicleAccess.overview.title', 'Access overview')}
       </PanelTitle>
 
       {isLoading ? (
@@ -93,7 +95,7 @@ export function AccessOverviewPanel({
         <div className="space-y-5">
           <div>
             <Subhead className="mb-2">
-              {t('vehicleAccess.overview.invitationStatus', 'Invitation Status')}
+              {t('vehicleAccess.overview.invitationStatus', 'Invitation status')}
             </Subhead>
             {statuses.length === 0 ? (
               <Caption>{t('vehicleAccess.overview.noInvitations', 'No invitations yet')}</Caption>
@@ -109,7 +111,7 @@ export function AccessOverviewPanel({
                       value={count}
                       max={invitations || count || 1}
                       color={slice.color}
-                      sublabel={`${count} · ${fmtPercent(pct, 0)}`}
+                      sublabel={`${count} · ${fmtPercent(pct)}`}
                     />
                   );
                 })}
@@ -119,7 +121,7 @@ export function AccessOverviewPanel({
 
           <div>
             <Subhead className="mb-2">
-              {t('vehicleAccess.overview.driverRoles', 'Driver Roles')}
+              {t('vehicleAccess.overview.driverRoles', 'Driver roles')}
             </Subhead>
             {roles.length === 0 ? (
               <Caption>{t('vehicleAccess.overview.noDrivers', 'No drivers yet')}</Caption>

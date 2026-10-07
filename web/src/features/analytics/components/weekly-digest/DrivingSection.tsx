@@ -9,13 +9,14 @@ import {
   chartGrid, axisTickSm, chartMarginLabeled, chartAnimation,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatDate } from '@/lib/dateFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { MiniStat } from './MiniStat';
 import { formatEfficiencyFromSI } from './display';
 import { pctChange } from './helpers';
 import type { DigestMetrics, DailyDistanceEntry } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DrivingSectionProps {
   metrics: DigestMetrics;
@@ -34,6 +35,7 @@ export function DrivingSection({
   error,
   onRetry,
 }: DrivingSectionProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance, formatDuration } = useUnits();
   const distanceData = dailyDistanceData ?? [];
@@ -61,12 +63,12 @@ export function DrivingSection({
       {/* Daily Distance bar chart */}
       <div>
         <Caption className="mb-2 block">
-          {t('analytics.weeklyDigest.dailyDistance', 'Daily Distance ({{unit}})', {
+          {t('analytics.weeklyDigest.dailyDistance', 'Daily distance ({{unit}})', {
             unit: unitPrefs.distance,
           })}
         </Caption>
         <EmbeddedChart
-          title={t('analytics.weeklyDigest.dailyDistance', 'Daily Distance')}
+          title={t('analytics.weeklyDigest.dailyDistance', 'Daily distance')}
           ariaLabel={t(
               'analytics.weeklyDigest.dailyDistanceChartLabel',
               'Bar chart of daily driving distance in {{unit}}',
@@ -77,7 +79,7 @@ export function DrivingSection({
             { key: 'day', label: t('analytics.weeklyDigest.day', 'Day') },
             {
               key: 'distance',
-              label: t('analytics.weeklyDigest.dailyDistance', 'Daily Distance ({{unit}})', {
+              label: t('analytics.weeklyDigest.dailyDistance', 'Daily distance ({{unit}})', {
                 unit: unitPrefs.distance,
               }),
             },
@@ -115,17 +117,17 @@ export function DrivingSection({
       {/* Driving efficiency stats */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <MiniStat
-          label={t('analytics.weeklyDigest.avgEfficiency', 'Avg Efficiency')}
+          label={t('analytics.weeklyDigest.avgEfficiency', 'Avg efficiency')}
           value={formatEfficiencyFromSI(metrics.avgEfficiencyWhPerM ?? 0, unitPrefs)}
           icon={<BarChart3 className="h-4 w-4" />}
         />
         <MiniStat
-          label={t('analytics.weeklyDigest.totalDrivingTime', 'Total Driving Time')}
-          value={formatDuration(metrics.totalDurationS ?? 0, { precision: 1 })}
+          label={t('analytics.weeklyDigest.totalDrivingTime', 'Total driving time')}
+          value={formatDuration(metrics.totalDurationS ?? 0)}
           icon={<Clock className="h-4 w-4" />}
         />
         <MiniStat
-          label={t('analytics.weeklyDigest.efficiencyChange', 'Efficiency Change')}
+          label={t('analytics.weeklyDigest.efficiencyChange', 'Efficiency change')}
           value={
             (metrics.prevAvgEfficiencyWhPerM ?? 0) > 0
               ? `${fmtNumber(
@@ -133,7 +135,6 @@ export function DrivingSection({
                     metrics.avgEfficiencyWhPerM ?? 0,
                     metrics.prevAvgEfficiencyWhPerM ?? 0,
                   ),
-                  1,
                 )}%`
               : '—'
           }
@@ -158,7 +159,7 @@ export function DrivingSection({
         {metrics.topDrive ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
             <Badge variant="success" size="sm">
-              {t('analytics.weeklyDigest.topDrive', 'Top Drive')}
+              {t('analytics.weeklyDigest.topDrive', 'Top drive')}
             </Badge>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="flex min-w-0 flex-col">
@@ -170,13 +171,13 @@ export function DrivingSection({
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.distance', 'Distance')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {formatDistance(metrics.topDrive.distanceM ?? 0, { precision: 1 })}
+                  {formatDistance(metrics.topDrive.distanceM ?? 0)}
                 </Text>
               </div>
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.duration', 'Duration')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {formatDuration(metrics.topDrive.durationS ?? 0, { precision: 1 })}
+                  {formatDuration(metrics.topDrive.durationS ?? 0)}
                 </Text>
               </div>
               <div className="flex min-w-0 flex-col">

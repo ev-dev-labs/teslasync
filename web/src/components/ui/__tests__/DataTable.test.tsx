@@ -71,7 +71,7 @@ describe('DataTable — column visibility (defaultVisible + persistence)', () =>
       />,
     )
     // Open the menu
-    fireEvent.click(screen.getByRole('button', { name: /show or hide columns/i }))
+    fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     // Toggle the hidden 'Detail' column on
     const detailCheckbox = screen.getByRole('checkbox', { name: /detail/i })
     expect(detailCheckbox).not.toBeChecked()

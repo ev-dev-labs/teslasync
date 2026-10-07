@@ -16,10 +16,11 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import { ArrivalReliabilitySectionBody } from './ArrivalReliabilitySectionBody';
 import type { ArrivalReliabilityQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityTimingConsistencyChartProps {
   analysis: ArrivalReliabilityResult;
@@ -32,6 +33,7 @@ export function ArrivalReliabilityTimingConsistencyChart({
   state,
   locale,
 }: ArrivalReliabilityTimingConsistencyChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const consistencyName = t(
     'arrivalReliability.consistencyChart.consistencySeries',
@@ -147,7 +149,7 @@ export function ArrivalReliabilityTimingConsistencyChart({
                   content={
                     <ChartTooltip
                       valueFormatter={(value) =>
-                        fmtNumber(value, 1, locale)
+                        fmtNumber(value, undefined, locale)
                       }
                     />
                   }

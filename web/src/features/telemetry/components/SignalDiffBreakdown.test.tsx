@@ -130,7 +130,7 @@ describe('SignalDiffBreakdown', () => {
     const panel = panelFor(SOURCE_TITLE);
 
     // l1(2) → l2(1) → unknown(1), in SOURCE_META reporting order.
-    expect(within(panel).getByText('L1 · In-process')).toBeInTheDocument();
+    expect(within(panel).getByText('L1 · in-process')).toBeInTheDocument();
     expect(within(panel).getByText('L2 · Redis')).toBeInTheDocument();
     // The row with no `source_b` is attributed to the Unknown bucket.
     expect(within(panel).getByText('Unknown')).toBeInTheDocument();
@@ -138,8 +138,8 @@ describe('SignalDiffBreakdown', () => {
     expect(within(panel).getByText('2 (50%)')).toBeInTheDocument();
 
     // Layers with zero rows never render (no LOG / STALE rows in the fixture).
-    expect(within(panel).queryByText('LOG · History')).toBeNull();
-    expect(within(panel).queryByText('STALE')).toBeNull();
+    expect(within(panel).queryByText('LOG · history')).toBeNull();
+    expect(within(panel).queryByText('Stale')).toBeNull();
   });
 
   it('lists pinned signals sorted alphabetically with a live count caption', () => {

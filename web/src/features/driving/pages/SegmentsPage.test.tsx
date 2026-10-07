@@ -9,6 +9,10 @@ const state = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   segments: [] as SegmentSummary[],
   selectedIds: [] as Array<number | null>,
+  segmentError: null as Error | null,
+  leaderboardError: null as Error | null,
+  segmentRefetch: vi.fn(),
+  leaderboardRefetch: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -28,8 +32,9 @@ vi.mock('@/hooks/useUnits', () => ({
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div>Vehicle select</div>,
 }));
-vi.mock('@/components/layout', () => ({
-  PageContainer: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+vi.mock('@/components/layout', async (importActual) => ({
+  ...await importActual<typeof import('@/components/layout')>(),
+  PageLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
 }));
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -38,8 +43,8 @@ vi.mock('@/api/hooks/useSegments', () => ({
   useSegments: () => ({
     data: { segments: state.segments },
     isLoading: false,
-    error: null,
-    refetch: vi.fn(),
+    error: state.segmentError,
+    refetch: state.segmentRefetch,
   }),
   useSegmentLeaderboard: (id: number | null) => {
     state.selectedIds.push(id);
@@ -50,8 +55,8 @@ vi.mock('@/api/hooks/useSegments', () => ({
         by_efficiency: [],
       },
       isLoading: false,
-      error: null,
-      refetch: vi.fn(),
+      error: state.leaderboardError,
+      refetch: state.leaderboardRefetch,
     };
   },
   useSegmentGhost: () => ({
@@ -89,6 +94,27 @@ describe('SegmentsPage pagination', () => {
     state.vehicleId = 7;
     state.segments = Array.from({ length: 25 }, (_, index) => segment(index + 1));
     state.selectedIds = [];
+    state.segmentError = null;
+    state.leaderboardError = null;
+    state.segmentRefetch.mockClear();
+    state.leaderboardRefetch.mockClear();
+  });
+
+  it('retains selected segments and leaderboard rows through independent failed refreshes', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    state.segmentError = new Error('segment refresh failed');
+    state.leaderboardError = new Error('leaderboard refresh failed');
+    view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
+    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('No ranked attempts on this segment yet.')).toBeInTheDocument();
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    expect(state.segmentRefetch).toHaveBeenCalledTimes(1);
+    expect(state.leaderboardRefetch).not.toHaveBeenCalled();
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(state.leaderboardRefetch).toHaveBeenCalledTimes(1);
   });
 
   it('shows twelve segments per page and navigates through every result', () => {

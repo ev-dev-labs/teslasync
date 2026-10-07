@@ -60,8 +60,8 @@ export function SeasonalAccounting({
                 date: formatLocalDate(analysis.lastIncludedTimestampMs, locale, timeZone),
               })}</Text>
               <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.energy', '{{energy}} total energy · {{distance}} total distance', {
-                energy: units.formatEnergy(analysis.totalEnergyWh, { precision: 1 }),
-                distance: units.formatDistance(analysis.totalDistanceM, { precision: 0 }),
+                energy: units.formatEnergy(analysis.totalEnergyWh),
+                distance: units.formatDistance(analysis.totalDistanceM),
               })}</Text>
             </div>
           </div>

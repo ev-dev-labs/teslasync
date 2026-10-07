@@ -12,7 +12,7 @@
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { Button } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -21,21 +21,22 @@ import {
   useGasPriceHistory,
   usePollGasPrice,
 } from '@/api/hooks/useSettings';
-import {
-  GasPriceKpiBand,
-  GasPriceControlPanel,
-  GasPriceTrendChart,
-  GasPriceHistoryTable,
-} from '@/features/admin/components/gas-price';
+import { deriveDataState } from '@/api/dataState';
+import { GasPriceBrief } from '../components/operationalbrief-a-g/GasPriceBrief';
+import { GasConfiguration } from '../components/continuation-admin-2/GasConfiguration';
+import { GasTrendChart } from '../components/continuation-admin-2/GasTrendChart';
+import { GasHistoryTable } from '../components/continuation-admin-2/GasHistoryTable';
 
 export default function GasPriceAutoPollPage() {
   const { t } = useTranslation();
-  const title = t('gas.title', 'Gas Price Auto-Poll');
+  const title = t('gas.title', 'Gas price auto-poll');
   usePageTitle(title);
 
   const statusQuery = useGasPriceStatus();
   const historyQuery = useGasPriceHistory();
   const pollMut = usePollGasPrice();
+  const statusSource = deriveDataState(statusQuery);
+  const historySource = deriveDataState(historyQuery);
 
   const actions = (
     <Button
@@ -45,33 +46,37 @@ export default function GasPriceAutoPollPage() {
       loading={pollMut.isPending}
       onClick={() => pollMut.mutate()}
     >
-      {t('gas.pollNow', 'Poll Now')}
+      {t('gas.pollNow', 'Poll now')}
     </Button>
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('gas.subtitle', 'Automatically fetch US average gas prices from EIA')}
-      actions={actions}
+      primaryAction={actions}
       query={[statusQuery, historyQuery]}
+      dataSources={[
+        { id: 'gas-status', label: t('gas.status', 'Status'), query: statusQuery },
+        { id: 'gas-history', label: t('gas.historyTitle', 'Price history'), query: historyQuery },
+      ]}
     >
       <FadeIn>
-        <GasPriceKpiBand query={statusQuery} />
+        <GasPriceBrief source={statusSource} />
       </FadeIn>
 
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <div className="xl:col-span-2">
-            <GasPriceTrendChart query={historyQuery} onPollNow={() => pollMut.mutate()} />
+            <GasTrendChart source={historySource} />
           </div>
-          <GasPriceControlPanel query={statusQuery} />
+          <GasConfiguration source={statusSource} />
         </section>
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <GasPriceHistoryTable query={historyQuery} />
+        <GasHistoryTable source={historySource} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

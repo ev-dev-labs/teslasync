@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { safe, fmt } from './chartUtils'
 import { CHART_COLORS } from '../../lib/colors'
+import { fmtNumber } from '@/lib/numberFormat'
 
 describe('safe', () => {
   it('converts number to number', () => expect(safe(42)).toBe(42))
@@ -15,11 +16,11 @@ describe('safe', () => {
 })
 
 describe('fmt', () => {
-  it('formats with 1 decimal by default', () => expect(fmt(3.14159)).toBe('3.1'))
+  it('formats with settings precision by default', () => expect(fmt(3.14159)).toBe(fmtNumber(3.14159)))
   it('formats with specified decimals', () => expect(fmt(3.14159, 2)).toBe('3.14'))
-  it('handles null', () => expect(fmt(null)).toBe('0.0'))
-  it('handles undefined', () => expect(fmt(undefined)).toBe('0.0'))
-  it('handles zero', () => expect(fmt(0)).toBe('0.0'))
+  it('handles null', () => expect(fmt(null)).toBe(fmtNumber(0)))
+  it('handles undefined', () => expect(fmt(undefined)).toBe(fmtNumber(0)))
+  it('handles zero', () => expect(fmt(0)).toBe(fmtNumber(0)))
   it('formats with 0 decimals', () => expect(fmt(3.7, 0)).toBe('4'))
 })
 

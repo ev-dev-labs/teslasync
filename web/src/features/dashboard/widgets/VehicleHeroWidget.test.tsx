@@ -24,6 +24,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { Heading } from '@/components/ui';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 // ── i18n stub: return the English fallback (2nd arg) or the key. ──
@@ -72,7 +74,7 @@ vi.mock('../components/VehicleHero', () => ({
     toTemperatureDisplay: (celsius: number) => number;
   }) => (
     <div data-testid="vehicle-hero">
-      <span data-testid="hero-name">{props.vehicle?.display_name || props.vehicle?.vin || ''}</span>
+      <Heading level="section" data-testid="hero-name">{props.vehicle?.display_name || props.vehicle?.vin || ''}</Heading>
       <span data-testid="hero-firmware">{props.firmwareVersion}</span>
       <span data-testid="hero-distance-unit">{props.distanceUnit}</span>
       <span data-testid="hero-speed-unit">{props.speedUnit}</span>
@@ -93,6 +95,42 @@ import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import VehicleHeroWidget from './VehicleHeroWidget';
+
+it.each([1, 2, 3])('uses the vehicle name as its sole heading at %i columns', (cols) => {
+  setup();
+  render(<VehicleHeroWidget size={{ cols, rows: 2 }} />);
+  expect(screen.getByRole('heading', { name: 'My Tesla' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Vehicle overview' })).not.toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('identifies an unlinked vehicle hero at %i columns', (cols) => {
+  setup({ vehicles: makeQuery({ data: [] }) });
+  render(<MemoryRouter><VehicleHeroWidget size={{ cols, rows: 2 }} /></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Vehicle overview' })).toBeInTheDocument();
+  expect(screen.getByText('No vehicle data')).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('identifies a loading vehicle hero at %i columns', (cols) => {
+  setup({ vehicles: makeQuery({ isLoading: true }) });
+  render(<MemoryRouter><VehicleHeroWidget size={{ cols, rows: 2 }} /></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Vehicle overview' })).toBeInTheDocument();
+  expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('identifies a failed vehicle hero load at %i columns', (cols) => {
+  setup({ vehicles: makeQuery({ isError: true, error: new Error('vehicles unavailable') }) });
+  render(<MemoryRouter><VehicleHeroWidget size={{ cols, rows: 2 }} /></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Vehicle overview' })).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('retains the vehicle heading after a failed refresh at %i columns', (cols) => {
+  setup({ state: makeQuery({ data: makeStateData(), isError: true, error: new Error('refresh failed') }) });
+  render(<VehicleHeroWidget size={{ cols, rows: 2 }} />);
+  expect(screen.getByRole('heading', { name: 'My Tesla' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Vehicle overview' })).not.toBeInTheDocument();
+  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+});
 
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockVehicleState = useVehicleState as unknown as ReturnType<typeof vi.fn>;
@@ -222,6 +260,14 @@ beforeEach(() => {
 });
 
 describe('VehicleHeroWidget — vehicle resolution', () => {
+  it('preserves the hero and firmware during a failed cached refresh', () => {
+    setup({ state: makeQuery({ data: makeStateData({ software_version: '2026.8' }), isError: true, error: new Error('refresh failed') }) });
+    render(<VehicleHeroWidget size={STANDARD} />);
+    expect(screen.getByTestId('hero-name')).toHaveTextContent('My Tesla');
+    expect(screen.getByTestId('hero-firmware')).toHaveTextContent('2026.8');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('resolves the vehicle matching an explicit vehicleId and keys the state query on it', () => {
     setup({
       vehicles: makeQuery({
@@ -420,7 +466,7 @@ describe('VehicleHeroWidget — state, freshness and degraded states', () => {
         await vi.advanceTimersByTimeAsync(1_002);
       });
 
-      const last = mockVehicleState.mock.calls.at(-1);
+      const last = mockVehicleState.mock.calls[mockVehicleState.mock.calls.length - 1];
       expect(last?.[1]).toEqual({ refetchInterval: expect.any(Number) });
       expect(screen.getByTestId('hero-freshness').textContent).toBe('stale');
     } finally {

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import type { ServiceIntelligenceFinding } from '@/api/hooks/useServiceIntelligence';
 import { PanelState } from './PanelState';
 import { RecallFindingCard } from './RecallFindingCard';
@@ -22,11 +22,8 @@ export function RecallInventoryPanel({
 }: RecallInventoryPanelProps) {
   const { t } = useTranslation();
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <ShieldAlert className="h-4 w-4 text-amber-300" aria-hidden="true" />
-        {t('serviceIntelligence.recall.title', 'Recall inventory')}
-      </PanelTitle>
+    <LayoutCard title={t('serviceIntelligence.recall.title', 'Recall inventory')}
+      actions={<ShieldAlert className="h-4 w-4 text-amber-300" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -51,6 +48,6 @@ export function RecallInventoryPanel({
           ))}
         </ol>
       </PanelState>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

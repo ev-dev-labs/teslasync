@@ -1,6 +1,7 @@
 import { fmtNumber } from '@/lib/numberFormat';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { convertDistanceToSI, convertEnergyFromSI, type UnitPref } from '@/lib/unitConversion';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 /**
  * Ownership display formatters.
@@ -70,17 +71,17 @@ export function formatEfficiencyFromSI(
   if (whPerM == null || !Number.isFinite(whPerM)) return '—';
   const whPerDisplayDistance = whPerM * convertDistanceToSI(1, units.distance);
   const energy = convertEnergyFromSI(whPerDisplayDistance, units.energy);
-  return `${fmtNumber(energy, 3)} ${units.energy}/${units.distance}`;
+  return `${fmtNumber(energy)} ${units.energy}/${units.distance}`;
 }
 
 /** Percentage with a fixed precision, or an em dash when not computed. */
-export function formatPct(value: number | null | undefined, digits = 1): string {
+export function formatPct(value: number | null | undefined, digits = getGlobalPrecision()): string {
   if (value == null || !Number.isFinite(value)) return '—';
   return `${fmtNumber(value, digits)}%`;
 }
 
 /** Signed percentage — used for deltas where direction carries meaning. */
-export function formatSignedPct(value: number | null | undefined, digits = 1): string {
+export function formatSignedPct(value: number | null | undefined, digits = getGlobalPrecision()): string {
   if (value == null || !Number.isFinite(value)) return '—';
   const sign = value > 0 ? '+' : '';
   return `${sign}${fmtNumber(value, digits)}%`;
@@ -113,10 +114,10 @@ export function formatSpan(seconds: number | null | undefined): string {
   if (seconds == null || !Number.isFinite(seconds)) return '—';
   const abs = Math.abs(seconds);
   const sign = seconds < 0 ? '-' : '';
-  if (abs < 3600) return `${sign}${fmtNumber(abs / 60, 0)} min`;
-  if (abs < 172800) return `${sign}${fmtNumber(abs / 3600, 1)} h`;
-  if (abs < 63072000) return `${sign}${fmtNumber(abs / 86400, 0)} d`;
-  return `${sign}${fmtNumber(abs / 31557600, 1)} y`;
+  if (abs < 3600) return `${sign}${fmtNumber(abs / 60)} min`;
+  if (abs < 172800) return `${sign}${fmtNumber(abs / 3600)} h`;
+  if (abs < 63072000) return `${sign}${fmtNumber(abs / 86400)} d`;
+  return `${sign}${fmtNumber(abs / 31557600)} y`;
 }
 
 /** Convert seconds to whole days for form inputs that think in days. */

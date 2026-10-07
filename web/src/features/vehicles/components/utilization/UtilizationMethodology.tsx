@@ -16,13 +16,15 @@ import {
   MetricLabel,
   MetricValue,
   PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { UtilizationSectionBody } from './UtilizationSectionBody';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface UtilizationMethodologyProps {
   summary: UtilizationSummary;
@@ -35,11 +37,12 @@ export function UtilizationMethodology({
   historyLimit,
   state,
 }: UtilizationMethodologyProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = summary.accounting;
   const observedDays =
     summary.observedDays != null
-      ? fmtNumber(summary.observedDays, 1)
+      ? fmtNumber(summary.observedDays)
       : '—';
   const coverage = [
     {
@@ -161,7 +164,7 @@ export function UtilizationMethodology({
       icon: <Wallet className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'utilization.method.cost',
-        'Total cost applies the Settings electricity rate to usable energy. Per-distance and per-hour costs use only energy from rows with the matching usable distance or duration, and exclude non-energy ownership costs.',
+        'Total cost applies the settings electricity rate to usable energy. Per-distance and per-hour costs use only energy from rows with the matching usable distance or duration, and exclude non-energy ownership costs.',
       ),
     },
     {
@@ -268,19 +271,22 @@ export function UtilizationMethodology({
                         'Timestamp eligibility',
                       )}
                     </Text>
-                    <ul className="mt-2 space-y-2">
-                      {exclusions.map((item) => (
-                        <li
-                          key={item.label}
-                          className="flex items-center justify-between gap-3"
-                        >
-                          <Text variant="bodySm">{item.label}</Text>
-                          <Text variant="bodySm" mono>
-                            {fmtInt(item.value)}
-                          </Text>
-                        </li>
-                      ))}
-                    </ul>
+                    <Table className="mt-2" aria-label={t('utilization.method.timestampExclusions', 'Timestamp eligibility')}>
+                      <tbody>
+                        {exclusions.map((item) => (
+                          <tr key={item.label}>
+                            <th scope="row" className="font-normal">
+                              <Text variant="bodySm">{item.label}</Text>
+                            </th>
+                            <td className="text-right tabular-nums">
+                              <Text variant="bodySm" mono>
+                                {fmtInt(item.value)}
+                              </Text>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
                   </div>
                   <div className="rounded-xl border border-[var(--border-subtle)] p-3">
                     <Text as="p" variant="label">
@@ -289,25 +295,29 @@ export function UtilizationMethodology({
                         'Metric field coverage',
                       )}
                     </Text>
-                    <ul className="mt-2 space-y-2">
-                      {fieldCoverage.map((item) => (
-                        <li key={item.label}>
-                          <Text as="p" variant="bodySm">
-                            {item.label}
-                          </Text>
-                          <Text as="p" variant="caption">
-                            {t(
-                              'utilization.method.fieldCoverageValue',
-                              '{{usable}} usable · {{excluded}} excluded',
-                              {
-                                usable: fmtInt(item.usable),
-                                excluded: fmtInt(item.excluded),
-                              },
-                            )}
-                          </Text>
-                        </li>
-                      ))}
-                    </ul>
+                    <Table className="mt-2" aria-label={t('utilization.method.fieldCoverageTitle', 'Metric field coverage')}>
+                      <tbody>
+                        {fieldCoverage.map((item) => (
+                          <tr key={item.label}>
+                            <th scope="row" className="font-normal">
+                              <Text variant="bodySm">{item.label}</Text>
+                            </th>
+                            <td className="text-right tabular-nums">
+                              <Text variant="caption">
+                                {t(
+                                  'utilization.method.fieldCoverageValue',
+                                  '{{usable}} usable · {{excluded}} excluded',
+                                  {
+                                    usable: fmtInt(item.usable),
+                                    excluded: fmtInt(item.excluded),
+                                  },
+                                )}
+                              </Text>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
                   </div>
                 </div>
               </>

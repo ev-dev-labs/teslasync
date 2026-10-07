@@ -120,9 +120,31 @@ describe('isEmptyStat', () => {
 
 // ── populated ────────────────────────────────────────────────────────────
 describe('SignalStatsPanel — populated', () => {
+  it('keeps unrecorded aggregates separate from true zero in the value checklist', () => {
+    renderPanel({
+      stats: [{ signal: 'recorded_zero', min: 0, max: 0, avg: 0, count: 1 }],
+      selectedSignals: ['recorded_zero', 'unrecorded'],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Avg filter' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('checkbox', { name: '0.00' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('checkbox', { name: '—' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: '—' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(screen.getByText('recorded_zero')).toBeInTheDocument();
+    expect(screen.queryByText('unrecorded')).toBeNull();
+  });
+
+  it('preserves complete selected-signal candidates when empty rows are locally hidden', () => {
+    renderPanel({ selectedSignals: SELECTED });
+    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('button', { name: 'Signal filter' }));
+    expect(within(screen.getByRole('dialog')).getByRole('checkbox', { name: 'phantom' })).toBeInTheDocument();
+  });
+
   it('renders the default title and the full column header set', () => {
     renderPanel();
-    expect(screen.getByRole('heading', { name: 'Stats Summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Stats summary' })).toBeInTheDocument();
     for (const header of ['Signal', 'Min', 'Max', 'Avg', 'Count']) {
       expect(screen.getByText(header)).toBeInTheDocument();
     }
@@ -141,7 +163,7 @@ describe('SignalStatsPanel — populated', () => {
   it('honours a title override', () => {
     renderPanel({ title: 'Live Aggregates' });
     expect(screen.getByRole('heading', { name: 'Live Aggregates' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Stats Summary' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Stats summary' })).toBeNull();
   });
 
   it('does not render the hide-empty toggle when no rows are empty', () => {
@@ -161,7 +183,7 @@ describe('SignalStatsPanel — loading', () => {
 
   it('keeps the panel title visible during loading', () => {
     renderPanel({ loading: true });
-    expect(screen.getByRole('heading', { name: 'Stats Summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Stats summary' })).toBeInTheDocument();
   });
 });
 
@@ -241,6 +263,21 @@ describe('SignalStatsPanel — null safety', () => {
 
 // ── styling & colour a11y ────────────────────────────────────────────────
 describe('SignalStatsPanel — styling & colour', () => {
+  it('keeps long selected identities, numeric values and explicit unknown rows through typography adoption', () => {
+    const name = 'BatteryTemperatureNormalizedSignal'.repeat(5);
+    renderPanel({
+      stats: [{ signal: name, min: -3.5, max: 0, avg: -1.25, count: 6 }],
+      selectedSignals: [name, 'NeverObservedSelectedSignal'],
+    });
+    expect(screen.getByText(name)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(within(rowFor(name)).getByText('-3.50')).toBeInTheDocument();
+    expect(within(rowFor(name)).getByText('0.00')).toBeInTheDocument();
+    expect(within(rowFor('NeverObservedSelectedSignal')).getAllByLabelText('No data')).toHaveLength(3);
+    expect(within(rowFor('NeverObservedSelectedSignal')).getByText('0')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: /Hide empty \(1\)/ }));
+    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(screen.queryByText('NeverObservedSelectedSignal')).toBeNull();
+  });
   it('applies an extra className to the panel surface', () => {
     const { container } = renderPanel({ className: 'stats-surface-x' });
     expect(container.querySelector('.stats-surface-x')).not.toBeNull();

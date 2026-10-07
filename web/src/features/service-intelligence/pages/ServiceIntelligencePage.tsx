@@ -11,13 +11,14 @@ import {
   SudoCanceledError,
   type OfficialNHTSACommunicationsArtifactURL,
 } from '@/api/hooks/useServiceIntelligence';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
 
 import {
   ClaimDraftPanel,
@@ -38,8 +39,11 @@ export default function ServiceIntelligencePage() {
   const query = useServiceIntelligence(vehicleId);
   const warrantyQuery = useWarrantyOutlook(vehicleId);
   const catalogQuery = useCommunicationsCatalogStatus();
+  const serviceState = useDataState(query);
+  const warrantyState = useDataState(warrantyQuery);
+  const catalogState = useDataState(catalogQuery);
   const catalogImport = useImportCommunicationsCatalog();
-  usePageTitle(t('serviceIntelligence.page.title', 'Recall & Service Intelligence'));
+  usePageTitle(t('serviceIntelligence.page.title', 'Recall & service intelligence'));
 
   const retry = useCallback(() => {
     void query.refetch();
@@ -71,20 +75,20 @@ export default function ServiceIntelligencePage() {
           )
         }
       >
-        {t('serviceIntelligence.actions.evidencePack', 'Open Service Evidence Pack')}
+        {t('serviceIntelligence.actions.evidencePack', 'Open service evidence pack')}
       </Button>
     </div>
   );
 
   return (
-    <PageContainer
-      title={t('serviceIntelligence.page.title', 'Recall & Service Intelligence')}
+    <PageLayout
+      title={t('serviceIntelligence.page.title', 'Recall & service intelligence')}
       subtitle={t(
         'serviceIntelligence.page.subtitle',
         'Compare decoded vehicle context and observed signal patterns with NHTSA safety records.',
       )}
-      actions={actions}
-      query={selected ? query : undefined}
+      secondaryActions={actions}
+      query={selected ? [query, warrantyQuery, catalogQuery] : catalogQuery}
     >
       <AlertBanner
         variant="info"
@@ -100,10 +104,11 @@ export default function ServiceIntelligencePage() {
       </AlertBanner>
 
       <FadeIn>
+        <StaleRefreshWarning state={catalogState} label={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')} />
         <CommunicationsCatalogPanel
           status={catalogQuery.data ?? null}
-          loading={catalogQuery.isLoading}
-          error={catalogQuery.error}
+          loading={!catalogState.hasData && catalogQuery.isLoading}
+          error={catalogState.fatalError}
           importing={catalogImport.isPending}
           importingArtifactURL={
             catalogImport.isPending ? (catalogImport.variables ?? null) : null
@@ -117,21 +122,26 @@ export default function ServiceIntelligencePage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
+        <StaleRefreshWarning state={serviceState} label={t('serviceIntelligence.page.title', 'Recall & service intelligence')} />
         <VehicleMatchPanel
           selected={selected}
-          loading={query.isLoading}
-          error={query.error}
+          loading={!serviceState.hasData && query.isLoading}
+          error={serviceState.fatalError}
           context={data?.vehicle_context ?? null}
           summary={data?.summary ?? null}
+          generatedAt={data?.generated_at ?? null}
+          sources={data?.sources ?? []}
+          retained={serviceState.hasData && query.error != null}
           onRetry={retry}
         />
       </FadeIn>
 
       <FadeIn delay={0.075}>
+        <StaleRefreshWarning state={warrantyState} label={t('serviceIntelligence.warranty.title', 'Warranty countdown')} />
         <WarrantyPanel
           selected={selected}
-          loading={warrantyQuery.isLoading}
-          error={warrantyQuery.error}
+          loading={!warrantyState.hasData && warrantyQuery.isLoading}
+          error={warrantyState.fatalError}
           outlook={warrantyQuery.data ?? null}
           onRetry={() => void warrantyQuery.refetch()}
         />
@@ -144,8 +154,8 @@ export default function ServiceIntelligencePage() {
       <FadeIn delay={0.1}>
         <RecallInventoryPanel
           selected={selected}
-          loading={query.isLoading}
-          error={query.error}
+          loading={!serviceState.hasData && query.isLoading}
+          error={serviceState.fatalError}
           findings={data?.recall_findings ?? []}
           onRetry={retry}
         />
@@ -155,8 +165,8 @@ export default function ServiceIntelligencePage() {
         <FadeIn delay={0.15}>
           <CommunicationsPanel
             selected={selected}
-            loading={query.isLoading}
-            error={query.error}
+            loading={!serviceState.hasData && query.isLoading}
+            error={serviceState.fatalError}
             communications={data?.communications ?? []}
             source={communicationsSource}
             onRetry={retry}
@@ -165,8 +175,8 @@ export default function ServiceIntelligencePage() {
         <FadeIn delay={0.2}>
           <SymptomMatchesPanel
             selected={selected}
-            loading={query.isLoading}
-            error={query.error}
+            loading={!serviceState.hasData && query.isLoading}
+            error={serviceState.fatalError}
             symptoms={data?.ranked_symptoms ?? []}
             onRetry={retry}
           />
@@ -176,8 +186,8 @@ export default function ServiceIntelligencePage() {
       <FadeIn delay={0.25}>
         <EvidenceLimitationsPanel
           selected={selected}
-          loading={query.isLoading}
-          error={query.error}
+          loading={!serviceState.hasData && query.isLoading}
+          error={serviceState.fatalError}
           evidence={data?.evidence ?? null}
           onRetry={retry}
         />
@@ -186,12 +196,12 @@ export default function ServiceIntelligencePage() {
       <FadeIn delay={0.3}>
         <SourceFreshnessPanel
           selected={selected}
-          loading={query.isLoading}
-          error={query.error}
+          loading={!serviceState.hasData && query.isLoading}
+          error={serviceState.fatalError}
           sources={data?.sources ?? []}
           onRetry={retry}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

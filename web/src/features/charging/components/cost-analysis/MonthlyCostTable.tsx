@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
 import { DataTable, Text, type Column } from '@/components/ui';
 import { Currency } from '@/components/data-display';
-import { fmtInt, fmtWithUnit } from '@/lib/numberFormat';
+
 import { CostSection } from './CostSection';
 import type { MonthlyBucket } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyCostTableProps {
   data: MonthlyBucket[];
@@ -15,6 +16,7 @@ interface MonthlyCostTableProps {
 }
 
 export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCostTableProps) {
+  const { fmtInt, fmtWithUnit, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const [tableSortKey, setTableSortKey] = useState('month');
   const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
@@ -31,18 +33,21 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       },
       {
         key: 'sessions',
+        align: 'right',
         header: t('costAnalysis.table.sessions', 'Sessions'),
         sortable: true,
         render: (row) => fmtInt(row.sessions),
       },
       {
         key: 'energy',
+        align: 'right',
         header: t('costAnalysis.table.energy', 'Energy'),
         sortable: true,
-        render: (row) => fmtWithUnit(row.energy, 'kWh', 1),
+        render: (row) => fmtWithUnit(row.energy, 'kWh'),
       },
       {
         key: 'cost',
+        align: 'right',
         header: t('costAnalysis.table.cost', 'Cost'),
         sortable: true,
         render: (row) => (
@@ -51,13 +56,15 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       },
       {
         key: 'avgCostPerKwh',
+        align: 'right',
         header: t('costAnalysis.table.avgRate', 'Avg $/kWh'),
         sortable: true,
-        render: (row) => <Currency value={row.avgCostPerKwh} precision={3} />,
+        render: (row) => <Currency value={row.avgCostPerKwh} precision={displayPrecision} />,
       },
       {
         key: 'gasEquiv',
-        header: t('costAnalysis.table.gasEquiv', 'Gas Equiv'),
+        align: 'right',
+        header: t('costAnalysis.table.gasEquiv', 'Gas equiv'),
         sortable: true,
         render: (row) => (
           <Currency value={row.gasEquiv} className="text-rose-300" />
@@ -65,6 +72,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       },
       {
         key: 'savings',
+        align: 'right',
         header: t('costAnalysis.table.savings', 'Savings'),
         sortable: true,
         render: (row) => (
@@ -77,7 +85,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
         ),
       },
     ],
-    [t],
+    [t, fmtInt, fmtWithUnit, displayPrecision, displayLocale],
   );
 
   const sortedData = useMemo(() => {
@@ -105,7 +113,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
 
   return (
     <CostSection
-      title={t('costAnalysis.table.title', 'Monthly Cost Breakdown')}
+      title={t('costAnalysis.table.title', 'Monthly cost breakdown')}
       icon={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
       isLoading={isLoading}
       error={error}

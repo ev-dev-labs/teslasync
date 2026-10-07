@@ -15,8 +15,9 @@ import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
-import { fmtInt, fmtPercent, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SignalTypeBreakdownProps {
   numericCount: number;
@@ -31,6 +32,7 @@ export function SignalTypeBreakdown({
   stringCount,
   className,
 }: SignalTypeBreakdownProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Coerce each count to a finite, non-negative integer. `?? 0` alone let a
@@ -55,11 +57,11 @@ export function SignalTypeBreakdown({
   );
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <PanelTitle className="flex items-center gap-2">
-          <PieChartIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('liveMonitor.typeBreakdown', 'Value Types')}
+    <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+      <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
+          <PieChartIcon className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+          {t('liveMonitor.typeBreakdown', 'Value types')}
         </PanelTitle>
         {total > 0 ? <Caption>{fmtInt(total)}</Caption> : null}
       </div>
@@ -73,14 +75,21 @@ export function SignalTypeBreakdown({
       ) : (
         <div className="space-y-4">
           {rows.map((row) => (
-            <MetricBar
-              key={row.key}
-              label={row.label}
-              value={row.value}
-              max={total}
-              color={row.color}
-              sublabel={`${fmtInt(row.value)} · ${fmtPercent((row.value / total) * 100, 0)}`}
-            />
+            <div key={row.key} className="min-w-0 space-y-2">
+              <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <Caption className="min-w-0 break-words">{row.label}</Caption>
+                <Caption className="min-w-0 break-words tabular-nums text-[var(--text-primary)]">
+                  {fmtInt(row.value)} · {fmtPercent((row.value / total) * 100)}
+                </Caption>
+              </div>
+              <MetricBar
+                label={row.label}
+                value={row.value}
+                max={total}
+                color={row.color}
+                showHeader={false}
+              />
+            </div>
           ))}
         </div>
       )}

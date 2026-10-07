@@ -13,11 +13,12 @@ import {
 } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { ParkingStint, ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RankedStint extends ParkingStint {
   rank: number;
@@ -35,6 +36,7 @@ export function LongestParkingStints({
   state,
   className,
 }: LongestParkingStintsProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
   const { formatDuration } = useUnits();
@@ -50,6 +52,7 @@ export function LongestParkingStints({
     () => [
       {
         key: 'rank',
+        align: 'right',
         header: t('parking.longest.rank', 'Rank'),
         visibleOnMobile: true,
         render: (row) => (
@@ -86,7 +89,7 @@ export function LongestParkingStints({
         visibleOnMobile: true,
         render: (row) => (
           <Text variant="body" mono>
-            {formatDuration(row.durationMs / 1_000, { precision: 1 })}
+            {formatDuration(row.durationMs / 1_000)}
           </Text>
         ),
       },
@@ -108,7 +111,7 @@ export function LongestParkingStints({
         ),
       },
     ],
-    [formatDateTime, formatDuration, t],
+    [formatDateTime, formatDuration, t, fmtInt],
   );
 
   return (
@@ -120,7 +123,7 @@ export function LongestParkingStints({
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
           <ListOrdered className="h-4 w-4 text-amber-300" aria-hidden="true" />
-          {t('parking.longest.title', 'Longest Observed Stints')}
+          {t('parking.longest.title', 'Longest observed stints')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">
           {t(

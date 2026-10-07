@@ -33,7 +33,7 @@
  * every render because QueryError calls `useNavigate`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { type ComponentProps } from 'react';
 
@@ -209,6 +209,39 @@ describe('TripDrivesTable — data rendering', () => {
 });
 
 // ── Sorting ─────────────────────────────────────────────────────────────────
+describe('TripDrivesTable — shared loaded-value filters', () => {
+  it('offers and filters a raw-SI value beyond the first client page', () => {
+    const drives = Array.from({ length: 30 }, (_, index) =>
+      makeDrive({ id: index + 1, distance_m: (index + 1) * 1000 }),
+    );
+    renderTable({ trip: makeTrip(drives) });
+    expect(screen.queryByText('dist:30000')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Distance filter' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Distance filter' }));
+    expect(dialog.getByRole('checkbox', { name: 'dist:30000' })).toBeChecked();
+    fireEvent.click(dialog.getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(dialog.getByRole('checkbox', { name: 'dist:30000' }));
+    fireEvent.click(dialog.getByRole('button', { name: 'Done' }));
+
+    expect(distanceOrder()).toEqual(['dist:30000']);
+    expect(unitMocks.formatDistance).toHaveBeenCalledWith(30000);
+  });
+
+  it('keeps unknown measurements distinct from a valid zero', () => {
+    renderTable({
+      trip: makeTrip([
+        makeDrive({ id: 1, distance_m: null }),
+        makeDrive({ id: 2, distance_m: 0 }),
+      ]),
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Distance filter' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Distance filter' }));
+    expect(dialog.getAllByRole('checkbox')).toHaveLength(3);
+    expect(dialog.getByRole('checkbox', { name: 'dist:0' })).toBeInTheDocument();
+  });
+});
+
 describe('TripDrivesTable — functional column sorting', () => {
   it('leaves rows in API order until a header is clicked', () => {
     renderTable();

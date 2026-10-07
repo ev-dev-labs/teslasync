@@ -1,31 +1,32 @@
 import { UnfoldHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { LayoutCard } from '@/components/layout';
 
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeSeparation({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
     <section data-testid="drive-archetypes-separation">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <UnfoldHorizontal className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('archetypes.separation.title', 'Cohesion and nearest-cluster separation')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('archetypes.separation.title', 'Cohesion and nearest-cluster separation')}
+        actions={<UnfoldHorizontal className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'archetypes.separation.subtitle',
@@ -39,10 +40,10 @@ export function ArchetypeSeparation({
                 (candidate) => candidate.index === cluster.nearestClusterIndex,
               );
               const metrics = [
-                [t('archetypes.separation.meanDistance', 'Mean assignment distance'), fmtNumber(cluster.meanAssignmentDistance, 3)],
-                [t('archetypes.separation.p90Distance', 'P90 assignment distance'), fmtNumber(cluster.p90AssignmentDistance, 3)],
-                [t('archetypes.separation.nearestDistance', 'Nearest centroid distance'), cluster.nearestCentroidDistance != null ? fmtNumber(cluster.nearestCentroidDistance, 3) : '—'],
-                [t('archetypes.separation.medianMargin', 'Median assignment margin'), fmtPercent(cluster.medianAssignmentMargin * 100, 1)],
+                [t('archetypes.separation.meanDistance', 'Mean assignment distance'), fmtScientificNumber(cluster.meanAssignmentDistance, 3)],
+                [t('archetypes.separation.p90Distance', 'P90 assignment distance'), fmtScientificNumber(cluster.p90AssignmentDistance, 3)],
+                [t('archetypes.separation.nearestDistance', 'Nearest centroid distance'), cluster.nearestCentroidDistance != null ? fmtScientificNumber(cluster.nearestCentroidDistance, 3) : '—'],
+                [t('archetypes.separation.medianMargin', 'Median assignment margin'), fmtPercent(cluster.medianAssignmentMargin * 100)],
               ] as const;
               return (
                 <li
@@ -78,14 +79,16 @@ export function ArchetypeSeparation({
                       )}
                     </Badge>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Table className="mt-4" aria-label={archetypeIdentity(t, cluster.index, cluster.label)}>
+                    <tbody>
                     {metrics.map(([label, value]) => (
-                      <div key={label}>
-                        <MetricLabel>{label}</MetricLabel>
-                        <Text as="p" variant="bodySm" className="mt-1">{value}</Text>
-                      </div>
+                      <tr key={label}>
+                        <th scope="row"><MetricLabel>{label}</MetricLabel></th>
+                        <td className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
+                      </tr>
                     ))}
-                  </div>
+                    </tbody>
+                  </Table>
                 </li>
               );
             })}
@@ -97,7 +100,7 @@ export function ArchetypeSeparation({
             )}
           </Text>
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

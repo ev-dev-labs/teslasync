@@ -16,12 +16,12 @@
 
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useQuietHours } from '@/api/hooks/useNotifications';
 import { QuietHoursPanel } from '@/features/settings/components/QuietHoursPanel';
-import { AIQuietHoursSuggestion } from '@/components/ai/AIQuietHoursSuggestion';
+import { AIQuietHoursSuggestion } from '@/components/ai';
 import { QuietHoursSummary } from '../components/QuietHoursSummary';
 import { QuietHoursGuide } from '../components/QuietHoursGuide';
 import type { QuietHoursWindowInput } from '@/api/types';
@@ -51,7 +51,7 @@ export default function QuietHoursPage() {
   }, []);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.quietHours.title', 'Quiet hours')}
       subtitle={t('notifications.quietHours.subtitle', 'Suppress non-critical notifications during a configurable window.')}
       query={quietHoursQuery}
@@ -75,6 +75,6 @@ export default function QuietHoursPage() {
           </FadeIn>
         </div>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

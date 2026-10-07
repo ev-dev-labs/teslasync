@@ -105,7 +105,7 @@ describe('ImpersonationPolicyPanel', () => {
     // Spot-check two bodies to prove the descriptive copy renders, not just
     // the headings.
     expect(
-      screen.getByText(/writes an immutable entry to the admin audit log/i),
+      screen.getByText(/writes an immutable entry to the admin Audit log/i),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/expires automatically after 15 minutes/i),

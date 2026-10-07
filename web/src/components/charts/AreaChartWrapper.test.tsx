@@ -16,8 +16,8 @@
  *     this is a pure presentational component fed entirely by props.
  */
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
 import { AreaChartWrapper, resolveAreaTooltip, type SeriesConfig } from './AreaChartWrapper'
 
 vi.mock('recharts', async (importOriginal) => {
@@ -39,6 +39,27 @@ const data = [
   { i: '1', energy: 2, power: 5 },
   { i: '2', energy: 3, power: 6 },
 ]
+
+const context = {
+  font: '',
+  measureText: vi.fn((label: string) => ({ width: label.length * 8 })),
+}
+let canvasDescriptor: PropertyDescriptor | undefined
+
+beforeEach(() => {
+  canvasDescriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')
+  context.measureText.mockClear()
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    value: () => context,
+  })
+})
+
+afterEach(() => {
+  cleanup()
+  if (canvasDescriptor) Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', canvasDescriptor)
+  else Reflect.deleteProperty(HTMLCanvasElement.prototype, 'getContext')
+})
 
 describe('resolveAreaTooltip', () => {
   it('maps a known series key to its friendly label', () => {
@@ -123,6 +144,54 @@ describe('AreaChartWrapper', () => {
     const { container } = render(<AreaChartWrapper data={data} xKey="i" series={series} />)
     expect(container.querySelector('.recharts-xAxis')).not.toBeNull()
     expect(container.querySelector('.recharts-yAxis')).not.toBeNull()
+    const axisLine = container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')
+    expect(axisLine).toHaveAttribute('x1', '64')
+  })
+
+  it('reserves the complete formatted label width across every plotted series', () => {
+    const rows = [
+      { i: '0', energy: 12.5, power: 1234.5678 },
+      { i: '1', energy: null, power: undefined },
+    ]
+    const formatter = (value: number) => `${value.toFixed(3)} kWh`
+    const { container } = render(
+      <AreaChartWrapper data={rows} xKey="i" series={series} yFormatter={formatter} />,
+    )
+    expect(context.measureText).toHaveBeenCalledWith('1234.568 kWh')
+    expect(context.measureText).toHaveBeenCalledWith('0.000 kWh')
+    expect(context.font).toMatch(/^11px /)
+    const axisLine = container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')
+    expect(axisLine).toHaveAttribute('x1', '124')
+    expect(rows).toEqual([
+      { i: '0', energy: 12.5, power: 1234.5678 },
+      { i: '1', energy: null, power: undefined },
+    ])
+  })
+
+  it('remeasures longer localized labels without shortening their copy or precision', () => {
+    const { container, rerender } = render(
+      <AreaChartWrapper data={data} xKey="i" series={series} yFormatter={value => `${value}%`} />,
+    )
+    const originalWidth = Number(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('x1'))
+    const formatter = (value: number) => `${value.toFixed(8)} kilowatt-hours`
+    rerender(<AreaChartWrapper data={data} xKey="i" series={series} yFormatter={formatter} />)
+    expect(context.measureText).toHaveBeenCalledWith('6.00000000 kilowatt-hours')
+    const axisLine = container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')
+    expect(Number(axisLine?.getAttribute('x1'))).toBeGreaterThan(originalWidth)
+    expect(container.querySelector('.recharts-yAxis')).toHaveTextContent('0.00000000 kilowatt-hours')
+  })
+
+  it('measures the existing localized integer formatter for count axes', () => {
+    const { container } = render(
+      <AreaChartWrapper
+        data={[{ i: '0', count: 1234567 }]}
+        xKey="i"
+        series={[{ key: 'count', label: 'Count', color: '#10b981' }]}
+        kind="count"
+      />,
+    )
+    expect(context.measureText).toHaveBeenCalledWith('1,234,567')
+    expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).toHaveAttribute('x1', '100')
   })
 
   it('renders an svg but no gradients or areas for an empty series list', () => {

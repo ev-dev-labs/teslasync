@@ -9,7 +9,7 @@ import { memo } from 'react';
 import { Database, KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 
 import type { CuratedTable } from './sqlCatalog';
 
@@ -29,7 +29,7 @@ const PRIMARY_KEY_MARKER = 'primary key';
 /**
  * SchemaCatalogCard renders one curated table as a self-contained GlassPanel:
  * a mono table name (h3), a one-line description, a column-count chip, and the
- * column list with SI-aware descriptions. Primary-key columns get a key icon
+ * column table with SI-aware descriptions. Primary-key columns get a key icon
  * so the status is conveyed by shape + text, not colour alone.
  */
 function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
@@ -37,8 +37,8 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
   const columns = table.columns ?? [];
 
   return (
-    <GlassPanel hover glow="cyan" className="flex h-full flex-col p-4 sm:p-5">
-      <div className="mb-3 flex items-start gap-2.5">
+    <GlassPanel className="flex h-full min-w-0 max-w-full flex-col p-4 sm:p-5">
+      <div className="mb-3 flex min-w-0 flex-wrap items-start gap-2.5">
         <span
           className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 p-1.5 ring-1 ring-cyan-400/20"
           aria-hidden="true"
@@ -46,10 +46,10 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
           <Database className="h-4 w-4 text-cyan-300" />
         </span>
         <div className="min-w-0 flex-1">
-          <PanelTitle className="truncate font-mono text-cyan-300">
+          <PanelTitle className="break-words font-mono [overflow-wrap:anywhere]">
             {table.name || EM_DASH}
           </PanelTitle>
-          <Text variant="bodySm" as="p" className="mt-0.5">
+          <Text variant="bodySm" as="p" className="mt-0.5 break-words">
             {table.description || t('powerSql.catalog.noDescription', 'No description')}
           </Text>
         </div>
@@ -58,7 +58,7 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
           size="2xs"
           weight="medium"
           color="muted"
-          className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 tabular-nums"
+          className="max-w-full break-words rounded-full bg-[var(--surface-2)] px-2 py-0.5 tabular-nums"
         >
           {t('powerSql.catalog.columnCount', '{{count}} cols', {
             count: columns.length,
@@ -67,37 +67,43 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
       </div>
 
       {columns.length > 0 ? (
-        <ul className="space-y-1.5">
-          {columns.map((col) => {
-            const isPrimaryKey =
-              (col.description ?? '').trim().toLowerCase() === PRIMARY_KEY_MARKER;
-            return (
-              <li
-                key={col.name}
-                className="rounded-md border border-[var(--border-subtle)] bg-white/[0.02] px-2.5 py-1.5"
-              >
-                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                  {isPrimaryKey && (
-                    <KeyRound
-                      role="img"
-                      className="h-3 w-3 shrink-0 self-center text-amber-300"
-                      aria-label={t('powerSql.catalog.primaryKey', 'Primary key')}
-                    />
-                  )}
-                  <Text mono size="xs" className="text-emerald-300">
-                    {col.name || EM_DASH}
-                  </Text>
-                  <Text variant="caption">{col.type || EM_DASH}</Text>
-                </div>
-                {col.description ? (
-                  <Text variant="caption" as="p" className="mt-0.5">
-                    {col.description}
-                  </Text>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+        <Table aria-label={table.name || EM_DASH}>
+          <thead>
+            <tr>
+              <th scope="col">{t('common.name', 'Name')}</th>
+              <th scope="col">{t('common.type', 'Type')}</th>
+              <th scope="col">{t('common.description', 'Description')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {columns.map((col) => {
+              const isPrimaryKey =
+                (col.description ?? '').trim().toLowerCase() === PRIMARY_KEY_MARKER;
+              return (
+                <tr key={col.name}>
+                  <th scope="row">
+                    <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                      {isPrimaryKey && (
+                        <KeyRound
+                          role="img"
+                          className="h-3 w-3 shrink-0 self-center text-amber-300"
+                          aria-label={t('powerSql.catalog.primaryKey', 'Primary key')}
+                        />
+                      )}
+                      <Text mono size="xs" className="break-words text-emerald-300 [overflow-wrap:anywhere]">{col.name || EM_DASH}</Text>
+                    </div>
+                  </th>
+                  <td><Text variant="caption">{col.type || EM_DASH}</Text></td>
+                  <td>
+                    {col.description
+                      ? <Text variant="caption" as="p">{col.description}</Text>
+                      : EM_DASH}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
       ) : (
         <Text
           variant="caption"

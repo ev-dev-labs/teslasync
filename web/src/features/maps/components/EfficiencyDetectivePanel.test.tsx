@@ -3,7 +3,8 @@
  * `useEfficiencyShift` is mocked; GlassPanel/Badge render for real.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { EfficiencyShift } from '@/api/hooks/useAnalytics';
@@ -65,6 +66,18 @@ beforeEach(() => {
 });
 
 describe('EfficiencyDetectivePanel', () => {
+  it('opens the real monthly-details drawer with signed source Celsius shift and retained server explanation', () => {
+    mockShift.mockReturnValue({
+      data: shift(), isLoading: false, isError: true, error: new Error('refresh failed'), refetch: vi.fn(),
+    });
+    render(<MemoryRouter><EfficiencyDetectivePanel vehicleId="4" /></MemoryRouter>);
+    expect(screen.getByText('Efficiency worsened and colder weather explains it.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Month-over-month diagnosis details' });
+    expect(within(drawer).getByText('-8.00°C')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/2025-12 versus 2025-11/).length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('Temperature difference in source degrees Celsius, not an absolute temperature conversion.')).toBeInTheDocument();
+  });
   it('renders the verdict badge and explanation', () => {
     render(<EfficiencyDetectivePanel vehicleId="4" />);
     expect(screen.getByText('Colder weather')).toBeTruthy();

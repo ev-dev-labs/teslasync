@@ -146,7 +146,7 @@ describe('ReplanPanel', () => {
   it('disables rescoring until a fix exists', () => {
     mockAssess.mockReturnValue(idle({ data: { ...assessment, latest: null } }));
     renderPanel();
-    expect(screen.getByText('Rescore from here')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Rescore from here' })).toBeDisabled();
   });
 
   it('renders the replan ranking with winner and version', () => {
@@ -163,5 +163,32 @@ describe('ReplanPanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('keeps the prior ranking independent of a failed initial assessment and never auto-rescores', () => {
+    const mutate = vi.fn();
+    mockAssess.mockReturnValue(idle({ error: new Error('assessment unavailable'), isError: true }));
+    mockReplan.mockReturnValue({ mutate, isPending: true, data: scores });
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'Replan' })).toBeInTheDocument();
+    expect(screen.getByText('Flagler SC wins')).toBeInTheDocument();
+    expect(screen.getByText('v2')).toBeInTheDocument();
+    expect(screen.getByText('no fleet data — ranked on corridor only')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rescore from here' })).toBeDisabled();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains the deviation and ranked stops with separate assessment and rescore failures', () => {
+    mockAssess.mockReturnValue(idle({
+      data: assessment, error: new Error('assessment refresh failed'), isError: true,
+    }));
+    mockReplan.mockReturnValue({
+      mutate: vi.fn(), isPending: false, data: scores, error: new Error('rescore failed'),
+    });
+    renderPanel();
+    expect(screen.getByText('12500 m off corridor')).toBeInTheDocument();
+    expect(screen.getByText('Flagler SC wins')).toBeInTheDocument();
+    expect(screen.getByText(/Stops could not be rescored/)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
   });
 });

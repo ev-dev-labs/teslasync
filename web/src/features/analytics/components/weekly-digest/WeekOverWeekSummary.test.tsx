@@ -136,22 +136,22 @@ describe('WeekOverWeekSummary — populated rendering', () => {
   it('renders the section title and every stat label', () => {
     renderSummary({ metrics: POPULATED });
 
-    expect(screen.getByText('Week-over-Week Comparison')).toBeInTheDocument();
+    expect(screen.getByText('Week-over-week comparison')).toBeInTheDocument();
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Drives')).toBeInTheDocument();
     expect(screen.getByText('Energy')).toBeInTheDocument();
     expect(screen.getByText('Cost')).toBeInTheDocument();
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('CO₂ Saved')).toBeInTheDocument();
+    expect(screen.getByText('CO₂ saved')).toBeInTheDocument();
   });
 
   it('formats each metric value with its unit suffix', () => {
     renderSummary({ metrics: POPULATED });
 
-    expect(screen.getByText('130.0 km')).toBeInTheDocument();
-    expect(screen.getByText('55.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('140.0 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('8.0')).toBeInTheDocument();
+    expect(screen.getByText('130.00 km')).toBeInTheDocument();
+    expect(screen.getByText('55.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('140.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('8.00')).toBeInTheDocument();
     expect(screen.getByText('kg')).toBeInTheDocument();
   });
 
@@ -169,7 +169,7 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
   it('reads more distance as an upward, positive (green) trend', () => {
     renderSummary({ metrics: POPULATED });
 
-    const row = trendOf('+30.0%');
+    const row = trendOf('+30.00%');
     expect(row.className).toContain('text-emerald-700');
     expect(row.textContent).toContain('\u2191'); // ↑
   });
@@ -177,7 +177,7 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
   it('inverts positivity for energy — more usage reads as a red up-trend', () => {
     renderSummary({ metrics: POPULATED });
 
-    const row = trendOf('+37.5%');
+    const row = trendOf('+37.50%');
     expect(row.className).toContain('text-rose-700');
     expect(row.className).not.toContain('text-emerald-700');
     expect(row.textContent).toContain('\u2191');
@@ -186,21 +186,21 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
   it('inverts positivity for cost — a higher bill reads red', () => {
     renderSummary({ metrics: POPULATED });
 
-    expect(trendOf('+20.0%').className).toContain('text-rose-700');
+    expect(trendOf('+20.00%').className).toContain('text-rose-700');
   });
 
   it('reads falling efficiency (lower Wh/km) as a positive (green) down-trend', () => {
     renderSummary({ metrics: POPULATED });
 
-    const row = trendOf('-12.5%');
+    const row = trendOf('-12.50%');
     expect(row.className).toContain('text-emerald-700');
     expect(row.textContent).toContain('\u2193'); // ↓
   });
 
-  it('guards divide-by-zero — a zero baseline yields +100.0%, never Infinity', () => {
+  it('guards divide-by-zero — a zero baseline yields +100.00%, never Infinity', () => {
     renderSummary({ metrics: { totalDrives: 5, prevDriveCount: 0 } });
 
-    expect(screen.getByText('+100.0%')).toBeInTheDocument();
+    expect(screen.getByText('+100.00%')).toBeInTheDocument();
     expect(screen.queryByText(/Infinity/)).toBeNull();
   });
 
@@ -208,7 +208,7 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
     // Distance is unchanged (100 vs 100); every other metric is 0 vs 0 — all flat.
     renderSummary({ metrics: { totalDistanceM: 100_000, prevDistanceM: 100_000 } });
 
-    expect(screen.getByText('100.0 km')).toBeInTheDocument();
+    expect(screen.getByText('100.00 km')).toBeInTheDocument();
     expect(screen.getAllByText('0%')).toHaveLength(6);
     expect(screen.getAllByText('\u2014')).toHaveLength(6); // — flat arrows
   });
@@ -236,10 +236,10 @@ describe('WeekOverWeekSummary — null-safety', () => {
 
     // Labels still render — the panel is never blank.
     expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(screen.getByText('0.0 km')).toBeInTheDocument();
-    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('0.0 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
     // Drives → fmtInt(0) → "0"; Cost → formatCurrency(0) → "$0.00".
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText('$0.00')).toBeInTheDocument();
@@ -254,10 +254,10 @@ describe('WeekOverWeekSummary — loading state', () => {
     const { container } = renderSummary({ metrics: POPULATED, isLoading: true });
 
     // Title lives outside the grid and is always shown.
-    expect(screen.getByText('Week-over-Week Comparison')).toBeInTheDocument();
+    expect(screen.getByText('Week-over-week comparison')).toBeInTheDocument();
     // Loading StatCards render skeletons only — labels and values are suppressed.
     expect(screen.queryByText('Distance')).toBeNull();
-    expect(screen.queryByText('130.0')).toBeNull();
+    expect(screen.queryByText('130.00')).toBeNull();
     // Two skeleton bars per card × six cards.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(12);
   });
@@ -276,9 +276,9 @@ describe('WeekOverWeekSummary — error state', () => {
 
     // The grid must not render behind the error surface.
     expect(screen.queryByText('Distance')).toBeNull();
-    expect(screen.queryByText('130.0')).toBeNull();
+    expect(screen.queryByText('130.00')).toBeNull();
     // The section title is still present so the band keeps its heading.
-    expect(screen.getByText('Week-over-Week Comparison')).toBeInTheDocument();
+    expect(screen.getByText('Week-over-week comparison')).toBeInTheDocument();
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
@@ -299,7 +299,7 @@ describe('WeekOverWeekSummary — accessibility', () => {
     renderSummary({ metrics: POPULATED });
 
     expect(
-      screen.getByRole('region', { name: 'Week-over-Week Comparison' }),
+      screen.getByRole('region', { name: 'Week-over-week comparison' }),
     ).toBeInTheDocument();
   });
 

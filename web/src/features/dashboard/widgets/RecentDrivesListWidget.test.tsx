@@ -181,6 +181,28 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe('RecentDrivesListWidget — measured values and retained trust', () => {
+  it('does not fabricate distance or duration when the fields are absent', () => {
+    const drive = Object.assign(makeDrive(), { distance_m: null, duration_s: null });
+    setup({ drives: makeQuery({ data: [drive] }) });
+    renderWidget({ size: STANDARD });
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
+  });
+
+  it('keeps drill-through rows during a background failure', () => {
+    setup({ drives: makeQuery({
+      data: [makeDrive()],
+      error: new Error('background outage'),
+      isError: true,
+    }) });
+    renderWidget({ size: WIDE });
+    expect(screen.getByText('10.00 km')).toBeInTheDocument();
+    expect(screen.getByText('123 Main St')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+  });
+});
+
 describe('truncateAddress', () => {
   it('returns the em-dash placeholder for nullish or empty input', () => {
     expect(truncateAddress(undefined, 30)).toBe('—');
@@ -229,16 +251,16 @@ describe('RecentDrivesListWidget — rendering', () => {
     setup({ drives: makeQuery({ data: [makeDrive()] }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('Recent Drives')).toBeInTheDocument();
+    expect(screen.getByText('Recent drives')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute('href', '/drives');
 
     // Left column: distance (10,000 m → 10.0 km) + duration (1500 s → 25m).
-    expect(screen.getByText('10.0 km')).toBeInTheDocument();
+    expect(screen.getByText('10.00 km')).toBeInTheDocument();
     expect(screen.getByText('25m')).toBeInTheDocument();
 
     // Right column: SOC range, used chip (80 − 70 = 10%), and the date.
-    expect(screen.getByText('80% → 70%')).toBeInTheDocument();
-    expect(screen.getByText('10%')).toBeInTheDocument();
+    expect(screen.getByText('80.00% → 70.00%')).toBeInTheDocument();
+    expect(screen.getByText('10.00%')).toBeInTheDocument();
     expect(screen.getByText('2026-06-01')).toBeInTheDocument();
 
     // Addresses are a wide-only column — withheld at 2 columns.
@@ -261,9 +283,9 @@ describe('RecentDrivesListWidget — rendering', () => {
 
     // The row link's accessible name is the summary aria-label, and it points
     // at the drive detail route.
-    const first = screen.getByRole('link', { name: 'Drive: 10.0 km, 2026-06-01' });
+    const first = screen.getByRole('link', { name: 'Drive: 10.00 km, 2026-06-01' });
     expect(first).toHaveAttribute('href', '/drives/1');
-    expect(screen.getByRole('link', { name: 'Drive: 20.0 km, 2026-06-02' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Drive: 20.00 km, 2026-06-02' })).toHaveAttribute(
       'href',
       '/drives/2',
     );
@@ -281,14 +303,13 @@ describe('RecentDrivesListWidget — rendering', () => {
     expect(screen.getByText('456 Oak Ave')).toBeInTheDocument();
   });
 
-  it('truncates a long address to 30 characters with an ellipsis in the wide layout', () => {
+  it('preserves the complete long address in the reflowing wide layout', () => {
     const long = 'A'.repeat(40);
     setup({ drives: makeQuery({ data: [makeDrive({ start_address: long, end_address: undefined })] }) });
     renderWidget({ size: WIDE });
 
-    // Displayed text is the 30-char slice + ellipsis; the missing end address
-    // collapses to the "—" placeholder.
-    expect(screen.getByText('A'.repeat(30) + '…')).toBeInTheDocument();
+    expect(screen.getByText(long)).toBeInTheDocument();
+    expect(screen.queryByText('A'.repeat(30) + '…')).not.toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
@@ -297,8 +318,8 @@ describe('RecentDrivesListWidget — rendering', () => {
     renderWidget({ size: STANDARD });
 
     // 10,000 m ÷ 1609.344 = 6.21 → "6.2 mi"; the km label never leaks.
-    expect(screen.getByText('6.2 mi')).toBeInTheDocument();
-    expect(screen.queryByText('10.0 km')).not.toBeInTheDocument();
+    expect(screen.getByText('6.21 mi')).toBeInTheDocument();
+    expect(screen.queryByText('10.00 km')).not.toBeInTheDocument();
   });
 });
 
@@ -322,28 +343,28 @@ describe('RecentDrivesListWidget — duration & battery formatting', () => {
     setup({ drives: makeQuery({ data: [makeDrive({ end_soc_pct: null })] }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('80% → ?%')).toBeInTheDocument();
+    expect(screen.getByText('80.00% → ?%')).toBeInTheDocument();
     // No positive delta to compute → no used-% chip.
-    expect(screen.queryByText('10%')).not.toBeInTheDocument();
+    expect(screen.queryByText('10.00%')).not.toBeInTheDocument();
   });
 
   it('never renders a negative used-% when the vehicle gained charge', () => {
     setup({ drives: makeQuery({ data: [makeDrive({ start_soc_pct: 60, end_soc_pct: 75 })] }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('60% → 75%')).toBeInTheDocument();
+    expect(screen.getByText('60.00% → 75.00%')).toBeInTheDocument();
     // Regression: a raw start − end used to render "-15%" here.
-    expect(screen.queryByText('-15%')).not.toBeInTheDocument();
+    expect(screen.queryByText('-15.00%')).not.toBeInTheDocument();
   });
 
   it('withholds the used chip for a zero-distance drive even when charge dropped', () => {
     setup({ drives: makeQuery({ data: [makeDrive({ distance_m: 0, start_soc_pct: 80, end_soc_pct: 70 })] }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('0.0 km')).toBeInTheDocument();
-    expect(screen.getByText('80% → 70%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getByText('80.00% → 70.00%')).toBeInTheDocument();
     // dist === 0 gates the chip out despite a 10-point drop.
-    expect(screen.queryByText('10%')).not.toBeInTheDocument();
+    expect(screen.queryByText('10.00%')).not.toBeInTheDocument();
   });
 });
 
@@ -355,7 +376,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     expect(screen.getByText('No recent drives recorded')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Standard widgets keep their header even when empty…
-    expect(screen.getByText('Recent Drives')).toBeInTheDocument();
+    expect(screen.getByText('Recent drives')).toBeInTheDocument();
     // …but the list itself is gated behind having rows.
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
@@ -365,7 +386,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     const { container } = renderWidget({ size: STANDARD });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Recent Drives')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent drives')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives recorded')).not.toBeInTheDocument();
   });
 
@@ -377,7 +398,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     // the misleading "No recent drives" empty state must NOT show here.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Recent Drives')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent drives')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives recorded')).not.toBeInTheDocument();
   });
 

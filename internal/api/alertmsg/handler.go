@@ -6,11 +6,15 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	alertmsgcore "github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 const maxAlertRequestBodyBytes = 1 << 20
@@ -25,13 +29,35 @@ const maxAlertRequestBodyBytes = 1 << 20
 // Each endpoint accepts the same rule-shaped query/body the editor
 // already builds for createAlertRuleRequest, so the frontend can call
 // them with the draft rule the user is editing — no special preview DTO is needed.
-type AlertMessageHandler struct{}
+type AlertMessageHandler struct {
+	settings alertmsgcore.SettingsReader
+	now      func() time.Time
+}
 
-// NewAlertMessageHandler returns a stateless handler. Endpoints only
-// read from the embedded preset catalog + the protomodel signal map,
-// neither of which require any per-request dependency.
-func NewAlertMessageHandler() *AlertMessageHandler {
-	return &AlertMessageHandler{}
+// NewAlertMessageHandler accepts the authoritative settings reader. Omitting it
+// is useful for isolated fixtures and uses installation defaults.
+func NewAlertMessageHandler(readers ...alertmsgcore.SettingsReader) *AlertMessageHandler {
+	h := &AlertMessageHandler{}
+	if len(readers) > 0 {
+		h.settings = readers[0]
+	}
+	return h
+}
+
+func (h *AlertMessageHandler) preferences(r *http.Request, rule *alertmodel.AlertRule) alertmsgcore.Preferences {
+	p, err := alertmsgcore.LoadPreferences(r.Context(), h.settings)
+	if err != nil {
+		log.Warn().Err(err).Msg("alert message: formatting settings unavailable; using defaults")
+	}
+	if h.now != nil {
+		p.ReferenceTime = h.now().UTC()
+	}
+	return computed.MessagePreferences(p.WithVehicleTimezone(r.URL.Query().Get("vehicle_timezone")), rule)
+}
+
+func (h *AlertMessageHandler) WithClock(now func() time.Time) *AlertMessageHandler {
+	h.now = now
+	return h
 }
 
 // alertMessagePreviewRequest accepts the editor's draft rule shape
@@ -44,12 +70,13 @@ func NewAlertMessageHandler() *AlertMessageHandler {
 // because the editor may call this before all required fields are
 // filled in.
 type alertMessagePreviewRequest struct {
-	Name        string `json:"name"`
-	Kind        string `json:"kind"`
-	SignalName  string `json:"signal_name"`
-	Op          string `json:"op"`
-	Severity    string `json:"severity"`
-	VehicleName string `json:"vehicle_name"`
+	Name            string `json:"name"`
+	Kind            string `json:"kind"`
+	SignalName      string `json:"signal_name"`
+	Op              string `json:"op"`
+	Severity        string `json:"severity"`
+	VehicleName     string `json:"vehicle_name"`
+	VehicleTimezone string `json:"vehicle_timezone"`
 
 	ValueNum  *float64 `json:"value_num"`
 	ValueText *string  `json:"value_text"`
@@ -87,12 +114,27 @@ type alertMessagePreviewResponse struct {
 // omitted, all presets (signal + computed_metric + universal) are
 // returned. Used by the editor's "Pick a preset" dialog.
 func (h *AlertMessageHandler) MessagePresets(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.message_presets")
+	defer span.End()
+	r = r.WithContext(ctx)
 	kind := r.URL.Query().Get("kind")
 	var rule *alertmodel.AlertRule
 	if kind != "" {
-		rule = &alertmodel.AlertRule{Kind: kind}
+		rule = &alertmodel.AlertRule{Kind: kind, Name: "Sample Rule", SignalName: r.URL.Query().Get("signal_name"), Op: r.URL.Query().Get("op")}
+		if mid := r.URL.Query().Get("metric_id"); mid != "" {
+			rule.MetricID = &mid
+		}
 	}
 	out := alertmsgcore.Presets(rule)
+	p := h.preferences(r, rule)
+	renderCtx := alertmsgcore.SampleContext(rule, p)
+	for i := range out {
+		if strings.TrimSpace(out[i].Template) != "" {
+			out[i].Example = alertmsgcore.Substitute(out[i].Template, renderCtx)
+		} else {
+			out[i].Example = alertmsgcore.RenderDefaultBody(rule, renderCtx)
+		}
+	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -100,6 +142,9 @@ func (h *AlertMessageHandler) MessagePresets(w http.ResponseWriter, r *http.Requ
 // rule shape. Query params: `kind`, `signal_name`, `op`. Used by the
 // editor's `{{` popover and the "Insert placeholder" toolbar button.
 func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.message_placeholders")
+	defer span.End()
+	r = r.WithContext(ctx)
 	q := r.URL.Query()
 	rule := &alertmodel.AlertRule{
 		Kind:       q.Get("kind"),
@@ -115,7 +160,7 @@ func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http
 	if transition := q.Get("transition"); transition != "" {
 		rule.Transition = &transition
 	}
-	out := alertmsgcore.Placeholders(rule)
+	out := alertmsgcore.Placeholders(rule, h.preferences(r, rule))
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -128,6 +173,9 @@ func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http
 // RenderBody — the exact same code path as production — so it can
 // never drift from real notifications.
 func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Request) {
+	requestCtx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.message_preview")
+	defer span.End()
+	r = r.WithContext(requestCtx)
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxAlertRequestBodyBytes))
@@ -157,6 +205,9 @@ func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Requ
 	hydrateSampleValue(rule, signals)
 
 	builtins := map[string]any{}
+	if now, supplied := signals["Now"]; supplied {
+		builtins["Now"] = now
+	}
 	if rule.Severity != "" {
 		builtins["Severity"] = rule.Severity
 	}
@@ -189,7 +240,7 @@ func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Requ
 	if rule.Kind == alertmodel.AlertRuleKindPlace && vehicleName == "" {
 		vehicleName = "Sample vehicle"
 	}
-	ctx := alertmsgcore.BuildContext(rule, vehicleName, signals, builtins)
+	ctx := alertmsgcore.BuildContext(rule, vehicleName, signals, builtins, h.preferences(r, rule).WithVehicleTimezone(req.VehicleTimezone))
 	if rule.Kind == alertmodel.AlertRuleKindSystemComponent || rule.Kind == alertmodel.AlertRuleKindPlace {
 		if rule.Transition == nil || strings.TrimSpace(*rule.Transition) == "" {
 			ctx["Transition"] = "transition"
@@ -301,6 +352,16 @@ func hydrateSampleValue(rule *alertmodel.AlertRule, signals map[string]any) {
 		}
 		if rule.ValueBool != nil {
 			signals[rule.SignalName] = *rule.ValueBool
+			return
+		}
+	}
+	if meta := protomodel.SignalsByName[rule.SignalName]; meta != nil {
+		switch meta.ValueKind {
+		case protomodel.ValueKindBool:
+			signals[rule.SignalName] = true
+			return
+		case protomodel.ValueKindInt32, protomodel.ValueKindInt64, protomodel.ValueKindFloat, protomodel.ValueKindDouble:
+			signals[rule.SignalName] = 18.2345
 			return
 		}
 	}

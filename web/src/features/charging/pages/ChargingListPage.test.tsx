@@ -8,11 +8,9 @@
  * list from them. The four data hooks and `useSelectedVehicle` are mocked at
  * the hook boundary so every branch — no-vehicle, loading, error, empty, and
  * the fully-populated happy path — is exercised deterministically. The heavy
- * chart/panel children (`MetricSwitcherChart`, the five `charging-list` panels,
- * and each `ChargingSessionCard`) are stubbed with prop-capturing markers so the
- * assertions target THE PAGE'S own orchestration (branch selection, threshold
- * gating, bulk-selection wiring, and the SI→display distance conversion) rather
- * than recharts/leaflet internals, which render nothing meaningful in jsdom.
+ * chart/panel children and each `ChargingSessionCard` render for real. The
+ * assertions target the shared stats, semantic chart/grid surfaces, threshold
+ * gating, bulk-selection wiring, and the SI→display distance conversion.
  *
  * The display hooks (`useUnits`/`useFormatting` → `useSettings`) render for real
  * with a mutable unit preference so the SI→display distance conversion at the
@@ -26,11 +24,11 @@
  * SavedViewMenu) can fire.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
 // options object so assertions can target the rendered English copy. A bare
@@ -63,6 +61,16 @@ vi.mock('react-i18next', () => ({
 // imperial (mi) display-conversion branches. Hoisted so the settings mock
 // factory can close over it.
 const unitState = vi.hoisted(() => ({ length: 'km' as 'km' | 'mi' }));
+const mediaState = vi.hoisted(() => ({ desktop: false }));
+
+vi.mock('@/hooks/useMediaQuery', async (importActual) => {
+  const actual = await importActual<typeof import('@/hooks/useMediaQuery')>();
+  return {
+    ...actual,
+    useMediaQuery: (query: string) => query === '(min-width: 1024px)'
+      ? mediaState.desktop : actual.useMediaQuery(query),
+  };
+});
 
 // File-level useSettings mock (overrides the global test-setup stub) so
 // `useUnits`/`useFormatting` see a stable shape while `unit_of_length` flips.
@@ -146,82 +154,44 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
-// Prop-capturing stub for each rendered session card. Records the page's real
-// `toDistanceDisplay` callback + `distanceUnit`, renders an anomaly marker when
-// flagged, and a keyboard-operable toggle that drives bulk-selection wiring.
+// Observe the page-owned conversion callback while rendering the real card.
 const captured = vi.hoisted(() => ({
   toDistanceDisplay: null as null | ((meters: number) => number),
   distanceUnit: '' as string,
 }));
 
-vi.mock('../components/ChargingSessionCard', () => ({
-  ChargingSessionCard: (props: any) => {
-    captured.toDistanceDisplay = props.toDistanceDisplay;
-    captured.distanceUnit = props.distanceUnit;
-    return (
-      <div data-testid={`session-card-${props.session.id}`}>
-        <span>{`session ${props.session.id}`}</span>
-        {props.anomaly ? (
-          <span data-testid={`anomaly-${props.session.id}`}>{props.anomaly.message}</span>
-        ) : null}
-        <button
-          type="button"
-          aria-label={`toggle ${props.session.id}`}
-          onClick={() => props.onToggleSelect?.(props.session.id, !props.selected)}
-        >
-          {props.selected ? 'selected' : 'select'}
-        </button>
-        <button
-          type="button"
-          aria-label={`preview ${props.session.id}`}
-          onClick={() => props.onPreview?.(props.session)}
-        >
-          preview
-        </button>
-      </div>
-    );
-  },
-}));
-
-// Stub the analytical panels (they mount charts) but keep the pure
-// compute* helpers real so the page's threshold gating runs against genuine data.
-vi.mock('../components/charging-list', async (importActual) => {
-  const actual = await importActual<typeof import('../components/charging-list')>();
-  const stub = (testId: string) => () => <div data-testid={testId} />;
+vi.mock('../components/ChargingSessionCard', async (importActual) => {
+  const actual = await importActual<typeof import('../components/ChargingSessionCard')>();
   return {
     ...actual,
-    AcDcStatsPanel: stub('acdc-panel'),
-    BatteryLevelChart: stub('battery-dist-panel'),
-    ChargeRatePanel: stub('charge-rate-panel'),
-    ChargerSpecsPanel: stub('specs-panel'),
-    OptimizerSection: stub('optimizer-panel'),
+    ChargingSessionCard: (props: ComponentProps<typeof actual.ChargingSessionCard>) => {
+      captured.toDistanceDisplay = props.toDistanceDisplay;
+      captured.distanceUnit = props.distanceUnit;
+      return <actual.ChargingSessionCard {...props} />;
+    },
   };
 });
 
-// Stub the trend chart (recharts) — echo its title + testId so the trend branch
-// can be asserted without mounting a chart.
-vi.mock('@/components/charts', async (importActual) => {
-  const actual = await importActual<typeof import('@/components/charts')>();
-  return {
-    ...actual,
-    MetricSwitcherChart: (props: any) => (
-      <div data-testid={props.testId}>{props.title}</div>
-    ),
-  };
-});
-
-// PageHeaderSticky is scroll-driven: it stays `null` until an IntersectionObserver
-// reports the anchor has scrolled off-screen — impossible to trigger in jsdom, and
-// the global IO mock's synthetic entry lacks `boundingClientRect`, which crashes
-// its callback. Stub it to a passthrough that always renders the summary inside
-// the same labelled region so the sticky content stays assertable.
-vi.mock('@/components/layout/PageHeaderSticky', () => ({
-  PageHeaderSticky: ({ children, ariaLabel, testId }: any) => (
-    <div role="region" aria-label={ariaLabel} data-testid={testId}>
-      {children}
-    </div>
-  ),
-}));
+// Exercise the real sticky summary after its overview anchor scrolls above view.
+class ChargingIntersectionObserver implements IntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = '';
+  readonly thresholds = [0];
+  constructor(private callback: IntersectionObserverCallback) {}
+  observe(target: Element) {
+    const scrolled = target.id === 'charging-overview';
+    const rect = target.getBoundingClientRect();
+    this.callback([{
+      target, time: 0, rootBounds: null,
+      isIntersecting: !scrolled, intersectionRatio: scrolled ? 0 : 1,
+      boundingClientRect: scrolled ? new DOMRect(0, -100, 100, 92) : rect,
+      intersectionRect: rect,
+    }], this);
+  }
+  unobserve() {}
+  disconnect() {}
+  takeRecords(): IntersectionObserverEntry[] { return []; }
+}
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it.
 if (typeof window.matchMedia !== 'function') {
@@ -339,7 +309,9 @@ function installHappyPath() {
   });
   mockSessions.mockReturnValue(qr({ data: SESSIONS }));
   mockVehicleState.mockReturnValue(qr({ data: { state: LIVE_STATE, live: true } }));
-  mockOptimizer.mockReturnValue(qr({ data: {} }));
+  // No optimizer response is available in this list fixture. An empty object
+  // is not a ChargingOptimizerData payload and crashes once count reaches 10.
+  mockOptimizer.mockReturnValue(qr());
   mockBulkDelete.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({}),
     isPending: false,
@@ -369,14 +341,42 @@ function briefMetric(label: string): HTMLElement {
   return metric as HTMLElement;
 }
 
+function sessionCard(id: number) {
+  const link = Array.from(document.querySelectorAll<HTMLAnchorElement>(`a[href="/charging/${id}"]`))
+    .find((candidate) => candidate.closest('table') == null);
+  return link?.parentElement ?? null;
+}
+
+async function findSessionCard(id: number) {
+  return waitFor(() => {
+    const card = sessionCard(id);
+    if (!card) throw new Error(`No charging session row for ${id}`);
+    return card;
+  });
+}
+
+function sessionCheckbox(id: number) {
+  const card = sessionCard(id);
+  if (!card) throw new Error(`No charging session row for ${id}`);
+  return within(card).getByRole('checkbox', { name: 'Select charging session' });
+}
+
+function trendChart() {
+  return screen.queryByRole('region', { name: 'Charging over time' })?.querySelector('figure') ?? null;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal('IntersectionObserver', ChargingIntersectionObserver);
   localStorage.clear();
+  mediaState.desktop = false;
   unitState.length = 'km';
   captured.toDistanceDisplay = null;
   captured.distanceUnit = '';
   installHappyPath();
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 /* ─────────────────────────── Pure helper unit tests ─────────────────────── */
 
@@ -397,10 +397,114 @@ describe('formatHour', () => {
 
 /* ─────────────────────────────── Component tests ─────────────────────────── */
 
+describe('ChargingListPage — responsive evidence adoption', () => {
+  it('renders the real desktop evidence table before charging insights without duplicating session cards', async () => {
+    mediaState.desktop = true;
+    renderPage();
+    const table = await screen.findByRole('table', { name: 'All charging sessions' });
+    const insights = screen.getByRole('region', { name: 'Charging insights' });
+    expect(table.compareDocumentPosition(insights) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(table.compareDocumentPosition(screen.getByTestId('charging-operational-brief')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sessionCard(1)).not.toBeInTheDocument();
+    expect(table.querySelector('a[href="/charging/1"]')).toBeInTheDocument();
+    expect(captured.toDistanceDisplay).toBeNull();
+    expect(table.querySelector('th[data-column-key="energy"]')).toBeInTheDocument();
+    expect(table.querySelector('th[data-column-key="batteryEnd"]')).toBeInTheDocument();
+    expect(screen.getByTestId('charging-overview'))
+      .toHaveTextContent('Search, collections, and exports cover up to 500 loaded sessions in this range.');
+    expect(screen.getByTestId('charging-export')).toBeInTheDocument();
+  });
+
+  it('keeps the grid and reset action available when desktop search matches no sessions', async () => {
+    mediaState.desktop = true;
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&q=nonexistent-charge-location']);
+    expect(await screen.findByRole('table', { name: 'All charging sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+  });
+
+  it('does not describe unknown battery state as zero-percent departure readiness', () => {
+    mockVehicleState.mockReturnValue(qr({ data: { state: { ...LIVE_STATE, battery_level: null } } }));
+    renderPage();
+    const readiness = briefMetric('Departure readiness');
+    expect(within(readiness).getByText('—')).toBeInTheDocument();
+    expect(within(readiness).queryByText('0%')).not.toBeInTheDocument();
+  });
+
+  it('excludes unknown-cost sessions from the free collection', async () => {
+    mockSessions.mockReturnValue(qr({
+      data: [
+        makeSession({ id: 10, cost_decimal: null }),
+        makeSession({ id: 11, cost_decimal: 0 }),
+      ],
+    }));
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&coll=free']);
+    expect(await findSessionCard(11)).toBeInTheDocument();
+    expect(sessionCard(10)).not.toBeInTheDocument();
+  });
+
+  it('does not describe unknown charging posture as not charging', () => {
+    mockVehicleState.mockReturnValue(qr({ data: { state: { ...LIVE_STATE, is_charging: null } } }));
+    renderPage();
+    const posture = briefMetric('Current posture');
+    expect(within(posture).getByText('Unavailable')).toBeInTheDocument();
+    expect(within(posture).queryByText('Not charging')).not.toBeInTheDocument();
+  });
+
+  it('filters the entire loaded window from column headers before pagination', async () => {
+    mediaState.desktop = true;
+    mockSessions.mockReturnValue(qr({
+      data: Array.from({ length: 63 }, (_, index) => makeSession({
+        id: index + 1, start_place: index === 0 ? 'Remote charger' : 'Home',
+        started_at: new Date(Date.UTC(2024, 5, 15, 8, index)).toISOString(),
+      })),
+    }));
+    renderPage();
+    const table = await screen.findByRole('table', { name: 'All charging sessions' });
+    const frame = table.closest<HTMLElement>('[data-grid-frame]');
+    const footer = frame?.querySelector<HTMLElement>('[data-grid-footer]');
+    if (!frame || !footer) throw new Error('Charging session evidence grid frame or footer is missing');
+    expect(footer).toBeInTheDocument();
+    expect(frame?.querySelector('[data-grid-viewport]')?.contains(footer ?? null)).toBe(false);
+    expect(within(frame).getByRole('button', { name: 'Next page' }))
+      .toBe(within(footer).getByRole('button', { name: 'Next page' }));
+    expect(table.querySelector('a[href="/charging/1"]')).not.toBeInTheDocument();
+    fireEvent.click(within(table).getByRole('button', { name: 'Charge location filter' }));
+    const filter = await screen.findByRole('dialog', { name: 'Charge location filter' });
+    expect(within(filter).getByRole('checkbox', { name: 'Remote charger' })).toBeInTheDocument();
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Home' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(table.querySelector('a[href="/charging/1"]')).toBeInTheDocument());
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(within(table).getByRole('button', { name: 'Charge location filter' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps unknown-cost filters distinct from free and offers recovery on mobile', async () => {
+    mockSessions.mockReturnValue(qr({ data: [
+      makeSession({ id: 10, cost_decimal: null }),
+      makeSession({ id: 11, cost_decimal: 0 }),
+    ] }));
+    const values = encodeURIComponent(JSON.stringify({ cost: ['null'] }));
+    renderPage([`/charging?from=2000-01-01&to=2100-01-01&grid_values=${values}`]);
+    expect(await findSessionCard(10)).toBeInTheDocument();
+    expect(sessionCard(11)).not.toBeInTheDocument();
+    expect(screen.getByText(/Column value filters are active/)).toBeInTheDocument();
+  });
+
+  it('reports invalid saved value filters explicitly and resets them', async () => {
+    mediaState.desktop = true;
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&grid_values=broken']);
+    expect(await screen.findByText('This saved value filter is invalid. Clear it to reset.')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'All charging sessions' }).querySelector('a[href^="/charging/"]')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /This saved value filter is invalid/ }));
+    await waitFor(() => expect(screen.queryByText('This saved value filter is invalid. Clear it to reset.')).not.toBeInTheDocument());
+    expect(screen.getByRole('table', { name: 'All charging sessions' }).querySelectorAll('tbody tr')).toHaveLength(SESSIONS.length);
+  });
+});
+
 describe('ChargingListPage — date window', () => {
   it('fetches sessions with vehicle-timezone RFC3339 instants, not UTC date-only days', async () => {
     renderPage();
-    await screen.findByRole('heading', { level: 1, name: 'Charging Sessions' });
+    await screen.findByRole('heading', { level: 1, name: 'Charging sessions' });
     expect(mockSessions).toHaveBeenCalled();
     const opts = mockSessions.mock.calls.at(-1)?.[1] as {
       start?: string;
@@ -418,31 +522,36 @@ describe('ChargingListPage — happy path', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Charging Sessions' }),
+      await screen.findByRole('heading', { level: 1, name: 'Charging sessions' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Live readiness, cost exposure, charger behavior, and charging history'),
     ).toBeInTheDocument();
-    expect(document.title).toContain('Charging Sessions');
+    expect(document.title).toContain('Charging sessions');
 
-    // Overview KPI band (unique MetricCard labels).
+    // Real shared overview metric labels.
     expect(screen.getByText('Energy (kWh)')).toBeInTheDocument();
     expect(screen.getByText('Avg rate (kW)')).toBeInTheDocument();
+    expect(screen.getByTestId('charging-overview').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
 
     // Trend chart branch fired (currentStats.count > 0).
-    expect(screen.getByTestId('charging-trend-chart')).toBeInTheDocument();
+    expect(trendChart()).toBeInTheDocument();
+    expect(within(trendChart() as HTMLElement).getByRole('img', {
+      name: 'Charging over time chart with metric switcher',
+    })).toBeInTheDocument();
 
     // Threshold-gated insight panels: 6 sessions clears AC/DC(1), battery(5),
     // delivery rate, and specs(5) — but NOT the optimizer(10).
-    expect(screen.getByTestId('acdc-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('battery-dist-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('charge-rate-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('specs-panel')).toBeInTheDocument();
-    expect(screen.queryByTestId('optimizer-panel')).not.toBeInTheDocument();
+    const insights = within(screen.getByRole('region', { name: 'Charging insights' }));
+    expect(insights.getByRole('table', { name: 'Charging stats by type' })).toBeInTheDocument();
+    expect(insights.getByRole('img', { name: 'Charging sessions by starting battery level' })).toBeInTheDocument();
+    expect(insights.getByRole('heading', { name: 'Charging delivery rate' })).toBeInTheDocument();
+    expect(insights.getByRole('heading', { name: 'Charger Specs Breakdown' })).toBeInTheDocument();
+    expect(insights.queryByRole('heading', { name: 'Charging Habits' })).not.toBeInTheDocument();
 
     // Every session card in the window renders.
-    expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
-    expect(screen.getByTestId('session-card-6')).toBeInTheDocument();
+    expect(sessionCard(1)).toBeInTheDocument();
+    expect(sessionCard(6)).toBeInTheDocument();
   });
 
   it('presents live posture, departure, cost, honest efficiency coverage, interruptions, and reliability', async () => {
@@ -482,7 +591,7 @@ describe('ChargingListPage — happy path', () => {
 
   it('preserves the session vehicle, place, and time window in related links', async () => {
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'preview 1' }));
+    fireEvent.click(within(await findSessionCard(1)).getByRole('button', { name: 'Quick view charging session' }));
 
     expect(await screen.findByRole('dialog', { name: 'Home Garage' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Vehicle' }))
@@ -501,15 +610,11 @@ describe('ChargingListPage — happy path', () => {
       );
   });
 
-  it('shows charger-category collection pills and the by-type secondary summary', async () => {
+  it('omits redundant collection tabs while retaining the by-type secondary summary', async () => {
     renderPage();
-    expect(await screen.findByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('Anomalies')).toBeInTheDocument();
-    const filters = screen.getByRole('tablist', { name: 'Filter charging sessions by collection' });
-    expect(filters.querySelector('svg')).toBeNull();
-    expect(within(filters).getByRole('tab', { name: /All/ })).toHaveClass('bg-[var(--theme-primary)]');
-    expect(within(filters).getByRole('tab', { name: /Home/ })).toHaveClass('border-[var(--control-border)]');
-    expect(within(filters).getByRole('tab', { name: /Tagged/ })).toBeDisabled();
+    expect(await screen.findByText('2 home · 2 SC · 2 DC')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Filter charging sessions by collection' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('charging-collections')).not.toBeInTheDocument();
     // 2 home (s1,s4) · 2 supercharger (s2,s5) · 2 dc / CCS (s3,s6).
     expect(screen.getByText('2 home · 2 SC · 2 DC')).toBeInTheDocument();
   });
@@ -518,32 +623,33 @@ describe('ChargingListPage — happy path', () => {
     renderPage();
     // s6 = 0 kWh over an hour ⇒ one telemetry-gap anomaly.
     expect(await screen.findByText('1 anomaly in this range')).toBeInTheDocument();
-    expect(screen.getByTestId('anomaly-6')).toBeInTheDocument();
-    expect(screen.queryByTestId('anomaly-1')).not.toBeInTheDocument();
+    expect(within(await findSessionCard(6)).getByText('0 kWh added in 1h — telemetry gap?')).toBeInTheDocument();
+    expect(within(await findSessionCard(1)).queryByText('0 kWh added in 1h — telemetry gap?')).not.toBeInTheDocument();
   });
 
   it('exposes labelled landmark regions and an accessible name on the icon-only card toggle', async () => {
     renderPage();
     expect(await screen.findByRole('region', { name: 'Charging summary' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'All charging sessions' })).toBeInTheDocument();
-    expect(screen.getByLabelText('toggle 1')).toBeInTheDocument();
+    expect(sessionCheckbox(1)).toHaveAccessibleName('Select charging session');
   });
 });
 
 describe('ChargingListPage — bulk selection', () => {
   it('toggles a session into and out of the bulk selection when its checkbox is clicked', async () => {
     renderPage();
-    const toggle = await screen.findByLabelText('toggle 1');
-    expect(toggle).toHaveTextContent('select');
+    await findSessionCard(1);
+    const toggle = sessionCheckbox(1);
+    expect(toggle).not.toBeChecked();
 
     fireEvent.click(toggle);
     await waitFor(() =>
-      expect(screen.getByLabelText('toggle 1')).toHaveTextContent('selected'),
+      expect(sessionCheckbox(1)).toBeChecked(),
     );
 
-    fireEvent.click(screen.getByLabelText('toggle 1'));
+    fireEvent.click(sessionCheckbox(1));
     await waitFor(() =>
-      expect(screen.getByLabelText('toggle 1')).toHaveTextContent('select'),
+      expect(sessionCheckbox(1)).not.toBeChecked(),
     );
   });
 });
@@ -551,20 +657,22 @@ describe('ChargingListPage — bulk selection', () => {
 describe('ChargingListPage — distance conversion (SI regression guard)', () => {
   it('converts canonical metres directly at the display boundary', async () => {
     renderPage();
-    await screen.findByTestId('session-card-1');
+    await findSessionCard(1);
     expect(captured.toDistanceDisplay).toBeTypeOf('function');
     expect(captured.toDistanceDisplay!(50_000)).toBe(50);
     expect(captured.toDistanceDisplay!(0)).toBe(0);
     expect(captured.distanceUnit).toBe('km');
+    expect(within(await findSessionCard(1)).getByText('+50 km')).toBeInTheDocument();
   });
 
   it('converts canonical metres to miles when the unit preference is imperial', async () => {
     unitState.length = 'mi';
     renderPage();
-    await screen.findByTestId('session-card-1');
+    await findSessionCard(1);
     // 50 km ⇒ 50_000 m / 1609.344 ≈ 31.07 mi.
     expect(captured.toDistanceDisplay!(50_000)).toBeCloseTo(31.07, 1);
     expect(captured.distanceUnit).toBe('mi');
+    expect(within(await findSessionCard(1)).getByText('+31 mi')).toBeInTheDocument();
   });
 });
 
@@ -582,9 +690,9 @@ describe('ChargingListPage — non-happy states', () => {
     expect(screen.getByText(/Battery-start patterns, charger comparisons/)).toBeInTheDocument();
     expect(screen.getByText('No charging sessions yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
-    // Analytical content stays withheld, but the insights section explains its prerequisite.
-    expect(screen.queryByTestId('charging-trend-chart')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('session-card-1')).not.toBeInTheDocument();
+    // Keep the trend shell available so the empty chart explains its missing data.
+    expect(trendChart()).toBeInTheDocument();
+    expect(sessionCard(1)).not.toBeInTheDocument();
   });
 
   it('renders loading skeletons and no session cards while the query is pending', () => {
@@ -592,8 +700,8 @@ describe('ChargingListPage — non-happy states', () => {
     const { container } = renderPage();
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByTestId('session-card-1')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('charging-trend-chart')).not.toBeInTheDocument();
+    expect(sessionCard(1)).not.toBeInTheDocument();
+    expect(trendChart()).not.toBeInTheDocument();
   });
 
   it('surfaces a retryable error banner and refetches when Retry is pressed', async () => {
@@ -603,8 +711,9 @@ describe('ChargingListPage — non-happy states', () => {
     );
     renderPage();
 
-    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    const summary = within(screen.getByRole('region', { name: 'Overview' }));
+    expect(await summary.findByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(summary.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1));
   });
 
@@ -618,7 +727,7 @@ describe('ChargingListPage — non-happy states', () => {
     renderPage();
 
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
+    expect(sessionCard(1)).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).toBeNull();
   });
 
@@ -630,8 +739,28 @@ describe('ChargingListPage — non-happy states', () => {
     expect(
       await screen.findByText('Live charging and departure state are unavailable'),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
+    expect(sessionCard(1)).toBeInTheDocument();
     expect(within(briefMetric('Current posture')).getByText('Unavailable')).toBeInTheDocument();
+  });
+
+  it('retains charging posture, departure battery, history and retry on a failed live-state refresh', async () => {
+    const refetch = vi.fn();
+    mockVehicleState.mockReturnValue(qr({
+      data: { state: LIVE_STATE, live: true },
+      error: new Error('Live refresh failed'),
+      isError: true,
+      refetch,
+    }));
+    renderPage();
+
+    const warning = await screen.findByTestId('stale-refresh-warning');
+    expect(within(warning).getByText('Live vehicle state may be out of date')).toBeInTheDocument();
+    expect(within(briefMetric('Current posture')).getByText('Charging')).toBeInTheDocument();
+    expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
+    expect(sessionCard(1)).toBeInTheDocument();
+    expect(screen.queryByText('Live charging and departure state are unavailable')).not.toBeInTheDocument();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('shows the no-vehicle prompt and hides all data sections when no vehicle is selected', async () => {
@@ -648,10 +777,10 @@ describe('ChargingListPage — non-happy states', () => {
       screen.getByText('Add a vehicle to your fleet to see data on this page.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Charging Sessions' }),
+      screen.getByRole('heading', { level: 1, name: 'Charging sessions' }),
     ).toBeInTheDocument();
     // The data scaffolding must not render on the null-vehicle guard path.
     expect(screen.queryByText('Energy (kWh)')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('session-card-1')).not.toBeInTheDocument();
+    expect(sessionCard(1)).not.toBeInTheDocument();
   });
 });

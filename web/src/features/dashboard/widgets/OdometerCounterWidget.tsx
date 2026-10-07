@@ -1,15 +1,18 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Calendar, TrendingUp } from 'lucide-react';
-import { AnimatedNumber, MetricCard } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useDrivingStats } from '@/api/hooks/useDriving';
+import { knownNumber } from '@/api/dataState';
+import { useCombinedDataState, useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Convert the live odometer to the user's display unit. `VehicleState.odometer`
@@ -37,21 +40,32 @@ export function toTotalDrivenDisplay(totalDistanceKm: number, to: DistanceUnitPr
 }
 
 export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const idStr = id > 0 ? String(id) : undefined;
 
-  const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
-  const { data: stats, isLoading: statsLoading } = useDrivingStats(idStr);
+  const stateQuery = useVehicleState(id);
+  const statsQuery = useDrivingStats(idStr);
+  const { data: stateData, isLoading: stateLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = stateQuery;
+  const { data: stats, isLoading: statsLoading } = statsQuery;
+  const trust = useDataState({ ...stateQuery, data: stateData ?? undefined }, { provenance: stateData?.live ? 'live' : 'cached' });
+  const statsTrust = useDataState({ ...statsQuery, data: stats ?? undefined }, { provenance: 'historical' });
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isWide = size.cols >= 2;
+  const combined = useCombinedDataState(isWide ? [trust, statsTrust] : [trust]);
+  const shellTrust = trust.hasData || !isWide ? trust : {
+    ...trust,
+    ...combined,
+    hasData: trust.hasData || (isWide && statsTrust.hasData),
+  };
 
-  const odometer = stateData?.state?.odometer ?? null;
-  const totalDistanceKm = stats?.totalDistanceKm ?? null;
+  const odometer = knownNumber(stateData?.state?.odometer);
+  const totalDistanceKm = knownNumber(stats?.totalDistanceKm);
 
   const convertedOdometer = useMemo(
     () => (odometer != null ? toOdometerDisplay(odometer, distanceUnit) : null),
@@ -62,31 +76,33 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
     [totalDistanceKm, distanceUnit],
   );
 
-  const isLoading = stateLoading || statsLoading;
-
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.odometer.title', 'Odometer')}
       icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={isLoading}
+      loading={stateLoading}
+      dataState={stateData != null || stateLoading || isError || error ? shellTrust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={() => { void refetch(); void statsQuery.refetch?.(); }}
     >
-      {convertedOdometer != null ? (
+      {trust.fatalError ? (
+        <QueryError error={trust.fatalError} onRetry={trust.retry ?? undefined} />
+      ) : stateLoading && !stateData ? (
+        <Skeleton className="h-24 rounded-xl" />
+      ) : convertedOdometer != null ? (
         isCompact ? (
-          <CompactView
-            odometer={convertedOdometer}
+          <WidgetBigNumber
+            value={convertedOdometer}
             unit={distanceUnit}
+            decimals={displayPrecision}
           />
         ) : (
           <ExpandedView
             odometer={convertedOdometer}
-            totalDriven={convertedTotalDriven}
             unit={distanceUnit}
-            isWide={isWide}
           />
         )
       ) : (
@@ -96,63 +112,36 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
           className="py-4"
         />
       )}
+      {!isCompact && isWide && (
+        <div className="mt-3 min-w-0">
+          <StaleRefreshWarning state={statsTrust} />
+          {statsTrust.fatalError ? (
+            <QueryError error={statsTrust.fatalError} onRetry={statsTrust.retry ?? undefined} />
+          ) : statsLoading && !stats ? (
+            <Skeleton className="h-16 rounded-xl" />
+          ) : (
+            <WidgetStatGrid cols={2} stats={[
+              { label: t('widget.odometer.totalDriven', 'Total driven'), value: convertedTotalDriven == null ? null : `${fmtNumber(convertedTotalDriven)} ${distanceUnit}`, icon: <TrendingUp className="h-3.5 w-3.5" /> },
+              { label: t('widget.odometer.unit', 'Unit'), value: distanceUnit, icon: <Calendar className="h-3.5 w-3.5" /> },
+            ]} />
+          )}
+        </div>
+      )}
     </WidgetShell>
-  );
-}
-
-function CompactView({ odometer, unit }: { odometer: number; unit: string }) {
-  return (
-    <div className="h-full flex flex-col items-center justify-center gap-1">
-      <p className="text-2xl font-bold text-cyan-300 tabular-nums">
-        <AnimatedNumber value={odometer} decimals={0} />
-      </p>
-      <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">{unit}</p>
-    </div>
   );
 }
 
 function ExpandedView({
   odometer,
-  totalDriven,
   unit,
-  isWide,
 }: {
   odometer: number;
-  totalDriven: number | null;
   unit: string;
-  isWide: boolean;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   return (
-    <div className="h-full flex flex-col justify-center gap-3">
-      {/* Primary odometer reading */}
-      <div className="text-center">
-        <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider mb-1">
-          {t('widget.odometer.total', 'Total Odometer')}
-        </p>
-        <p className="text-3xl font-bold text-cyan-300 tabular-nums">
-          <AnimatedNumber value={odometer} decimals={0} suffix={` ${unit}`} />
-        </p>
-      </div>
-
-      {/* Breakdown metrics — only when wide */}
-      {isWide && (
-        <div className="grid grid-cols-2 gap-2">
-          <MetricCard
-            label={t('widget.odometer.totalDriven', 'Total Driven')}
-            value={totalDriven != null ? `${fmtNumber(totalDriven, 0)} ${unit}` : '—'}
-            icon={<TrendingUp className="h-3.5 w-3.5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('widget.odometer.unit', 'Unit')}
-            value={unit}
-            icon={<Calendar className="h-3.5 w-3.5" />}
-            color="amber"
-          />
-        </div>
-      )}
-    </div>
+    <WidgetBigNumber value={`${fmtNumber(odometer)} ${unit}`} label={t('widget.odometer.total', 'Total odometer')} />
   );
 }

@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportCapacityContextProps {
   analysis: BatteryPassportAnalysis;
@@ -18,28 +20,19 @@ export function BatteryPassportCapacityContext({
   analysis,
   state,
 }: BatteryPassportCapacityContextProps) {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const metrics = analysis.metrics;
 
   return (
     <section data-testid="battery-passport-capacity-context">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BatteryMedium
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.capacity.title',
             'Capacity and reference context',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.capacity.subtitle',
             'The certificate reports capacity_kwh and original_capacity_kwh as separate kWh fields; their quotient is shown transparently.',
-          )}
-        </Text>
+          )} actions={<BatteryMedium className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <MetricCard
@@ -51,7 +44,7 @@ export function BatteryPassportCapacityContext({
                 ? t(
                     'batteryPassport.values.kwh',
                     '{{value}} kWh',
-                    { value: fmtNumber(metrics.capacityKwh, 2) },
+                    { value: fmtNumber(metrics.capacityKwh) },
                   )
                 : '—'}
               subtitle={t(
@@ -73,7 +66,6 @@ export function BatteryPassportCapacityContext({
                     {
                       value: fmtNumber(
                         metrics.originalCapacityKwh,
-                        1,
                       ),
                     },
                   )
@@ -91,7 +83,7 @@ export function BatteryPassportCapacityContext({
                 'Reported / reference ratio',
               )}
               value={metrics.capacityRatio != null
-                ? fmtPercent(metrics.capacityRatio * 100, 2)
+                ? fmtPercent(metrics.capacityRatio * 100)
                 : '—'}
               subtitle={t(
                 'batteryPassport.capacity.ratioHint',
@@ -110,7 +102,7 @@ export function BatteryPassportCapacityContext({
             </Text>
           </AlertBanner>
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

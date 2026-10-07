@@ -91,7 +91,7 @@ describe('bucketOfStatus', () => {
   });
 
   it('classifies cancellation and rejection ahead of everything else', () => {
-    expect(bucketOfStatus('CANCELLED')).toBe('cancelled');
+    expect(bucketOfStatus('Cancelled')).toBe('cancelled');
     expect(bucketOfStatus('order_rejected')).toBe('cancelled');
     // Cancel wins even when the raw status also mentions delivery.
     expect(bucketOfStatus('DELIVERY_CANCELLED')).toBe('cancelled');
@@ -104,8 +104,8 @@ describe('bucketOfStatus', () => {
   });
 
   it('classifies a plain delivered status as "delivered"', () => {
-    expect(bucketOfStatus('DELIVERED')).toBe('delivered');
-    expect(bucketOfStatus('delivered')).toBe('delivered');
+    expect(bucketOfStatus('Delivered')).toBe('delivered');
+    expect(bucketOfStatus('Delivered')).toBe('delivered');
   });
 
   it('classifies the early-lifecycle keywords as "inProgress"', () => {
@@ -122,16 +122,16 @@ describe('bucketOfStatus', () => {
   });
 
   it('is case-insensitive and defaults unknown statuses to "other"', () => {
-    expect(bucketOfStatus('cancelled')).toBe('cancelled');
+    expect(bucketOfStatus('Cancelled')).toBe('cancelled');
     expect(bucketOfStatus('SOMETHING_WEIRD')).toBe('other');
   });
 });
 
 describe('orderStatusVariant', () => {
   it('derives the Badge variant through the status bucket', () => {
-    expect(orderStatusVariant('DELIVERED')).toBe('success');
+    expect(orderStatusVariant('Delivered')).toBe('success');
     expect(orderStatusVariant('READY_FOR_DELIVERY')).toBe('info');
-    expect(orderStatusVariant('CANCELLED')).toBe('danger');
+    expect(orderStatusVariant('Cancelled')).toBe('danger');
     expect(orderStatusVariant('IN_PRODUCTION')).toBe('warning');
   });
 
@@ -149,9 +149,9 @@ describe('formatOrderStatus', () => {
   });
 
   it('title-cases a SNAKE_CASE status into a human label', () => {
-    expect(formatOrderStatus('READY_FOR_DELIVERY')).toBe('Ready For Delivery');
-    expect(formatOrderStatus('IN_PRODUCTION')).toBe('In Production');
-    expect(formatOrderStatus('DELIVERED')).toBe('Delivered');
+    expect(formatOrderStatus('READY_FOR_DELIVERY')).toBe('Ready for delivery');
+    expect(formatOrderStatus('IN_PRODUCTION')).toBe('In production');
+    expect(formatOrderStatus('Delivered')).toBe('Delivered');
   });
 });
 

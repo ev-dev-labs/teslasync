@@ -39,6 +39,9 @@ import {
   useRevokeApiKey,
   useApiLogs,
   useApiLogStats,
+  useAPICallLogs,
+  useAPICallLogStats,
+  useSystemErrorStats,
   useBackupConfigs,
   useBackupRuns,
   useSystemHealth,
@@ -49,6 +52,7 @@ import {
   useAuditLogs,
   useWebErrorsSummary,
   useSecurityEvents,
+  useLatestSecurityEvent,
   useDBStats,
   useMigrations,
   useConnectionPool,
@@ -127,6 +131,137 @@ describe('adminKeys', () => {
 // ---------------------------------------------------------------------------
 // API keys — list + create/delete/revoke mutations
 // ---------------------------------------------------------------------------
+
+describe('API log evidence hooks', () => {
+  const start = '2026-09-19T07:00:00Z';
+  const endExclusive = '2026-09-26T07:00:00Z';
+  const filters = {
+    method: 'POST', status: '5xx', endpoint: '/vehicles?a=1',
+    service: 'tesla-api', client: 'android:installation', key: 'Living room',
+    start, endExclusive,
+  };
+  const logs = { data: [{ id: 7, endpoint: '/vehicles' }], total: 400, limit: 25, offset: 50 };
+
+  it('retains every list predicate, the server envelope, page offset, cache key and 10s polling', async () => {
+    mockedRequest.mockResolvedValueOnce(logs);
+    const { qc, wrapper } = makeWrapper();
+    const { result } = renderHook(() => useAPICallLogs(2, filters), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [path, opts] = callArgs();
+    expect(path).toBe('/api-logs?limit=25&offset=50&method=POST&status=5xx&endpoint=%2Fvehicles%3Fa%3D1&service=tesla-api&client=android%3Ainstallation&key=Living+room&start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z');
+    expect(opts.signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual(logs);
+    const queryKey = ['api-logs', 2, 'POST', '5xx', '/vehicles?a=1', 'tesla-api',
+      'android:installation', 'Living room', start, endExclusive, 25];
+    expect(adminKeys.apiCallLogs(2, filters)).toEqual(queryKey);
+    expect(qc.getQueryCache().find({ queryKey })?.options).toMatchObject({ refetchInterval: 10_000 });
+  });
+
+  it('separates each page/filter/range cache while preserving empty-filter keys', () => {
+    expect(adminKeys.apiCallLogs(0)).toEqual(['api-logs', 0, '', '', '', '', '', '', undefined, undefined, 25]);
+    expect(adminKeys.apiCallLogs(0, { method: '' })).toEqual(adminKeys.apiCallLogs(0));
+    expect(adminKeys.apiCallLogs(3, filters)).not.toEqual(adminKeys.apiCallLogs(2, filters));
+    for (const key of Object.keys(filters) as (keyof typeof filters)[]) {
+      expect(adminKeys.apiCallLogs(2, { ...filters, [key]: 'different' }))
+        .not.toEqual(adminKeys.apiCallLogs(2, filters));
+    }
+  });
+
+  it('includes server row size in the offset and query cache identity', async () => {
+    mockedRequest.mockResolvedValueOnce({ ...logs, limit: 50, offset: 100 });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useAPICallLogs(2, filters, 50), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toContain('/api-logs?limit=50&offset=100&');
+    expect(adminKeys.apiCallLogs(2, filters, 50)).not.toEqual(adminKeys.apiCallLogs(2, filters, 25));
+  });
+
+  it('forwards both stats bounds and signal, retaining 30s polling and the old scoped key', async () => {
+    const stats = { total_calls: 400, by_service: { 'tesla-api': 400 } };
+    mockedRequest.mockResolvedValueOnce(stats);
+    const { qc, wrapper } = makeWrapper();
+    const { result } = renderHook(() => useAPICallLogStats(start, endExclusive), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/api-logs/stats?start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z');
+    expect(callArgs()[1].signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual(stats);
+    const queryKey = ['api-log-stats', start, endExclusive];
+    expect(adminKeys.apiCallLogStats(start, endExclusive)).toEqual(queryKey);
+    expect(qc.getQueryCache().find({ queryKey })?.options).toMatchObject({ refetchInterval: 30_000 });
+  });
+
+  it('keeps unbounded stats supported and rejects partial bounds', async () => {
+    mockedRequest.mockResolvedValueOnce({ total_calls: 0 });
+    const { wrapper } = makeWrapper();
+    const unbounded = renderHook(() => useAPICallLogStats(), { wrapper });
+    await waitFor(() => expect(unbounded.result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/api-logs/stats');
+    mockedRequest.mockClear();
+    const partial = renderHook(() => useAPICallLogStats(start), { wrapper });
+    await waitFor(() => expect(partial.result.current.isError).toBe(true));
+    expect(partial.result.current.error?.message).toMatch(/both start and endExclusive/);
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('keeps runtime errors process-wide and forwards the cancellation signal with 30s polling', async () => {
+    const errors = { total_errors: 0, uptime: '2h', by_code: {} };
+    mockedRequest.mockResolvedValueOnce(errors);
+    const { qc, wrapper } = makeWrapper();
+    const { result } = renderHook(() => useSystemErrorStats(), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/system/errors/stats');
+    expect(callArgs()[1].signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual(errors);
+    expect(adminKeys.systemErrorStats).toEqual(['system-error-stats']);
+    expect(qc.getQueryCache().find({ queryKey: adminKeys.systemErrorStats })?.options)
+      .toMatchObject({ refetchInterval: 30_000 });
+  });
+
+  it('aborts obsolete list requests when server filters change', async () => {
+    mockedRequest.mockImplementation(() => new Promise(() => undefined));
+    const { wrapper } = makeWrapper();
+    const { rerender, unmount } = renderHook(
+      ({ service }) => useAPICallLogs(0, { service }),
+      { wrapper, initialProps: { service: 'tesla-api' } },
+    );
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    const firstSignal = callArgs()[1].signal as AbortSignal;
+    rerender({ service: 'notify-generic' });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(firstSignal.aborted).toBe(true);
+    const secondSignal = callArgs(1)[1].signal as AbortSignal;
+    unmount();
+    expect(secondSignal.aborted).toBe(true);
+  });
+
+  it.each(['stats', 'runtime'] as const)('aborts pending %s requests on unmount', async (kind) => {
+    mockedRequest.mockImplementation(() => new Promise(() => undefined));
+    const { wrapper } = makeWrapper();
+    const { unmount } = renderHook(() => {
+      const stats = useAPICallLogStats(start, endExclusive);
+      const runtime = useSystemErrorStats();
+      return { stats, runtime };
+    }, { wrapper });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    const signal = callArgs(kind === 'stats' ? 0 : 1)[1].signal as AbortSignal;
+    unmount();
+    expect(signal.aborted).toBe(true);
+  });
+
+  it('retains cached evidence after a refresh fails without masking the error', async () => {
+    mockedRequest.mockResolvedValueOnce(logs);
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useAPICallLogs(2, filters), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const error = new Error('refresh offline');
+    mockedRequest.mockRejectedValueOnce(error);
+    await act(async () => { await result.current.refetch(); });
+    await waitFor(() => expect(result.current.isRefetchError).toBe(true));
+    expect(result.current.error).toBe(error);
+    expect(result.current.data).toEqual(logs);
+  });
+});
 
 describe('useApiKeys', () => {
   it('GETs /api-keys and threads the AbortSignal', async () => {
@@ -520,6 +655,37 @@ describe('useWebErrorsSummary', () => {
 // ---------------------------------------------------------------------------
 
 describe('useSecurityEvents', () => {
+  it('sends exact workspace bounds, keeps all returned history, and isolates both range keys', async () => {
+    const rows = [{ id: 'older-than-seven-days', locked: false, createdAt: '2020-02-10T00:00:00Z' }];
+    mockedRequest.mockResolvedValue(rows);
+    const { qc, wrapper } = makeWrapper();
+    const start = '2020-02-01T08:00:00Z';
+    const endExclusive = '2020-03-01T08:00:00Z';
+    const { result, rerender } = renderHook(
+      ({ from, to }) => useSecurityEvents('42', from, to),
+      { wrapper, initialProps: { from: start, to: endExclusive } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [path, options] = callArgs();
+    const url = new URL(path, 'http://localhost');
+    expect(url.pathname).toBe('/security');
+    expect([...url.searchParams.keys()]).toEqual(['end', 'start', 'vehicle_id']);
+    expect(url.searchParams.get('start')).toBe(start);
+    expect(url.searchParams.get('end')).toBe(endExclusive);
+    expect(url.searchParams.get('vehicle_id')).toBe('42');
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual(rows);
+    expect(qc.getQueryCache().find({ queryKey: adminKeys.securityEvents('42', start, endExclusive) })).toBeDefined();
+    expect(adminKeys.securityEvents('43', start, endExclusive)).not.toEqual(adminKeys.securityEvents('42', start, endExclusive));
+
+    rerender({ from: '2020-02-02T08:00:00Z', to: endExclusive });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(new URL(callArgs(1)[0], 'http://localhost').searchParams.get('start')).toBe('2020-02-02T08:00:00Z');
+    rerender({ from: '2020-02-02T08:00:00Z', to: '2020-03-02T08:00:00Z' });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3));
+    expect(new URL(callArgs(2)[0], 'http://localhost').searchParams.get('end')).toBe('2020-03-02T08:00:00Z');
+  });
+
   it('GETs /security with a snake_case vehicle_id query param', async () => {
     mockedRequest.mockResolvedValueOnce([{ id: 's1', locked: true, createdAt: 'now' }]);
     const { wrapper } = makeWrapper();
@@ -530,13 +696,36 @@ describe('useSecurityEvents', () => {
     expect(result.current.data?.[0].locked).toBe(true);
   });
 
+  describe('useLatestSecurityEvent', () => {
+    it('preserves the live query key, five-second polling, payload and abort signal', async () => {
+      const latest = { locked: false, sentryMode: 'On', doorState: 'Closed' };
+      mockedRequest.mockResolvedValue(latest);
+      const { qc, wrapper } = makeWrapper();
+      const { result } = renderHook(() => useLatestSecurityEvent('42'), { wrapper });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(callArgs()[0]).toBe('/security/latest?vehicle_id=42');
+      expect(callArgs()[1].signal).toBeInstanceOf(AbortSignal);
+      expect(result.current.data).toEqual(latest);
+      expect(adminKeys.latestSecurityEvent('42')).toEqual(['security-latest', '42']);
+      expect(qc.getQueryCache().find({ queryKey: adminKeys.latestSecurityEvent('42') })?.options.refetchInterval).toBe(5000);
+    });
+
+    it('does not request live state without a selected vehicle', async () => {
+      const { wrapper } = makeWrapper();
+      const { result } = renderHook(() => useLatestSecurityEvent(''), { wrapper });
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(mockedRequest).not.toHaveBeenCalled();
+    });
+  });
+
   it('URL-encodes a vehicle id that carries reserved characters', async () => {
     mockedRequest.mockResolvedValueOnce([]);
     const { wrapper } = makeWrapper();
     renderHook(() => useSecurityEvents('7 8&x=1'), { wrapper });
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
-    expect(callArgs()[0]).toBe('/security?vehicle_id=7%208%26x%3D1');
+    expect(callArgs()[0]).toBe('/security?vehicle_id=7+8%26x%3D1');
+    expect(new URL(callArgs()[0], 'http://localhost').searchParams.get('vehicle_id')).toBe('7 8&x=1');
   });
 
   it('is disabled (never fires) when the vehicle id is empty', async () => {

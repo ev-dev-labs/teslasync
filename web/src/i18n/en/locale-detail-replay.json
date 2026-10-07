@@ -1,18 +1,26 @@
 {
   "replay": {
     "elevation": {
-      "title": "Elevation Profile",
+      "title": "Elevation profile",
       "noData": "No elevation data available",
       "label": "Elevation",
       "aria": "Elevation profile chart — no data available yet"
     },
     "controls": {
       "reset": "Reset",
+      "restart": "Restart",
       "pause": "Pause",
       "play": "Play",
       "stop": "Stop",
       "speed": "Playback speed",
       "progress": "Playback progress"
+    },
+    "overview": {
+      "label": "Event overview",
+      "clusterCount": "{{count}} events",
+      "clusterCount_one": "{{count}} event",
+      "clusterCount_other": "{{count}} events",
+      "positionUnavailable": "Position unavailable"
     },
     "shortcuts": {
       "title": "Trip replay shortcuts",
@@ -20,7 +28,7 @@
       "play": "Play",
       "pause": "Pause",
       "playPause": "Play / Pause",
-      "skip5": "Skip ±5s (Shift = ±30s)",
+      "skip5": "Skip ±5s (shift = ±30s)",
       "skip10": "Skip ±10s",
       "frame": "Previous / next frame",
       "startEnd": "Jump to start / end",
@@ -43,14 +51,14 @@
       "regenPeak": "Regen peak",
       "lowSoc": "Low battery"
     },
-    "title": "Trip Replay",
+    "title": "Trip replay",
     "drive": "Drive",
-    "backToDrive": "Back to Drive",
+    "backToDrive": "Back to drive",
     "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
     "map": {
       "noPositions": "No position data available for this drive"
     },
-    "currentStats": "Current Position Stats",
+    "currentStats": "Current position stats",
     "stat": {
       "speed": "Speed",
       "power": "Power",
@@ -60,7 +68,7 @@
       "temp": "Temperature"
     },
     "timeline": {
-      "title": "Speed & Power Timeline",
+      "title": "Speed & power timeline",
       "subtitle": "Click to seek replay position",
       "speed": "Speed",
       "power": "Power",
@@ -68,14 +76,14 @@
       "aria": "Trip replay speed and power timeline area chart"
     },
     "summary": {
-      "title": "Drive Summary",
+      "title": "Drive summary",
       "distance": "Distance",
       "duration": "Duration",
       "efficiency": "Efficiency",
-      "elevGain": "Elevation Gain",
-      "elevLoss": "Elevation Loss",
-      "maxSpeed": "Max Speed",
-      "avgSpeed": "Avg Speed",
+      "elevGain": "Elevation gain",
+      "elevLoss": "Elevation loss",
+      "maxSpeed": "Max speed",
+      "avgSpeed": "Avg speed",
       "battery": "Battery"
     }
   }

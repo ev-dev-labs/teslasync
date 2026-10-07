@@ -8,11 +8,10 @@
  *     FSM + timeline queries stay disabled). The resolved id string is what the
  *     admin hooks are queried with;
  *   - every render state fanned out by `WidgetShell` — the loading skeleton
- *     (driven by stats OR fsm, never by the deprecated timeline), the empty
+ *     (driven by stats OR fsm, never by the historical timeline), the empty
  *     state when no stats have landed (never a blank panel), and that a genuine
  *     primary-source failure still paints a red freshness dot;
- *   - the REGRESSION FIX at the heart of this elevation: the deprecated,
- *     always-404 `useStateTimeline` secondary must NOT poison the widget's
+ *   - the historical `useFSMTransitions` secondary must NOT poison the widget's
  *     health indicator. A timeline `isError` / `isFetching` while stats + FSM
  *     are healthy now renders a *fresh* (emerald) dot, not a red/sky one;
  *   - the populated full-size body — the stat grid (vehicles / trips / charge
@@ -27,7 +26,7 @@
  *   - a11y — the decorative header/empty icons are hidden from the a11y tree.
  *
  * Strategy: the four data hooks (`useVehicles`, `useDashboardStats`,
- * `useVehicleStateMachine`, `useStateTimeline`) live in mocked modules so no
+ * `useVehicleStateMachine`, `useFSMTransitions`) live in mocked modules so no
  * network is touched and every query state is controllable per-test. i18n is a
  * passthrough that honours the English default so the visible copy is
  * deterministic and real. `formatRelative` is left un-mocked and fed timestamps
@@ -36,11 +35,13 @@
  * reach for router context.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { DashboardStats } from '@/types/dashboard';
-import type { VehicleState, StateTransition } from '@/types/admin';
+import type { VehicleState } from '@/types/admin';
+import type { FSMTransition } from '@/types/fsm';
 import type { WidgetSize } from './types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -65,12 +66,14 @@ const {
   useVehiclesMock,
   useDashboardStatsMock,
   useVehicleStateMachineMock,
-  useStateTimelineMock,
+  timelineMock,
+  retiredTimelineMock,
 } = vi.hoisted(() => ({
   useVehiclesMock: vi.fn(),
   useDashboardStatsMock: vi.fn(),
   useVehicleStateMachineMock: vi.fn(),
-  useStateTimelineMock: vi.fn(),
+  timelineMock: vi.fn(),
+  retiredTimelineMock: vi.fn(),
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({
@@ -83,8 +86,13 @@ vi.mock('@/api/hooks/useDashboard', () => ({
 
 vi.mock('@/api/hooks/useAdmin', () => ({
   useVehicleStateMachine: (vehicleId: string) => useVehicleStateMachineMock(vehicleId),
-  useStateTimeline: (...args: unknown[]) => useStateTimelineMock(...args),
+  useStateTimeline: (...args: unknown[]) => retiredTimelineMock(...args),
 }));
+vi.mock('@/api/hooks/useFSM', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/hooks/useFSM')>(),
+  useFSMTransitions: (...args: unknown[]) => timelineMock(...args),
+}));
+import { buildTransitionsPath } from '@/api/hooks/useFSM';
 
 import DashboardStatsWidget from './DashboardStatsWidget';
 
@@ -130,12 +138,15 @@ function makeFsm(state = 'online'): VehicleState {
   return { state, since: new Date().toISOString(), vehicleId: '1' };
 }
 
-function makeTransition(over: Partial<StateTransition> = {}): StateTransition {
+function makeTransition(over: Partial<FSMTransition> = {}): FSMTransition {
   return {
-    state: 'driving',
-    startedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-    endedAt: null,
-    durationSeconds: 300,
+    id: 1,
+    vehicle_id: 1,
+    fsm_name: 'vehicle',
+    from_state: 'parked',
+    to_state: 'driving',
+    ts: new Date(Date.now() - 5 * 60_000).toISOString(),
+    trigger: 'speed_changed',
     ...over,
   };
 }
@@ -149,39 +160,77 @@ function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: numbe
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   useVehiclesMock.mockReset();
   useDashboardStatsMock.mockReset();
   useVehicleStateMachineMock.mockReset();
-  useStateTimelineMock.mockReset();
+  timelineMock.mockReset();
+  retiredTimelineMock.mockReset();
 
   useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
   useDashboardStatsMock.mockReturnValue(makeQ(makeStats()));
   useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online')));
-  useStateTimelineMock.mockReturnValue(makeQ({ transitions: [] as StateTransition[] }));
+  timelineMock.mockReturnValue(makeQ({ data: [] as FSMTransition[] }));
 });
 
 // ── Data-source resolution ───────────────────────────────────────────────────
+
+describe.each([1, 2, 3])('DashboardStatsWidget — identifying heading at cols=%i', (cols) => {
+  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+    'keeps exactly one visible shell heading when %s',
+    (state) => {
+      const populated = state === 'populated' || state === 'retained failure';
+      const failed = state === 'initial failure' || state === 'retained failure';
+      const flags = { isLoading: state === 'loading', isError: failed };
+      useDashboardStatsMock.mockReturnValue({
+        ...makeQ(populated ? makeStats() : undefined, flags),
+        ...(state === 'empty' ? { data: null } : {}),
+        error: failed ? new Error('offline') : null,
+      });
+      useVehicleStateMachineMock.mockReturnValue({
+        ...makeQ(populated ? makeFsm() : undefined, flags),
+        ...(state === 'empty' ? { data: null } : {}),
+        error: failed ? new Error('offline') : null,
+      });
+      const { container } = renderWidget({ cols, rows: 2 });
+      const headings = screen.getAllByRole('heading', { name: 'Dashboard stats', level: 3 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toBeVisible();
+      if (populated) {
+        expect(screen.getByText('1,234')).toBeInTheDocument();
+        expect(screen.getByText('Trips')).toBeInTheDocument();
+        if (cols > 1) expect(screen.getByText('Charge sessions')).toBeInTheDocument();
+      }
+      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'empty') expect(screen.getByText('No dashboard stats available')).toBeInTheDocument();
+      if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+      if (state === 'retained failure') expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
+    },
+  );
+});
 
 describe('DashboardStatsWidget — vehicle resolution', () => {
   it('queries FSM + timeline for the explicit vehicleId prop', () => {
     useVehiclesMock.mockReturnValue({ data: [{ id: 99 }] });
     renderWidget({ cols: 2, rows: 2 }, 42);
     expect(useVehicleStateMachineMock).toHaveBeenCalledWith('42');
-    expect(useStateTimelineMock).toHaveBeenCalledWith('42');
+    expect(timelineMock).toHaveBeenCalledWith('42', 'vehicle', 168, 1, 5);
+    expect(retiredTimelineMock).not.toHaveBeenCalled();
   });
 
   it('falls back to the first fleet vehicle when no vehicleId prop is given', () => {
     useVehiclesMock.mockReturnValue({ data: [{ id: 7 }, { id: 8 }] });
     renderWidget();
     expect(useVehicleStateMachineMock).toHaveBeenCalledWith('7');
-    expect(useStateTimelineMock).toHaveBeenCalledWith('7');
+    expect(timelineMock).toHaveBeenCalledWith('7', 'vehicle', 168, 1, 5);
   });
 
   it('passes an empty id (queries disabled) when the fleet is empty', () => {
     useVehiclesMock.mockReturnValue({ data: [] });
     renderWidget();
     expect(useVehicleStateMachineMock).toHaveBeenCalledWith('');
-    expect(useStateTimelineMock).toHaveBeenCalledWith('');
+    expect(timelineMock).toHaveBeenCalledWith('', 'vehicle', 168, 1, 5);
   });
 
   it('tolerates an undefined vehicles list without throwing', () => {
@@ -194,22 +243,25 @@ describe('DashboardStatsWidget — vehicle resolution', () => {
 // ── Render states ────────────────────────────────────────────────────────────
 
 describe('DashboardStatsWidget — states', () => {
-  it('renders a loading skeleton while the stats query is pending', () => {
+  it('retains FSM evidence as partial while the stats query is pending', () => {
     useDashboardStatsMock.mockReturnValue(makeQ<DashboardStats>(undefined, { isLoading: true }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
     expect(screen.queryByText('No dashboard stats available')).toBeNull();
-    expect(screen.queryByText('Vehicles')).toBeNull();
+    expect(screen.queryByText('Vehicles')).toBeInTheDocument();
   });
 
-  it('also shows the skeleton while the FSM state query is pending', () => {
+  it('retains fleet counts as partial while the FSM state query is pending', () => {
     useVehicleStateMachineMock.mockReturnValue(makeQ<VehicleState>(undefined, { isLoading: true }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+    expect(screen.getByText('1,234')).toBeInTheDocument();
   });
 
   it('shows the empty state (never a blank panel) when no stats have landed', () => {
-    useDashboardStatsMock.mockReturnValue(makeQ<DashboardStats>(undefined));
+    useDashboardStatsMock.mockReturnValue(makeQ<DashboardStats>(null as unknown as DashboardStats));
+    useVehicleStateMachineMock.mockReturnValue(makeQ<VehicleState>(undefined));
+    useVehiclesMock.mockReturnValue({ data: [] });
     renderWidget();
     expect(screen.getByText('No dashboard stats available')).toBeInTheDocument();
     expect(screen.queryByText('Vehicles')).toBeNull();
@@ -222,19 +274,19 @@ describe('DashboardStatsWidget — states', () => {
     const { container } = renderWidget();
     // Error tier dot on the freshness chip, and an empty panel (never blank).
     expect(container.querySelector('.bg-red-400')).not.toBeNull();
-    expect(screen.getByText('No dashboard stats available')).toBeInTheDocument();
+    expect(screen.getByText('FSM state')).toBeInTheDocument();
   });
 });
 
-// ── Freshness merge — deprecated-timeline poison guard (the elevation fix) ────
+// ── Historical-source freshness isolation ────
 
-describe('DashboardStatsWidget — freshness does not follow the deprecated timeline', () => {
-  it('keeps a fresh (emerald) dot when only the always-404 timeline errors', () => {
-    // Primary sources healthy; the deprecated timeline 404s.
+describe('DashboardStatsWidget — primary freshness does not follow historical transitions', () => {
+  it('keeps a fresh (emerald) dot when only the historical transition source errors', () => {
+    // Primary sources remain independently available.
     useDashboardStatsMock.mockReturnValue(makeQ(makeStats(), { dataUpdatedAt: Date.now() }));
     useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online')));
-    useStateTimelineMock.mockReturnValue(
-      makeQ<{ transitions: StateTransition[] }>(undefined, { isError: true, dataUpdatedAt: 0 }),
+    timelineMock.mockReturnValue(
+      makeQ<{ data: FSMTransition[] }>(undefined, { isError: true, dataUpdatedAt: 0 }),
     );
 
     const { container } = renderWidget();
@@ -245,8 +297,8 @@ describe('DashboardStatsWidget — freshness does not follow the deprecated time
 
   it('does not flip to the fetching tier when only the timeline is refetching', () => {
     useDashboardStatsMock.mockReturnValue(makeQ(makeStats(), { dataUpdatedAt: Date.now() }));
-    useStateTimelineMock.mockReturnValue(
-      makeQ<{ transitions: StateTransition[] }>(undefined, { isFetching: true, dataUpdatedAt: 0 }),
+    timelineMock.mockReturnValue(
+      makeQ<{ data: FSMTransition[] }>(undefined, { isFetching: true, dataUpdatedAt: 0 }),
     );
 
     const { container } = renderWidget();
@@ -266,6 +318,23 @@ describe('DashboardStatsWidget — freshness does not follow the deprecated time
 // ── Populated body (full size, cols = 2) ─────────────────────────────────────
 
 describe('DashboardStatsWidget — populated (full size)', () => {
+  it('reviews retained fleet counts and distinct current-state scope without gating transition history', () => {
+    useDashboardStatsMock.mockReturnValue({
+      ...makeQ(makeStats(), { isError: true }), error: new Error('refresh failed'),
+    });
+    timelineMock.mockReturnValue(makeQ({ data: [makeTransition()] }));
+    renderWidget({ cols: 3, rows: 4 }, 42);
+    const brief = screen.getByTestId('dashboard-stats-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(within(brief).getByText('Fleet counts · FSM vehicle 42')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('1,234')).toBeInTheDocument();
+    expect(within(drawer).getByText('online')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/separate 168-hour history query/).length).toBeGreaterThan(0);
+    expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+    expect(screen.getByText('5m ago')).toBeInTheDocument();
+  });
   it('renders the stat grid with fmtInt-formatted fleet counts', () => {
     useDashboardStatsMock.mockReturnValue(
       makeQ(makeStats({ totalVehicles: 3, totalTrips: 1234, totalChargingSessions: 42 })),
@@ -274,7 +343,7 @@ describe('DashboardStatsWidget — populated (full size)', () => {
 
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Trips')).toBeInTheDocument();
-    expect(screen.getByText('Charge Sessions')).toBeInTheDocument();
+    expect(screen.getByText('Charge sessions')).toBeInTheDocument();
     // fmtInt applies locale grouping — 1234 → "1,234", not "1234".
     expect(screen.getByText('1,234')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
@@ -285,8 +354,8 @@ describe('DashboardStatsWidget — populated (full size)', () => {
     useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online')));
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('FSM State')).toBeInTheDocument();
-    expect(screen.getByText('Current State')).toBeInTheDocument();
+    expect(screen.getByText('FSM state')).toBeInTheDocument();
+    expect(screen.getByText('Current state')).toBeInTheDocument();
     // The state appears once in the grid card and once in the StatusBadge.
     expect(screen.getAllByText('online')).toHaveLength(2);
   });
@@ -298,42 +367,42 @@ describe('DashboardStatsWidget — populated (full size)', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('floors missing fleet counts to 0 rather than rendering NaN', () => {
+  it('keeps missing fleet counts unknown rather than manufacturing zero', () => {
     useDashboardStatsMock.mockReturnValue(
       makeQ({ ...makeStats(), totalVehicles: undefined } as unknown as DashboardStats),
     );
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('NaN')).toBeNull();
   });
 
   it('does not render the wide "Recent Transitions" section at full (cols=2) size', () => {
-    useStateTimelineMock.mockReturnValue(makeQ({ transitions: [makeTransition()] }));
+    timelineMock.mockReturnValue(makeQ({ data: [makeTransition()] }));
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.queryByText('Recent Transitions')).toBeNull();
+    expect(screen.queryByText('Recent transitions')).toBeNull();
   });
 });
 
 // ── Compact (1×1) variant ────────────────────────────────────────────────────
 
 describe('DashboardStatsWidget — compact', () => {
-  it('renders the trips hero + "active" label and suppresses the grid', () => {
+  it('renders the trips hero with its honest Trips label and suppresses the grid', () => {
     useDashboardStatsMock.mockReturnValue(makeQ(makeStats({ totalTrips: 1234 })));
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('1,234')).toBeInTheDocument();
-    expect(screen.getByText('active')).toBeInTheDocument();
+    expect(screen.getByText('Trips')).toBeInTheDocument();
     // The stat grid and current-state row are hidden in the compact variant.
     expect(screen.queryByText('Vehicles')).toBeNull();
-    expect(screen.queryByText('Current State')).toBeNull();
+    expect(screen.queryByText('Current state')).toBeNull();
   });
 
-  it('floors a missing trips count to 0 in the compact hero', () => {
+  it('shows unknown for a missing trips count in the compact hero', () => {
     useDashboardStatsMock.mockReturnValue(
       makeQ({ ...makeStats(), totalTrips: undefined } as unknown as DashboardStats),
     );
     renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('NaN')).toBeNull();
   });
 });
@@ -343,18 +412,18 @@ describe('DashboardStatsWidget — compact', () => {
 describe('DashboardStatsWidget — wide (recent transitions)', () => {
   it('renders the transitions section with state badges and relative times', () => {
     useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online')));
-    useStateTimelineMock.mockReturnValue(
+    timelineMock.mockReturnValue(
       makeQ({
-        transitions: [
-          makeTransition({ state: 'driving', startedAt: new Date(Date.now() - 5 * 60_000).toISOString() }),
-          makeTransition({ state: 'charging', startedAt: new Date(Date.now() - 2 * 3_600_000).toISOString() }),
-          makeTransition({ state: 'parked', startedAt: new Date(Date.now() - 3 * 86_400_000).toISOString() }),
+        data: [
+          makeTransition({ to_state: 'driving', ts: new Date(Date.now() - 5 * 60_000).toISOString() }),
+          makeTransition({ to_state: 'charging', ts: new Date(Date.now() - 2 * 3_600_000).toISOString() }),
+          makeTransition({ to_state: 'parked', ts: new Date(Date.now() - 3 * 86_400_000).toISOString() }),
         ],
       }),
     );
     renderWidget({ cols: 3, rows: 4 });
 
-    expect(screen.getByText('Recent Transitions')).toBeInTheDocument();
+    expect(screen.getByText('Recent transitions')).toBeInTheDocument();
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('charging')).toBeInTheDocument();
     expect(screen.getByText('parked')).toBeInTheDocument();
@@ -366,9 +435,9 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
 
   it('caps the visible transitions at five rows', () => {
     const transitions = Array.from({ length: 7 }, (_, i) =>
-      makeTransition({ state: `st${i}`, startedAt: new Date(Date.now() - (i + 1) * 60_000).toISOString() }),
+      makeTransition({ to_state: `st${i}`, ts: new Date(Date.now() - (i + 1) * 60_000).toISOString() }),
     );
-    useStateTimelineMock.mockReturnValue(makeQ({ transitions }));
+    timelineMock.mockReturnValue(makeQ({ data: transitions }));
     renderWidget({ cols: 3, rows: 4 });
 
     expect(screen.getByText('st0')).toBeInTheDocument();
@@ -379,10 +448,10 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
   });
 
   it('renders an em-dash for a transition missing its timestamp', () => {
-    useStateTimelineMock.mockReturnValue(
+    timelineMock.mockReturnValue(
       makeQ({
-        transitions: [
-          makeTransition({ state: 'sleeping', startedAt: '' as unknown as string }),
+        data: [
+          makeTransition({ to_state: 'sleeping', ts: '' }),
         ],
       }),
     );
@@ -391,10 +460,11 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  it('hides the transitions section when the timeline is empty', () => {
-    useStateTimelineMock.mockReturnValue(makeQ({ transitions: [] as StateTransition[] }));
+  it('preserves the transitions section with an empty state when the timeline is empty', () => {
+    timelineMock.mockReturnValue(makeQ({ data: [] as FSMTransition[] }));
     renderWidget({ cols: 3, rows: 4 });
-    expect(screen.queryByText('Recent Transitions')).toBeNull();
+    expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+    expect(screen.getByText('No data available')).toBeInTheDocument();
   });
 });
 
@@ -407,8 +477,8 @@ describe('DashboardStatsWidget — refresh', () => {
     const refetchTimeline = vi.fn();
     useDashboardStatsMock.mockReturnValue(makeQ(makeStats(), { refetch: refetchStats }));
     useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online'), { refetch: refetchFsm }));
-    useStateTimelineMock.mockReturnValue(
-      makeQ({ transitions: [] as StateTransition[] }, { refetch: refetchTimeline }),
+    timelineMock.mockReturnValue(
+      makeQ({ data: [] as FSMTransition[] }, { refetch: refetchTimeline }),
     );
 
     renderWidget({ cols: 2, rows: 2 });
@@ -429,9 +499,161 @@ describe('DashboardStatsWidget — a11y', () => {
   });
 
   it('hides the decorative empty-state icon from the accessibility tree', () => {
-    useDashboardStatsMock.mockReturnValue(makeQ<DashboardStats>(undefined));
+    useDashboardStatsMock.mockReturnValue(makeQ<DashboardStats>(null as unknown as DashboardStats));
+    useVehicleStateMachineMock.mockReturnValue(makeQ<VehicleState>(undefined));
+    useVehiclesMock.mockReturnValue({ data: [] });
     const { container } = renderWidget({ cols: 2, rows: 2 });
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(screen.getByText('No dashboard stats available')).toBeInTheDocument();
+  });
+
+  describe('DashboardStatsWidget — trust and recovery regressions', () => {
+    it.each([1, 2, 3])('retains fleet counts during refresh failure at %i columns', (cols) => {
+      useDashboardStatsMock.mockReturnValue({ ...makeQ(makeStats()), error: new Error('offline'), isError: true });
+      const { container } = renderWidget({ cols, rows: 3 });
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    });
+
+    it('owns fatal initial failure when both primary sources fail', () => {
+      useDashboardStatsMock.mockReturnValue({ ...makeQ(undefined), error: new Error('stats') });
+      useVehicleStateMachineMock.mockReturnValue({ ...makeQ(undefined), error: new Error('fsm') });
+      renderWidget();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.queryByText('No dashboard stats available')).not.toBeInTheDocument();
+    });
+
+    it('renders a skeleton when neither primary source has resolved', () => {
+      useDashboardStatsMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
+      useVehicleStateMachineMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
+      const { container } = renderWidget();
+      expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+    });
+
+    it('does not keep disabled FSM hooks in a permanent loading state for an empty fleet', () => {
+      useVehiclesMock.mockReturnValue({ data: [] });
+      useVehicleStateMachineMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
+      timelineMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
+      const { container } = renderWidget({ cols: 3, rows: 3 });
+      expect(container.querySelector('[data-data-state="initial"]')).toBeNull();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+    });
+
+    it.each([0, -1, NaN, Infinity, 1.5, Number.MAX_SAFE_INTEGER + 1])('disables vehicle reads for invalid id %s', (id) => {
+      renderWidget({ cols: 2, rows: 2 }, id);
+      expect(useVehicleStateMachineMock).toHaveBeenCalledWith('');
+      expect(timelineMock).toHaveBeenCalledWith('', 'vehicle', 168, 1, 5);
+    });
+
+    it('recovers failed discovery without invoking disabled vehicle reads', () => {
+      const discovery = vi.fn();
+      const fsm = vi.fn();
+      useVehiclesMock.mockReturnValue({ data: undefined, error: new Error('discovery'), refetch: discovery });
+      useVehicleStateMachineMock.mockReturnValue(makeQ(undefined, { refetch: fsm }));
+      renderWidget();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+      expect(discovery).toHaveBeenCalledOnce();
+      expect(fsm).not.toHaveBeenCalled();
+    });
+
+    it('surfaces timeline failure only in its preserved wide section, with independent recovery', () => {
+      const retry = vi.fn();
+      timelineMock.mockReturnValue({ ...makeQ(undefined, { refetch: retry }), error: new Error('unavailable') });
+      const { container } = renderWidget({ cols: 3, rows: 4 });
+      expect(container.querySelector('[data-data-state="ok"]')).not.toBeNull();
+      expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(retry).toHaveBeenCalledOnce();
+    });
+
+    it('safely accepts nullable transition arrays', () => {
+      timelineMock.mockReturnValue(makeQ({ data: null }));
+      renderWidget({ cols: 3, rows: 4 });
+      expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+      expect(screen.getByText('No data available')).toBeInTheDocument();
+    });
+
+    it('renders the actual CurrentState envelope without feeding an object to StatusBadge', () => {
+      useVehicleStateMachineMock.mockReturnValue(makeQ({
+        state: { vehicle_id: 1, state: 'driving' },
+        live: true,
+        observed_at: new Date().toISOString(),
+      }));
+      renderWidget();
+      expect(screen.getAllByText('driving')).toHaveLength(2);
+      expect(screen.queryByText('[object Object]')).not.toBeInTheDocument();
+    });
+
+    it('reactively formats memoized fleet counts without refetching', () => {
+      renderWidget();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+      act(() => setGlobalLocale('de-DE'));
+      expect(screen.getByText('1.234')).toBeInTheDocument();
+    });
+
+    it('uses the canonical vehicle-only seven-day FSM route and renders its actual paginated response', () => {
+      timelineMock.mockReturnValue(makeQ({
+        data: [makeTransition({ to_state: 'charging', ts: new Date(Date.now() - 300_000).toISOString() })],
+        total: 1,
+        page: 1,
+        per_page: 5,
+      }));
+      renderWidget({ cols: 3, rows: 4 }, 42);
+      expect(timelineMock).toHaveBeenCalledWith('42', 'vehicle', 168, 1, 5);
+      expect(buildTransitionsPath('42', 'vehicle', 168, 1, 5)).toBe(
+        '/fsm/transitions?vehicle_id=42&hours=168&page=1&per_page=5&fsm_name=vehicle',
+      );
+      expect(retiredTimelineMock).not.toHaveBeenCalled();
+      expect(screen.getByText('charging')).toBeInTheDocument();
+      expect(screen.getByText('5m ago')).toBeInTheDocument();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+    });
+
+    it('keeps all primary stats visible while historical transitions initially load', () => {
+      timelineMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
+      const { container } = renderWidget({ cols: 3, rows: 4 });
+      expect(screen.getByText('Recent transitions')).toBeInTheDocument();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+      expect(screen.getByText('42')).toBeInTheDocument();
+      expect(container.querySelector('[data-data-state="ok"] .animate-pulse')).not.toBeNull();
+      expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    });
+
+    it('retains real transition rows on refresh failure and independently retries their supported source', () => {
+      const retry = vi.fn();
+      timelineMock.mockReturnValue({
+        ...makeQ({ data: [makeTransition({ to_state: 'sleeping' })] }, { refetch: retry }),
+        error: new Error('refresh failed'),
+      });
+      renderWidget({ cols: 3, rows: 4 });
+      expect(screen.getByText('sleeping')).toBeInTheDocument();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+      expect(retry).toHaveBeenCalledOnce();
+    });
+
+    it('offers a section-local retry when supported transition history is empty', () => {
+      const retry = vi.fn();
+      timelineMock.mockReturnValue(makeQ({ data: [] }, { refetch: retry }));
+      renderWidget({ cols: 3, rows: 4 });
+      const empty = screen.getByText('No data available').closest<HTMLElement>('[role="status"]')!;
+      fireEvent.click(within(empty).getByRole('button', { name: 'Refresh' }));
+      expect(retry).toHaveBeenCalledOnce();
+      expect(useDashboardStatsMock.mock.results[0].value.refetch).not.toHaveBeenCalled();
+      expect(screen.getByText('1,234')).toBeInTheDocument();
+    });
+
+    it('offers fleet discovery rather than refetching a disabled transition source', () => {
+      useVehiclesMock.mockReturnValue({ data: [] });
+      timelineMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
+      renderWidget({ cols: 3, rows: 4 });
+      const empty = screen.getByText('No data available').closest<HTMLElement>('[role="status"]')!;
+      expect(within(empty).getByRole('link', { name: 'Fleet' })).toHaveAttribute('href', '/vehicles');
+      expect(within(empty).queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    });
   });
 });

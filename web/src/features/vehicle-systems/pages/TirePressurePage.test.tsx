@@ -79,21 +79,19 @@ function stripMotionProps(props: Record<string, unknown>): Record<string, unknow
   return out;
 }
 
-vi.mock('framer-motion', () => ({
-  motion: new Proxy(
-    {},
-    {
-      get:
-        () =>
-        ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
-          <div {...stripMotionProps(props)}>{children}</div>
-        ),
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  useInView: () => true,
-  useReducedMotion: () => false,
-}));
+vi.mock('framer-motion', () => {
+  // Stable identity keeps query updates from remounting the scoped KPI/table
+  // nodes that async assertions are waiting on.
+  const MotionElement = ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
+    <div {...stripMotionProps(props)}>{children}</div>
+  );
+  return {
+    motion: new Proxy({}, { get: () => MotionElement }),
+    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    useInView: () => true,
+    useReducedMotion: () => false,
+  };
+});
 
 /* ── react-i18next: deterministic English-fallback `t` with interpolation. ── */
 
@@ -265,11 +263,24 @@ function renderPage() {
   );
 }
 
-/** Scope a query to a single KPI MetricCard by its label. */
+/** Scope to the real shared statistic, not its label/tooltip wrapper. */
 function kpiCard(label: string) {
-  const el = screen.getByText(label).closest('div');
+  const el = screen.getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' }).closest('[data-operational-metric]');
   if (!el) throw new Error(`KPI card not found for label: ${label}`);
   return within(el as HTMLElement);
+}
+
+function historyTable() {
+  const card = screen.getByRole('heading', { name: 'History table' }).closest('[data-card]');
+  if (!(card instanceof HTMLElement)) throw new Error('Missing pressure history table shell');
+  return within(card);
+}
+
+function pressureMetric(label: string, value: string, unit: string) {
+  // OperationalBrief retains the formatted value and unit together.
+  const card = kpiCard(label);
+  expect(card.getByText(`${value} ${unit}`, { selector: '[data-operational-value]' })).toHaveTextContent(value);
+  expect(card.getByText(`${value} ${unit}`, { selector: '[data-operational-value]' })).toHaveTextContent(unit);
 }
 
 beforeEach(() => {
@@ -403,22 +414,22 @@ describe('TirePressurePage — populated data (bar)', () => {
       }),
     );
     setHistory([
-      makeReading({ id: 1, created_at: '2026-06-10T08:00:00Z' }),
+      makeReading({ id: 1, created_at: '2026-06-10T08:00:00Z', tpms_hard_warnings: 'false', tpms_soft_warnings: 'false' }),
       makeReading({ id: 2, created_at: '2026-06-15T09:00:00Z', tpms_soft_warnings: '{"rl":true}' }),
     ]);
     renderPage();
 
     // Header shell always renders.
-    expect(screen.getByRole('heading', { level: 1, name: 'Tire Pressure' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tire pressure' })).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
 
     // Wait for the latest reading to resolve (avg KPI is a unique post-resolution
     // string), then scope each KPI to its card. avg = 300k Pa = 3 bar,
     // min = 200k Pa = 2 bar, 2 warnings.
-    await screen.findByText('3.00 bar');
-    expect(kpiCard('Avg Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Min Pressure').getByText('2.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Warning Count').getByText('2')).toBeInTheDocument();
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
+    pressureMetric('Avg pressure', '3.00', 'bar');
+    pressureMetric('Min pressure', '2.00', 'bar');
+    expect(kpiCard('Warning count').getByText('2')).toBeInTheDocument();
 
     // Gauge status badges reflect each corner's bucket.
     expect(screen.getAllByText('Normal')).toHaveLength(2);
@@ -430,9 +441,9 @@ describe('TirePressurePage — populated data (bar)', () => {
 
     // History table headers carry the active display unit; the soft-warning row
     // surfaces its badge and the clean row an OK badge. No empty/placeholder.
-    expect(screen.getByText('Front Left (bar)')).toBeInTheDocument();
-    expect(screen.getByText('Soft Warning')).toBeInTheDocument();
-    expect(screen.getByText('OK')).toBeInTheDocument();
+    expect(historyTable().getByRole('columnheader', { name: /Front left \(bar\)/ })).toBeInTheDocument();
+    expect(historyTable().getByText('Soft warning')).toBeInTheDocument();
+    expect(historyTable().getByText('OK')).toBeInTheDocument();
     expect(screen.queryByText('No history data')).not.toBeInTheDocument();
     expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
   });
@@ -452,12 +463,15 @@ describe('TirePressurePage — populated data (bar)', () => {
     renderPage();
 
     // Wait for the reading to resolve; avg + min both convert to 3.00 bar.
-    await screen.findAllByText('3.00 bar');
-    expect(kpiCard('Min Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Avg Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Warning Count').getByText('0')).toBeInTheDocument();
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
+    pressureMetric('Min pressure', '3.00', 'bar');
+    pressureMetric('Avg pressure', '3.00', 'bar');
+    expect(kpiCard('Warning count').getByText('0')).toBeInTheDocument();
+    expect(screen.getAllByRole('meter')).toHaveLength(3);
     // The phantom 0-bar reading must not leak into the KPI band.
     expect(screen.queryByText('0.00 bar')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Tire pressure summary' }))
+      .queryByText('0.00 bar', { selector: '[data-operational-value]' })).not.toBeInTheDocument();
   });
 });
 
@@ -469,9 +483,9 @@ describe('TirePressurePage — unit-aware display', () => {
     renderPage();
 
     // Column header advertises the psi unit ...
-    expect(await screen.findByText('Front Left (psi)')).toBeInTheDocument();
+    expect(await historyTable().findByRole('columnheader', { name: /Front left \(psi\)/ })).toBeInTheDocument();
     // ... and the KPI values are converted into psi (not left as bar).
-    expect(kpiCard('Avg Pressure').getByText('43.51 psi')).toBeInTheDocument();
+    pressureMetric('Avg pressure', '43.51', 'psi');
     expect(screen.queryByText('3.00 bar')).not.toBeInTheDocument();
   });
 });
@@ -483,7 +497,7 @@ describe('TirePressurePage — TPMS warning banners', () => {
     renderPage();
 
     expect(await screen.findByText('Hard TPMS warning active')).toBeInTheDocument();
-    expect(screen.getByText('Hard Warning')).toBeInTheDocument();
+    expect(screen.getByText('Hard warning')).toBeInTheDocument();
     expect(screen.queryByText('Soft TPMS warning active')).not.toBeInTheDocument();
   });
 
@@ -520,7 +534,7 @@ describe('TirePressurePage — loading / empty / error states', () => {
     // Both the chart and the table surface an empty placeholder.
     expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
-    expect(kpiCard('Avg Pressure').getByText('—')).toBeInTheDocument();
+    expect(kpiCard('Avg pressure').getByText('—')).toBeInTheDocument();
   });
 
   it('names the failed source, preserves history, and keeps section retry working', async () => {
@@ -530,15 +544,17 @@ describe('TirePressurePage — loading / empty / error states', () => {
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByText('Partial data')).toBeInTheDocument();
-    expect(screen.getByText('Latest tire pressure')).toBeInTheDocument();
+    expect(screen.getByText('Latest tire pressure', { selector: 'li span' })).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
     expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(1);
 
     const callsBefore = H.calls.latest;
+    const historyCallsBefore = H.calls.history;
     fireEvent.click(screen.getByRole('button', { name: /^Retry$/ }));
     await waitFor(() => expect(H.calls.latest).toBeGreaterThan(callsBefore));
+    expect(H.calls.history).toBe(historyCallsBefore);
   });
 });
 
@@ -551,22 +567,28 @@ describe('TirePressurePage — interactions + a11y', () => {
     ]);
     renderPage();
 
-    const timeHeader = await screen.findByRole('columnheader', { name: /Time/i });
+    const timeHeader = await historyTable().findByRole('columnheader', { name: /Time/i });
     // Default sort is newest-first (descending) by created_at.
     expect(timeHeader).toHaveAttribute('aria-sort', 'descending');
+    const newestFirst = historyTable().getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[0].textContent);
+    expect(newestFirst).toHaveLength(2);
 
     fireEvent.click(within(timeHeader).getByRole('button'));
     // Re-query rather than trust the pre-click node reference.
-    expect(screen.getByRole('columnheader', { name: /Time/i })).toHaveAttribute(
+    expect(historyTable().getByRole('columnheader', { name: /Time/i })).toHaveAttribute(
       'aria-sort',
       'ascending',
     );
+    expect(historyTable().getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[0].textContent))
+      .toEqual([...newestFirst].reverse());
   });
 
   it('uses the shared range for history without rendering a local range picker', async () => {
     renderPage();
 
-    await screen.findByText('Front Left (bar)'); // wait for populated render
+    await historyTable().findByRole('columnheader', { name: /Front left \(bar\)/ });
     expect(H.historyPaths).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01&end=2026-06-30');
     expect(screen.queryByTestId('tire-pressure-range')).not.toBeInTheDocument();
     expect(H.setRange).not.toHaveBeenCalled();

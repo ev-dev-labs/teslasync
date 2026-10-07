@@ -190,7 +190,7 @@ export function Drawer({
         </div>
         {footer !== null && (
           <div
-            className="shrink-0 border-t border-white/[0.06] bg-[var(--surface-overlay)] px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4"
+            className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 sm:py-4"
             data-drawer-footer
           >
             {footer === undefined ? (

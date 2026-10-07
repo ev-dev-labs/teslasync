@@ -1,78 +1,73 @@
 import { useTranslation } from 'react-i18next';
-import { Zap, BatteryCharging } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { Badge } from '@/components/ui';
+import { deriveDataState, knownNumber } from '@/api/dataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
+import { WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
+  const query = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
   /* SI-floor: state.rated_range and state.charge_rate arrive in METERS / m·h⁻¹.
    * convertDistanceFromSI handles the meters→user-unit conversion. */
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
+  const vehiclesState = deriveDataState(vehiclesQuery);
+  const sourceState = deriveDataState({
+    ...query,
+    data: stateData ?? (isLoading || isError || error ? undefined : null),
+  }, { provenance: stateData?.live ? 'live' : 'cached', unavailable: state == null });
+  const dataState = id > 0 ? sourceState : vehiclesState;
+  const reading = (value: unknown, format: (value: number) => string) => {
+    const number = knownNumber(value);
+    return number == null ? '—' : format(number);
+  };
 
   return (
     <WidgetShell
-      loading={isLoading}
+      title={t('widget.chargeStatusLive', 'Charge status')}
+      loading={isLoading && !stateData}
+      error={!stateData && isError ? String(error ?? 'Request failed') : null}
+      dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={() => { if (id > 0) void refetch(); else void vehiclesQuery.refetch(); }}
     >
       <div className="h-full flex flex-col justify-center">
         {state?.is_charging ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <BatteryCharging className="h-4 w-4 text-neon-green animate-pulse" />
-              <span className="text-sm font-semibold text-emerald-300">
-                {t('widget.charging', 'Charging')}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">{t('widget.power', 'Power')}</p>
-                <p className="text-sm font-bold text-emerald-300">{fmtNumber(state.charger_power)} kW</p>
-              </div>
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">{t('widget.rate', 'Rate')}</p>
-                <p className="text-sm font-bold text-[var(--text-primary)]">
-                  {fmtInt(convertDistanceFromSI(state.charge_rate ?? 0, distanceUnit))} {distanceUnit}/h
-                </p>
-              </div>
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">{t('widget.battery', 'Battery')}</p>
-                <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level ?? 0}%</p>
-              </div>
-              <div>
-                <p className="text-2xs text-[var(--text-muted)]">
-                  {t('widget.timeToFull', 'Time to Full')}
-                </p>
-                <p className="text-sm font-bold text-[var(--text-primary)]">
-                  {(state.time_to_full_charge ?? 0) > 0
-                    ? `${fmtNumber(state.time_to_full_charge, 1)}h`
-                    : '—'}
-                </p>
-              </div>
-            </div>
+          <div className="min-w-0 space-y-3">
+            <Badge variant="success" size="sm">{t('widget.charging', 'Charging')}</Badge>
+            <WidgetStatGrid cols={2} stats={[
+              { label: t('widget.power', 'Power'), value: reading(state.charger_power, value => `${fmtNumber(value)} kW`) },
+              { label: t('widget.rate', 'Rate'), value: reading(state.charge_rate, value => `${fmtNumber(convertDistanceFromSI(value, distanceUnit))} ${distanceUnit}/h`) },
+              { label: t('widget.battery', 'Battery'), value: reading(state.battery_level, value => `${fmtNumber(value)}%`) },
+              { label: t('widget.timeToFull', 'Time to full'), value: reading(state.time_to_full_charge, value => value >= 0 ? `${fmtNumber(value)}h` : '—') },
+            ]} />
           </div>
         ) : state ? (
-          <div className="flex flex-col items-center justify-center text-center">
-            <Zap className="h-6 w-6 text-[var(--text-muted)] mb-2" />
-            <p className="text-sm font-medium text-[var(--text-primary)]">
-              {t('widget.notCharging', 'Not Charging')}
-            </p>
-            <p className="text-xs text-[var(--text-muted)]">
-              {state.battery_level ?? 0}% · {fmtNumber(convertDistanceFromSI(state.rated_range ?? 0, distanceUnit), 0)} {distanceUnit}
-            </p>
+          <div className="min-w-0 space-y-3">
+            <Badge variant="neutral" size="sm">
+              {state.is_charging === false ? t('widget.notCharging', 'Not charging') : t('widget.chargingSchedule.modeUnknown', 'Unknown')}
+            </Badge>
+            <WidgetStatGrid cols={2} stats={[
+              { label: t('widget.battery', 'Battery'), value: reading(state.battery_level, value => `${fmtNumber(value)}%`) },
+              { label: t('widget.range', 'Range'), value: reading(state.rated_range, value => `${fmtNumber(convertDistanceFromSI(value, distanceUnit))} ${distanceUnit}`) },
+            ]} />
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

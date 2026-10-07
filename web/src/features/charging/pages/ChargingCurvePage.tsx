@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BatteryCharging } from 'lucide-react';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Caption } from '@/components/ui';
+import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
+import { Select, Caption, HelperText } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import {
-  SummaryStatsGrid,
   SessionCurveChart,
   SessionDetailPanel,
   SessionComparisonChart,
@@ -22,10 +20,18 @@ import {
 } from '../components/charging-curve';
 import { sessionLabel, generateChargingCurve, avg, durationMinutes } from '../components/charging-curve/helpers';
 import type { SummaryStats } from '../components/charging-curve/types';
-import { AIChargingCurveFingerprintClustering } from '@/components/ai/AIChargingCurveFingerprintClustering';
-import { AIMLChargingCurveClustering } from '@/components/ai/AIMLChargingCurveClustering';
+import { AIChargingCurveFingerprintClustering } from '@/components/ai';
+import { AIMLChargingCurveClustering } from '@/components/ai';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import {
+  CurveSourceSection,
+  CurveSummary,
+  chargingAvailability,
+} from '../components/charging-curve-modernization';
 
 export default function ChargingCurvePage() {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('charging.curve.title', 'Charging Curve'));
 
@@ -41,13 +47,21 @@ export default function ChargingCurvePage() {
   });
 
   const sessionsQuery = useChargingSessionsPaginated(activeVehicleId, { limit: 200, start, end });
-  const { data, isLoading, isError, error, refetch } = sessionsQuery;
+  const { data, refetch } = sessionsQuery;
   const sessions = data ?? [];
   const hasSessions = sessions.length > 0;
+  const availability = useMemo(() => chargingAvailability(sessions), [sessions]);
+  const sourceState = useDataState(sessionsQuery, {
+    provenance: 'historical',
+    partial: availability.partial,
+    unavailable: data !== undefined && !hasSessions,
+  });
+  const initialLoading = activeVehicleId !== null && !sourceState.hasData
+    && !sourceState.fatalError && !sourceState.isRefreshBlocked;
 
   const sessionOptions = useMemo(
     () => sessions.map((s) => ({ value: String(s.id), label: sessionLabel(s) })),
-    [sessions],
+    [sessions, displayPrecision, displayLocale],
   );
 
   const handleSessionChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
@@ -55,7 +69,7 @@ export default function ChargingCurvePage() {
   }, []);
 
   const handleRetry = useCallback(() => {
-    refetch();
+    void refetch();
   }, [refetch]);
 
   // A vehicle or workspace-range change invalidates the selected session.
@@ -92,54 +106,41 @@ export default function ChargingCurvePage() {
     [selectedSession],
   );
 
-  /* ── Per-section async wrappers ──────────────────────────────────────────
-   * Keep every panel visible with its OWN loading / error / empty state so we
-   * never gate the whole page behind a single `{data && …}` flag. `errorPanel`
-   * is shared by the KPI band and `section` so a failed fetch surfaces a
-   * retryable error everywhere instead of leaking a misleading all-zero KPI. */
-  const errorPanel = (): ReactNode => (
-    <GlassPanel className="p-4 sm:p-5">
-      <QueryError
-        error={error}
-        onRetry={handleRetry}
-        resourceName={t('charging.curve.resource', 'Charging sessions')}
-      />
-    </GlassPanel>
-  );
-
-  const section = (height: number, emptyMessage: string, content: () => ReactNode): ReactNode => {
-    if (isError) return errorPanel();
-    if (isLoading) {
-      return (
-        <GlassPanel className="p-4 sm:p-5">
-          <Skeleton height={height} />
-        </GlassPanel>
-      );
-    }
-    if (!hasSessions) {
-      return (
-        <GlassPanel className="flex min-h-48 items-center justify-center p-4 sm:p-5">
-          <EmptyState
-            icon={<BatteryCharging className="h-8 w-8" aria-hidden="true" />}
-            message={emptyMessage}
-            action={{ label: t('charging.curve.resetRange', 'Reset date range'), onClick: reset }}
-          />
-        </GlassPanel>
-      );
-    }
-    return content();
+  /* Each source boundary keeps its own shell; retained failures do not replace
+   * charts or unset the inspector. These props never alter the query contract. */
+  const sectionProps = {
+    state: sourceState,
+    vehicleSelected: activeVehicleId !== null,
+    hasSessions,
+    onResetRange: reset,
+    onRetry: handleRetry,
   };
-
-  const emptyMsg = t('charging.curve.empty', 'No charging sessions to plot a curve.');
 
   /* ── Render ──────────────────────────────────────────────────────────── */
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('charging.curve.title', 'Charging Curve')}
       subtitle={t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
       query={sessionsQuery}
+      busy={sourceState.isRefreshing || initialLoading}
+      className="w-full min-w-0"
     >
+      <StaleRefreshWarning
+        state={sourceState}
+        label={t('charging.curve.resource', 'Charging sessions')}
+        title={sourceState.status === 'partial'
+          ? t('charging.curve.modernization.partialTitle', 'Some session measurements are incomplete')
+          : sourceState.status === 'unavailable'
+            ? t('charging.curve.modernization.noSessionsTitle', 'No sessions in this range')
+            : undefined}
+        message={sourceState.status === 'partial'
+          ? t('charging.curve.modernization.partialMessage', 'Available sessions remain visible. Existing chart calculations are unchanged; missing readings and unfinished sessions may contribute zero to those calculations. Check recorded-value coverage before comparing rates.')
+          : sourceState.status === 'unavailable'
+            ? t('charging.curve.empty', 'No charging sessions to plot a curve.')
+            : undefined}
+        hideRetry={sourceState.status === 'partial' || sourceState.status === 'unavailable'}
+      />
       {/* AI narrators — opt-in, render null when ai_mode='off'. The inner
           Explain/Train buttons stay disabled until a vehicle is in scope. */}
       <FadeIn delay={0.02}>
@@ -152,7 +153,13 @@ export default function ChargingCurvePage() {
       {/* 1 — KPI band (full-width responsive metric grid) */}
       <FadeIn delay={0.05}>
         <section aria-label={t('charging.curve.summary', 'Summary metrics')}>
-          {isError ? errorPanel() : <SummaryStatsGrid stats={stats} loading={isLoading} />}
+          <CurveSummary
+            stats={stats}
+            availability={availability}
+            state={sourceState}
+            initialLoading={initialLoading}
+            onRetry={handleRetry}
+          />
         </section>
       </FadeIn>
 
@@ -163,9 +170,9 @@ export default function ChargingCurvePage() {
           data-tour="charging-curve"
           aria-label={t('charging.curve.sessionInspector', 'Session inspector')}
         >
-          <GlassPanel className="p-4 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div className="w-full sm:max-w-sm">
+          <LayoutCard title={t('charging.curve.selectSessionLabel', 'Inspect session')}>
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="w-full min-w-0 sm:max-w-sm">
                 <Select
                   label={t('charging.curve.selectSessionLabel', 'Inspect session')}
                   value={String(selectedSessionId ?? '')}
@@ -173,65 +180,105 @@ export default function ChargingCurvePage() {
                   options={sessionOptions}
                   placeholder={t('charging.curve.selectSession', 'Select a session to inspect')}
                   disabled={!hasSessions}
+                  className="min-h-11"
                 />
               </div>
               {selectedSession && (
-                <Caption>
+                <Caption className="min-w-0 break-words">
                   <TimeStamp value={selectedSession.started_at} />
                   {selectedSession.start_place ? ` · ${selectedSession.start_place}` : ''}
                 </Caption>
               )}
             </div>
-          </GlassPanel>
+          </LayoutCard>
 
-          {section(320, emptyMsg, () =>
-            selectedSession ? (
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                <div className="xl:col-span-2">
-                  <SessionCurveChart curveData={curveData} />
-                </div>
-                <SessionDetailPanel session={selectedSession} />
-              </div>
-            ) : (
-              <GlassPanel className="flex min-h-64 items-center justify-center p-4 sm:p-5">
-                {/* no-action: the Inspect-session Select control sits directly above this panel and is the trigger. */}
-                <EmptyState
-                  icon={<BatteryCharging className="h-8 w-8" aria-hidden="true" />}
-                  message={t(
-                    'charging.curve.selectSessionHint',
-                    'Select a session above to view its charging curve',
-                  )}
-                />
-              </GlassPanel>
-            ),
-          )}
+          <HelperText>
+            {t('charging.curve.modernization.modeledCurves', 'Curves are modeled from session metadata, not sampled charging telemetry.')}
+          </HelperText>
+
+          <CardGrid
+            label={t('charging.curve.sessionInspector', 'Session inspector')}
+            items={[
+              {
+                id: 'charging-curve-power',
+                size: 'half',
+                content: (
+                  <CurveSourceSection {...sectionProps} height={320}
+                    title={t('charging.curve.powerVsSoc', 'Power vs SOC')}
+                    selectionRequired={!selectedSession}>
+                    <SessionCurveChart curveData={curveData} />
+                  </CurveSourceSection>
+                ),
+              },
+              {
+                id: 'charging-curve-details',
+                size: 'third',
+                content: (
+                  <CurveSourceSection {...sectionProps} height={320}
+                    title={t('charging.curve.sessionDetails', 'Session Details')}
+                    selectionRequired={!selectedSession}>
+                    {selectedSession ? <SessionDetailPanel session={selectedSession} /> : null}
+                  </CurveSourceSection>
+                ),
+              },
+            ]}
+          />
         </section>
       </FadeIn>
 
       {/* 3 — Session comparison (full-width band) */}
       <FadeIn delay={0.15}>
         <section aria-label={t('charging.curve.sessionComparison', 'Session Comparison')}>
-          {section(300, emptyMsg, () => <SessionComparisonChart sessions={sessions} />)}
+          <CurveSourceSection {...sectionProps} height={300}
+            title={t('charging.curve.sessionComparison', 'Session Comparison')}>
+            <SessionComparisonChart sessions={sessions} />
+          </CurveSourceSection>
         </section>
       </FadeIn>
 
       {/* 4 — Charger-type + speed-trend bento (two charts side-by-side on wide) */}
       <FadeIn delay={0.2}>
         <section
-          className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+          className="w-full min-w-0"
           aria-label={t('charging.curve.chargerBreakdown', 'Charger breakdown')}
         >
-          {section(280, emptyMsg, () => <ChargerTypeChart sessions={sessions} />)}
-          {section(280, emptyMsg, () => <SpeedTrendChart sessions={sessions} />)}
+          <CardGrid
+            label={t('charging.curve.chargerBreakdown', 'Charger breakdown')}
+            items={[
+              {
+                id: 'charging-curve-charger-types',
+                size: 'half',
+                content: (
+                  <CurveSourceSection {...sectionProps} height={280}
+                    title={t('charging.curve.chargerType', 'Charge Rate by Charger Type')}>
+                    <ChargerTypeChart sessions={sessions} />
+                  </CurveSourceSection>
+                ),
+              },
+              {
+                id: 'charging-curve-speed-trend',
+                size: 'half',
+                content: (
+                  <CurveSourceSection {...sectionProps} height={280}
+                    title={t('charging.curve.speedTrend', 'Charging Speed Trend')}>
+                    <SpeedTrendChart sessions={sessions} />
+                  </CurveSourceSection>
+                ),
+              },
+            ]}
+          />
         </section>
       </FadeIn>
 
       {/* 5 — Time-to-charge analysis (KPI sub-grid + yearly trend) */}
       <FadeIn delay={0.25}>
         <section aria-label={t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}>
-          {section(320, emptyMsg, () => <TimeToChargeSection sessions={sessions} />)}
+          <CurveSourceSection {...sectionProps} height={320}
+            title={t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}>
+            <TimeToChargeSection sessions={sessions} />
+          </CurveSourceSection>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

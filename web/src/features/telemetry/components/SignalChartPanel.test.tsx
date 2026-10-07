@@ -35,8 +35,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -63,6 +64,7 @@ vi.mock('@/components/charts', async () => {
   return {
     EmbeddedChart: chartTestDoubles.EmbeddedChart,
     ChartLegend: chartTestDoubles.ChartLegend,
+    ChartTooltip: () => null,
     ResponsiveContainer: ({ children }: any) => (
       <div data-testid="responsive-container">{children}</div>
     ),
@@ -152,8 +154,33 @@ function renderPanel(overrides: Partial<SignalChartPanelProps> = {}) {
     stats: BASE_STATS,
     ...overrides,
   };
-  return render(<SignalChartPanel {...props} />);
+  return render(<MemoryRouter><SignalChartPanel {...props} /></MemoryRouter>);
 }
+
+describe('SignalChartPanel — Phase 4 allocation and failure shell', () => {
+  it('contains the grid allocation without changing signal order, cell height or synchronization', () => {
+    const { container } = renderPanel({
+      chartMode: 'grid', selectedSignals: ['speed', 'battery_level'], gridCellHeight: 123,
+    });
+    const panel = container.querySelector('[data-print-card]');
+    expect(panel?.className).toContain('min-w-0');
+    expect(panel?.className).toContain('max-w-full');
+    expect(panel?.parentElement?.className).toContain('min-w-0');
+    const grid = screen.getByTestId('small-multiples');
+    expect(grid).toHaveAttribute('data-series', 'speed,battery_level');
+    expect(grid).toHaveAttribute('data-cell-height', '123');
+    expect(grid).toHaveAttribute('data-sync-id', 'signal-chart-historical');
+  });
+
+  it('keeps its title and offers retry rather than painting an empty grid on initial failure', () => {
+    const onRetry = vi.fn();
+    renderPanel({ data: [], error: new Error('history unavailable'), onRetry, chartMode: 'grid', selectedSignals: ['speed', 'battery_level'] });
+    expect(screen.getByRole('heading', { name: 'Signal chart' })).toBeInTheDocument();
+    expect(screen.queryByTestId('small-multiples')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+});
 
 // ── Header & title ────────────────────────────────────────────────────────────
 
@@ -162,7 +189,7 @@ describe('SignalChartPanel — header & title', () => {
     const { container } = renderPanel();
 
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Signal Chart' }),
+      screen.getByRole('heading', { level: 2, name: 'Signal chart' }),
     ).toBeInTheDocument();
     expect(container.querySelector('.lucide-bar-chart3')).not.toBeNull();
     expect(container.querySelector('.lucide-radio')).toBeNull();
@@ -172,7 +199,7 @@ describe('SignalChartPanel — header & title', () => {
     const { container } = renderPanel({ isLive: true, data: [] });
 
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Live Signal Stream' }),
+      screen.getByRole('heading', { level: 2, name: 'Live signal stream' }),
     ).toBeInTheDocument();
     expect(container.querySelector('.lucide-radio')).not.toBeNull();
     expect(container.querySelector('.lucide-bar-chart3')).toBeNull();
@@ -184,7 +211,7 @@ describe('SignalChartPanel — header & title', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: 'Custom Title' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Live Signal Stream')).toBeNull();
+    expect(screen.queryByText('Live signal stream')).toBeNull();
   });
 
   it('marks the header status glyph aria-hidden so screen readers skip it', () => {

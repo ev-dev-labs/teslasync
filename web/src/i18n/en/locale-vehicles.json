@@ -26,7 +26,8 @@
       "energyUsed": "Energy used",
       "empty": "No drives or charging sessions this day.",
       "emptyHint": "Locks, sentry, and state changes below still tell the story when the car stayed put.",
-      "drivesCta": "Open drives"
+      "drivesCta": "Open drives",
+      "period": "Selected vehicle day"
     },
     "timeline": {
       "title": "Timeline",
@@ -276,23 +277,23 @@
     }
   },
   "digitalTwin": {
-    "title": "Digital Twin",
-    "doorDriverFront": "Driver Front",
-    "doorPassengerFront": "Passenger Front",
-    "doorDriverRear": "Driver Rear",
-    "doorPassengerRear": "Passenger Rear",
+    "title": "Digital twin",
+    "doorDriverFront": "Driver front",
+    "doorPassengerFront": "Passenger front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerRear": "Passenger rear",
     "frunk": "Frunk",
     "trunk": "Trunk",
-    "windowFD": "Front Driver",
-    "windowFP": "Front Passenger",
-    "windowRD": "Rear Driver",
-    "windowRP": "Rear Passenger",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger",
     "locked": "Locked",
     "driving": "Driving",
     "charging": "Charging",
     "sentryMode": "Sentry Mode",
-    "chargePort": "Charge Port",
-    "driverSeat": "Driver Seat",
+    "chargePort": "Charge port",
+    "driverSeat": "Driver seat",
     "occupied": "Occupied",
     "empty": "Empty",
     "headlights": "Headlights",
@@ -304,31 +305,31 @@
     "noDoorData": "No door data available",
     "windowsTitle": "Windows",
     "noWindowData": "No window data available",
-    "securityTitle": "Security & Status",
+    "securityTitle": "Security & status",
     "noSecurityData": "No live status available",
-    "lightsTitle": "Lights & Signals",
+    "lightsTitle": "Lights & signals",
     "noLightData": "No lights data available",
-    "turnSignal": "Turn Signal",
+    "turnSignal": "Turn signal",
     "turnLeft": "Left",
     "turnRight": "Right",
     "turnBoth": "Both",
     "partial": "Partial",
     "overview": "Overview",
-    "sectionLive": "Live Overview",
-    "sectionComponents": "Component State",
-    "liveStatusTitle": "Live Status",
+    "sectionLive": "Live overview",
+    "sectionComponents": "Component state",
+    "liveStatusTitle": "Live status",
     "kpiStatus": "Status",
     "kpiLock": "Lock",
-    "kpiDoorsOpen": "Doors Open",
-    "kpiWindowsOpen": "Windows Open",
+    "kpiDoorsOpen": "Doors open",
+    "kpiWindowsOpen": "Windows open",
     "kpiSentry": "Sentry Mode",
-    "kpiChargePort": "Charge Port",
+    "kpiChargePort": "Charge port",
     "ofOpenings": "of 6 openings",
     "ofWindows": "of 4 windows",
     "lockUnknown": "Lock unknown",
     "sentryUnknown": "Sentry unknown",
-    "sentryOn": "Sentry On",
-    "sentryOff": "Sentry Off",
+    "sentryOn": "Sentry on",
+    "sentryOff": "Sentry off",
     "statusLabel": {
       "driving": "Driving",
       "charging": "Charging",
@@ -339,10 +340,11 @@
       "parked": "Parked",
       "idle": "Idle"
     },
-    "loadingSection": "Loading {{section}}"
+    "loadingSection": "Loading {{section}}",
+    "snapshot": "Latest vehicle signals"
   },
   "fleet": {
-    "size": "Fleet Size",
+    "size": "Fleet size",
     "online": "online",
     "distance": "Distance (30d)",
     "energy": "Energy (30d)",
@@ -350,38 +352,38 @@
     "average": "fleet average",
     "alerts": "Alerts",
     "unread": "unread",
-    "title": "Fleet API Settings",
+    "title": "Fleet API settings",
     "suspended": "API polling is suspended",
     "description": "Manage polling, endpoint toggles, and telemetry capture",
-    "batteryStatus": "Fleet Battery Status",
+    "batteryStatus": "Fleet battery status",
     "vehicles": "Vehicles",
-    "avgBattery": "Avg Battery",
-    "totalRange": "Total Range",
-    "chargingOnline": "Charging / Online"
+    "avgBattery": "Avg battery",
+    "totalRange": "Total range",
+    "chargingOnline": "Charging / online"
   },
   "parking": {
-    "title": "Parking Analytics",
+    "title": "Parking analytics",
     "subtitle": "Where your car spends its time between drives",
     "kpis": "Parking summary metrics",
     "kpis.observedSample": "{{drives}} usable drives · {{stints}} reconstructed stints",
     "kpis.overnightSample": "22:00–06:00 · {{count}} stints",
     "kpis.longestSample": "{{location}} · longest of {{count}} stints",
     "kpis.locationQuality": "{{known}} located · {{missing}} missing",
-    "parkedShare": "Time Parked",
+    "parkedShare": "Time parked",
     "vsDriving": "vs time driving",
-    "nightShare": "Overnight Share",
+    "nightShare": "Overnight share",
     "nightWindow": "22:00–06:00",
-    "longestStint": "Longest Stint",
+    "longestStint": "Longest stint",
     "locations": "Locations",
     "locations.subtitle": "{{count}} location groups across {{stints}} reconstructed stints",
     "locations.empty": "No destination-linked parking stints are available in this window.",
     "stintCount": "{{count}} stints",
-    "topLocations": "Where It Sits",
+    "topLocations": "Where it sits",
     "location": "Location",
     "unknown": "Unknown location",
     "now": "now",
     "stints": "Stints",
-    "dwell": "Time Parked",
+    "dwell": "Time parked",
     "share": "Share",
     "durationDh": "{{d}}d {{h}}h",
     "durationH": "{{h}}h",
@@ -399,7 +401,7 @@
     "durationDistribution": {
       "countSeries": "Stints",
       "dwellSeries": "Observed dwell ({{unit}})",
-      "title": "Parking Duration Distribution",
+      "title": "Parking duration distribution",
       "subtitle": "{{count}} reconstructed stints; final observed stints may be right-censored.",
       "aria": "Bar and line chart of parking stint counts and observed dwell by duration band",
       "band": "Duration band",
@@ -422,14 +424,14 @@
       "ongoing": "Ongoing",
       "rangeEdge": "Range edge",
       "complete": "Between drives",
-      "title": "Longest Observed Stints",
+      "title": "Longest observed stints",
       "subtitle": "Showing {{shown}} of {{count}} reconstructed stints; range-edge durations are observed minimums.",
       "empty": "No positive parking gaps are available to rank in this window."
     },
     "monthly": {
       "dwellSeries": "Observed dwell ({{unit}})",
       "countSeries": "Stints",
-      "title": "Monthly Dwell & Stint Trend",
+      "title": "Monthly dwell & stint trend",
       "subtitle": "{{count}} stints grouped by parking-start month in {{timeZone}}; observed dwell includes right-censored tails.",
       "aria": "Monthly bars for observed parking dwell with a line for reconstructed stint counts",
       "month": "Month",
@@ -441,7 +443,7 @@
       "daytime": "06:00–22:00",
       "subtitle": "{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in {{timeZone}}.",
       "subtitleEmpty": "Observed dwell will be split at 22:00 and 06:00 in {{timeZone}}.",
-      "title": "Overnight vs Daytime Context",
+      "title": "Overnight vs daytime context",
       "aria": "Donut chart splitting observed parking duration into local overnight and daytime windows",
       "window": "Local window",
       "duration": "Observed dwell ({{unit}})",
@@ -473,7 +475,7 @@
       "hourProfile": "Hour",
       "weekdayProfile": "Weekday",
       "startsSeries": "Parking starts",
-      "title": "When Parking Starts",
+      "title": "When parking starts",
       "subtitle": "{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.",
       "aria": "Bar charts of reconstructed parking starts by local hour and weekday",
       "profile": "Profile",
@@ -486,7 +488,7 @@
     "startBarColTime": "Time"
   },
   "physicsLedger": {
-    "title": "Physics Ledger",
+    "title": "Physics ledger",
     "subtitle": "Predicted vs measured energy and force. Residual is unexplained, never zero-filled.",
     "unknown": {
       "title": "Unknown budget",
@@ -605,10 +607,10 @@
     }
   },
   "telemetry": {
-    "title": "Live Telemetry",
+    "title": "Live telemetry",
     "drivetrain": "Drivetrain",
     "torque": "Torque",
-    "motorTemp": "Motor Temp",
+    "motorTemp": "Motor temp",
     "gear": "Gear",
     "latestUnknown": "Latest reading flagged unknown: {{value}}",
     "replayUnverified": "Replay event-time preservation not confirmed",
@@ -633,14 +635,14 @@
     "epochMeterBounds": "Epochs with FSD counter bounds",
     "budgetBreakdown": "Per-signal coverage budget",
     "nerveScope": "Counts classify returned signal checks only; an absent signal is not a measured zero.",
-    "gforce": "G-Force",
+    "gforce": "G-force",
     "climate": "Climate",
     "cabin": "Cabin",
     "outside": "Outside",
-    "hvac": "HVAC Power",
+    "hvac": "HVAC power",
     "fan": "Fan",
     "defrost": "Defrost",
-    "batHeater": "Bat Heater",
+    "batHeater": "Bat heater",
     "noModes": "No active modes",
     "security": "Security",
     "lock": "Lock",
@@ -650,11 +652,11 @@
     "active": "Active",
     "off": "Off",
     "doors": "Doors",
-    "allClosed": "All Closed",
+    "allClosed": "All closed",
     "open": "Open",
     "windows": "Windows",
-    "tirePressure": "Tire Pressure",
-    "allNormal": "All Normal",
+    "tirePressure": "Tire pressure",
+    "allNormal": "All normal",
     "warning": "Warning",
     "media": "Media",
     "unknownArtist": "Unknown artist",
@@ -668,37 +670,37 @@
     "work": "Work",
     "favorite": "Favorite",
     "noSavedLocation": "No saved location",
-    "driverSetpoint": "Driver Setpoint",
-    "passengerSetpoint": "Passenger Setpoint",
-    "hvacState": "HVAC State",
-    "fanSpeed": "Fan Speed",
+    "driverSetpoint": "Driver setpoint",
+    "passengerSetpoint": "Passenger setpoint",
+    "hvacState": "HVAC state",
+    "fanSpeed": "Fan speed",
     "precondition": "Precondition",
     "noClimateData": "No climate data available",
-    "energyCharging": "Energy & Charging",
-    "chargerVoltage": "Charger Voltage",
-    "chargerCurrent": "Charger Current",
-    "chargerPower": "Charger Power",
-    "energyAdded": "Energy Added",
-    "chargingState": "Charging State",
-    "batteryLevel": "Battery Level",
-    "chargeRate": "Charge Rate",
+    "energyCharging": "Energy & charging",
+    "chargerVoltage": "Charger voltage",
+    "chargerCurrent": "Charger current",
+    "chargerPower": "Charger power",
+    "energyAdded": "Energy added",
+    "chargingState": "Charging state",
+    "batteryLevel": "Battery level",
+    "chargeRate": "Charge rate",
     "noChargingTelemetry": "No charging telemetry available",
-    "mediaNav": "Media & Navigation",
-    "shiftState": "Shift State",
+    "mediaNav": "Media & navigation",
+    "shiftState": "Shift state",
     "power": "Power",
     "rpmFront": "Front RPM",
     "rpmRear": "Rear RPM",
-    "torqueFront": "Front Torque",
-    "torqueRear": "Rear Torque",
-    "inverterTemp": "Inverter Temp",
+    "torqueFront": "Front torque",
+    "torqueRear": "Rear torque",
+    "inverterTemp": "Inverter temp",
     "regen": "Regen",
     "noMotorData": "No motor data available",
     "lockStatus": "Vehicle lock status",
     "sentryMode": "Sentry Mode",
-    "userPresent": "User Present",
-    "remoteStart": "Remote Start",
+    "userPresent": "User present",
+    "remoteStart": "Remote start",
     "noSecurityData": "No security data available",
-    "nowPlaying": "Now Playing",
+    "nowPlaying": "Now playing",
     "nothingPlaying": "Nothing playing",
     "noMediaData": "No media data",
     "noActiveDestination": "No active destination",
@@ -706,20 +708,23 @@
     "placeWork": "Work",
     "placeFavorite": "Favorite",
     "noLocationData": "No location data",
-    "vehicleState": "Vehicle State",
+    "vehicleState": "Vehicle state",
     "live": "Live",
-    "highBeams": "High Beams",
-    "turnSignal": "Turn Signal",
+    "highBeams": "High beams",
+    "turnSignal": "Turn signal",
     "hazards": "Hazards",
-    "driverSeat": "Driver Seat",
+    "driverSeat": "Driver seat",
     "seatOccupied": "Occupied",
     "seatEmpty": "Empty",
-    "pairedKeys": "Paired Keys",
+    "pairedKeys": "Paired keys",
     "valetMode": "Valet Mode",
     "serviceMode": "Service Mode",
-    "speedLimit": "Speed Limit",
-    "centerDisplay": "Center Display",
-    "homelinkDevices": "HomeLink Devices"
+    "speedLimit": "Speed limit",
+    "centerDisplay": "Center display",
+    "homelinkDevices": "HomeLink Devices",
+    "sparkline": {
+      "retained": "Trend may be out of date"
+    }
   },
   "teslaOnly": {
     "livingClockIngest": "Latest stored ingest timestamp",
@@ -731,7 +736,7 @@
     "logbookLast": "Last recorded gear: {{gear}} · last charge state: {{charge}}",
     "modesLatestFirmware": "Last observed firmware: {{value}}",
     "rangePairRelative": "Difference relative to {{baseline}}: {{value}}",
-    "nervousMatchedBudgets": "Non-alive fields with a same-named Unknown OS budget: {{count}} / {{total}}",
+    "nervousMatchedBudgets": "Non-alive fields with a same-named unknown OS budget: {{count}} / {{total}}",
     "nervousBudgetReading": "{{field}}: {{status}} now; {{hours}} h unknown in returned budget",
     "nervousNoBudgetMatch": "No matching signal budget was returned; signal-specific unknown hours cannot be inferred.",
     "nervousBudgetCaution": "Name matching is an exact cross-reference, not proof that a currently silent field was silent throughout its historical unknown budget.",
@@ -768,7 +773,7 @@
     "lifeChronologyRow": "{{state}}: {{from}} → {{to}} ({{duration}})",
     "epochsBoundsKnown": "Epochs with both FSD counter bounds: {{count}} / {{total}}",
     "epochsCounterDrops": "Epochs with lower final FSD counter: {{count}}",
-    "epochsDwellKnown": "Epochs with Complete-to-unplug value: {{count}}",
+    "epochsDwellKnown": "Epochs with complete-to-unplug value: {{count}}",
     "epochsChronology": "Version observation chronology",
     "epochsNoHistory": "No firmware observations returned. Current version and intervening updates are unknown.",
     "epochsCaution": "The first observation of a version is not its installation timestamp. Counter changes within or across epochs are not evidence of FSD use; compare meter resets before attributing a drop to an update.",
@@ -833,7 +838,7 @@
     "clocksOver60": "Over one minute",
     "clocksOver300": "Over five minutes",
     "clocksMissing": "Unknown interval",
-    "clocksAnalysis": "Lag is ingest minus event time for paired timestamps; negative values can reflect clock disagreement. Intervals are gaps between returned events, not proven outages. Display time is generated on read. Compare Unknown OS and Car Kept Living.",
+    "clocksAnalysis": "Lag is ingest minus event time for paired timestamps; negative values can reflect clock disagreement. Intervals are gaps between returned events, not proven outages. Display time is generated on read. Compare Unknown OS and Car kept living.",
     "unknownAccepted": "Accepted telemetry: {{value}}",
     "unknownUncovered": "Uncovered window: {{value}}",
     "unknownKinds": "Reported signal budgets: {{count}}",
@@ -864,7 +869,7 @@
     "metersQuantified": "Quantifiable drops: {{count}}",
     "metersLargest": "Largest measured drop: {{value}}",
     "metersDrop": "Measured drop",
-    "metersAnalysis": "Counters are current returned readings, not lifetime totals. A drop is a difference between before and after counter values, not lost driven distance. The cause is classified from nearby mode or firmware evidence, not established as fact. Compare Firmware Epochs.",
+    "metersAnalysis": "Counters are current returned readings, not lifetime totals. A drop is a difference between before and after counter values, not lost driven distance. The cause is classified from nearby mode or firmware evidence, not established as fact. Compare Firmware epochs.",
     "metersSnapshot": "These are the latest returned counters; the report does not timestamp each current counter reading or provide a continuous counter time series. The FSD counter does not measure engaged FSD driving.",
     "metersRelative": "FSD counter / driving counter: {{value}}",
     "metersRatioNote": "The counter ratio compares two returned readings only. It does not indicate FSD engagement share, particularly across resets or different counter scopes.",
@@ -874,9 +879,9 @@
     "metersEpoch": "Firmware {{version}} observed {{from}} → {{to}}",
     "metersEpochCounters": "FSD counter bounds: {{from}} → {{to}}",
     "metersNoEpochs": "No firmware counter bounds were returned for cross-checking.",
-    "metersModeContext": "Latest mode context: Valet {{valet}}, Service {{service}}, Transport {{transport}}",
+    "metersModeContext": "Latest mode context: Valet {{valet}}, service {{service}}, Transport {{transport}}",
     "metersModeCaution": "Latest modes are not historical mode readings at each drop. Firmware epoch bounds are observations, not a continuous trace or proof of cause.",
-    "livingClockComparison": "Three Clocks latest event: {{value}} · matches last telemetry: {{match}}",
+    "livingClockComparison": "Three clocks latest event: {{value}} · matches last telemetry: {{match}}",
     "livingNoNotes": "No explanatory notes returned; a silent broker does not identify the missing source.",
     "logbookEntries": "Returned entries",
     "epochLatestStart": "Latest first observed",
@@ -897,7 +902,7 @@
     "vaultCaution": "A digest attests only to returned certificate boundaries under its rules; HMAC requires the configured key for verification. Neither digest proves telemetry completeness or a lifetime record.",
     "workbench": {
       "subtitle": "A bounded evidence workbench: conclusions first, raw observations on demand.",
-      "navigation": "Tesla Physics investigations",
+      "navigation": "Tesla physics investigations",
       "choose": "Choose investigation",
       "overview": "Start here",
       "summary": "Evidence at a glance",
@@ -969,67 +974,67 @@
     "hmacDigest": "HMAC-SHA256 digest",
     "feature": {
       "ledger": {
-        "title": "Physics Ledger"
+        "title": "Physics ledger"
       },
       "clocks": {
-        "title": "Three Clocks"
+        "title": "Three clocks"
       },
       "life-tape": {
-        "title": "Life Tape"
+        "title": "Life tape"
       },
       "contradictions": {
-        "title": "Contradiction Court"
+        "title": "Contradiction court"
       },
       "meters": {
-        "title": "Trip-Meter Genealogy"
+        "title": "Trip-meter genealogy"
       },
       "unknown": {
         "title": "Unknown OS"
       },
       "car-kept-living": {
-        "title": "Car Kept Living"
+        "title": "Car kept living"
       },
       "logbook": {
-        "title": "Tesla-Language Logbook"
+        "title": "Tesla-language logbook"
       },
       "firmware-epochs": {
-        "title": "Firmware Epochs"
+        "title": "Firmware epochs"
       },
       "charge-port": {
-        "title": "Charge-Port Court"
+        "title": "Charge-port court"
       },
       "black-box": {
-        "title": "Black Box 90s"
+        "title": "Black box 90s"
       },
       "dictionary": {
-        "title": "Owner Dictionary"
+        "title": "Owner dictionary"
       },
       "vault": {
-        "title": "Physics Vault"
+        "title": "Physics vault"
       },
       "modes": {
-        "title": "Mode Laws"
+        "title": "Mode laws"
       },
       "nervous-system": {
-        "title": "Nervous System"
+        "title": "Nervous system"
       },
       "range": {
-        "title": "Range Disagreement"
+        "title": "Range disagreement"
       }
     },
-    "title": "Tesla Physics",
+    "title": "Tesla physics",
     "subtitle": "Gear, charge, park, and meters as Tesla language.",
     "hub": "All Tesla physics",
     "empty": "Select a vehicle to load Tesla physics.",
     "unknown": "unknown",
-    "clocks": "Three Clocks",
+    "clocks": "Three clocks",
     "eventTime": "Event time",
     "ingestTime": "Ingest time",
     "displayTime": "Display time",
-    "lifeTape": "Life Tape",
-    "contradictions": "Contradiction Court",
+    "lifeTape": "Life tape",
+    "contradictions": "Contradiction court",
     "noContradictions": "No contradictions in the window. Complete still latched is expected.",
-    "meters": "Trip-Meter Genealogy",
+    "meters": "Trip-meter genealogy",
     "odometer": "Odometer",
     "drivingMeter": "Driving trip meter",
     "fsdMeter": "FSD trip meter",
@@ -1038,25 +1043,25 @@
     "window": "Window",
     "sampled": "Sampled",
     "unknownHours": "Unknown",
-    "carKeptLiving": "Car Kept Living",
+    "carKeptLiving": "Car kept living",
     "mqttUnknown": "MQTT state unknown",
     "mqttUp": "MQTT connected",
     "mqttDown": "MQTT not connected",
     "queued": "Queued",
     "replay": "Replay keeps event time",
-    "logbook": "Tesla-Language Logbook",
-    "epochs": "Firmware Epochs",
-    "portCourt": "Charge-Port Court",
-    "blackBox": "Black Box 90s",
+    "logbook": "Tesla-language logbook",
+    "epochs": "Firmware epochs",
+    "portCourt": "Charge-port court",
+    "blackBox": "Black box 90s",
     "frames": "{{count}} frames",
-    "dictionary": "Owner Dictionary",
+    "dictionary": "Owner dictionary",
     "unplug": "Complete → unplug",
     "parkDwell": "Park confirm dwell",
     "unscheduled": "Complete without schedule",
-    "vault": "Physics Vault",
-    "modes": "Mode Laws",
-    "nervous": "Nervous System",
-    "range": "Range Disagreement",
+    "vault": "Physics vault",
+    "modes": "Mode laws",
+    "nervous": "Nervous system",
+    "range": "Range disagreement",
     "rated": "Rated",
     "typical": "Typical",
     "ideal": "Ideal",
@@ -1090,7 +1095,7 @@
     "emptyList": "Nothing in this window.",
     "followEvidence": "Continue the investigation",
     "relatedNote": "Compare independent evidence before interpreting a gap, reset, or disagreement. These views share the selected vehicle.",
-    "scienceLab": "Science Lab",
+    "scienceLab": "Science lab",
     "sampleCoverage": "Sampled window",
     "whereToStart": "Where to start",
     "windowNote": "Exclusive views use up to 14 days of bounded history. Sampled coverage is time with accepted telemetry, not proof that every signal was present. Live values and session boundaries may use different evidence.",
@@ -1108,7 +1113,7 @@
     "conflictNote": "Inspect each timestamp against charge-port and motion evidence. Conflicts flag observations for review; they do not establish which sensor was wrong.",
     "before": "Before",
     "after": "After",
-    "resetCaution": "A cause is classified from nearby mode or firmware evidence, not verified as the reason the meter fell. Compare timestamps with Firmware Epochs.",
+    "resetCaution": "A cause is classified from nearby mode or firmware evidence, not verified as the reason the meter fell. Compare timestamps with Firmware epochs.",
     "budgetNote": "Per-signal unknown hours overlap. Do not add these budgets together: each asks a different question about the same window.",
     "lastTelemetry": "Last recorded telemetry",
     "missingSince": "Elapsed since last event",
@@ -1139,21 +1144,22 @@
     "allStates": "All states",
     "filterKind": "Filter by finding",
     "allFindings": "All findings",
-    "noMatchingFindings": "No findings match this filter."
+    "noMatchingFindings": "No findings match this filter.",
+    "returnedEvidence": "Returned evidence"
   },
   "utilization": {
     "title": "Utilization",
     "subtitle": "How intensively the car is actually used",
     "kpis": "Utilization summary metrics",
-    "drivingShare": "Time Driving",
+    "drivingShare": "Time driving",
     "ofWindow": "of the observed window",
-    "activeDays": "Days Used",
+    "activeDays": "Days used",
     "observed": "of {{days}} observed days",
-    "perDay": "Distance per Day",
+    "perDay": "Distance per day",
     "driveCount": "{{count}} drives",
-    "costPerKmCard": "Cost per Distance",
+    "costPerKmCard": "Cost per distance",
     "energyOnly": "energy only",
-    "timeSplit": "Where the Hours Go",
+    "timeSplit": "Where the hours Go",
     "drivingHours": "Driving hours",
     "idleHours": "Parked hours",
     "hours": "{{h}} h",
@@ -1297,7 +1303,7 @@
     }
   },
   "vehicleAccess": {
-    "title": "Vehicle Access",
+    "title": "Vehicle access",
     "drivers": {
       "name": "Name",
       "email": "Email",
@@ -1306,31 +1312,32 @@
       "title": "Drivers",
       "refresh": "Refresh drivers",
       "empty": "No drivers found",
-      "removeTitle": "Remove Driver",
+      "removeTitle": "Remove driver",
       "removeMessage": "Are you sure you want to remove this driver's access? This action cannot be undone.",
       "removeConfirm": "Remove"
     },
     "invitations": {
       "status": "Status",
-      "createdBy": "Created By",
+      "createdBy": "Created by",
       "expires": "Expires",
       "link": "Link",
       "copyLink": "Copy invite link",
       "revoke": "Revoke invitation",
-      "title": "Share Invitations",
+      "title": "Share invitations",
       "refresh": "Refresh invitations",
       "create": "Create invitation",
-      "createBtn": "Invite Driver",
+      "createBtn": "Invite driver",
       "empty": "No invitations found",
-      "revokeTitle": "Revoke Invitation",
+      "revokeTitle": "Revoke invitation",
       "revokeMessage": "Are you sure you want to revoke this invitation? The invite link will no longer work.",
       "revokeConfirm": "Revoke"
     },
     "subtitle": "Manage drivers and share invitations",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "snapshot": "Latest access records"
   },
   "vehicleManagement": {
-    "pageTitle": "Vehicle Management",
+    "pageTitle": "Vehicle management",
     "pageSubtitle": "Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.",
     "selectVehicle": "Select management vehicle",
     "vehicle": {
@@ -1344,7 +1351,7 @@
       "emptyTitle": "No vehicles available",
       "empty": "Connect and sync a Tesla vehicle to enable vehicle-scoped management APIs."
     },
-    "title": "Vehicle Management workspace",
+    "title": "Vehicle management workspace",
     "description": "Account metadata, paid specifications, pricing, and enterprise controls are separate from physical vehicle commands.",
     "catalogBadge": "8 official endpoints",
     "noVehicleTitle": "Vehicle selection required",
@@ -1627,73 +1634,73 @@
       }
     },
     "detail": {
-      "batteryOverview": "Battery Overview",
-      "driveTrend": "Drive Distance Trend",
+      "batteryOverview": "Battery overview",
+      "driveTrend": "Drive distance trend",
       "noDriveData": "No drive data for chart",
-      "ratedRange": "Rated Range",
-      "idealRange": "Ideal Range",
+      "ratedRange": "Rated range",
+      "idealRange": "Ideal range",
       "fullIn": "Full in",
-      "chargingTelemetry": "Charging Telemetry",
-      "chargerPower": "Charger Power",
+      "chargingTelemetry": "Charging telemetry",
+      "chargerPower": "Charger power",
       "voltage": "Voltage",
       "current": "Current",
-      "energyAdded": "Energy Added",
-      "chargingState": "Charging State",
-      "batteryLevel": "Battery Level",
-      "chargeRate": "Charge Rate",
-      "milesAdded": "Miles Added",
+      "energyAdded": "Energy added",
+      "chargingState": "Charging state",
+      "batteryLevel": "Battery level",
+      "chargeRate": "Charge rate",
+      "milesAdded": "Miles added",
       "noChargingTelemetry": "No charging telemetry available",
       "climate": "Climate",
-      "driverSetpoint": "Driver Setpoint",
-      "fanSpeed": "Fan Speed",
-      "seatHeaterL": "Seat Heater Left",
-      "seatHeaterR": "Seat Heater Right",
+      "driverSetpoint": "Driver setpoint",
+      "fanSpeed": "Fan speed",
+      "seatHeaterL": "Seat heater left",
+      "seatHeaterR": "Seat heater right",
       "defrost": "Defrost",
-      "climateOn": "Climate On",
+      "climateOn": "Climate on",
       "noClimateData": "No climate data available",
       "motor": "Powertrain",
-      "shiftState": "Shift State",
+      "shiftState": "Shift state",
       "power": "Power",
       "regen": "Regen",
-      "packVoltage": "Pack Voltage",
-      "motorCurrentFront": "Motor Current (F)",
-      "torqueFront": "Front Torque",
-      "torqueRear": "Rear Torque",
+      "packVoltage": "Pack voltage",
+      "motorCurrentFront": "Motor current (F)",
+      "torqueFront": "Front torque",
+      "torqueRear": "Rear torque",
       "rpmFront": "Front RPM",
       "rpmRear": "Rear RPM",
-      "motorTemp": "Motor Temp (peak)",
+      "motorTemp": "Motor temp (peak)",
       "noMotorData": "No motor data available",
-      "quickLinks": "Quick Links",
+      "quickLinks": "Quick links",
       "security": "Security",
       "doors": "Doors",
       "windows": "Windows",
       "windowsOpen": "{{count}} open",
       "noSecurityData": "No security data available",
-      "tireFl": "Front Left",
-      "tireFr": "Front Right",
-      "tireRl": "Rear Left",
-      "tireRr": "Rear Right",
-      "tirePressure": "Tire Pressure",
+      "tireFl": "Front left",
+      "tireFr": "Front right",
+      "tireRl": "Rear left",
+      "tireRr": "Rear right",
+      "tirePressure": "Tire pressure",
       "noTireData": "No tire pressure data available",
-      "carType": "Car Type",
+      "carType": "Car type",
       "trim": "Trim",
-      "color": "Exterior Color",
+      "color": "Exterior color",
       "wheels": "Wheels",
-      "roofColor": "Roof Color",
-      "chargePort": "Charge Port",
-      "rhd": "Right-Hand Drive",
-      "europeVehicle": "Europe Vehicle",
-      "offroadLightbar": "Offroad Lightbar",
-      "rearSeatHeaters": "Rear Seat Heaters",
+      "roofColor": "Roof color",
+      "chargePort": "Charge port",
+      "rhd": "Right-hand drive",
+      "europeVehicle": "Europe vehicle",
+      "offroadLightbar": "Offroad lightbar",
+      "rearSeatHeaters": "Rear seat heaters",
       "sunroofInstalled": "Sunroof",
       "softwareVersion": "Software",
-      "vehicleConfig": "Vehicle Configuration",
-      "title": "Vehicle Detail",
+      "vehicleConfig": "Vehicle configuration",
+      "title": "Vehicle detail",
       "wakeSuccess": "Wake command sent",
       "wakeFailed": "Failed to wake vehicle",
       "invalidIdTitle": "Vehicle not found",
       "invalidIdBody": "That vehicle link looks wrong. Check the URL or pick a vehicle from the list.",
-      "backToVehicles": "Back to Vehicles",
+      "backToVehicles": "Back to vehicles",
       "section": {
         "headerFailed": "Vehicle header failed to load",
         "batteryRangeFailed": "Battery & range section failed to load",
@@ -1723,32 +1730,70 @@
         "wheels": "Wheels",
         "firmware": "Firmware",
         "name": "Name",
-        "chargePort": "Charge Port",
-        "rearHeaters": "Rear Heaters",
+        "chargePort": "Charge port",
+        "rearHeaters": "Rear heaters",
         "efficiency": "Efficiency",
         "sunroof": "Sunroof",
-        "notInstalled": "Not Installed",
-        "remoteStart": "Remote Start",
+        "notInstalled": "Not installed",
+        "remoteStart": "Remote start",
         "active": "Active",
         "off": "Off",
-        "offroadLightbar": "Offroad Lightbar",
+        "offroadLightbar": "Offroad lightbar",
         "present": "Present",
-        "swUpdate": "SW Update",
+        "swUpdate": "SW update",
         "none": "None",
-        "swDownload": "SW Download",
-        "swInstall": "SW Install"
+        "swDownload": "SW download",
+        "swInstall": "SW install"
       },
       "prefs": {
         "intro": "These are your vehicle's display settings — you can sync your app to match them from the Settings page.",
         "distance": "Distance",
         "temperature": "Temperature",
-        "chargeUnit": "Charge Unit",
-        "tirePressure": "Tire Pressure",
-        "time24h": "24h Time"
+        "chargeUnit": "Charge unit",
+        "tirePressure": "Tire pressure",
+        "time24h": "24h time"
       },
       "batteryAria": "Battery current and remaining levels bar chart",
       "driveTrendAria": "Recent drive distance and duration area chart",
-      "speedHistoryAria": "Vehicle speed history area chart"
+      "speedHistoryAria": "Vehicle speed history area chart",
+      "brief": {
+        "chargeTitle": "Charging options",
+        "overviewTitle": "Range and charging",
+        "overviewDescription": "Rated and ideal range with the reported charging state, range-added rate and available time-to-full estimate.",
+        "fanDescription": "Reported fan value using the existing fan-status then fan-speed fallback order.",
+        "seatLeftDescription": "Reported left-seat heater level; missing is distinct from zero.",
+        "seatRightDescription": "Reported right-seat heater level; missing is distinct from zero.",
+        "climateDescription": "Cabin and outside temperatures, driver setpoint, fan speed, seat heating, defrost and climate power; missing readings remain unknown.",
+        "voltageDescription": "Rear pack voltage, falling back to the front reading when absent; displayed in volts.",
+        "currentDescription": "Front motor current displayed in amperes.",
+        "frontTorqueDescription": "Front axle torque displayed in newton-metres.",
+        "rearTorqueDescription": "Rear axle torque displayed in newton-metres.",
+        "frontRpmDescription": "Direct front axle-speed reading in RPM; no inferred angular-speed conversion.",
+        "rearRpmDescription": "Direct rear axle-speed reading in RPM; no inferred angular-speed conversion.",
+        "motorDescription": "Shift state, pack voltage, front motor current, axle torque and RPM, and peak known motor temperature.",
+        "quickTitle": "Live vehicle readings",
+        "quickDescription": "Battery, range, odometer, motion, temperatures, power and vehicle state from the current source snapshot.",
+        "liveContext": "{{source}} · {{status}}",
+        "windowsPartial": "Other window states are unknown.",
+        "securityDescription": "Lock, sentry, doors and windows retain their individual source states; unknown is not unlocked, off or closed.",
+        "tireDescription": "Four corner pressures with source-derived low, normal, high or critical status and explicit missing-data reasons.",
+        "loading": "Loading source",
+        "retained": "Retained source snapshot",
+        "unavailable": "Source unavailable",
+        "snapshot": "Source snapshot",
+        "unknown": "No source readings",
+        "provenance": "{{source}} · {{time}}"
+      },
+      "summaryMixedSources": "Lock and sentry: live state; doors and windows: security telemetry.",
+      "vehicleNumber": "Vehicle #{{id}}",
+      "batteryRange": "Battery & range",
+      "liveStateResource": "Live vehicle state",
+      "overview": "Live overview",
+      "liveState": "Live state",
+      "quickStats": "Quick stats",
+      "systems": "Vehicle systems",
+      "summaryUnknown": "Source time unknown",
+      "summaryProvenance": "{{source}} snapshot"
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",
@@ -1760,19 +1805,19 @@
     "syncSuccess": "Vehicles synced successfully.",
     "syncError": "Sync failed. Please try again.",
     "emptyTitle": "No vehicles yet",
-    "totalVehicles": "Total Vehicles",
-    "avgBattery": "Avg Battery",
-    "totalRange": "Total Range",
-    "chargingOnline": "Charging / Online",
-    "batteryStatus": "Fleet Battery Status",
+    "totalVehicles": "Total vehicles",
+    "avgBattery": "Avg battery",
+    "totalRange": "Total range",
+    "chargingOnline": "Charging / online",
+    "batteryStatus": "Fleet battery status",
     "avgLabel": "avg",
-    "allVehicles": "All Vehicles",
-    "removeTitle": "Remove Vehicle",
+    "allVehicles": "All vehicles",
+    "removeTitle": "Remove vehicle",
     "removeMessage": "Are you sure you want to remove \"{{name}}\"? This will delete all associated data including drives, charges, and state history.",
     "emptyMessage": "Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.",
     "summary": "Fleet summary",
     "overview": "Fleet overview",
-    "statusBreakdown": "Fleet Status",
+    "statusBreakdown": "Fleet status",
     "noStatusData": "No fleet status data yet",
     "noStatusDataDescription": "Availability and readiness appear after at least one registered vehicle reports live state.",
     "noBatteryReadings": "Live battery readings have not arrived for the registered fleet.",
@@ -1791,6 +1836,1694 @@
     "locked": "Locked",
     "sentryOn": "Sentry mode on",
     "noLiveData": "No live data",
-    "unknownModel": "Unknown model"
+    "unknownModel": "Unknown model",
+    "physicsCockpit": {
+      "heartbeat": "FSD trip-meter heartbeat",
+      "heartbeatError": "Trip-meter heartbeat could not be loaded.",
+      "noHeartbeat": "No trip-meter heartbeat has been reported.",
+      "noPark": "No park evidence has been reported.",
+      "parkError": "Park evidence could not be loaded.",
+      "snapshot": "Live cockpit readings"
+    },
+    "summarySnapshot": "Current verified fleet readings"
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "alertPacks": {
+    "aiDescription": "Describe your goal, from a focused group to comprehensive coverage. Helix selects supported rules; you review defaults and individual overrides before installing.",
+    "aiGenerate": "Suggest an alert pack",
+    "aiReview": "Review this proposed pack",
+    "aiTitle": "Build a custom pack with Helix",
+    "goal": "What would you like to keep an eye on?",
+    "goalExample": "For example: a low-noise group for charging and battery on longer trips",
+    "helixMessage": "Suggest a message for {{name}}",
+    "proposedCount": "{{count}} proposed rules",
+    "proposedRules": "Proposed rules",
+    "rules": {
+      "battery-critical": {
+        "message": "{{VehicleName}} has {{Value}}% battery remaining. Plan a safe charging stop.",
+        "name": "Battery critically low"
+      },
+      "battery-full": {
+        "message": "{{VehicleName}} has reached {{Value}}%. Plenty in the battery for the next chapter.",
+        "name": "Battery above 90%"
+      },
+      "battery-heating-ended": {
+        "message": "{{VehicleName}} reports its battery heater has stopped.",
+        "name": "Battery heater stopped"
+      },
+      "battery-heating": {
+        "message": "{{VehicleName}} is warming its battery. Cold-weather preparation is underway.",
+        "name": "Battery heater active"
+      },
+      "battery-low": {
+        "message": "{{VehicleName}} is down to {{Value}}% battery. Time to put the next charge on the map.",
+        "name": "Battery running low"
+      },
+      "battery-reserve": {
+        "message": "{{VehicleName}} has {{Value}}% remaining. A good moment to plan the next plug-in.",
+        "name": "Battery reserve below 30%"
+      },
+      "bms-full": {
+        "message": "{{VehicleName}} reports its battery-management full-charge cycle complete.",
+        "name": "BMS full charge complete"
+      },
+      "cabin-cold": {
+        "message": "{{VehicleName}} has a frosty cabin. Consider preconditioning before your next departure.",
+        "name": "Cabin below freezing"
+      },
+      "cabin-hot": {
+        "message": "{{VehicleName}} reports a hot cabin. Check cabin conditions before getting in; never rely on this alert for occupant safety.",
+        "name": "Cabin temperature high"
+      },
+      "charge-cold-weather": {
+        "message": "{{VehicleName}} has enabled charge-port cold-weather mode.",
+        "name": "Charge port cold-weather mode"
+      },
+      "charge-complete": {
+        "message": "{{VehicleName}} has finished its charging chapter. Next stop: your choice.",
+        "name": "Charging complete"
+      },
+      "charge-latch": {
+        "message": "{{VehicleName}} reports a charge-port latch change: {{Value}}.",
+        "name": "Charge port latch changed"
+      },
+      "charge-limit": {
+        "message": "{{VehicleName}} has a new charging target: {{Value}}%. Check that it suits your next journey.",
+        "name": "Charge limit changed"
+      },
+      "charge-port-closed": {
+        "message": "{{VehicleName}} reports its charge port closed.",
+        "name": "Charge port closed"
+      },
+      "charge-port-open": {
+        "message": "{{VehicleName}} has opened its charge port. Ready for a connection.",
+        "name": "Charge port opened"
+      },
+      "charge-schedule-mode": {
+        "message": "{{VehicleName}} has a new charging schedule mode: {{Value}}.",
+        "name": "Charging schedule changed"
+      },
+      "charge-scheduled": {
+        "message": "{{VehicleName}} is waiting on its charging schedule.",
+        "name": "Scheduled charging pending"
+      },
+      "charge-started": {
+        "message": "{{VehicleName}} is taking an electricity break. Charging has started.",
+        "name": "Charging started"
+      },
+      "charge-stopped": {
+        "message": "{{VehicleName}} reports charging stopped. If that was not planned, check the session.",
+        "name": "Charging stopped"
+      },
+      "climate-auto": {
+        "message": "{{VehicleName}} has changed automatic climate mode to {{Value}}.",
+        "name": "Automatic climate mode changed"
+      },
+      "climate-keeper": {
+        "message": "{{VehicleName}} reports climate keeper mode {{Value}}. Never use this notification as an occupant-safety monitor.",
+        "name": "Climate keeper mode changed"
+      },
+      "destination-changed": {
+        "message": "{{VehicleName}} has updated its destination: {{Value}}.",
+        "name": "Navigation destination changed"
+      },
+      "drive-neutral": {
+        "message": "{{VehicleName}} reports Neutral selected.",
+        "name": "Neutral gear selected"
+      },
+      "drive-parked": {
+        "message": "{{VehicleName}} has selected park. Take a breath before the next trip.",
+        "name": "Park gear selected"
+      },
+      "drive-reverse": {
+        "message": "{{VehicleName}} has selected Reverse. A small step back before moving on.",
+        "name": "Reverse gear selected"
+      },
+      "drive-started": {
+        "message": "{{VehicleName}} has selected drive. The next chapter is ahead.",
+        "name": "Drive gear selected"
+      },
+      "driver-arrived": {
+        "message": "{{VehicleName}} reports the driver seat occupied.",
+        "name": "Driver seat occupied"
+      },
+      "driver-belt": {
+        "message": "{{VehicleName}} reports driver seatbelt state {{Value}}. This does not establish whether the vehicle is moving.",
+        "name": "Driver seatbelt changed"
+      },
+      "driver-left": {
+        "message": "{{VehicleName}} reports the driver seat unoccupied.",
+        "name": "Driver seat unoccupied"
+      },
+      "fast-charger-left": {
+        "message": "{{VehicleName}} no longer detects a fast charger.",
+        "name": "Fast charger disconnected"
+      },
+      "fast-charger": {
+        "message": "{{VehicleName}} has detected a fast charger. Watch the charging session for actual power.",
+        "name": "Fast charger connected"
+      },
+      "favorite-arrived": {
+        "message": "{{VehicleName}} reports arrival at a saved favorite.",
+        "name": "Arrived at a favorite location"
+      },
+      "favorite-left": {
+        "message": "{{VehicleName}} no longer reports being at a saved favorite.",
+        "name": "Left a favorite location"
+      },
+      "guest-disabled": {
+        "message": "{{VehicleName}} reports Guest Mode disabled.",
+        "name": "Guest mode disabled"
+      },
+      "guest-enabled": {
+        "message": "{{VehicleName}} reports Guest Mode enabled.",
+        "name": "Guest mode enabled"
+      },
+      "home-arrived": {
+        "message": "{{VehicleName}} reports home. The familiar end of a journey.",
+        "name": "Arrived home"
+      },
+      "home-left": {
+        "message": "{{VehicleName}} no longer reports being at home.",
+        "name": "Left home"
+      },
+      "hvac-off": {
+        "message": "{{VehicleName}} has switched climate off.",
+        "name": "Climate system stopped"
+      },
+      "hvac-on": {
+        "message": "{{VehicleName}} has switched climate on. Comfort is getting some attention.",
+        "name": "Climate system active"
+      },
+      "locked": {
+        "message": "{{VehicleName}} reports locked. One less thing to double-check.",
+        "name": "Vehicle locked"
+      },
+      "media-artist": {
+        "message": "{{VehicleName}} is now showing artist {{Value}}.",
+        "name": "Now-playing artist changed"
+      },
+      "media-playback": {
+        "message": "{{VehicleName}} reports playback state {{Value}}.",
+        "name": "Media playback changed"
+      },
+      "media-source": {
+        "message": "{{VehicleName}} switched its audio source to {{Value}}.",
+        "name": "Media source changed"
+      },
+      "media-station": {
+        "message": "{{VehicleName}} tuned to {{Value}}.",
+        "name": "Media station changed"
+      },
+      "media-track": {
+        "message": "{{VehicleName}} changed the soundtrack: {{Value}}.",
+        "name": "Now-playing track changed"
+      },
+      "module-cold": {
+        "message": "{{VehicleName}} has a cold battery module. Charging and regeneration may be limited.",
+        "name": "Battery module temperature low"
+      },
+      "module-hot": {
+        "message": "{{VehicleName}} reports a warm battery module. Review the temperature trend; this alert does not diagnose a fault.",
+        "name": "Battery module temperature high"
+      },
+      "outside-freezing": {
+        "message": "{{VehicleName}} reports freezing air outside. This does not measure road conditions.",
+        "name": "Outside temperature below freezing"
+      },
+      "outside-hot": {
+        "message": "{{VehicleName}} reports hot weather outside. Plan cabin comfort before departure.",
+        "name": "Outside temperature high"
+      },
+      "pin-disabled": {
+        "message": "{{VehicleName}} reports PIN to drive disabled. Check this setting if the change was unexpected.",
+        "name": "PIN to drive disabled"
+      },
+      "pin-enabled": {
+        "message": "{{VehicleName}} reports PIN to drive enabled.",
+        "name": "PIN to drive enabled"
+      },
+      "powershare-state": {
+        "message": "{{VehicleName}} reports Powershare state {{Value}}.",
+        "name": "Powershare state changed"
+      },
+      "powershare-stop": {
+        "message": "{{VehicleName}} reports Powershare stop reason {{Value}}. Review the vehicle for context.",
+        "name": "Powershare stop reason changed"
+      },
+      "powershare-type": {
+        "message": "{{VehicleName}} reports Powershare type {{Value}}.",
+        "name": "Powershare type changed"
+      },
+      "preconditioning-ended": {
+        "message": "{{VehicleName}} reports preconditioning has stopped.",
+        "name": "Preconditioning stopped"
+      },
+      "preconditioning": {
+        "message": "{{VehicleName}} is getting ready: preconditioning is active.",
+        "name": "Preconditioning active"
+      },
+      "sentry-state": {
+        "message": "{{VehicleName}} changed Sentry Mode to {{Value}}. A mode change is not evidence of an intrusion.",
+        "name": "Sentry mode changed"
+      },
+      "software-version": {
+        "message": "{{VehicleName}} has a new software chapter: {{Value}}. Take a look at the release notes.",
+        "name": "Software version changed"
+      },
+      "unlocked": {
+        "message": "{{VehicleName}} reports unlocked. A useful heads-up if you expected it to be locked.",
+        "name": "Vehicle unlocked"
+      },
+      "update-available": {
+        "message": "{{VehicleName}} has a software update available. A new chapter is waiting.",
+        "name": "Software update available"
+      },
+      "update-ended": {
+        "message": "{{VehicleName}} no longer reports an update in progress. Check the vehicle for the outcome.",
+        "name": "Software update no longer in progress"
+      },
+      "update-schedule": {
+        "message": "{{VehicleName}} changed its software update schedule: {{Value}}.",
+        "name": "Software update schedule changed"
+      },
+      "update-started": {
+        "message": "{{VehicleName}} is updating its software. Leave the update to finish.",
+        "name": "Software update in progress"
+      },
+      "update-version": {
+        "message": "{{VehicleName}} reports available software version {{Value}}.",
+        "name": "Available software version changed"
+      },
+      "valet-disabled": {
+        "message": "{{VehicleName}} reports Valet Mode disabled. Review access settings when keys change hands.",
+        "name": "Valet mode disabled"
+      },
+      "valet-enabled": {
+        "message": "{{VehicleName}} reports Valet Mode enabled. The keys may be shared, but the settings are worth a glance.",
+        "name": "Valet mode enabled"
+      },
+      "window-driver": {
+        "message": "{{VehicleName}} reports the driver window is {{Value}}.",
+        "name": "Driver window changed"
+      },
+      "window-rear-driver": {
+        "message": "{{VehicleName}} reports the rear driver window is {{Value}}.",
+        "name": "Rear driver window changed"
+      },
+      "work-arrived": {
+        "message": "{{VehicleName}} reports arrival at work.",
+        "name": "Arrived at work"
+      },
+      "work-left": {
+        "message": "{{VehicleName}} no longer reports being at work.",
+        "name": "Left work"
+      }
+    }
+  },
+  "analytics": {
+    "weeklyDigest": {
+      "aiNarration": {
+        "badge": "Helix",
+        "description": "Get a short, Helix-written recap of your week from the digest data above.",
+        "generateButton": "Generate narration",
+        "title": "Helix narration"
+      }
+    }
+  },
+  "anomaly": {
+    "aiBaseline": {
+      "badge": "Helix",
+      "description": "Compute statistical anomaly bounds (mean, stddev, p5/p95) from this vehicle's recent signal history and walk through how each signal compares to the static safe-range fallback.",
+      "generateButton": "Train baseline",
+      "title": "Learn per-vehicle baseline"
+    },
+    "aiExplanation": {
+      "badge": "Helix",
+      "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
+      "emptyHint": "Select a vehicle above to explain its anomalies.",
+      "generateButton": "Generate explanation",
+      "title": "Helix explanation"
+    }
+  },
+  "automations": {
+    "builder": {
+      "aiBuilder": {
+        "badge": "Helix",
+        "description": "Describe the automation you want and get a typed graph draft you can review and save below.",
+        "draftButton": "Draft automation",
+        "inputLabel": "Automation description",
+        "noPrompt": "Describe the automation you want Helix to draft.",
+        "noVehicle": "Pick a vehicle above to let Helix draft an automation for it.",
+        "placeholder": "e.g. precondition the cabin to 22°C when I leave work on weekdays",
+        "title": "Draft from natural language"
+      },
+      "aiGeofenceAware": {
+        "actionsLabel": "Actions",
+        "applyButton": "Apply to form",
+        "badge": "Helix",
+        "conditionsLabel": "Conditions",
+        "description": "Describe an automation that uses one of your existing geofences. Helix proposes a typed graph anchored to a place_id you already have — review and apply to the form below before saving.",
+        "placeholder": "e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection",
+        "proposalLabel": "Proposed automation",
+        "rejectedLabel": "Proposal rejected by validator",
+        "suggestButton": "Suggest automation",
+        "title": "Suggest a geofence-aware automation",
+        "triggersLabel": "Triggers",
+        "unnamed": "(unnamed)"
+      }
+    }
+  },
+  "battery": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
+      "generateButton": "Narrate forecast",
+      "title": "Explain the battery health forecast"
+    }
+  },
+  "bulk": {
+    "clear": "Clear selection",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "chargePlanner": {
+    "aiAgent": {
+      "badge": "Helix",
+      "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically — review the proposed window and click Schedule below to apply it.",
+      "emptyHint": "Select a vehicle and a rate plan to draft a schedule.",
+      "generateButton": "Draft a schedule",
+      "title": "Draft a schedule with Helix"
+    }
+  },
+  "charging": {
+    "aiClustering": {
+      "badge": "Helix",
+      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
+      "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
+      "generateButton": "Explain clusters",
+      "title": "Explain the charging-curve cluster fingerprints"
+    },
+    "aiMlClustering": {
+      "badge": "Helix",
+      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
+      "generateButton": "Train charging-curve clusters",
+      "title": "Learn per-vehicle charging-curve clusters"
+    },
+    "detail": {
+      "aiDiagnosis": {
+        "badge": "Helix",
+        "description": "Get a 2-4 paragraph plain-language explanation of any flags raised on this charging session — trickle, expensive, low-power, or interrupted — generated from the same deterministic aggregation metrics shown above.",
+        "emptyHint": "Waiting for a charging session…",
+        "generateButton": "Generate diagnosis",
+        "title": "Charging diagnosis"
+      }
+    }
+  },
+  "chart": {
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    }
+  },
+  "climate": {
+    "aiPreheatPrecool": {
+      "badge": "Helix",
+      "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
+      "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule.",
+      "generateButton": "Draft schedule",
+      "title": "Suggest a preheat or precool schedule"
+    }
+  },
+  "compare": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the deterministic period-over-period analytics — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign. The numbers are the same the chart and table below show; the narrator only explains them and is honest about zero-baseline windows and best-effort cost figures.",
+      "generateButton": "Narrate comparison",
+      "noVehicleHint": "Pick a vehicle to enable Helix narration.",
+      "title": "Narrate the period comparison"
+    }
+  },
+  "costAnalysis": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the deterministic charging-cost forecast — the historical trend, the projected cost / cost_low / cost_high band, the home-vs-supercharger split, and the deterministic insight. The dollar amounts are the same the chart below shows; the narrator only explains them and is honest that the band is an APPROXIMATE prediction interval, not a strict 95% confidence interval.",
+      "generateButton": "Narrate forecast",
+      "title": "Narrate the charging-cost forecast"
+    }
+  },
+  "dataRepair": {
+    "aiSuggestions": {
+      "badge": "Helix",
+      "button": "Draft repair plan",
+      "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
+      "title": "Helix repair suggestions"
+    }
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    }
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "developerReference": {
+    "stats": {
+      "metric": {
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "loading": "Loading measurements",
+        "retained": "Showing retained measurements"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
+    }
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "driveDetail": {
+    "aiCoaching": {
+      "badge": "Helix",
+      "description": "Get a 2-4 paragraph plain-language coaching summary of this drive — efficiency, regen use, and notable braking or acceleration moments — generated from the same per-drive metrics shown above.",
+      "generateButton": "Generate coaching",
+      "title": "Drive coaching"
+    },
+    "aiSpeedProfile": {
+      "badge": "Helix",
+      "description": "Get a short plain-language interpretation of this drive’s speed regime distribution — city / suburban / highway buckets, outliers, and how the speed envelope compares to a typical drive — generated from the same per-drive aggregates shown in the chart.",
+      "generateButton": "Generate insights",
+      "title": "Speed-profile insights"
+    }
+  },
+  "drives": {
+    "aiSearch": {
+      "badge": "Helix",
+      "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
+      "searchButton": "Search with Helix",
+      "title": "Find a drive in natural language"
+    }
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "entityContext": {
+    "alerts": "Alerts",
+    "charging": "Charging sessions",
+    "drives": "Drive history",
+    "locations": "Visited locations",
+    "service": "Service history",
+    "telemetry": "Telemetry evidence",
+    "title": "Related context"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "exports": {
+    "aiRedaction": {
+      "badge": "Helix",
+      "button": "Suggest redactions",
+      "description": "Ask Helix to recommend which PII classes to redact from a shared export. The recommendation is catalog-based — Helix never reads the rows of your export; it consults a deterministic per-export-type PII catalog and surfaces the highly-recommended redactions plus the optional ones that depend on your consent. Apply the recommendation by toggling the matching options in your export request.",
+      "exportType": {
+        "account": "Account",
+        "analytics": "Analytics",
+        "backup": "Backup",
+        "charging": "Charging",
+        "drives": "Drives",
+        "trips": "Trips"
+      },
+      "exportTypeLabel": "Export type",
+      "exportTypePlaceholder": "Select an export type…",
+      "noTypeHint": "Pick an export type to enable Helix.",
+      "title": "Plan PII redactions before sharing"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
+  },
+  "freshness": {
+    "age": {
+      "days": "{{count}}d ago",
+      "hours": "{{count}}h ago",
+      "minutes": "{{count}}m ago",
+      "seconds": "{{count}}s ago"
+    },
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "geofences": {
+    "aiSuggest": {
+      "applyButton": "Apply to form",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "description": "Propose a typed geofence draft (centroid, radius, and name) for this visited location based on its visit pattern. Review only — Helix never saves the geofence; you confirm and save via the existing baseline Add geofence form.",
+      "proposalLabel": "Proposed geofence",
+      "radiusLabel": "Radius",
+      "rejectedLabel": "Proposal rejected by validator",
+      "suggestButton": "Suggest geofence",
+      "title": "Suggest a geofence for this location"
+    }
+  },
+  "helix": {
+    "ariaLabel": "Helix",
+    "badge": "Helix",
+    "evidence": {
+      "gathering": "Gathering",
+      "grounded": "Grounded in",
+      "limited": "Limited evidence",
+      "reading": "Reading",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "successful": "successful",
+      "title": "Evidence trail",
+      "tokens": "tokens",
+      "unavailable": "Unavailable",
+      "used": "Used"
+    },
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
+  },
+  "help": {
+    "aiHelp": {
+      "askButton": "Ask the assistant",
+      "badge": "Helix",
+      "description": "Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source.",
+      "inputLabel": "Ask a question about the app",
+      "placeholder": "e.g. How do I enable energy cost forecasting?",
+      "title": "Ask the help assistant"
+    },
+    "parkingAnalytics": {
+      "body": "Parking stints are reconstructed from the gaps between consecutive drives, located at the previous drive's destination. The overnight share counts parked time falling between 22:00 and 06:00 local.",
+      "iconLabel": "More info about parking analytics"
+    },
+    "utilization": {
+      "body": "The observed window runs from the first drive in the picked period to its end. Driving hours come from logged drive durations; everything else is the car sitting still. Costs use your electricity rate from Settings and cover energy only.",
+      "iconLabel": "More info about utilization",
+      "methodologyLabel": "More info about utilization coverage"
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "incidentTimeline": {
+    "aiSummary": {
+      "badge": "Helix",
+      "button": "Summarize",
+      "description": "Get a 3-6 sentence factual summary of this incident’s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.",
+      "title": "Helix timeline summary"
+    }
+  },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "aiQA": {
+      "askButton": "Ask",
+      "badge": "Helix",
+      "description": "Ask Helix a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
+      "inputLabel": "Your question",
+      "noQuestion": "Type a question to ask Helix about your lifetime stats.",
+      "noVehicle": "Select a vehicle to ask about its lifetime stats.",
+      "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
+      "title": "Ask about your lifetime stats"
+    },
+    "unlocked": "✓ Unlocked"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "liveLogs": {
+    "aiSummary": {
+      "badge": "Helix",
+      "button": "Summarize",
+      "description": "Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.",
+      "emptyHint": "Waiting for a valid log window…",
+      "title": "Helix log/trace summary"
+    }
+  },
+  "locations": {
+    "aiAutoName": {
+      "applyButton": "Apply to form",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — Helix never saves the name; you confirm and save via the existing baseline form.",
+      "proposalLabel": "Proposed name",
+      "rejectedLabel": "Proposal rejected by validator",
+      "suggestButton": "Suggest name",
+      "title": "Suggest a name for this location"
+    }
+  },
+  "maintenance": {
+    "aiPredictive": {
+      "badge": "Helix",
+      "button": "Predict maintenance",
+      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
+      "emptyHint": "Select a vehicle first.",
+      "title": "Helix maintenance advisor"
+    }
+  },
+  "maps": {
+    "animatedMarker": {
+      "label": "Vehicle position"
+    },
+    "layerSwitcher": {
+      "dark": "Dark",
+      "label": "Map style",
+      "satellite": "Satellite",
+      "streets": "Streets",
+      "terrain": "Terrain"
+    },
+    "routePlayback": {
+      "empty": "No GPS points to replay for this route.",
+      "mapLabel": "Route playback map"
+    }
+  },
+  "mqttSseInspector": {
+    "aiExplainer": {
+      "badge": "Helix",
+      "button": "Explain streams",
+      "description": "Get a 3-6 sentence factual explanation of the current MQTT broker, SSE hub, and background-job state. The explainer reads only the deterministic broker-status envelope (broker connectivity, per-vehicle stream stats, SSE client counts, job freshness) — broker hostnames, ports, SSE client identifiers, and VINs are redacted before the message reaches the provider. The explanation is informational; the broker-status snapshot above remains the canonical raw view.",
+      "emptyHint": "A valid time window is required.",
+      "title": "Helix stream explainer"
+    }
+  },
+  "nextCharge": {
+    "homeNow": "Home now",
+    "noData": "No charge decision yet",
+    "openAutopilot": "Open Autopilot",
+    "reason": {
+      "charge_home_now": "Charge at home now — the cheapest window is already open (or too far out to wait).",
+      "enough": "Battery is at {{soc}}%, already at the {{target}}% target.",
+      "skip_dc": "Skip {{site}} ({{sc}}) — home now is {{home}} for the same energy.",
+      "supercharger_cheaper": "{{site}} is cheaper ({{sc}} vs {{home}} at home) for the energy you still need.",
+      "supercharger_faster": "Home charging cannot finish before ready-by; {{site}} is the cheapest billed Supercharger.",
+      "wait_offpeak": "Wait for off-peak at {{time}} — save {{save}} versus charging now."
+    },
+    "resource": "Next charge decision",
+    "socLine": "{{soc}}% → {{target}}% · {{kwh}} kWh needed",
+    "supercharger": "Supercharger",
+    "title": "Next charge",
+    "verdict": {
+      "charge_home_now": "Charge home now",
+      "enough": "Enough energy",
+      "skip_dc": "Skip DC-fast",
+      "supercharger": "Use Supercharger",
+      "wait": "Wait for off-peak"
+    },
+    "waitWindow": "Wait window",
+    "waitingSoc": "Waiting for live battery level"
+  },
+  "notifications": {
+    "alertStudio": {
+      "aiBuilder": {
+        "badge": "Helix",
+        "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
+        "draftButton": "Draft alert",
+        "title": "Draft from natural language"
+      },
+      "aiConflicts": {
+        "badge": "Helix",
+        "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
+        "detectButton": "Detect conflicts",
+        "emptyMessage": "No structural conflicts found in the current rule set.",
+        "kind": {
+          "overlapping_threshold": "Overlapping threshold",
+          "redundant_duplicate": "Redundant duplicate"
+        },
+        "reviewButton": "Review rule",
+        "title": "Detect cross-rule conflicts"
+      },
+      "aiTemplate": {
+        "applyButton": "Apply to editor",
+        "badge": "Helix",
+        "description": "Ask Helix to write a distinctive Tesla-owner notification body from the alert dimensions you already selected — not a bland threshold line. Helix uses the same placeholder catalog as the editor and never saves — Apply copies the draft into the field below, then you click Save.",
+        "emptyHint": "Choose a signal or computed metric (and operator) first so Helix can ground the template.",
+        "previewLabel": "Proposed template (review before applying):",
+        "previewPlaceholders": "Placeholders: {{keys}}",
+        "suggestButton": "Suggest template",
+        "title": "Suggest a message template"
+      },
+      "aiTuning": {
+        "applyButton": "Apply to form",
+        "badge": "Helix",
+        "description": "Review recent firings and propose a typed AlertRule patch. Descriptive replay only — review before saving.",
+        "previewLabel": "Proposed patch (review before saving):",
+        "suggestButton": "Suggest tuning",
+        "title": "Suggest lower-noise tuning"
+      }
+    },
+    "inbox": {
+      "aiCategorize": {
+        "applyButton": "Apply categories as filter",
+        "badge": "Helix",
+        "description": "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.",
+        "previewLabel": "Proposed categories (review before applying):",
+        "suggestButton": "Suggest categories",
+        "title": "Suggest inbox categories"
+      }
+    },
+    "quietHours": {
+      "aiSuggestion": {
+        "applyButton": "Apply to form",
+        "badge": "Helix",
+        "button": "Suggest quiet hours",
+        "description": "Ask Helix to recommend ONE quiet-hours window based on the trailing 30 days of your notification cadence. Helix never reads individual notification titles or messages — it consults a per-hour aggregate of non-critical events to find the sparsest interval. Apply the recommendation to seed the form below; you remain in control of the Save button.",
+        "previewBypass": "Bypass severities: {{severities}}",
+        "previewExistingCount": "You already have {{count}} quiet-hours window(s) configured.",
+        "previewInsufficientHistory": "Helix had insufficient notification history; this is a conservative default.",
+        "previewLabel": "Proposed window (review before saving):",
+        "previewWeekdays": "Weekday bitmask: {{weekdays}}",
+        "previewWindow": "Window: {{start}} → {{end}} ({{tz}})",
+        "title": "Suggest a quiet-hours window from your notification history"
+      }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "detailTitle": "{{title}} details",
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details",
+    "status": {
+      "loading": "Resolving live state",
+      "ready": "Fleet ready",
+      "review": "Review recommended"
+    },
+    "vehicles": {
+      "batteryCoverageNote": "Based on {{covered}} of {{total}} vehicles with a current battery reading.",
+      "description": "Live connectivity, departure readiness, utilization, software consistency, and service attention are consolidated before vehicle-level detail.",
+      "evidenceGapDescription": "Refresh vehicles without verified battery or software readings before making fleet-wide decisions.",
+      "evidenceGapTitle": "Current fleet evidence is incomplete",
+      "eyebrow": "Fleet posture",
+      "liveStateSource": "Live vehicle state",
+      "lowBatteryDescription": "Review charging readiness before the next scheduled departure.",
+      "lowBatteryTitle": "{{count}} vehicle below 20%",
+      "narrative": {
+        "chargeResponse": "Confirm charging plans for vehicles below the departure-readiness threshold.",
+        "connectivityResponse": "Verify connectivity before issuing commands to vehicles without live state.",
+        "coverageLimitation": "Fleet-wide conclusions are limited because one or more vehicles lack verified current state, battery, or software evidence.",
+        "evidenceGapResponse": "Refresh vehicles without verified state, battery, or software evidence before making fleet-wide readiness decisions.",
+        "evidenceLimit": "Supporting evidence is limited to four vehicle snapshots and two urgent work orders.",
+        "liveBasis": "Live state resolved for {{online}} of {{total}} registered vehicles.",
+        "liveMethod": "Resolves current state independently for every registered vehicle.",
+        "monitorResponse": "No immediate fleet response is indicated; continue monitoring readiness and service status.",
+        "readyImpact": "Verified live state and service status support fleet dispatch decisions; unavailable evidence remains explicitly excluded.",
+        "serviceMethod": "Counts open work orders and elevates high- and critical-severity records.",
+        "serviceResponse": "Review the urgent fleet operations work orders before assigning affected vehicles.",
+        "snapshotLimitation": "Live vehicle state is a current snapshot and does not explain why a vehicle is offline or at a low charge level.",
+        "stateUnavailable": "live state unavailable",
+        "vehicleMethod": "Latest independently resolved state for this registered vehicle.",
+        "vehicleSummary": "{{vehicle}}: {{state}}, battery {{battery}}.",
+        "whatChanged": "{{online}} of {{total}} registered vehicles have current state; {{ready}} of {{batteryCovered}} with verified battery data are departure ready, and {{urgent}} urgent work orders remain open.",
+        "whatChangedWithoutBattery": "{{online}} of {{total}} registered vehicles have current state; departure readiness is unknown because no battery reading is verified, and {{urgent}} urgent work orders remain open.",
+        "workOrderBasis": "{{count}} open work orders were evaluated for service attention.",
+        "workOrderLimitation": "Service readiness is incomplete while fleet operations work orders are unavailable.",
+        "workOrderLimitedBasis": "Fleet operations work orders were unavailable.",
+        "workOrderMethod": "Open high- or critical-severity fleet operations work order.",
+        "workOrderSummary": "{{vehicle}}: {{severity}} work order — {{title}}."
+      },
+      "offlineDescription": "Live state could not be resolved. Verify connectivity before issuing commands.",
+      "offlineTitle": "{{count}} vehicle unavailable",
+      "online": "Live state available",
+      "onlineDetail": "Vehicles with a current state response available.",
+      "openFleetOperations": "Fleet operations",
+      "openWorkOrders": "{{count}} open",
+      "provenance": "Based on the registered fleet, the latest independently resolved live state for each vehicle, and Fleet operations work orders.",
+      "readiness": "Departure ready",
+      "readinessDetail": "Vehicles reporting live state with at least 20% battery.",
+      "serviceAttention": "Service attention",
+      "serviceAttentionDescription": "High- or critical-severity maintenance is still open in fleet operations.",
+      "serviceAttentionTitle": "Urgent service work requires attention ({{count}})",
+      "serviceDetail": "High- or critical-severity work orders requiring review: {{urgent}}.",
+      "serviceUnavailableDescription": "Fleet availability and live state remain visible, but maintenance work orders could not be loaded.",
+      "serviceUnavailableMetric": "Work-order data is unavailable; live fleet data remains usable.",
+      "serviceUnavailableTitle": "Service attention is temporarily unavailable",
+      "softwareCoverageDetail": "Based on {{covered}} of {{total}} vehicles with a current software reading.",
+      "softwareMixedDescription": "Review rollout consistency before diagnosing behavior that differs between vehicles.",
+      "softwareMixedTitle": "{{count}} software versions are active",
+      "softwarePosture": "Software posture",
+      "softwareVersionCount": "{{count}} versions",
+      "title": "Availability and readiness across the fleet",
+      "totalDetail": "Vehicles currently registered in this TeslaSync workspace.",
+      "utilization": "Live utilization",
+      "utilizationDetail": "{{active}} of {{total}} registered vehicles are driving or charging now.",
+      "workOrdersSource": "Fleet work orders"
+    }
+  },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
+  },
+  "range": {
+    "aiPredict": {
+      "badge": "Helix",
+      "description": "Compute per-bucket (temperature × speed) learned Wh/km from this vehicle's recent drives and walk through how each bucket compares to the static heuristic curve the projection uses today.",
+      "generateButton": "Train range model",
+      "title": "Learn per-vehicle range model"
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "routeEfficiency": {
+    "aiSuggestions": {
+      "badge": "Helix",
+      "description": "Get a short plain-language suggestion for lower-consumption habits and route choices grounded in your own historical route data — the dominant route, its kWh/100mi figure, a comparison across your other routes, and one or two concrete, non-mutating ideas you can try yourself.",
+      "emptyHint": "Select a vehicle to generate route-efficiency suggestions.",
+      "generateButton": "Generate suggestions",
+      "title": "Route-efficiency suggestions"
+    }
+  },
+  "safetySettings": {
+    "aiExplainer": {
+      "badge": "Helix",
+      "button": "Explain my settings",
+      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "title": "Explain my safety settings"
+    }
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "search": {
+    "aiSearch": {
+      "badge": "Helix",
+      "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "searchButton": "Search with Helix",
+      "title": "Search with natural language"
+    }
+  },
+  "sharing": {
+    "aiTripPostcard": {
+      "badge": "Helix",
+      "button": "Generate share card",
+      "description": "Ask Helix to draft a propose-only image prompt and preview spec for the selected trip's share card. Helix only sees the redacted trip context (distance, duration, drive count, vehicle name) — never raw coordinates or street addresses. The draft is never published automatically; review it here, then use the existing Share button on the trip to publish a static share card.",
+      "noTripHint": "Pick a trip from the list above to enable Helix.",
+      "title": "Draft a Helix share-card image"
+    }
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "softwareUpdates": {
+    "aiNarration": {
+      "badge": "Helix",
+      "button": "Summarize updates",
+      "description": "Ask Helix to walk through your firmware update history — the current version, the install cadence, and the headline release-note themes. The narrator quotes only the deterministic update events your vehicle reported plus public Tesla release notes for the versions you have installed; it never invents firmware versions or claims features your installed build does not have.",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
+      "title": "Summarize my software update history"
+    }
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window.",
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "stateMachineDebugger": {
+    "aiNarrator": {
+      "badge": "Helix",
+      "button": "Narrate transitions",
+      "description": "Get a 3-6 sentence factual narration of the current vehicle FSM transition trace. The narrator reads only the deterministic FSM envelope (vehicle id, window bounds, per-FSM-name counts, per-edge counts, flap count, transition stream) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narration is informational; the transition table, state diagram, and FSM health panel above remain the canonical raw view.",
+      "emptyHint": "Select a vehicle and a valid time window first.",
+      "title": "Helix FSM narrator"
+    }
+  },
+  "tco": {
+    "aiNarration": {
+      "badge": "Helix",
+      "button": "Explain ownership cost",
+      "description": "Ask Helix to explain the deterministic operating-cost evidence below. Lifetime equivalent gas cost is derived from positive-drive distance, configured gas price per unit, and comparison MPG; only monthly equivalent gas rows estimate distance from recorded-cost charging energy. The layer also discloses the positive-cost charging filter, the flat $50-per-modeled-month maintenance heuristic, and the excluded ownership costs.",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
+      "title": "Explain my lifetime operating cost"
+    }
+  },
+  "tempImpact": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain how outside ambient temperature affects this vehicle's efficiency — which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.",
+      "emptyHint": "Select a vehicle to narrate its temperature impact.",
+      "generateButton": "Narrate impact",
+      "title": "Narrate the cabin-temperature impact"
+    }
+  },
+  "timeMachine": {
+    "ageDays": "{{value}}d",
+    "ageHours": "{{value}}h",
+    "ageMinutes": "{{value}}m",
+    "ageSeconds": "{{value}}s",
+    "category": {
+      "battery": "Battery & charge",
+      "climate": "Climate",
+      "motion": "Motion & drive",
+      "other": "Other signals",
+      "security": "Security & access",
+      "tires": "Tires"
+    },
+    "changedAgo": "changed {{age}} ago",
+    "dataSpan": "History span",
+    "earliest": "Earliest",
+    "emptyCategory": "No {{category}} signals at this instant",
+    "fieldsTracked": "Fields tracked",
+    "latest": "Latest",
+    "noHistory": "No signal history",
+    "noHistoryHint": "This vehicle has no recorded signals yet. History appears once telemetry starts flowing.",
+    "noVehicles": "No vehicles found. Add a vehicle to travel through its signal history.",
+    "now": "Now",
+    "overview": "Overview",
+    "presetDay": "−1d",
+    "presetHour": "−1h",
+    "presetWeek": "−1w",
+    "scrubberLabel": "Reconstruction instant",
+    "signalState": "Reconstructed signal state",
+    "signalsReconstructed": "Signals reconstructed",
+    "sourceError": "Signal reconstruction could not be loaded.",
+    "subtitle": "Scrub the DVR of your car's mind — reconstruct every signal at any past instant",
+    "summary": "Reconstruction summary",
+    "summarySource": "Historical signal reconstruction",
+    "timeline": "Timeline",
+    "title": "Vehicle time machine",
+    "viewingAt": "Viewing at"
+  },
+  "tirePressure": {
+    "aiTrendReasoning": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
+      "generateButton": "Narrate trend",
+      "title": "Narrate the 30-day tire-pressure trend"
+    }
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
+  },
+  "tripPlanner": {
+    "aiAgent": {
+      "badge": "Helix",
+      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
+      "generateButton": "Draft a plan",
+      "noDestination": "Set a destination for Helix to plan the route to.",
+      "noOrigin": "Set a starting point for Helix to plan the route from.",
+      "noVehicle": "Select a vehicle to let Helix draft a trip plan.",
+      "title": "Draft a plan with Helix"
+    }
+  },
+  "trips": {
+    "detail": {
+      "aiSuggestName": {
+        "badge": "Helix",
+        "description": "Get a short, propose-only name suggestion grounded in this trip’s route context (start and end places, drive count, distance, time window). The suggestion is never saved automatically — review the proposed name in the panel and click Save to apply it.",
+        "generateButton": "Suggest a name",
+        "title": "Suggest a trip name"
+      }
+    }
+  },
+  "vampireDrain": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
+      "generateButton": "Narrate drain",
+      "title": "Explain the recent vampire drain"
+    }
+  },
+  "vehicleHero": {
+    "action": {
+      "commands": "Commands",
+      "details": "Details",
+      "liveMap": "Live map"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "firmware": "Firmware",
+      "insideTemp": "Inside temp",
+      "odometer": "Odometer",
+      "outsideTemp": "Outside temp",
+      "power": "Power",
+      "range": "Range",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
+  "voiceMode": {
+    "actions": {
+      "muteTts": "Mute spoken replies",
+      "muteTtsShort": "Mute Helix",
+      "startListening": "Start listening",
+      "startListeningShort": "Speak",
+      "stopAll": "Stop Helix",
+      "stopAllShort": "Stop",
+      "stopListening": "Stop listening",
+      "stopListeningShort": "Stop mic",
+      "unmuteTts": "Unmute spoken replies",
+      "unmuteTtsShort": "Unmute Helix"
+    },
+    "button": "Speak to Helix",
+    "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
+    "emptyHint": "Tap the mic and dictate a question first.",
+    "errors": {
+      "sttFailed": "Voice input failed: {{reason}}",
+      "unsupported": "Your browser does not support voice input. Try Chrome, Edge, or Safari."
+    },
+    "idleHint": "Tap the mic and ask Helix anything about your Tesla.",
+    "listeningHint": "Listening — speak now…",
+    "title": "Voice mode",
+    "transcriptLabel": "Voice transcript",
+    "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below."
+  },
+  "watchFaceNL": {
+    "badge": "Helix",
+    "button": "Ask about my car",
+    "description": "Ask Helix a glance-style natural-language question about your vehicle right now — battery, range, charging, locks, climate, recent alerts. Helix only reads a typed snapshot of canonical state values; it never claims to have changed a setting or sent a vehicle command. To lock, unlock, start climate, or send another command use the watch-face tap icons or the phone app.",
+    "inputLabel": "Your question for Helix",
+    "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
+    "title": "Ask Helix about your watch face"
+  },
+  "yearReview": {
+    "aiNarration": {
+      "badge": "Helix",
+      "description": "Get a short, Helix-written recap of your year from the slide data above.",
+      "generateButton": "Generate narration",
+      "title": "Helix narration"
+    }
   }
 }

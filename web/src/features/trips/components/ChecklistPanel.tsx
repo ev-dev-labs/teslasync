@@ -8,7 +8,9 @@ import {
 } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
 import { Badge, Button, Text } from '@/components/ui';
-import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
+import { KVList } from '@/components/data-display';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { EmptyState, ErrorDisplay, ListSkeleton } from '@/components/feedback';
 import { isApiError } from '@/lib/resilience';
 import { formatDateTime } from '@/lib/dateFormat';
 import { safeArray } from '@/lib/safeArray';
@@ -76,16 +78,24 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
     runState.fatalError != null &&
     isApiError(runState.fatalError) &&
     runState.fatalError.status === 404;
+  const emptyChecklist = (
+    <EmptyState
+      icon={<Icons.checklist className="h-10 w-10" aria-hidden="true" />}
+      message={t('journey.checklist.empty', 'No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.')}
+      action={{
+        label: t('journey.checklist.run', 'Run checklist'),
+        onClick: () => refresh.mutate(session.id),
+      }}
+    />
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Text as="p" variant="label" className="flex items-center gap-2">
-          <Icons.checklist className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('journey.checklist.title', 'Ready to roll')}
-        </Text>
-        {run != null ? (
+    <LayoutCard
+      title={t('journey.checklist.title', 'Ready to roll')}
+      actions={
+        run != null ? (
           <Button
+            wrapLabel
             variant="secondary"
             size="sm"
             loading={refresh.isPending}
@@ -93,51 +103,37 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
           >
             {t('journey.checklist.refresh', 'Re-check')}
           </Button>
-        ) : null}
-      </div>
-
-      {runQuery.isLoading || refresh.isPending ? (
-        <ListSkeleton label={t('journey.checklist.loading', 'Checking readiness…')} />
-      ) : neverRan || (run == null && !runState.fatalError) ? (
-        <EmptyState
-          icon={<Icons.checklist className="h-10 w-10" aria-hidden="true" />}
-          message={t(
-            'journey.checklist.empty',
-            'No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.',
-          )}
-          action={{
-            label: t('journey.checklist.run', 'Run checklist'),
-            onClick: () => refresh.mutate(session.id),
-          }}
-        />
-      ) : runState.fatalError ? (
-        <QueryError error={runState.fatalError} onRetry={() => runState.retry?.()} />
-      ) : run == null ? (
-        <EmptyState
-          icon={<Icons.checklist className="h-10 w-10" aria-hidden="true" />}
-          message={t(
-            'journey.checklist.empty',
-            'No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.',
-          )}
-          action={{
-            label: t('journey.checklist.run', 'Run checklist'),
-            onClick: () => refresh.mutate(session.id),
-          }}
-        />
-      ) : (
+        ) : null
+      }
+    >
+      {refresh.error ? (
+        <ErrorDisplay compact error={refresh.error} message={t('journey.checklist.refreshFailed', 'Readiness could not be checked. Try the checklist again.')} />
+      ) : null}
+      <SourceContent
+        state={(runQuery.isLoading || refresh.isPending) && run == null ? 'loading'
+          : neverRan ? 'empty' : runState.fatalError ? 'error'
+          : runState.status === 'stale' ? 'retained' : run == null ? 'empty' : 'ready'}
+        label={t('journey.checklist.title', 'Ready to roll')}
+        emptyMessage={t('journey.checklist.empty', 'No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.')}
+        errorMessage={t('journey.checklist.loadFailed', 'The readiness checklist could not be loaded.')}
+        error={runState.fatalError}
+        errorRecovery={{ onRetry: runState.retry ?? undefined }}
+        loadingContent={<ListSkeleton label={t('journey.checklist.loading', 'Checking readiness…')} />}
+        emptyContent={emptyChecklist}
+      >
+      {run != null ? (
         <div className="space-y-2">
           <Text as="p" variant="caption">
             {t('journey.checklist.runAt', 'Checked {{time}}', {
               time: formatDateTime(run.run_at),
             })}
           </Text>
-          <ul className="space-y-2">
-            {items.map((item) => (
-              <li
-                key={item.key}
-                className="flex items-start justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"
-              >
-                <div>
+          <KVList
+            layout="responsive"
+            items={items.map((item) => ({
+              id: item.key,
+              label: (
+                <div className="min-w-0 space-y-1">
                   <Text as="p" variant="label">
                     {t(
                       ITEM_LABEL_KEYS[item.key as keyof typeof ITEM_LABEL_KEYS],
@@ -148,14 +144,17 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
                     {item.detail}
                   </Text>
                 </div>
+              ),
+              value: (
                 <Badge variant={statusVariant(item.status)}>
                   {t(STATUS_LABEL_KEYS[item.status], STATUS_DEFAULTS[item.status])}
                 </Badge>
-              </li>
-            ))}
-          </ul>
+              ),
+            }))}
+          />
         </div>
-      )}
-    </div>
+      ) : emptyChecklist}
+      </SourceContent>
+    </LayoutCard>
   );
 }

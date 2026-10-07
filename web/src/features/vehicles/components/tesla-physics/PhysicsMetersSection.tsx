@@ -2,14 +2,16 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, time, unknown } from './PhysicsPageShell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage }) {
+  const { fmtNumber } = useNumberFormatting();
   const { report, t } = physics;
   const { formatDistance } = useUnits();
-  const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m, { precision: 1 });
+  const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m);
   const meter = report?.meters;
   const resets = meter?.resets ?? [];
   const drops = resets.flatMap((row) => row.from_m != null && row.to_m != null && row.from_m > row.to_m
@@ -32,7 +34,7 @@ export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage
         <Badge variant="neutral" size="sm">{t('teslaOnly.workbench.resetSummary', '{{count}} returned meter drops; inspect before and after readings below.', { count: resets.length })}</Badge>
         <Badge variant="neutral" size="sm">{t('teslaOnly.metersQuantified', 'Quantifiable drops: {{count}}', { count: drops.length })}</Badge>
         <Badge variant="warning" size="sm">{t('teslaOnly.metersLargest', 'Largest measured drop: {{value}}', { value: largest ? distance(largest.delta) : unknown(t) })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.metersRelative', 'FSD counter / driving counter: {{value}}', { value: fsdFraction == null ? unknown(t) : `${fmtNumber(fsdFraction, 1)}%` })}</Badge>
+        <Badge variant="neutral" size="sm">{t('teslaOnly.metersRelative', 'FSD counter / driving counter: {{value}}', { value: fsdFraction == null ? unknown(t) : `${fmtNumber(fsdFraction)}%` })}</Badge>
       </div>
       <Text as="p" variant="caption">{t('teslaOnly.metersRatioNote', 'The counter ratio compares two returned readings only. It does not indicate FSD engagement share, particularly across resets or different counter scopes.')}</Text>
       <div className="grid gap-2 sm:grid-cols-2">{byMeter.map((name) => <div key={name} className="rounded-lg border border-[var(--glass-border)] p-3">
@@ -53,20 +55,20 @@ export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage
           from: distance(epoch.fsd_meter_start_m), to: distance(epoch.fsd_meter_end_m),
         })}</Text>
       </div>) : <Text as="p" variant="caption">{t('teslaOnly.metersNoEpochs', 'No firmware counter bounds were returned for cross-checking.')}</Text>}
-      <Text as="p" variant="bodySm">{t('teslaOnly.metersModeContext', 'Latest mode context: Valet {{valet}}, Service {{service}}, Transport {{transport}}', {
+      <Text as="p" variant="bodySm">{t('teslaOnly.metersModeContext', 'Latest mode context: valet {{valet}}, service {{service}}, transport {{transport}}', {
         valet: modes?.valet == null ? unknown(t) : modes.valet ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
         service: modes?.service == null ? unknown(t) : modes.service ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
         transport: modes?.transport == null ? unknown(t) : modes.transport ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
       })}</Text>
       <Text as="p" variant="caption">{t('teslaOnly.metersModeCaution', 'Latest modes are not historical mode readings at each drop. Firmware epoch bounds are observations, not a continuous trace or proof of cause.')}</Text>
-      <Text as="p" variant="caption">{t('teslaOnly.metersAnalysis', 'Counters are current returned readings, not lifetime totals. A drop is a difference between before and after counter values, not lost driven distance. The cause is classified from nearby mode or firmware evidence, not established as fact. Compare Firmware Epochs.')}</Text>
+      <Text as="p" variant="caption">{t('teslaOnly.metersAnalysis', 'Counters are current returned readings, not lifetime totals. A drop is a difference between before and after counter values, not lost driven distance. The cause is classified from nearby mode or firmware evidence, not established as fact. Compare firmware epochs.')}</Text>
       <RawRows title={physics.title} rows={[...resets].reverse()} tableId="physics:meters" t={t} mobileColumns={['meter', 'at', 'drop']}
         keyExtractor={(r) => `${r.meter}-${r.at}`} columns={[
           { key: 'meter', header: t('teslaOnly.meter', 'Meter'), render: (r) => r.meter },
           { key: 'at', header: t('teslaOnly.started', 'Started'), render: (r) => time(r.at, t) },
-          { key: 'before', header: t('teslaOnly.before', 'Before'), render: (r) => distance(r.from_m) },
-          { key: 'after', header: t('teslaOnly.after', 'After'), render: (r) => distance(r.to_m) },
-          { key: 'drop', header: t('teslaOnly.metersDrop', 'Measured drop'), render: (r) => r.from_m != null && r.to_m != null && r.from_m > r.to_m ? distance(r.from_m - r.to_m) : unknown(t) },
+          { key: 'before', align: 'right', header: t('teslaOnly.before', 'Before'), render: (r) => distance(r.from_m) },
+          { key: 'after', align: 'right', header: t('teslaOnly.after', 'After'), render: (r) => distance(r.to_m) },
+          { key: 'drop', align: 'right', header: t('teslaOnly.metersDrop', 'Measured drop'), render: (r) => r.from_m != null && r.to_m != null && r.from_m > r.to_m ? distance(r.from_m - r.to_m) : unknown(t) },
           { key: 'cause', header: t('teslaOnly.cause', 'Cause'), render: (r) => r.cause },
         ]} />
     </Evidence>

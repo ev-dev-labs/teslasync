@@ -107,7 +107,7 @@ describe('EventTimeline — state precedence', () => {
   it('always renders the panel title regardless of state', () => {
     renderTimeline({ timelineEvents: [] });
     expect(
-      screen.getByRole('heading', { name: 'Security Event Timeline' }),
+      screen.getByRole('heading', { name: 'Security event timeline' }),
     ).toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe('EventTimeline — state precedence', () => {
     // The error branch pre-empts the event list entirely. (QueryError renders
     // its own help-links list, so target the labelled timeline list.)
     expect(
-      screen.queryByRole('list', { name: 'Security Event Timeline' }),
+      screen.queryByRole('list', { name: 'Security event timeline' }),
     ).toBeNull();
   });
 
@@ -137,7 +137,7 @@ describe('EventTimeline — state precedence', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(
-      screen.queryByRole('list', { name: 'Security Event Timeline' }),
+      screen.queryByRole('list', { name: 'Security event timeline' }),
     ).toBeNull();
   });
 
@@ -146,7 +146,7 @@ describe('EventTimeline — state precedence', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByRole('list')).toBeNull();
-    expect(screen.queryByText(/no state changes detected/i)).toBeNull();
+    expect(screen.queryByText(/no State changes detected/i)).toBeNull();
   });
 
   it('shows the empty state once loaded with zero events', () => {
@@ -177,12 +177,12 @@ describe('EventTimeline — state precedence', () => {
 
 describe('EventTimeline — label + subtitle per (kind, variant)', () => {
   it.each([
-    ['lock', 'positive', 'Vehicle Locked', 'Doors secured'],
-    ['lock', 'negative', 'Vehicle Unlocked', 'Doors accessible'],
-    ['sentry', 'positive', 'Sentry Mode Activated', 'Camera surveillance enabled'],
-    ['sentry', 'negative', 'Sentry Mode Deactivated', 'Camera surveillance disabled'],
-    ['door', 'positive', 'Doors Closed', 'Closed'],
-    ['door', 'negative', 'Door Opened', 'Open'],
+    ['lock', 'positive', 'Vehicle locked', 'Doors secured'],
+    ['lock', 'negative', 'Vehicle unlocked', 'Doors accessible'],
+    ['sentry', 'positive', 'Sentry mode activated', 'Camera surveillance enabled'],
+    ['sentry', 'negative', 'Sentry mode deactivated', 'Camera surveillance disabled'],
+    ['door', 'positive', 'Doors closed', 'Closed'],
+    ['door', 'negative', 'Door opened', 'Open'],
   ] as const)('%s / %s → "%s" + "%s"', (kind, variant, title, subtitle) => {
     renderTimeline({
       timelineEvents: [makeEvent({ id: `${kind}-1`, kind, variant, detail: '' })],
@@ -199,7 +199,7 @@ describe('EventTimeline — label + subtitle per (kind, variant)', () => {
       ],
     });
 
-    expect(screen.getByText('Door Opened')).toBeInTheDocument();
+    expect(screen.getByText('Door opened')).toBeInTheDocument();
     expect(screen.getByText('OpenDriverFront')).toBeInTheDocument();
     // The generic Closed/Open fallback must NOT appear once a detail is given.
     expect(screen.queryByText('Open')).toBeNull();
@@ -214,8 +214,8 @@ describe('EventTimeline — label + subtitle per (kind, variant)', () => {
     });
 
     const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Sentry Mode Activated');
-    expect(items[1]).toHaveTextContent('Vehicle Unlocked');
+    expect(items[0]).toHaveTextContent('Sentry mode activated');
+    expect(items[1]).toHaveTextContent('Vehicle unlocked');
   });
 });
 
@@ -299,7 +299,7 @@ describe('EventTimeline — robustness', () => {
     expect(() =>
       renderTimeline({ timelineEvents: undefined as unknown as TimelineEvent[] }),
     ).not.toThrow();
-    expect(screen.getByRole('status')).toHaveTextContent(/no state changes detected/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/no State changes detected/i);
   });
 
   it('degrades a malformed row (unknown kind) to a neutral label instead of crashing', () => {
@@ -321,8 +321,8 @@ describe('EventTimeline — robustness', () => {
     // the known row still renders normally.
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(2);
-    expect(within(items[0]).getByText('State Change')).toBeInTheDocument();
+    expect(within(items[0]).getByText('State change')).toBeInTheDocument();
     expect(within(items[0]).getByText('Vehicle state updated')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle Locked')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle locked')).toBeInTheDocument();
   });
 });

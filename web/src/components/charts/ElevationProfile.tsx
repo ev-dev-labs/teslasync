@@ -2,11 +2,12 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ReferenceLine, ChartContainer, chartGrid, axisTick, fmt,
+  ReferenceLine, ChartContainer, chartGrid, axisTick,
   AREA_DEFAULTS, areaGradient, ChartTooltip,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -41,6 +42,7 @@ export function ElevationProfile({
   className,
 }: ElevationProfileProps) {
   const { t } = useTranslation();
+  const { fmtNumber } = useNumberFormatting();
 
   // Null-safe view of the incoming series. A caller whose query has not yet
   // resolved can hand us `undefined` at runtime despite the typed contract;
@@ -104,8 +106,8 @@ export function ElevationProfile({
     <ChartContainer
       title={t('replay.elevation.title', 'Elevation Profile')}
       subtitle={t('replay.elevation.gainLoss', '↑ {{gain}}m  ↓ {{loss}}m', {
-        gain: elevGain.gain,
-        loss: elevGain.loss,
+        gain: fmtNumber(elevGain.gain),
+        loss: fmtNumber(elevGain.loss),
       })}
       ariaLabel={t('replay.elevation.aria', 'Elevation profile chart along the route, with total gain and loss in meters')}
       height={height}
@@ -122,18 +124,18 @@ export function ElevationProfile({
           <XAxis
             dataKey="distance"
             {...axisTick}
-            tickFormatter={(v: number) => fmt(v, 1)}
+            tickFormatter={(value: number) => fmtNumber(value)}
             label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, style: { fontSize: 10, fill: '#9ca3af' } }}
           />
           <YAxis
             {...axisTick}
-            tickFormatter={(v: number) => fmt(v, 0)}
+            tickFormatter={(value: number) => fmtNumber(value)}
             label={{ value: 'm', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: '#9ca3af' } }}
           />
           <Tooltip
             content={<ChartTooltip />}
-            labelFormatter={(v: number) => `${fmt(v, 2)} ${distanceUnit}`}
-            formatter={(v: number) => [`${fmt(v, 0)} m`, t('replay.elevation.label', 'Elevation')]}
+            labelFormatter={(v: number) => `${fmtNumber(v)} ${distanceUnit}`}
+            formatter={(v: number) => [`${fmtNumber(v)} m`, t('replay.elevation.label', 'Elevation')]}
           />
           <Area
             {...AREA_DEFAULTS}

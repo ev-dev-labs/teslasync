@@ -2,19 +2,20 @@ import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Skeleton } from '@/components/feedback';
-import { Badge, Button as ControlButton } from '@/components/ui';
+import { Badge, Text, Button as ControlButton } from '@/components/ui';
+import { deriveDataState } from '@/api/dataState';
 import { cn } from '@/lib/cn';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
-import { OperationalModeBadge } from '@/components/data-display';
+import { OperationalModeBadge, ProgressRing } from '@/components/data-display';
 import {
   convertDistanceFromSI,
   convertTempFromSI,
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
 import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
-import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
+import { AIWatchFaceNLResponse } from '@/components/ai';
 
 /**
  * Watch-optimized page for Apple Watch / Wear OS.
@@ -42,7 +43,9 @@ export default function WatchFacePage() {
   const { t } = useTranslation();
   const { vehicleId: selectedVehicleId } = useSelectedVehicle();
   const vehicleId = selectedVehicleId ?? undefined;
-  const { data, isLoading, error } = useWatchSummary(vehicleId);
+  const summaryQuery = useWatchSummary(vehicleId);
+  const { data, isLoading } = summaryQuery;
+  const source = deriveDataState({ ...summaryQuery, data: data ?? undefined }, { provenance: 'live' });
   const commandMutation = useWatchCommand();
   const operationalMode = useOperationalMode();
   const { unitPrefs } = useUnits();
@@ -62,7 +65,7 @@ export default function WatchFacePage() {
   // (withAiFeature returns null → the sibling is absent from the
   // DOM, preserving the wearable invariant).
   let watchContent: React.ReactNode;
-  if (isLoading) {
+  if (isLoading && !source.hasData) {
     watchContent = (
       <div
         role="status"
@@ -82,33 +85,41 @@ export default function WatchFacePage() {
         <Skeleton className="h-3 w-16" />
       </div>
     );
-  } else if (error || !data) {
+  } else if (source.fatalError || !data) {
     watchContent = (
-      <p className="text-[var(--text-secondary)] text-sm text-center px-4">
-        {error ? String(error) : t('watch.noVehicle', 'No vehicle found')}
-      </p>
+      <div className="min-w-0 space-y-2 px-4 text-center">
+        <Text as="p" variant="bodySm" className="break-words text-[var(--text-on-accent)] [overflow-wrap:anywhere]">
+          {source.fatalError ? String(source.fatalError) : t('watch.noVehicle', 'No vehicle found')}
+        </Text>
+        {source.fatalError && source.retry ? (
+          <ControlButton wrapLabel variant="secondary" size="sm" onClick={source.retry}>
+            {t('error.retry', 'Retry')}
+          </ControlButton>
+        ) : null}
+      </div>
     );
   } else {
     // SI boundary: backend `range_km` is in km, derived in
     // watch_handler.go as RatedRange*1.60934. Multiply by 1000 before
     // passing it to convertDistanceFromSI.
-    const displayRange = convertDistanceFromSI(
-      (data.range_km ?? 0) * 1000,
-      unitPrefs.distance,
-    );
+    const displayRange = Number.isFinite(data.range_km)
+      ? convertDistanceFromSI(data.range_km * 1000, unitPrefs.distance) : null;
     // SI boundary: backend `inside_temp_c` is already °C (SI for temp).
-    const displayInsideTemp = convertTempFromSI(
-      data.inside_temp_c ?? 0,
-      unitPrefs.temperature,
-    );
-    const batteryLevel = data.battery_level ?? 0;
+    const displayInsideTemp = Number.isFinite(data.inside_temp_c)
+      ? convertTempFromSI(data.inside_temp_c, unitPrefs.temperature) : null;
+    const batteryLevel = Number.isFinite(data.battery_level) ? data.battery_level : null;
 
     watchContent = (
       <>
         {/* Vehicle name */}
-        <div className="text-2xs text-[var(--text-muted)] text-center truncate px-2">
+        <Text variant="caption" className="min-w-0 break-words px-2 text-center text-[var(--text-on-accent)] [overflow-wrap:anywhere]">
           {data.vehicle_name}
-        </div>
+        </Text>
+        {source.refreshError && (
+          <Badge variant="warning" size="sm" className="mx-auto" role="status">
+            {t('watch.cached', 'Cached')}
+          </Badge>
+        )}
         {operationalMode.isReadOnly && (
           <div className="flex justify-center pt-1">
             <OperationalModeBadge compact />
@@ -125,13 +136,15 @@ export default function WatchFacePage() {
 
           {/* Charging status */}
           {data.is_charging && (
-            <div className="mt-2 flex items-center gap-1 text-emerald-400 text-xs">
-              <Zap className="h-3 w-3" />
-              <span>
-                {t('watch.timeToFull', '{{minutes}}m to full', {
-                  minutes: Math.round(data.time_to_full ?? 0),
-                })}
-              </span>
+            <div className="mt-2 flex min-w-0 items-center gap-1">
+              <Zap className="h-3 w-3 shrink-0 text-emerald-400" aria-hidden="true" />
+              <Text variant="caption" className="min-w-0 break-words text-emerald-300">
+                {data.time_to_full != null && Number.isFinite(data.time_to_full)
+                  ? t('watch.timeToFull', '{{minutes}}m to full', {
+                      minutes: Math.round(data.time_to_full),
+                    })
+                  : t('watch.timeToFullUnknown', 'Time to full unknown')}
+              </Text>
             </div>
           )}
 
@@ -139,9 +152,9 @@ export default function WatchFacePage() {
           <Badge
             variant={watchStateVariant(data.state)}
             size="sm"
-            className={cn('mt-2 text-2xs font-medium', watchStateClassName(data.state))}
+            className={cn('mt-2', watchStateClassName(data.state))}
           >
-            {data.state}
+            {t(`watch.state.${data.state}`, data.state)}
           </Badge>
         </div>
 
@@ -164,7 +177,7 @@ export default function WatchFacePage() {
           <StatusIcon
             icon={Thermometer}
             active={data.is_climate_on}
-            label={`${Math.round(displayInsideTemp)}°`}
+            label={displayInsideTemp == null ? '—' : `${Math.round(displayInsideTemp)}°`}
             ariaLabel={
               data.is_climate_on
                 ? t('watch.action.climateOff', 'Turn climate off')
@@ -188,9 +201,9 @@ export default function WatchFacePage() {
         </div>
 
         {/* Last updated */}
-        <div className="text-2xs text-[var(--text-muted)] text-center">
-          {formatRelativeTime(data.last_updated)}
-        </div>
+        <Text as="div" variant="caption" className="text-center">
+          {formatRelativeTime(data.last_updated, (key, fallback, count) => t(key, fallback, { count }))}
+        </Text>
 
         {/* PWA meta tags (injected via effect) */}
         <WatchPWAMeta />
@@ -231,37 +244,30 @@ export function BatteryGauge({
   rangeDisplay,
   distanceUnit,
 }: {
-  level: number;
-  rangeDisplay: number;
+  level: number | null;
+  rangeDisplay: number | null;
   distanceUnit: DistanceUnitPref;
 }) {
-  const color = getBatteryColor(level);
-  const dashLength = level * 2.64;
+  const { t } = useTranslation();
+  const knownLevel = level != null && Number.isFinite(level);
+  const color = knownLevel ? getBatteryColor(level) : 'var(--text-on-accent)';
+  const levelLabel = knownLevel ? `${level}%` : '—';
+  const rangeLabel = rangeDisplay != null && Number.isFinite(rangeDisplay)
+    ? `${Math.round(rangeDisplay)} ${distanceUnit}` : '—';
 
   return (
-    <div className="relative w-32 h-32">
-      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-        {/* Background ring */}
-        <circle
-          cx="50" cy="50" r="42" fill="none"
-          stroke="rgba(255,255,255,0.1)" strokeWidth="8"
-        />
-        {/* Battery level arc */}
-        <circle
-          cx="50" cy="50" r="42" fill="none"
-          stroke={color}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={`${dashLength} 264`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold">{level}%</span>
-        <span className="text-2xs text-[var(--text-secondary)]">
-          {Math.round(rangeDisplay)} {distanceUnit}
-        </span>
-      </div>
-    </div>
+    <ProgressRing
+      value={knownLevel ? level : Number.NaN}
+      size={128}
+      strokeWidth={10}
+      color={color}
+      ariaLabel={t('watch.batteryGauge', 'Battery {{battery}}; range {{range}}', {
+        battery: knownLevel ? levelLabel : t('common.unknown', 'Unknown'),
+        range: rangeLabel,
+      })}
+      centerLabel={<Text variant="metricValue" className="text-[var(--text-on-accent)]">{levelLabel}</Text>}
+      centerSubLabel={<Text variant="caption" className="text-[var(--text-on-accent)]">{rangeLabel}</Text>}
+    />
   );
 }
 
@@ -307,7 +313,7 @@ export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClic
       aria-label={ariaLabel ?? label}
     >
       <Icon className="h-4 w-4" />
-      {label && <span className="text-2xs mt-0.5" aria-hidden="true">{label}</span>}
+      {label && <Text variant="caption" className="mt-0.5" aria-hidden="true">{label}</Text>}
     </ControlButton>
   );
 }
@@ -395,15 +401,25 @@ export function watchStateClassName(state: string): string {
   }
 }
 
-export function formatRelativeTime(isoTimestamp: string): string {
+export function formatRelativeTime(
+  isoTimestamp: string,
+  translate?: (key: string, fallback: string, count?: number) => string,
+): string {
   if (!isoTimestamp) return '';
   const now = Date.now();
   const then = new Date(isoTimestamp).getTime();
   if (Number.isNaN(then)) return '';
   const diffSec = Math.floor((now - then) / 1000);
 
-  if (diffSec < 60) return 'just now';
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
+  if (diffSec < 60) return translate?.('watch.updated.justNow', 'just now') ?? 'just now';
+  if (diffSec < 3600) {
+    const count = Math.floor(diffSec / 60);
+    return translate?.('watch.updated.minutesAgo', '{{count}}m ago', count) ?? `${count}m ago`;
+  }
+  if (diffSec < 86400) {
+    const count = Math.floor(diffSec / 3600);
+    return translate?.('watch.updated.hoursAgo', '{{count}}h ago', count) ?? `${count}h ago`;
+  }
+  const count = Math.floor(diffSec / 86400);
+  return translate?.('watch.updated.daysAgo', '{{count}}d ago', count) ?? `${count}d ago`;
 }

@@ -3,23 +3,21 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Gauge, Battery, Zap, Mountain, Thermometer,
-  Navigation, MapPin, Clock, Route, TrendingUp,
-  ArrowUpRight, ArrowDownRight, RefreshCw,
+  Navigation, MapPin, RefreshCw,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, PanelTitle } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
+import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, PanelTitle, Text } from '@/components/ui';
 import {
   PlaybackControls,
   type TimelineMarker,
   type TimelinePreviewPoint,
 } from '@/components/data-display';
-import { StatCard, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { Sparkline, ElevationProfile, type ElevationDataPoint } from '@/components/charts';
+import { FadeIn } from '@/components/motion';
+import { Sparkline } from '@/components/charts';
 import { useDrive } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
-import type { DistanceUnitPref, SpeedUnitPref } from '@/lib/unitConversion';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -30,7 +28,7 @@ import { useTripReplay } from '@/hooks/useTripReplay';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { haversineDistance } from '@/lib/geo';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import {
   computeReplayMarkers,
@@ -39,10 +37,14 @@ import {
 } from '@/features/driving/lib/replayMarkers';
 import type { DrivePosition } from '@/types/driving';
 import { TripReplayMap } from '@/features/trips/components/TripReplayMap';
+import { TripReplayReadout } from '@/features/trips/components/TripReplayReadout';
+import { TripReplayElevation, type TripReplayElevationPoint } from '@/features/trips/components/TripReplayElevation';
 import {
   TripReplayCharts,
   type TripReplayChartPoint,
 } from '@/features/trips/components/TripReplayCharts';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { TripReplaySummaryBrief } from '../components/operationalbrief-all/TripReplaySummaryBrief';
 
 /* ================================================================== */
 /*  Helpers                                                            */
@@ -104,21 +106,19 @@ export function fmtDriveTime(min: number): string {
  *   replay-specific display formatting at render time.
  */
 export default function TripReplayPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   usePageTitle(t('replay.title', 'Trip Replay'));
 
   const driveQuery = useDrive(id ?? '');
-  const { data: drive, isLoading, error } = driveQuery;
+  const { data: drive } = driveQuery;
+  const driveState = deriveDataState(driveQuery, { provenance: 'historical' });
   const { reduce } = useMotionPreference();
 
   // Display preferences for position-derived SI fields.
   const { unitPrefs } = useUnits();
 
-
-  const distanceUnit = unitPrefs.distance;
-
-  const speedUnit = unitPrefs.speed;
 
   /* ---- Normalize positions ---- */
   // The /drives/{id} positions array carries only lat/lon/heading/speed
@@ -181,7 +181,9 @@ export default function TripReplayPage() {
           longitude: (p.longitude as number) ?? 0,
           speed: (p.speed as number | null) ?? (t.speed as number | null) ?? null,
           power: pick<number>('power'),
-          batteryLevel: pick<number>('batteryLevel', 'battery_level') ?? 0,
+          // DrivePosition requires a number; NaN keeps an unobserved SOC
+          // distinct from a measured 0 without changing the wire contract.
+          batteryLevel: pick<number>('batteryLevel', 'battery_level') ?? Number.NaN,
           timestamp: tsStr,
           elevation: pick<number>('elevation'),
           insideTemp: pick<number>('insideTemp', 'inside_temp'),
@@ -274,11 +276,9 @@ export default function TripReplayPage() {
   }, [replay.progress, replay.isPlaying, positions.length, setSearchParams]);
 
   /* ---- Elevation profile data ---- */
-  // PRE-EXISTING BUG fix: cumDist is meters from haversineDistance, but the
-  // legacy code did `toDistanceDisplay(cumDist / 1000)` which fed kilometres
-  // into a miles-based helper — this would reintroduce the same unit bug in
-  // useDriveDetailData. Now we use convertDistanceFromSI on raw meters.
-  const elevationData: ElevationDataPoint[] = useMemo(() => {
+  // Keep every sample index, including unknown altitude, so elevation
+  // seeking follows the same playhead as the map without bridging gaps.
+  const elevationData: TripReplayElevationPoint[] = useMemo(() => {
     let cumDistMeters = 0;
     return positions.map((p, i) => {
       if (i > 0) {
@@ -292,8 +292,8 @@ export default function TripReplayPage() {
         distance: Number(
           convertDistanceFromSI(cumDistMeters, unitPrefs.distance).toFixed(2),
         ),
-        elevation: p.elevation ?? 0,
-        speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : 0,
+        elevation: p.elevation,
+        speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : null,
       };
     });
   }, [positions, unitPrefs.distance, unitPrefs.speed]);
@@ -310,8 +310,8 @@ export default function TripReplayPage() {
       return {
         index: i,
         time: Number(elapsedMin.toFixed(3)),
-        speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : 0,
-        power: p.power ?? 0,
+        speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : null,
+        power: p.power,
       };
     });
   }, [positions, unitPrefs.speed]);
@@ -338,12 +338,12 @@ export default function TripReplayPage() {
         speed: p.speed != null
           ? `${fmtNumber(convertSpeedFromSI(p.speed, unitPrefs.speed))} ${unitPrefs.speed}`
           : undefined,
-        power: p.power != null ? `${fmtNumber(p.power, 1)} kW` : undefined,
-        soc: `${fmtInt(p.batteryLevel)}%`,
+        power: p.power != null ? `${fmtNumber(p.power)} kW` : undefined,
+        soc: Number.isFinite(p.batteryLevel) ? `${fmtInt(p.batteryLevel)}%` : undefined,
         elevation: p.elevation != null ? `${fmtInt(p.elevation)} m` : undefined,
       };
     },
-    [positions, replay.totalTime, unitPrefs.speed],
+    [positions, replay.totalTime, unitPrefs.speed, fmtNumber, fmtInt],
   );
 
   /* ---- Speed sparkline behind the scrubber ---- */
@@ -373,7 +373,7 @@ export default function TripReplayPage() {
     (kinds: ReplayMarker['kind'][]): string | undefined => {
       if (!activeMarker) return undefined;
       return kinds.includes(activeMarker.kind)
-        ? 'ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-black/30'
+        ? 'rounded-md ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[var(--panel-bg)]'
         : undefined;
     },
     [activeMarker],
@@ -381,16 +381,6 @@ export default function TripReplayPage() {
 
   /* ---- Current stat values ---- */
   const cp = replay.currentPosition;
-
-  /* ---- Drive summary stats ---- */
-  // drive.distanceM is meters, drive.durationS is seconds.
-  // Use convertDistanceFromSI/convertSpeedFromSI for SI-aware conversion.
-  const distanceM = drive?.distanceM ?? 0;
-  const durationS = drive?.durationS ?? 0;
-  const distanceUserUnit = convertDistanceFromSI(distanceM, distanceUnit as DistanceUnitPref);
-  const efficiency = distanceM > 0 && drive?.startBatteryPct != null && drive?.endBatteryPct != null
-    ? ((drive.startBatteryPct - drive.endBatteryPct) / distanceUserUnit) * 1000
-    : null;
 
   /* ---- Elevation gain / loss for the summary band ---- */
   // Elevation is SI metres on every position; sum positive/negative deltas so
@@ -412,20 +402,24 @@ export default function TripReplayPage() {
   }, [positions]);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('replay.title', 'Trip Replay')}
-      subtitle={drive
-        ? `${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startTs)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`
+      metadataActions={drive
+        ? (
+          <Text variant="bodySm" className="max-w-full [overflow-wrap:anywhere]">
+            {`${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startTs)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`}
+          </Text>
+        )
         : undefined}
-      loading={isLoading}
-      error={error instanceof Error ? error : error ? new Error(String(error)) : null}
+      loading={driveState.status === 'initial'}
+      error={driveState.fatalError}
       query={driveQuery}
       breadcrumbLabels={{
         '/drives/:id': drive
           ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
           : `${t('replay.drive', 'Drive')} #${id}`,
       }}
-      actions={
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2" data-tour="drive-replay-share">
           <Button
             variant="ghost"
@@ -435,89 +429,23 @@ export default function TripReplayPage() {
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
           </Button>
-          <Link to={`/drives/${id}`}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />
-              {t('replay.backToDrive', 'Back to Drive')}
-            </Button>
+          <Link
+            to={`/drives/${id}`}
+            className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-9 max-w-full px-3 py-1.5')}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <Text variant="bodySm" className="min-w-0 break-words">{t('replay.backToDrive', 'Back to Drive')}</Text>
           </Link>
         </div>
       }
     >
       {/* ================================================================ */}
-      {/*  Section 1 — Drive Summary KPI band (full-width metric grid)      */}
+      {/*  Section 1 — One summary surface, unframed measurement grid      */}
       {/*  Summary fields come from the drive record, not the GPS trail, so */}
       {/*  they render even when a drive has no position coordinates.        */}
       {/* ================================================================ */}
       <FadeIn>
-        <section aria-label={t('replay.summary.title', 'Drive Summary')}>
-          <StaggerContainer className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-8">
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.distance', 'Distance')}
-                value={fmtNumber(distanceUserUnit)}
-                unit={distanceUnit}
-                icon={<Route className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.duration', 'Duration')}
-                value={fmtDriveTime(durationS / 60)}
-                icon={<Clock className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.avgSpeed', 'Avg Speed')}
-                value={drive?.avgSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.avgSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
-                unit={drive?.avgSpeedMps != null ? speedUnit : undefined}
-                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.maxSpeed', 'Max Speed')}
-                value={drive?.maxSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.maxSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
-                unit={drive?.maxSpeedMps != null ? speedUnit : undefined}
-                icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.efficiency', 'Efficiency')}
-                value={efficiency != null ? fmtNumber(efficiency) : '—'}
-                unit={efficiency != null ? (distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km') : undefined}
-                icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.battery', 'Battery')}
-                value={drive?.startBatteryPct != null && drive?.endBatteryPct != null
-                  ? `${fmtInt(drive.startBatteryPct)}% → ${fmtInt(drive.endBatteryPct)}%`
-                  : '—'}
-                icon={<Battery className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.elevGain', 'Elevation Gain')}
-                value={elevStats.has ? fmtInt(elevStats.gain) : '—'}
-                unit={elevStats.has ? 'm' : undefined}
-                icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-            <StaggerItem>
-              <StatCard
-                label={t('replay.summary.elevLoss', 'Elevation Loss')}
-                value={elevStats.has ? fmtInt(elevStats.loss) : '—'}
-                unit={elevStats.has ? 'm' : undefined}
-                icon={<ArrowDownRight className="h-4 w-4" aria-hidden="true" />}
-              />
-            </StaggerItem>
-          </StaggerContainer>
-        </section>
+        <TripReplaySummaryBrief drive={drive} source={driveState} elevation={elevStats} formatDriveTime={fmtDriveTime} />
       </FadeIn>
 
       {positions.length === 0 ? (
@@ -535,42 +463,42 @@ export default function TripReplayPage() {
         <>
           {/* ============================================================ */}
           {/*  Section 2 — Replay hero: route map + live position stats     */}
-          {/*  Map is the hero (spans 2 cols on xl+); the live-stats rail    */}
-          {/*  sits beside it so values update as the playhead scrubs.       */}
+          {/*  One stage owns map, live readouts and transport.             */}
+          {/*  The desktop readouts align with the map, not six tall cards. */}
           {/* ============================================================ */}
           <FadeIn delay={0.05}>
-            <section
+            <GlassPanel role="region"
               aria-label={t('replay.map.section', 'Route map and live position')}
-              className="grid grid-cols-1 gap-4 xl:gap-5 xl:grid-cols-3"
+              className="flex flex-col overflow-hidden"
             >
-              <div className="xl:col-span-2">
+              <div className="contents lg:order-first lg:grid lg:min-w-0 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+              <div className="order-first min-w-0 h-[320px] sm:h-[380px] lg:order-none lg:h-[440px]">
                 <TripReplayMap
                   positions={positions}
                   currentIndex={replay.currentIndex}
                   onSeekToIndex={handleSeekToIndex}
                   reduceMotion={reduce}
-                  height={440}
+                  height="100%"
+                  embedded
                 />
               </div>
-              <GlassPanel className="p-4 sm:p-5">
-                <PanelTitle className="mb-3">
+              <div className="order-last flex min-w-0 flex-col border-t border-[var(--border-subtle)] p-3 lg:order-none lg:border-t-0 lg:border-s sm:p-4" data-testid="replay-current-stats">
+                <PanelTitle className="px-3 pb-2 sm:px-4">
                   {t('replay.currentStats', 'Current Position Stats')}
                 </PanelTitle>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                  <MetricCard
+                <div className="grid flex-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-2">
+                  <TripReplayReadout
                     label={t('replay.stat.speed', 'Speed')}
                     value={cp?.speed != null
                       ? `${fmtNumber(convertSpeedFromSI(cp.speed, unitPrefs.speed))} ${unitPrefs.speed}`
                       : '—'}
                     icon={<Gauge className="h-4 w-4" />}
-                    color="cyan"
                     className={cn(cardHighlight(['fast-segment']))}
                   />
-                  <MetricCard
+                  <TripReplayReadout
                     label={t('replay.stat.power', 'Power')}
-                    value={cp?.power != null ? `${fmtNumber(cp.power, 1)} kW` : '—'}
+                    value={cp?.power != null ? `${fmtNumber(cp.power)} kW` : '—'}
                     icon={<Zap className="h-4 w-4" />}
-                    color="cyan"
                     className={cn(cardHighlight(['regen-peak', 'charge-start', 'charge-stop']))}
                     help={{
                       i18nKey: 'help.replay.power',
@@ -578,11 +506,10 @@ export default function TripReplayPage() {
                         'Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.',
                     }}
                   />
-                  <MetricCard
+                  <TripReplayReadout
                     label={t('replay.stat.battery', 'Battery')}
-                    value={cp ? `${fmtInt(cp.batteryLevel)}%` : '—'}
+                    value={cp && Number.isFinite(cp.batteryLevel) ? `${fmtInt(cp.batteryLevel)}%` : '—'}
                     icon={<Battery className="h-4 w-4" />}
-                    color="cyan"
                     className={cn(cardHighlight(['low-soc', 'charge-start', 'charge-stop']))}
                     help={{
                       i18nKey: 'help.replay.battery',
@@ -590,44 +517,41 @@ export default function TripReplayPage() {
                         "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
                     }}
                   />
-                  <MetricCard
+                  <TripReplayReadout
                     label={t('replay.stat.elevation', 'Elevation')}
                     value={cp?.elevation != null ? `${fmtInt(cp.elevation)} m` : '—'}
                     icon={<Mountain className="h-4 w-4" />}
-                    color="cyan"
                   />
-                  <MetricCard
+                  <TripReplayReadout
                     label={t('replay.stat.range', 'Range')}
                     value={cp?.ratedRange != null
                       ? `${fmtNumber(convertDistanceFromSI(cp.ratedRange, unitPrefs.distance))} ${unitPrefs.distance}`
                       : '—'}
                     icon={<Navigation className="h-4 w-4" />}
-                    color="cyan"
                     help={{
                       i18nKey: 'help.replay.range',
                       defaultValue:
                         'Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load.',
                     }}
                   />
-                  <MetricCard
+                  <TripReplayReadout
                     label={t('replay.stat.temp', 'Temperature')}
                     value={cp?.outsideTemp != null
                       ? `${fmtNumber(convertTempFromSI(cp.outsideTemp, unitPrefs.temperature))} ${unitPrefs.temperature}`
                       : '—'}
                     icon={<Thermometer className="h-4 w-4" />}
-                    color="cyan"
                   />
                 </div>
-              </GlassPanel>
-            </section>
-          </FadeIn>
+              </div>
+              </div>
 
           {/* ============================================================ */}
-          {/*  Section 3 — Playback scrubber (full-width transport bar)      */}
+          {/*  Section 3 — Playback transport stays attached to the map     */}
           {/* ============================================================ */}
-          <FadeIn delay={0.1}>
-            <div data-tour="drive-replay-scrubber">
+            <div className="border-t border-[var(--border-subtle)]" data-tour="drive-replay-scrubber">
               <PlaybackControls
+                framed={false}
+                className="p-3 sm:p-4"
                 isPlaying={replay.isPlaying}
                 speed={replay.speed}
                 progress={replay.progress}
@@ -635,6 +559,7 @@ export default function TripReplayPage() {
                 total={fmtDuration(replay.totalTime)}
                 onPlay={controls.play}
                 onPause={controls.pause}
+                onRestart={() => controls.seekToProgress(0)}
                 onStop={controls.stop}
                 onSpeedChange={controls.setSpeed}
                 onSeek={controls.seekToProgress}
@@ -652,19 +577,20 @@ export default function TripReplayPage() {
                 }
               />
             </div>
+            </GlassPanel>
           </FadeIn>
 
           {/* ============================================================ */}
           {/*  Section 4 — Timeline charts bento (elevation + speed/power)   */}
-          {/*  Side-by-side on 2xl to use horizontal space; both share the   */}
+          {/*  Side-by-side on xl to use horizontal space; both share the   */}
           {/*  playhead cursor via replay.currentIndex.                      */}
           {/* ============================================================ */}
           <FadeIn delay={0.15}>
             <section
               aria-label={t('replay.timeline.section', 'Trip elevation and speed timelines')}
-              className="grid grid-cols-1 gap-4 xl:gap-5 2xl:grid-cols-2"
+              className="grid grid-cols-1 gap-4 xl:gap-5 xl:grid-cols-2"
             >
-              <ElevationProfile
+              <TripReplayElevation
                 data={elevationData}
                 currentIndex={replay.currentIndex}
                 onClickIndex={handleSeekToIndex}
@@ -682,6 +608,6 @@ export default function TripReplayPage() {
           </FadeIn>
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

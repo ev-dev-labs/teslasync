@@ -142,7 +142,7 @@ describe('GasPriceHistoryTable — rendering', () => {
     renderTable(makeQuery({ data: [r1, r2, r3] }));
 
     // Panel heading (i18n default).
-    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument();
 
     // A real accessible table with the three records.
     const table = screen.getByRole('table');
@@ -155,7 +155,7 @@ describe('GasPriceHistoryTable — rendering', () => {
     expect(within(table).getAllByText('gal')).toHaveLength(3);
 
     // Efficiency column renders "<n> mpg".
-    expect(within(table).getAllByText('25 mpg')).toHaveLength(3);
+    expect(within(table).getAllByText('25.00 mpg')).toHaveLength(3);
 
     // The open record (effective_to === null) shows the "Current" badge;
     // exactly one of the three is current.
@@ -171,7 +171,7 @@ describe('GasPriceHistoryTable — sorting', () => {
 
     expect(priceOrder()).toEqual(['$3.10', '$3.50', '$3.29']);
     // The active sort column advertises aria-sort for assistive tech.
-    const dateHeader = screen.getByRole('button', { name: 'Effective From' }).closest('th');
+    const dateHeader = screen.getByRole('button', { name: 'Effective from' }).closest('th');
     expect(dateHeader).toHaveAttribute('aria-sort', 'descending');
   });
 
@@ -228,7 +228,7 @@ describe('GasPriceHistoryTable — error / loading / empty', () => {
     const { container } = renderTable(makeQuery({ isLoading: true, data: undefined }));
 
     // Heading stays mounted; body is a skeleton placeholder.
-    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
   });
@@ -265,7 +265,7 @@ describe('GasPriceHistoryTable — null safety', () => {
     expect(within(table).getAllByText('—').length).toBeGreaterThanOrEqual(1);
     // Open record → "Current"; closed record → a formatted date, not "Current".
     expect(within(table).getAllByText('Current')).toHaveLength(1);
-    expect(within(table).getByText('30 mpg')).toBeInTheDocument();
+    expect(within(table).getByText('30.00 mpg')).toBeInTheDocument();
     // A closed record's effective_to renders a real (2026) date.
     expect(within(table).getAllByText(/2026/).length).toBeGreaterThanOrEqual(1);
   });

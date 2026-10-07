@@ -301,6 +301,15 @@ afterEach(() => {
 });
 
 describe('SleepEfficiencyPage persistent workspace', () => {
+  it('keeps the scientific matrix columns fixed', () => {
+    renderPage();
+    const matrix = screen.getByTestId('sleep-efficiency-availability-matrix');
+    expect(within(matrix).getAllByRole('columnheader')).toHaveLength(3);
+    expect(within(matrix).queryByRole('button', { name: /columns/i })).not.toBeInTheDocument();
+    expect(within(matrix).queryAllByLabelText(/^Resize column/)).toHaveLength(0);
+    expect(matrix.querySelector('[draggable="true"]')).toBeNull();
+  });
+
   it('mounts all 14 section shells', () => {
     renderPage();
     for (const testId of SECTION_TEST_IDS) {
@@ -318,7 +327,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     );
     expect(screen.queryByTestId('sleep-efficiency-range')).not.toBeInTheDocument();
     expect(
-      screen.getByText('2026-06-17 to 2026-07-16 UTC'),
+      within(screen.getByTestId('sleep-efficiency-kpi-evidence')).getByText(
+        '2026-06-17 to 2026-07-16 UTC', { selector: '[data-battery-period]' },
+      ),
     ).toBeInTheDocument();
   });
 
@@ -442,7 +453,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.getAllByText('10').length).toBeGreaterThan(0);
     expect(screen.getAllByText('80.00%').length).toBeGreaterThan(0);
     expect(
-      screen.getByText('Count-based; not a time share'),
+      within(screen.getByTestId('sleep-efficiency-kpi-evidence')).getByText(
+        'Count-based; not a time share', { selector: '[data-battery-detail-context]' },
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Placeholder zero withheld'),

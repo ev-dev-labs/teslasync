@@ -200,19 +200,19 @@ describe('FleetApiSection — scaffolding', () => {
     // Sync on a query-gated card so the mount fetches have resolved.
     await findToolCard('Config')
 
-    expect(screen.getByRole('heading', { name: 'Setup Wizard' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Fleet API Tools' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Setup wizard' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Fleet API tools' })).toBeInTheDocument()
 
     const toolTitles = [
       'Config',
-      'Partner Reg',
-      'Public Key Verification',
-      'Public Key',
-      'Key Pairing',
-      'Telemetry Sub',
-      'Telemetry Config',
-      'Fleet Status',
-      'Vehicle Data',
+      'Partner reg',
+      'Public key verification',
+      'Public key',
+      'Key pairing',
+      'Telemetry sub',
+      'Telemetry config',
+      'Fleet status',
+      'Vehicle data',
     ]
     for (const title of toolTitles) {
       expect(screen.getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
@@ -236,7 +236,7 @@ describe('FleetApiConfigTool', () => {
     install({ fleetInfo: { authenticated: false, regions: [] } })
     const card = await findToolCard('Config')
 
-    expect(within(card).getByText('Not Authenticated')).toBeInTheDocument()
+    expect(within(card).getByText('Not authenticated')).toBeInTheDocument()
     // baseUrl, clientId and regions all fall back to the em-dash placeholder.
     expect(within(card).getAllByText('—').length).toBeGreaterThan(0)
   })
@@ -246,7 +246,7 @@ describe('FleetApiConfigTool', () => {
     renderSection()
 
     // A non-gated tool still mounts, proving the section rendered…
-    expect(await screen.findByRole('heading', { level: 3, name: 'Fleet Status' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 3, name: 'Fleet status' })).toBeInTheDocument()
     // …but the config card is still in its loading branch.
     expect(screen.queryByRole('heading', { level: 3, name: 'Config' })).toBeNull()
   })
@@ -269,7 +269,7 @@ describe('PartnerRegistrationTool', () => {
           ? { ok: true, marker: 'REG_OK' }
           : undefined,
     })
-    const card = await findToolCard('Partner Reg')
+    const card = await findToolCard('Partner reg')
 
     fireEvent.change(within(card).getByRole('textbox'), {
       target: { value: 'reg.example.com' },
@@ -296,7 +296,7 @@ describe('PartnerPublicKeyTool', () => {
             }
           : undefined,
     })
-    const card = await findToolCard('Public Key Verification')
+    const card = await findToolCard('Public key verification')
 
     const verifyBtn = within(card).getByRole('button', { name: 'Verify' })
     expect(verifyBtn).toBeDisabled()
@@ -308,8 +308,8 @@ describe('PartnerPublicKeyTool', () => {
 
     fireEvent.click(verifyBtn)
 
-    expect(await within(card).findByText('Key Registered')).toBeInTheDocument()
-    expect(within(card).getByText('Matches Local Key')).toBeInTheDocument()
+    expect(await within(card).findByText('Key registered')).toBeInTheDocument()
+    expect(within(card).getByText('Matches local key')).toBeInTheDocument()
     expect(within(card).getByText('PEM-CONTENT-BLOCK')).toBeInTheDocument()
     expect(mockedRequest).toHaveBeenCalledWith(
       '/dev-tools/partner-public-key?domain=myapp.example.com',
@@ -331,14 +331,14 @@ describe('PartnerPublicKeyTool', () => {
             }
           : undefined,
     })
-    const card = await findToolCard('Public Key Verification')
+    const card = await findToolCard('Public key verification')
 
     fireEvent.change(within(card).getByRole('textbox'), {
       target: { value: 'mismatch.example.com' },
     })
     fireEvent.click(within(card).getByRole('button', { name: 'Verify' }))
 
-    expect(await within(card).findByText('Does Not Match Local Key')).toBeInTheDocument()
+    expect(await within(card).findByText('Does not match local key')).toBeInTheDocument()
   })
 
   it('flags when no key is registered with Tesla', async () => {
@@ -348,14 +348,14 @@ describe('PartnerPublicKeyTool', () => {
           ? { verification: { remote_key_found: false }, response: {} }
           : undefined,
     })
-    const card = await findToolCard('Public Key Verification')
+    const card = await findToolCard('Public key verification')
 
     fireEvent.change(within(card).getByRole('textbox'), {
       target: { value: 'none.example.com' },
     })
     fireEvent.click(within(card).getByRole('button', { name: 'Verify' }))
 
-    expect(await within(card).findByText('Key Not Found')).toBeInTheDocument()
+    expect(await within(card).findByText('Key not found')).toBeInTheDocument()
   })
 })
 
@@ -372,13 +372,13 @@ describe('PublicKeySetupTool', () => {
           ? { ok: true, generated: true }
           : undefined,
     })
-    const card = await findToolCard('Public Key')
+    const card = await findToolCard('Public key')
 
     expect(within(card).getByText('AB:CD:EF:99')).toBeInTheDocument()
     expect(within(card).getByText('https://app.example.com/.well-known/pub.pem')).toBeInTheDocument()
     expect(within(card).getByText('Configured')).toBeInTheDocument()
 
-    fireEvent.click(within(card).getByRole('button', { name: 'Generate Keypair' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'Generate keypair' }))
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -390,16 +390,16 @@ describe('PublicKeySetupTool', () => {
 
   it('shows the not-configured badge when no keypair exists', async () => {
     install({ publicKeyStatus: { configured: false } })
-    const card = await findToolCard('Public Key')
+    const card = await findToolCard('Public key')
 
-    expect(within(card).getByText('Not Configured')).toBeInTheDocument()
+    expect(within(card).getByText('Not configured')).toBeInTheDocument()
   })
 })
 
 describe('VehicleKeyPairingTool', () => {
   it('builds the pairing URL from the fleet hostname', async () => {
     install({ fleetInfo: { authenticated: true, hostname: 'myfleet.example.com' } })
-    const card = await findToolCard('Key Pairing')
+    const card = await findToolCard('Key pairing')
 
     expect(
       await within(card).findByText('https://tesla.com/_ak/myfleet.example.com'),
@@ -412,7 +412,7 @@ describe('FleetTelemetrySubscribeTool', () => {
     install({
       match: (path) => (path === '/dev-tools/fleet-telemetry-subscribe' ? { ok: true } : undefined),
     })
-    const card = await findToolCard('Telemetry Sub')
+    const card = await findToolCard('Telemetry sub')
 
     await selectVehicle(card, 'Car One', 'VIN1')
     fireEvent.change(within(card).getByPlaceholderText('telemetry.example.com'), {
@@ -435,9 +435,9 @@ describe('FleetTelemetrySubscribeTool', () => {
 
   it('opens the signal configuration modal', async () => {
     install()
-    const card = await findToolCard('Telemetry Sub')
+    const card = await findToolCard('Telemetry sub')
 
-    fireEvent.click(within(card).getByRole('button', { name: /Configure Signals/ }))
+    fireEvent.click(within(card).getByRole('button', { name: /Configure signals/ }))
 
     expect(
       await screen.findByRole('dialog', { name: 'Fleet Telemetry Signal Configuration' }),
@@ -453,9 +453,9 @@ describe('FleetTelemetryConfigTool', () => {
           ? { config: { fields: ['Soc'] }, marker: 'CFG_OK' }
           : undefined,
     })
-    const card = await findToolCard('Telemetry Config')
+    const card = await findToolCard('Telemetry config')
 
-    const getBtn = within(card).getByRole('button', { name: 'Get Config' })
+    const getBtn = within(card).getByRole('button', { name: 'Get config' })
     expect(getBtn).toBeDisabled()
 
     await selectVehicle(card, 'Car One', 'VIN1')
@@ -480,10 +480,10 @@ describe('FleetTelemetryConfigTool', () => {
             }
           : undefined,
     })
-    const card = await findToolCard('Telemetry Config')
+    const card = await findToolCard('Telemetry config')
 
     await selectVehicle(card, 'Car One', 'VIN1')
-    fireEvent.click(within(card).getByRole('button', { name: 'View Errors' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'View errors' }))
 
     expect(await within(card).findByText('ERR_STREAM')).toBeInTheDocument()
     expect(within(card).getByText('stream disconnected')).toBeInTheDocument()
@@ -494,10 +494,10 @@ describe('FleetTelemetryConfigTool', () => {
       match: (path) =>
         path.startsWith('/dev-tools/fleet-telemetry-errors') ? { errors: [] } : undefined,
     })
-    const card = await findToolCard('Telemetry Config')
+    const card = await findToolCard('Telemetry config')
 
     await selectVehicle(card, 'Car One', 'VIN1')
-    fireEvent.click(within(card).getByRole('button', { name: 'View Errors' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'View errors' }))
 
     expect(
       await within(card).findByText(/No Fleet Telemetry errors reported/),
@@ -509,10 +509,10 @@ describe('FleetTelemetryConfigTool', () => {
       match: (path) =>
         path.startsWith('/dev-tools/fleet-telemetry-errors') ? { unexpected: 'shape' } : undefined,
     })
-    const card = await findToolCard('Telemetry Config')
+    const card = await findToolCard('Telemetry config')
 
     await selectVehicle(card, 'Car One', 'VIN1')
-    fireEvent.click(within(card).getByRole('button', { name: 'View Errors' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'View errors' }))
 
     expect(await within(card).findByText(/Show raw Tesla response/)).toBeInTheDocument()
   })
@@ -524,10 +524,10 @@ describe('FleetTelemetryConfigTool', () => {
           ? Promise.reject(new Error('errors upstream 500'))
           : undefined,
     })
-    const card = await findToolCard('Telemetry Config')
+    const card = await findToolCard('Telemetry config')
 
     await selectVehicle(card, 'Car One', 'VIN1')
-    fireEvent.click(within(card).getByRole('button', { name: 'View Errors' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'View errors' }))
 
     expect(await within(card).findByText('errors upstream 500')).toBeInTheDocument()
   })
@@ -536,9 +536,9 @@ describe('FleetTelemetryConfigTool', () => {
 describe('FleetStatusTool', () => {
   it('checks fleet status for every vehicle VIN', async () => {
     install({ match: (path) => (path === '/dev-tools/fleet-status' ? { ok: true } : undefined) })
-    const card = await findToolCard('Fleet Status')
+    const card = await findToolCard('Fleet status')
 
-    const btn = within(card).getByRole('button', { name: 'Check Fleet Status' })
+    const btn = within(card).getByRole('button', { name: 'Check fleet status' })
     await waitFor(() => expect(btn).toBeEnabled())
     fireEvent.click(btn)
 
@@ -553,16 +553,16 @@ describe('FleetStatusTool', () => {
 
   it('disables the fleet status action when there are no vehicles', async () => {
     install({ vehicles: [] })
-    const card = await findToolCard('Fleet Status')
+    const card = await findToolCard('Fleet status')
 
-    expect(within(card).getByRole('button', { name: 'Check Fleet Status' })).toBeDisabled()
+    expect(within(card).getByRole('button', { name: 'Check fleet status' })).toBeDisabled()
   })
 })
 
 describe('VehicleDataTools', () => {
   it('starts with an idle result panel before any action runs', async () => {
     install()
-    const card = await findToolCard('Vehicle Data')
+    const card = await findToolCard('Vehicle data')
 
     expect(
       within(card).getByText('Choose a vehicle and an action to see results.'),
@@ -577,13 +577,13 @@ describe('VehicleDataTools', () => {
         return undefined
       },
     })
-    const card = await findToolCard('Vehicle Data')
+    const card = await findToolCard('Vehicle data')
     await selectVehicle(card, 'Car One', 'VIN1')
 
-    fireEvent.click(within(card).getByRole('button', { name: 'Nearby Charging' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'Nearby charging' }))
     expect(await within(card).findByText(/CHG_RESULT/)).toBeInTheDocument()
 
-    fireEvent.click(within(card).getByRole('button', { name: 'Recent Alerts' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'Recent alerts' }))
     expect(await within(card).findByText(/ALERT_RESULT/)).toBeInTheDocument()
     // The regression: the charging result must no longer be displayed.
     expect(within(card).queryByText(/CHG_RESULT/)).toBeNull()
@@ -615,13 +615,13 @@ describe('OnboardingWorkflow', () => {
     renderSection()
 
     expect(
-      await screen.findByRole('heading', { level: 3, name: /Step 1: Tesla Developer Account/ }),
+      await screen.findByRole('heading', { level: 3, name: /Step 1: Tesla developer account/ }),
     ).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Mark Complete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mark complete' }))
 
     expect(
-      await screen.findByRole('heading', { level: 3, name: /Step 2: Create Application/ }),
+      await screen.findByRole('heading', { level: 3, name: /Step 2: Create application/ }),
     ).toBeInTheDocument()
     expect(screen.getByText(/1 \/ 7/)).toBeInTheDocument()
   })
@@ -633,12 +633,12 @@ describe('OnboardingWorkflow', () => {
     })
     renderSection()
 
-    const chip = await screen.findByRole('button', { name: /Go to step 3: Generate Key Pair/ })
+    const chip = await screen.findByRole('button', { name: /Go to step 3: Generate key pair/ })
     chip.focus()
     fireEvent.keyDown(chip, { key: 'Enter' })
 
     expect(
-      await screen.findByRole('heading', { level: 3, name: /Step 3: Generate Key Pair/ }),
+      await screen.findByRole('heading', { level: 3, name: /Step 3: Generate key pair/ }),
     ).toBeInTheDocument()
   })
 

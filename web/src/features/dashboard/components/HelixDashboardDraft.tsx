@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles } from 'lucide-react';
-import { withAiFeature } from '@/components/ai/withAiFeature';
+import { withAiFeature } from '@/components/ai';
 import { Button, Text, Textarea } from '@/components/ui';
 import { useDraftDashboardWidgets, type DashboardWidgetDraft } from '@/api/hooks/useDashboard';
 import { WIDGET_REGISTRY } from '../widgets/registry';

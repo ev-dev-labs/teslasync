@@ -122,9 +122,9 @@ describe('FeatureConfigDistribution', () => {
     renderPanel({ summary: makeSummary({ total: 4, enabled: 3, disabled: 1, enabledRate: 75 }) });
 
     expect(heading()).toBeInTheDocument();
-    // Gauge — labelled, whole-percent value, and its unit.
-    expect(screen.getByText('Enabled Rate')).toBeInTheDocument();
-    expect(screen.getByText('75')).toBeInTheDocument();
+    // Gauge uses display precision; the count chips remain integers.
+    expect(screen.getByText('Enabled rate')).toBeInTheDocument();
+    expect(screen.getByText('75.00')).toBeInTheDocument();
     expect(screen.getByText('%')).toBeInTheDocument();
     // Count chips.
     expect(screen.getByText('Enabled: 3')).toBeInTheDocument();
@@ -145,15 +145,14 @@ describe('FeatureConfigDistribution', () => {
 
     expect(screen.getByText('Enabled: 1,234')).toBeInTheDocument();
     expect(screen.getByText('Disabled: 1,234')).toBeInTheDocument();
-    expect(screen.getByText('50')).toBeInTheDocument();
+    expect(screen.getByText('50.00')).toBeInTheDocument();
   });
 
-  it('rounds a fractional enabled rate to a whole percent in the gauge (decimals=0)', () => {
-    // total = 3, enabled = 2 → 66.66…% → rounds to "67".
+  it('rounds a fractional enabled rate at the selected display precision', () => {
     renderPanel({ summary: makeSummary({ total: 3, enabled: 2, disabled: 1 }) });
 
-    expect(screen.getByText('67')).toBeInTheDocument();
-    expect(screen.queryByText('66.67')).toBeNull();
+    expect(screen.getByText('66.67')).toBeInTheDocument();
+    expect(screen.queryByText('67')).toBeNull();
   });
 
   it('renders a role="status" empty state (and no gauge) when there are no features', () => {
@@ -162,7 +161,7 @@ describe('FeatureConfigDistribution', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No feature data to summarise yet.')).toBeInTheDocument();
     // The gauge and chips must not leak behind the empty state.
-    expect(screen.queryByText('Enabled Rate')).toBeNull();
+    expect(screen.queryByText('Enabled rate')).toBeNull();
     expect(screen.queryByText(/^Enabled:/)).toBeNull();
     // …but the panel is never headless.
     expect(heading()).toBeInTheDocument();
@@ -176,7 +175,7 @@ describe('FeatureConfigDistribution', () => {
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
     // Loading wins even though there is data and no error.
-    expect(screen.queryByText('Enabled Rate')).toBeNull();
+    expect(screen.queryByText('Enabled rate')).toBeNull();
     expect(screen.queryByText('No feature data to summarise yet.')).toBeNull();
     expect(heading()).toBeInTheDocument();
   });
@@ -196,7 +195,7 @@ describe('FeatureConfigDistribution', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     // Neither the gauge nor the empty-state copy renders behind the error.
-    expect(screen.queryByText('Enabled Rate')).toBeNull();
+    expect(screen.queryByText('Enabled rate')).toBeNull();
     expect(screen.queryByText('No feature data to summarise yet.')).toBeNull();
     expect(heading()).toBeInTheDocument();
   });
@@ -225,7 +224,7 @@ describe('FeatureConfigDistribution', () => {
 
     expect(() => renderPanel({ summary: partial })).not.toThrow();
     // total > 0 → gauge branch; the missing counts read as 0.
-    expect(screen.getByText('Enabled Rate')).toBeInTheDocument();
+    expect(screen.getByText('Enabled rate')).toBeInTheDocument();
     expect(screen.getByText('Enabled: 0')).toBeInTheDocument();
     expect(screen.getByText('Disabled: 0')).toBeInTheDocument();
   });

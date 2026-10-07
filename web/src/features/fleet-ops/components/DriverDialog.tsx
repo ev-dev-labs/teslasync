@@ -9,6 +9,7 @@ import {
 import { Button, ConfirmDialog, Input, Modal, Select } from '@/components/ui';
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import { MutationErrorDialog } from './MutationErrorDialog';
+import { FormSection } from '@/components/forms';
 
 interface DriverDialogProps {
   item: FleetDriver | null;
@@ -123,6 +124,7 @@ export function DriverDialog({
           : t('fleetOps.driverDialog.createTitle', 'Add driver')}
       >
         <form onSubmit={submit} className="space-y-4">
+          <FormSection title={t('fleetOps.driverDialog.identity', 'Driver identity')}>
           <Input
             label={t('fleetOps.driverDialog.name', 'Display name')}
             value={displayName}
@@ -154,6 +156,8 @@ export function DriverDialog({
               { value: 'inactive', label: t('fleetOps.drivers.inactive', 'Inactive') },
             ]}
           />
+          </FormSection>
+          <FormSection title={t('fleetOps.drivers.guardrails', 'Guardrails')}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Input
               label={t('fleetOps.driverDialog.chargeCap', 'Charge cap (%)')}
@@ -187,6 +191,7 @@ export function DriverDialog({
               }}
             />
           </div>
+          </FormSection>
           <div className="flex justify-between gap-2">
             <div>
               {item && (

@@ -17,7 +17,8 @@
  *   5. Wake failure → the error message is surfaced via an error toast.
  *   6. Live-state failure (the regression this file also fixes) → a failed
  *      `/state` read renders <QueryError> with a working Retry instead of an
- *      infinite skeleton, and the state-gated sections stay unmounted.
+ *      infinite skeleton. Only live-state consumers remain unavailable;
+ *      independent systems/history/configuration/settings stay mounted.
  *   7. Invalid route id → every query is disabled (no network), title falls back.
  *
  * Strategy (mirrors web/src/features/driving/pages/DrivetrainHealthPage.test.tsx):
@@ -38,7 +39,7 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -171,6 +172,22 @@ vi.mock('../components/vehicle-detail', async () => {
   }
 })
 
+// The security and chart mounts now live in the owned modernization area.
+// Keep their original semantic test IDs and prop assertions; only relocate
+// these orchestration doubles, leaving the actual shared layout/state adapters.
+vi.mock('../components/modernization/VehicleSecurityPanel', () => ({
+    VehicleSecurityPanel: (props: Record<string, unknown>) => {
+      H.captured.SecuritySection = props
+      return <div data-testid="sec-security" />
+    },
+}))
+vi.mock('../components/modernization/VehicleDetailCharts', () => ({
+    VehicleDetailCharts: (props: Record<string, unknown>) => {
+      H.captured.BatteryRangeCharts = props
+      return <div data-testid="sec-battery-charts" />
+    },
+}))
+
 vi.mock('../components/VehicleSettingsTab', async () => {
   const React = await vi.importActual<typeof import('react')>('react')
   return {
@@ -276,7 +293,7 @@ function renderPage(route = '/vehicles/1') {
       mutations: { retry: false },
     },
   })
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         <Routes>
@@ -285,6 +302,7 @@ function renderPage(route = '/vehicles/1') {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...view, client }
 }
 
 const ALL_SECTION_IDS = [
@@ -330,6 +348,11 @@ describe('VehicleDetailPage', () => {
     renderPage()
 
     expect(await screen.findByTestId('vehicle-detail-skeleton')).toBeInTheDocument()
+    const title = screen.getByRole('heading', { name: 'Vehicle detail', level: 1 })
+    expect(title).toHaveAttribute('data-route-focus-target', 'true')
+    expect(title).toHaveAttribute('tabindex', '-1')
+    expect(title.closest('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     // No live sections should leak through while the record loads.
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
   })
@@ -341,7 +364,7 @@ describe('VehicleDetailPage', () => {
 
       expect(await screen.findByText('Vehicle not found')).toBeInTheDocument()
       expect(
-        screen.getByRole('link', { name: 'Back to Vehicles' }),
+        screen.getByRole('link', { name: 'Back to vehicles' }),
       ).toHaveAttribute('href', '/vehicles')
       // Queries stay disabled: no record fetch, no skeleton, no sections.
       const paths = H.requestMock.mock.calls.map((c: unknown[]) => String(c[0]))
@@ -355,14 +378,21 @@ describe('VehicleDetailPage', () => {
     renderPage()
 
     // Title uses the nickname override; subtitle uses model + trim badging.
-    expect(await screen.findByRole('heading', { name: 'My Roadster' })).toBeInTheDocument()
+    const title = await screen.findByRole('heading', { name: 'My Roadster' })
+    expect(title).toBeInTheDocument()
+    const header = title.closest('[data-role="page-header"]')
+    expect(header).toHaveClass('border-0', 'bg-transparent')
+    expect(screen.getByTestId('wake-btn').closest('[data-role="page-header"]')).toBe(header)
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByText('Model 3 Performance')).toBeInTheDocument()
 
     // Every section + the settings tab + the paint preview must mount — no
     // gutted / hidden panels.
-    for (const id of ALL_SECTION_IDS) {
-      expect(screen.getByTestId(id)).toBeInTheDocument()
-    }
+    await waitFor(() => {
+      for (const id of ALL_SECTION_IDS) {
+        expect(screen.getByTestId(id)).toBeInTheDocument()
+      }
+    })
 
     // deriveStatus(state): is_charging === true → 'charging'.
     expect(H.captured.QuickStatsGrid?.status).toBe('charging')
@@ -374,6 +404,10 @@ describe('VehicleDetailPage', () => {
     expect(H.captured.MotorSection?.motorData).toBe(MOTOR)
     expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
     expect(H.captured.RecentChargesSection?.sessions).toBe(SESSIONS)
+    expect(H.captured.SecuritySection?.securityData).toBe(SECURITY)
+    expect(H.captured.SecuritySection?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.drives).toBe(DRIVES)
 
     // Both vehicle-scoped children get the numeric id parsed from the route.
     expect(H.captured.VehicleSettingsTab?.vehicleId).toBe(1)
@@ -425,19 +459,30 @@ describe('VehicleDetailPage', () => {
 
     renderPage()
 
-    // The header still renders (wake button present) but the state-gated
-    // sections must NOT — the failed read renders <QueryError>, not a skeleton
-    // that hangs forever.
+    // Stateful live consumers cannot fabricate values. Independent successful
+    // sources and all recovery/navigation/settings controls remain available.
     expect(await screen.findByTestId('wake-btn')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('Server error')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('Server error')).toHaveLength(3))
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
     expect(screen.queryByTestId('sec-quick-stats')).not.toBeInTheDocument()
+    for (const id of ['sec-motor', 'sec-climate', 'sec-security', 'sec-tire',
+      'sec-charging-telem', 'sec-recent-drives', 'sec-recent-charges',
+      'sec-vehicle-config', 'sec-quick-links', 'sec-settings', 'sec-ai-paint']) {
+      expect(await screen.findByTestId(id)).toBeInTheDocument()
+    }
+    expect(H.captured.SecuritySection?.securityData).toBe(SECURITY)
+    expect(H.captured.SecuritySection?.state).toBeUndefined()
+    expect(H.captured.VehicleConfigSection?.vehicleConfig).toBe(CONFIG)
+    expect(H.captured.VehicleConfigSection?.softwareVersion).toBeUndefined()
+    expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
+    expect(H.captured.RecentChargesSection?.sessions).toBe(SESSIONS)
 
     // Retry re-issues the /state read.
     const stateCalls = () =>
       H.requestMock.mock.calls.filter((c) => c[0] === '/vehicles/1/state').length
     const before = stateCalls()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    const overview = screen.getByRole('region', { name: 'Live overview' })
+    fireEvent.click(within(overview).getAllByRole('button', { name: 'Retry' })[0])
     await waitFor(() => expect(stateCalls()).toBeGreaterThan(before))
   })
 
@@ -447,8 +492,81 @@ describe('VehicleDetailPage', () => {
     renderPage('/vehicles/not-a-number')
 
     // Title falls back and no vehicle-scoped fetch fires.
-    expect(await screen.findByRole('heading', { name: 'Vehicle Detail' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Vehicle detail' })).toBeInTheDocument()
     expect(H.requestMock).not.toHaveBeenCalled()
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
+  })
+
+  it('retains the complete page and vehicle-record recovery on a failed cached refresh', async () => {
+    const { client } = renderPage()
+    await waitFor(() => {
+      for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    })
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path === '/vehicles/1') return Promise.reject(new ApiError('Record refresh failed', 500))
+      return defaultRequest(path, options)
+    })
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['vehicles', '1'], exact: true })
+    })
+    expect(screen.getByRole('heading', { name: 'My Roadster', level: 1 })).toBeInTheDocument()
+    // invalidateQueries awaits the read, not the observer's scheduled render.
+    const warning = await screen.findByTestId('stale-refresh-warning')
+    expect(warning).toBeInTheDocument()
+    expect(warning).toHaveAttribute('role', 'status')
+    expect(within(warning).getByText('Vehicle detail may be out of date')).toBeInTheDocument()
+    expect(within(warning).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument()
+    expect(client.getQueryData(['vehicles', '1'])).toBe(VEHICLE)
+    expect(client.getQueryState(['vehicles', '1'])?.error).toBeInstanceOf(ApiError)
+    for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
+    expect(H.captured.RecentChargesSection?.sessions).toBe(SESSIONS)
+    expect(screen.queryByText(/synthetic/i)).not.toBeInTheDocument()
+
+    const recordCalls = () => H.requestMock.mock.calls.filter((call) => call[0] === '/vehicles/1').length
+    const beforeRetry = recordCalls()
+    H.requestMock.mockImplementation(defaultRequest)
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(recordCalls()).toBeGreaterThan(beforeRetry))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(client.getQueryData(['vehicles', '1'])).toBe(VEHICLE)
+    expect(client.getQueryState(['vehicles', '1'])?.error).toBeNull()
+    for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+  })
+
+  it('keeps independent state, systems, histories and settings usable on first vehicle-record failure', async () => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path === '/vehicles/1') return Promise.reject(new ApiError('Record unavailable', 500))
+      return defaultRequest(path, options)
+    })
+    renderPage()
+    await waitFor(() => {
+      for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    })
+    // Shared status-aware recovery deliberately localizes a classified 500
+    // instead of printing the raw server message.
+    expect(screen.getByText('Server error')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(H.captured.QuickStatsGrid?.status).toBe('charging')
+    expect(H.captured.VehicleSettingsTab?.vehicleId).toBe(1)
+  })
+
+  it('contains a motor failure without blanking climate, tires, security or history', async () => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path.startsWith('/motor/latest')) return Promise.reject(new ApiError('Motor unavailable', 500))
+      return defaultRequest(path, options)
+    })
+    renderPage()
+    const systems = await screen.findByRole('region', { name: 'Vehicle systems' })
+    expect(await within(systems).findByText('Server error')).toBeInTheDocument()
+    expect(within(systems).getByRole('heading', { name: 'Powertrain' })).toBeInTheDocument()
+    expect(screen.queryByTestId('sec-motor')).not.toBeInTheDocument()
+    for (const sectionId of ['sec-climate', 'sec-tire', 'sec-security', 'sec-recent-drives', 'sec-recent-charges', 'sec-settings']) {
+      expect(await screen.findByTestId(sectionId)).toBeInTheDocument()
+    }
+    expect(H.captured.ClimateSection?.climateData).toBe(CLIMATE)
+    expect(H.captured.SecuritySection?.securityData).toBe(SECURITY)
+    expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
   })
 })

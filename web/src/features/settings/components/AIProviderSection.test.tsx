@@ -174,7 +174,7 @@ describe('AIProviderSection — local mode structure', () => {
     const select = screen.getByTestId('ai-provider-select') as HTMLSelectElement
     expect(select.value).toBe('ollama')
     expect(screen.getByRole('option', { name: 'Ollama' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'LM Studio' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'LM studio' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'llama.cpp' })).toBeInTheDocument()
 
     expect(screen.getByTestId('ai-provider-base-url')).toBeInTheDocument()
@@ -226,6 +226,9 @@ describe('AIProviderSection — local mode structure', () => {
       'aria-label',
       'Provider configuration',
     )
+    const group = screen.getByRole('group', { name: 'Provider configuration' })
+    expect(group).toContainElement(screen.getByTestId('ai-provider-base-url'))
+    expect(screen.getByRole('heading', { name: 'Provider configuration', level: 3 })).toBeInTheDocument()
   })
 })
 
@@ -404,7 +407,7 @@ describe('AIProviderSection — cloud mode', () => {
 
     expect(screen.getByRole('option', { name: 'OpenAI' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Microsoft Foundry' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Microsoft foundry' })).toBeInTheDocument()
 
     const apiKey = screen.getByTestId('ai-provider-api-key') as HTMLInputElement
     expect(apiKey.type).toBe('password')

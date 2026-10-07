@@ -196,8 +196,11 @@ describe('LiveSignalInspectorPage — empty fleet', () => {
 
     // KPI band always renders; freshest age collapses to the em-dash.
     const kpi = within(screen.getByRole('region', { name: 'Snapshot summary' }));
-    expect(kpi.getByText('Total Signals')).toBeInTheDocument();
-    expect(kpi.getByText('—')).toBeInTheDocument();
+    expect(kpi.getByText('Total signals')).toBeInTheDocument();
+    expect(kpi.getAllByText('—')).toHaveLength(6);
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
   });
 
   it('leaves the live query disabled when no vehicle exists', () => {
@@ -226,6 +229,33 @@ describe('LiveSignalInspectorPage — vehicle selection wiring', () => {
 });
 
 describe('LiveSignalInspectorPage — ready state', () => {
+  it('uses the real compact Brief and preserves raw-derived ages, source captions and Review details', async () => {
+    setLive({ data: readyData(), dataUpdatedAt: Date.now() });
+    renderPage();
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-metric="freshest"] [data-operational-value]')).toHaveTextContent('101ms');
+    for (const caption of ['Fresh in-process', 'Past 2-min window', 'Redis, unknown age', 'Newest value age']) {
+      expect(brief).toHaveTextContent(caption);
+    }
+    const review = within(brief).getByRole('button', { name: 'Review details' });
+    review.focus();
+    expect(review).toHaveFocus();
+    fireEvent.click(review);
+    const drawer = await screen.findByRole('dialog', { name: 'Snapshot metrics details' });
+    expect(drawer).toHaveTextContent('Snapshot only; no historical query window or completeness guarantee is supplied.');
+    expect(drawer).toHaveTextContent('Redis, unknown age');
+    expect(drawer).toHaveTextContent('Fields in the returned snapshot, before table filters');
+    expect(drawer).toHaveTextContent('Newest value age');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Snapshot metrics details' })).toBeNull());
+    expect(screen.getByText('a1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter signals')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh live snapshot' })).toBeEnabled();
+  });
+
   it('renders the snapshot table rows, KPI aggregates, and source-layer badges', () => {
     setLive({ data: readyData(), dataUpdatedAt: Date.now() });
     renderPage();
@@ -279,10 +309,17 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     selectVehicle('1');
 
     expect(document.querySelector('.animate-pulse')).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading Source layers' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Signal kinds' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Live snapshot' })).toBeInTheDocument();
     // The filter input only mounts with the table, so its absence proves we
     // are not yet in the ready state.
     expect(screen.queryByLabelText('Filter signals')).toBeNull();
     expect(screen.queryByText(NO_VEHICLE_TABLE_MSG)).toBeNull();
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('shows the empty-cache affordance when the snapshot has no signals', () => {
@@ -297,6 +334,22 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('No live signals to classify yet.')).toBeInTheDocument();
     expect(screen.getByText('No live signals to categorise yet.')).toBeInTheDocument();
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    for (const key of ['total', 'live', 'stale', 'legacy', 'numeric']) {
+      expect(brief.querySelector(`[data-operational-metric="${key}"] [data-operational-value]`)).toHaveTextContent('0');
+    }
+  });
+
+  it('keeps an unreported snapshot unknown rather than treating derived empty rows as measured zero', () => {
+    setLive({ data: { vehicle_id: 1, count: 0 }, dataUpdatedAt: Date.now() });
+    renderPage();
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief).toHaveTextContent('No snapshot supplied');
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Refresh live snapshot' })).toBeEnabled();
   });
 });
 
@@ -308,6 +361,8 @@ describe('LiveSignalInspectorPage — error handling', () => {
 
     // The generic network branch of <QueryError> renders per data section.
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
 
     const retryButtons = screen.getAllByRole('button', { name: 'Retry' });
     fireEvent.click(retryButtons[0]);
@@ -329,8 +384,41 @@ describe('LiveSignalInspectorPage — error handling', () => {
     expect(screen.getByText('a1')).toBeInTheDocument();
     expect(screen.getByText('hello')).toBeInTheDocument();
     // No section collapsed to the error affordance.
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief).toHaveTextContent('Retained snapshot');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('7');
     expect(screen.queryByText("Can't reach server")).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    const breakdowns = within(screen.getByRole('region', { name: 'Signal breakdowns' }));
+    expect(breakdowns.getAllByTestId('source-layer-badge')).toHaveLength(4);
+    const retryButtons = screen.getAllByRole('button', { name: 'Retry' });
+    expect(retryButtons).toHaveLength(3);
+    refetch.mockClear();
+    fireEvent.click(retryButtons[0]);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('a1')).toBeInTheDocument();
+    expect(screen.getByText('hello')).toBeInTheDocument();
+  });
+
+  it('keeps all three retained-empty source explanations during a failed poll', () => {
+    setLive({
+      data: { vehicle_id: 1, count: 0, signals: {} },
+      isError: true,
+      error: new Error('transient blip'),
+      dataUpdatedAt: Date.now(),
+    });
+    renderPage();
+    expect(screen.getByText('Redis has no live snapshot for this vehicle yet. Confirm the vehicle is online and publishing.')).toBeInTheDocument();
+    expect(screen.getByText('No live signals to classify yet.')).toBeInTheDocument();
+    expect(screen.getByText('No live signals to categorise yet.')).toBeInTheDocument();
+    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(3);
+    expect(screen.queryByLabelText('Filter signals')).toBeNull();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
+    const brief = screen.getByTestId('live-signals-operational-brief');
+    expect(brief).toHaveTextContent('Retained empty snapshot');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
+    expect(brief.querySelector('[data-operational-metric="freshest"]')).toHaveAttribute('data-value-state', 'missing');
   });
 });
 
@@ -341,7 +429,7 @@ describe('LiveSignalInspectorPage — accessibility landmarks', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole('heading', { name: 'Live Signal Inspector' }),
+        screen.getByRole('heading', { name: 'Live signal inspector' }),
       ).toBeInTheDocument(),
     );
     expect(screen.getByRole('region', { name: 'Snapshot summary' })).toBeInTheDocument();

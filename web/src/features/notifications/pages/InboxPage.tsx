@@ -1,11 +1,12 @@
 /**
  * InboxPage — top-level Notifications inbox route.
  *
- * Full-width modern-ui layout: an active-backlog KPI band (`InboxSummary`) over
- * the shared `InboxBody` detail surface (`archived={false}`). The KPI band reads
+ * Data-first layout: compact active-backlog context (`InboxSummary`) over
+ * the shared `InboxBody` evidence surface (`archived={false}`). The strip reads
  * the unfiltered active set so it stays a stable "backlog overview" while the
  * list below honours the user's URL-backed filters. Mirrors `ArchivedPage` for a
- * connected, consistent feel across the two notification surfaces.
+ * connected, consistent feel across the two notification surfaces. Complete
+ * period metrics, timeline and breakdowns follow the primary list.
  */
 
 import { useMemo } from 'react';
@@ -14,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { Archive } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -42,12 +43,12 @@ export default function InboxPage() {
   const summaryQuery = useNotificationLogs(summaryFilters);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.inbox.title', 'Inbox')}
       subtitle={t('notifications.inbox.subtitle', 'All system, alert, automation, and scheduled notifications in one place.')}
       copyLink
       query={summaryQuery}
-      actions={
+      secondaryActions={
         <Link
           to="/notifications/archived"
           className={cn(
@@ -64,15 +65,15 @@ export default function InboxPage() {
       }
     >
       <FadeIn>
-        <NotificationReportPanel fromInstant={startInstant} toExclusive={endInstantExclusive} timezone={timezone} />
-      </FadeIn>
-      <FadeIn>
         <InboxSummary query={summaryQuery} />
       </FadeIn>
 
-      <FadeIn delay={0.1}>
+      <FadeIn delay={0.05}>
         <InboxBody archived={false} vehicles={vehicles} rules={rules} />
       </FadeIn>
-    </PageContainer>
+      <FadeIn delay={0.1}>
+        <NotificationReportPanel fromInstant={startInstant} toExclusive={endInstantExclusive} timezone={timezone} />
+      </FadeIn>
+    </PageLayout>
   );
 }

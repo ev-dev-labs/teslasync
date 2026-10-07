@@ -24,7 +24,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -32,7 +32,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   Tariff,
   TariffRate,
@@ -43,10 +43,12 @@ import {
   EvidencePanel,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatPct, formatPricePerEnergy } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STRUCTURES: TariffStructure[] = ['flat', 'tou', 'tiered', 'real_time', 'demand'];
 const ALL_DAYS = 127;
@@ -80,6 +82,7 @@ function clockToMinutes(value: string): number {
 }
 
 export default function TariffLabPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -100,7 +103,7 @@ export default function TariffLabPage() {
     rates: [newRate()],
   });
 
-  usePageTitle(t('ownership.tariff.title', 'Utility Tariff Arbitrage Lab'));
+  usePageTitle(t('ownership.tariff.title', 'Utility tariff arbitrage lab'));
 
   const tariffQuery = useTariffs(100, 0);
   const create = useCreateTariff();
@@ -215,11 +218,13 @@ export default function TariffLabPage() {
     },
     {
       key: 'bands',
+      align: 'right',
       header: t('ownership.tariff.plan.bands', 'Price bands'),
       render: (row) => <span className="tabular-nums">{(row.rates ?? []).length}</span>,
     },
     {
       key: 'standing',
+      align: 'right',
       header: t('ownership.tariff.plan.standing', 'Standing charge'),
       render: (row) => (
         <span className="tabular-nums">
@@ -234,6 +239,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'demand',
+      align: 'right',
       header: t('ownership.tariff.plan.demand', 'Demand charge'),
       render: (row) => (
         <span className="tabular-nums">
@@ -277,6 +283,7 @@ export default function TariffLabPage() {
   const resultColumns: Column<TariffSimulationResult>[] = [
     {
       key: 'rank',
+      align: 'right',
       header: t('ownership.tariff.result.rank', 'Rank'),
       render: (row) => (
         <span className={`tabular-nums ${row.rank === 1 ? 'text-emerald-300' : ''}`}>
@@ -301,12 +308,14 @@ export default function TariffLabPage() {
     },
     {
       key: 'annual',
+      align: 'right',
       header: t('ownership.tariff.result.annual', 'Annualised cost'),
       render: (row) => <span className="tabular-nums">{money(row.annual_cost_minor)}</span>,
       sortable: true,
     },
     {
       key: 'delta',
+      align: 'right',
       header: t('ownership.tariff.result.delta', 'vs current'),
       render: (row) => (
         <span
@@ -319,6 +328,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'effective',
+      align: 'right',
       header: t('ownership.tariff.result.effective', 'Effective price'),
       render: (row) => (
         <span className="tabular-nums">
@@ -333,6 +343,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'shift',
+      align: 'right',
       header: t('ownership.tariff.result.shift', 'Load-shift upside'),
       render: (row) => (
         <span className="tabular-nums text-emerald-300">
@@ -342,6 +353,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'breakeven',
+      align: 'right',
       header: t('ownership.tariff.result.breakEven', 'Break-even'),
       render: (row) =>
         row.break_even_days != null
@@ -350,6 +362,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'peak',
+      align: 'right',
       header: t('ownership.tariff.result.peak', 'Peak demand'),
       render: (row) =>
         row.peak_demand_w != null ? units.formatPower(row.peak_demand_w) : '—',
@@ -369,14 +382,13 @@ export default function TariffLabPage() {
   const bestResult = results.find((row) => row.rank === 1) ?? null;
 
   return (
-    <PageContainer
-      title={t('ownership.tariff.title', 'Utility Tariff Arbitrage Lab')}
+    <PageLayout
+      title={t('ownership.tariff.title', 'Utility tariff arbitrage lab')}
       subtitle={t(
         'ownership.tariff.subtitle',
         'Replay your real measured charging load against every rate plan you can author — flat, time-of-use, tiered, real-time, and demand — then rank them on annualised cost.',
       )}
-      loading={tariffQuery.isLoading}
-      error={tariffQuery.error as Error | null}
+      query={tariffQuery}
     >
       <AlertBanner
         variant="info"
@@ -450,37 +462,47 @@ export default function TariffLabPage() {
         <OwnershipPanel
           title={t('ownership.tariff.summary.title', 'Arbitrage summary')}
           empty={!result}
+          preserveSummary
           emptyMessage={t(
             'ownership.tariff.summary.empty',
             'Run a replay to see how much your plan choice is worth.',
           )}
         >
-          <StatGrid
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.tariff.brief.title', 'Returned tariff replay comparison')}
+            description={t('ownership.tariff.brief.description', 'Annualised savings and shiftable share are modelled replay results, not a bill or a completed charging action.')}
+            scope={t('ownership.tariff.brief.scope', 'Latest replay selection and model assumptions; source coverage remains in the evidence')}
+            source={simulate}
+            window={result?.window}
+            metrics={[
               {
-                key: 'saving',
+                occurrenceId: 'saving', metricId: 'currency',
                 label: t('ownership.tariff.stat.saving', 'Best-case annual saving'),
-                value: money(result?.max_saving_minor),
+                rawValue: result?.max_saving_minor,
+                display: specialistDisplay(money),
                 tone: (result?.max_saving_minor ?? 0) > 0 ? 'positive' : 'default',
-                hint: bestResult?.name,
+                context: bestResult?.name,
               },
               {
-                key: 'observed',
+                occurrenceId: 'observed', metricId: 'energy',
                 label: t('ownership.tariff.stat.observed', 'Observed energy'),
-                value: units.formatEnergy(result?.observed_energy_wh ?? 0),
-                hint: t('ownership.tariff.stat.sessions', '{{count}} sessions', {
-                  count: result?.session_count ?? 0,
+                rawValue: result?.observed_energy_wh,
+                display: specialistDisplay(units.formatEnergy),
+                context: result?.session_count == null ? '—' : t('ownership.tariff.stat.sessions', '{{count}} sessions', {
+                  count: result.session_count,
                 }),
               },
               {
-                key: 'plans',
+                occurrenceId: 'plans', metricId: 'count',
                 label: t('ownership.tariff.stat.plans', 'Plans evaluated'),
-                value: fmtNumber(results.length, 0),
+                rawValue: result ? results.length : null,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'shift',
+                occurrenceId: 'shift', metricId: 'percent',
                 label: t('ownership.tariff.stat.shift', 'Shiftable share modelled'),
-                value: formatPct(result?.shiftable_pct, 0),
+                rawValue: result?.shiftable_pct,
+                display: specialistDisplay(formatPct),
                 tone: 'accent',
               },
             ]}
@@ -511,7 +533,7 @@ export default function TariffLabPage() {
               {
                 key: 'annual',
                 label: t('ownership.tariff.chart.cost', 'Annual cost'),
-                format: (v) => fmtNumber(v as number, 2),
+                format: (v) => fmtNumber(v as number),
               },
               { key: 'status', label: t('ownership.tariff.chart.col.status', 'Status') },
             ]}
@@ -625,6 +647,8 @@ export default function TariffLabPage() {
       <FadeIn delay={0.25}>
         <OwnershipPanel
           title={t('ownership.tariff.plans.title', 'Your rate plan library')}
+          source={tariffQuery}
+          editing={formOpen}
           description={t(
             'ownership.tariff.plans.subtitle',
             'Author any plan your utility offers. Prices are stored per watt-hour in currency minor units so exotic structures stay exact.',
@@ -889,6 +913,6 @@ export default function TariffLabPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

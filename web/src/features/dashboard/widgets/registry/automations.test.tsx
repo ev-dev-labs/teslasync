@@ -262,7 +262,7 @@ describe('automation-status — lazy component wiring', () => {
     );
     await renderWidget(statusDef, { cols: 3, rows: 3 });
 
-    expect(screen.getByText('Automation Status')).toBeInTheDocument();
+    expect(screen.getByText('Automation status')).toBeInTheDocument();
     expect(screen.getByText('Morning Precondition')).toBeInTheDocument();
     expect(screen.getByText('Sentry Alert')).toBeInTheDocument();
     // consecutive_failures === 0 + last_success_at set → OK; > 0 → Failing.
@@ -277,7 +277,7 @@ describe('automation-status — lazy component wiring', () => {
     expect(screen.getByText('No automations configured')).toBeInTheDocument();
     // EmptyState renders role="status"; the widget title still renders above it.
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.getByText('Automation Status')).toBeInTheDocument();
+    expect(screen.getByText('Automation status')).toBeInTheDocument();
   });
 
   it('renders a loading skeleton (no title) while the automations query is in flight', async () => {
@@ -285,7 +285,7 @@ describe('automation-status — lazy component wiring', () => {
     const { container } = await renderWidget(statusDef, { cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Automation Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Automation status')).toBeInTheDocument();
   });
 
   it('toggles an automation via the accessible switch in the wide layout', async () => {
@@ -330,11 +330,11 @@ describe('automation-history — lazy component wiring', () => {
     );
     await renderWidget(historyDef, { cols: 2, rows: 3 });
 
-    expect(screen.getByText('Automation History')).toBeInTheDocument();
+    expect(screen.getByText('Automation history')).toBeInTheDocument();
     expect(screen.getByText('Morning Precondition')).toBeInTheDocument();
     // Feed subtitle = `${status} · ${duration}`.
     expect(screen.getByText(/success ·/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Success Rate/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Success rate/).length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows the compact empty state when there is no run history', async () => {

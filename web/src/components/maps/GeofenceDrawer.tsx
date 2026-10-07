@@ -4,6 +4,7 @@ import L from 'leaflet';
 import './leafletGlobal';
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { fmtNumber, fmtScientificNumber } from '@/lib/numberFormat';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -262,7 +263,7 @@ export function describeFence(f: DrawableGeofence): string {
     typeof f.radius === 'number'
   ) {
     const name = f.name ?? 'Geofence';
-    return `${name} — ${f.radius.toFixed(0)}m circle around ${f.lat.toFixed(4)}, ${f.lng.toFixed(4)}`;
+    return `${name} — ${fmtNumber(f.radius)}m circle around ${fmtScientificNumber(f.lat, 4)}, ${fmtScientificNumber(f.lng, 4)}`;
   }
   if (Array.isArray(f.polygon) && f.polygon.length >= 3) {
     const name = f.name ?? 'Geofence';

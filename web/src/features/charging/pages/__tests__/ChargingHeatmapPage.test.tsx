@@ -17,13 +17,13 @@
  *      (labelled regions, an icon-only refresh button, the heatmap `img`).
  *
  * Strategy mirrors PeriodComparePage: render the REAL page + REAL shared subtree
- * (PageContainer, MetricCard, MetricBar, HeatmapGrid, QueryError, charts). Only
+ * (PageLayout, StatStrip, MetricBar, HeatmapGrid, QueryError, charts). Only
  * the network `request` helper and i18n are mocked — the vehicle store, range
  * state, and settings-driven unit/format hooks all run for real so the SI →
  * display conversion and active-vehicle fallback are genuinely exercised.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -220,15 +220,13 @@ function renderPage() {
   );
 }
 
-// Read a KPI card's value by its label text via MetricCard's stable semantic
-// hooks: the card root is `[data-role="metric-card"]` and its value node is
-// `[data-role="metric-value"]` (both siblings of `[data-role="metric-label"]`).
+// StatTile keeps the numeric value and display unit in separate siblings.
 function kpiValue(label: string): string {
-  const card = screen.getByText(label).closest('[data-role="metric-card"]');
+  const card = screen.getByText(label).closest('[data-stat]');
   expect(card).not.toBeNull();
-  const value = card!.querySelector('[data-role="metric-value"]');
+  const value = card!.querySelector('[data-stat-value]');
   expect(value).not.toBeNull();
-  return value!.textContent ?? '';
+  return value!.parentElement!.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -315,7 +313,7 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
     expect(avg).not.toBe(1);
   });
 
-  it('shows a guarded zero (never NaN) when no session has an end time', async () => {
+  it('shows an honest unknown (never NaN or measured zero) when no session has an end time', async () => {
     const openOnly = [
       session({ id: 1, started_at: localIso(2024, 0, 1, 10, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
       session({ id: 2, started_at: localIso(2024, 0, 2, 11, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
@@ -326,7 +324,8 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
 
     const text = kpiValue('Avg Duration');
     expect(text).not.toContain('NaN');
-    expect(parseFloat(text)).toBe(0);
+    expect(text).toBe('—');
+    expect(screen.getByText('Avg Duration').closest('[data-stat]')).toHaveAttribute('data-state', 'missing');
     expect(kpiValue('Total Sessions')).toBe('2');
   });
 });
@@ -456,7 +455,8 @@ describe('ChargingHeatmapPage — a11y & edge cases', () => {
 
     // The insights panel still mounts (hasData is true) but the busiest slot is
     // empty → the favorite value degrades to '—' instead of crashing.
-    await screen.findByText('—');
+    const favorite = await screen.findByText('Favorite Charging Time');
+    expect(within(favorite.parentElement!).getByText('—')).toBeInTheDocument();
     expect(screen.getByText('0 sessions')).toBeInTheDocument();
     // KPIs still count the sessions and sum their (date-independent) energy.
     expect(kpiValue('Total Sessions')).toBe('2');

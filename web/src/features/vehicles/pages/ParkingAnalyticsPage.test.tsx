@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { Drive } from '@/types/driving';
@@ -84,7 +85,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -195,13 +196,14 @@ afterEach(() => {
 
 describe('ParkingAnalyticsPage', () => {
   it('mounts all eight sections and requests the selected server window', () => {
-    render(<ParkingAnalyticsPage />);
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
     expect(
-      screen.getByRole('heading', { name: 'Parking Analytics' }),
+      screen.getByRole('heading', { name: 'Parking analytics' }),
     ).toBeInTheDocument();
     for (const id of SECTION_IDS) {
-      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      if (id === 'parking-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Source returned');
+      else expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(useDrivesMock).toHaveBeenCalledWith('42', {
       start: '2026-07-01',
@@ -211,7 +213,7 @@ describe('ParkingAnalyticsPage', () => {
   });
 
   it('passes newly selected dates and the 1,000-row cap to the hook', async () => {
-    render(<ParkingAnalyticsPage />);
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
     act(() => sharedRange.set({ start: '2026-07-10', end: '2026-07-31' }));
     expect(screen.queryByTestId('parking-analytics-range')).not.toBeInTheDocument();
 
@@ -226,13 +228,16 @@ describe('ParkingAnalyticsPage', () => {
 
   it.each([
     ['loading', query({ isLoading: true })],
-    ['error', query({ isError: true, error: new Error('unavailable') })],
+    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
   ])('threads the %s state to every mounted section', (expected, result) => {
     useDrivesMock.mockReturnValue(result);
-    render(<ParkingAnalyticsPage />);
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
     for (const id of SECTION_IDS) {
-      expect(screen.getByTestId(id)).toHaveTextContent(expected);
+      if (id === 'parking-kpis') {
+        if (expected === 'loading') expect(screen.getByTestId('parking-summary')).toHaveAttribute('aria-busy', 'true');
+        else expect(screen.getByTestId(id)).toHaveTextContent('Source unavailable');
+      } else expect(screen.getByTestId(id)).toHaveTextContent(expected);
     }
   });
 
@@ -243,7 +248,7 @@ describe('ParkingAnalyticsPage', () => {
       .mockReturnValueOnce(frozenNow)
       .mockReturnValue(laterNow);
 
-    render(<ParkingAnalyticsPage />);
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
     act(() => sharedRange.set({ start: '2026-07-10', end: '2026-07-31' }));
     await waitFor(() => expect(summarizeParkingMock).toHaveBeenCalledTimes(2));
 
@@ -264,11 +269,36 @@ describe('ParkingAnalyticsPage', () => {
 
   it('preserves the no-vehicle selection state', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
-    render(<ParkingAnalyticsPage />);
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
-      'Parking Analytics',
+      'Parking analytics',
     );
     expect(screen.queryByTestId('parking-duration')).not.toBeInTheDocument();
+  });
+
+  it('keeps every section available on a failed cached refresh without changing range bounds', () => {
+    useDrivesMock.mockReturnValue(query({ data: [], isError: true, error: new Error('refresh failed') }));
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
+    for (const id of SECTION_IDS) {
+      if (id === 'parking-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Retained after refresh failure');
+      else expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(useDrivesMock).toHaveBeenCalledWith('42', { start: '2026-07-01', end: '2026-08-07', limit: 1_000 });
+  });
+
+  it('preserves observed sample context in the actual review drawer and distinguishes unavailable counts from zero', () => {
+    useDrivesMock.mockReturnValue(query({ data: undefined, isError: true, error: new Error('unavailable') }));
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
+    const brief = screen.getByTestId('parking-summary');
+    const locations = brief.querySelector('[data-operational-metric="locations"]');
+    if (!(locations instanceof HTMLElement)) throw new Error('Locations evidence missing');
+    expect(locations).toHaveAttribute('data-value-state', 'missing');
+    expect(within(locations).queryByText('0')).not.toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText(/22:00–06:00/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/0 located · 0 missing/)).toBeInTheDocument();
   });
 });

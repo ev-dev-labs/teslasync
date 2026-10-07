@@ -4,9 +4,10 @@ import { HardDrive } from 'lucide-react'
 import { Input, Select } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { cn } from '@/lib/cn'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import { ToolCard } from '../ToolCard'
 import { BYTE_UNITS } from '../constants'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // BYTE_UNITS is a module constant, so the option list never changes — build it
 // once instead of allocating a fresh array (a new prop reference) every render.
@@ -24,6 +25,7 @@ const UNIT_OPTIONS = BYTE_UNITS.map((u) => ({ value: u, label: u }))
  * grid so the panel is never blank.
  */
 export function ByteSizeConverterTool() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState('B')
@@ -40,7 +42,7 @@ export function ByteSizeConverterTool() {
       unit: u,
       value: fmtNumber(bytes / Math.pow(1024, i), i === 0 ? 0 : 4),
     }))
-  }, [value, unit])
+  }, [value, unit, fmtNumber])
 
   const emptyMessage =
     value.trim() === ''
@@ -51,7 +53,7 @@ export function ByteSizeConverterTool() {
     <ToolCard
       icon={HardDrive}
       color="cyan"
-      title={t('devtools.utils.byteSize', 'Byte Size')}
+      title={t('devtools.utils.byteSize', 'Byte size')}
       description={t('devtools.utils.byteSizeDesc', 'Convert a value between B, KB, MB, GB, and TB.')}
     >
       <div className="space-y-3">

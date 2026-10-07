@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, sep } from 'node:path'
+import ts from 'typescript'
 
 /**
  * Defense-in-depth contract test.
@@ -37,116 +38,24 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-function buildMaskedRegions(text: string): Array<[number, number]> {
-  const regions: Array<[number, number]> = []
-  let i = 0
-  while (i < text.length) {
-    const c = text[i]
-    const next = text[i + 1]
-    if (c === '/' && next === '/') {
-      const start = i
-      i += 2
-      while (i < text.length && text[i] !== '\n') i++
-      regions.push([start, i])
-      continue
-    }
-    if (c === '/' && next === '*') {
-      const start = i
-      i += 2
-      while (i < text.length - 1 && !(text[i] === '*' && text[i + 1] === '/')) i++
-      i += 2
-      regions.push([start, i])
-      continue
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      const quote = c
-      const start = i
-      i++
-      while (i < text.length && text[i] !== quote) {
-        if (text[i] === '\\') i += 2
-        else i++
-      }
-      i++
-      regions.push([start, i])
-      continue
-    }
-    i++
-  }
-  return regions
-}
-
-function isMaskedRegion(regions: Array<[number, number]>, offset: number): boolean {
-  for (const [s, e] of regions) {
-    if (offset >= s && offset < e) return true
-    if (s > offset) return false
-  }
-  return false
-}
-
-function findTagEnd(text: string, from: number): number {
-  let i = from
-  if (text[i] === '<') {
-    let angle = 0
-    for (; i < text.length; i++) {
-      const c = text[i]
-      if (c === '<') angle++
-      else if (c === '>') {
-        angle--
-        if (angle === 0) {
-          i++
-          break
-        }
-      }
-    }
-  }
-  let depth = 0
-  let inString: string | null = null
-  for (; i < text.length; i++) {
-    const c = text[i]
-    if (inString) {
-      if (c === inString && text[i - 1] !== '\\') inString = null
-      continue
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      inString = c
-      continue
-    }
-    if (c === '{') {
-      depth++
-      continue
-    }
-    if (c === '}') {
-      depth--
-      continue
-    }
-    if (depth === 0 && (c === '>' || (c === '/' && text[i + 1] === '>'))) {
-      return c === '/' ? i + 2 : i + 1
-    }
-  }
-  return -1
-}
-
 function findOffenders(): string[] {
   const offenders: string[] = []
   for (const file of walk(ROOT)) {
     const text = readFileSync(file, 'utf8')
-    const masked = buildMaskedRegions(text)
-    const re = /<DataTable(?=[\s</>])/g
-    let m: RegExpExecArray | null
-    while ((m = re.exec(text)) !== null) {
-      if (isMaskedRegion(masked, m.index)) continue
-      const tagEnd = findTagEnd(text, m.index + '<DataTable'.length)
-      if (tagEnd === -1) {
-        const line = text.slice(0, m.index).split('\n').length
-        offenders.push(`${file}:${line} (unterminated tag)`)
-        continue
-      }
-      const tagSource = text.slice(m.index, tagEnd)
-      if (!/\btableId\s*=/.test(tagSource)) {
-        const line = text.slice(0, m.index).split('\n').length
+    const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+    const visit = (node: ts.Node) => {
+      if (
+        (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))
+        && node.tagName.getText(source) === 'DataTable'
+        && !node.attributes.properties.some(attribute =>
+          ts.isJsxAttribute(attribute) && attribute.name.getText(source) === 'tableId')
+      ) {
+        const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1
         offenders.push(`${file}:${line}`)
       }
+      ts.forEachChild(node, visit)
     }
+    visit(source)
   }
   return offenders
 }

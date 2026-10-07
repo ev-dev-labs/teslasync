@@ -41,7 +41,7 @@ export function WorkspaceHeader({
       className="hidden h-[4.5rem] shrink-0 grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)_minmax(0,1fr)] items-center gap-4 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 shadow-e1 xl:grid 2xl:px-6"
     >
       <div className="min-w-0 overflow-hidden justify-self-start">
-        <Caption className="mb-1 hidden font-semibold uppercase tracking-[0.1em] 3xl:block">
+        <Caption className="mb-1 hidden font-semibold tracking-[0.1em] 3xl:block">
           {t('nav.workspaceContext', 'Fleet operations')}
         </Caption>
         <LayoutBreadcrumbs variant="workspace" className="min-w-0 text-sm" sections={breadcrumbSections} collections={breadcrumbCollections} />

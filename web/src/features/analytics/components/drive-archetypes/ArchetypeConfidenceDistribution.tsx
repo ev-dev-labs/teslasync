@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
   ChartTooltip,
   CHART_COLORS,
   ResponsiveContainer,
@@ -14,15 +13,18 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeConfidenceDistribution({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtInt, fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(() => {
     const bins = [
@@ -55,7 +57,8 @@ export function ArchetypeConfidenceDistribution({
 
   return (
     <section data-testid="drive-archetypes-confidence">
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t('archetypes.confidence.title', 'Assignment confidence and margin distribution')}
         subtitle={t(
           'archetypes.confidence.subtitle',
@@ -77,7 +80,7 @@ export function ArchetypeConfidenceDistribution({
         dataColumns={[
           { key: 'margin', label: t('archetypes.confidence.marginBand', 'Margin band') },
           { key: 'count', label: t('archetypes.common.drives', 'Drives'), format: (value) => fmtInt(value) },
-          { key: 'share', label: t('archetypes.confidence.share', 'Assignment share (%)'), format: (value) => fmtNumber(value, 1) },
+          { key: 'share', label: t('archetypes.confidence.share', 'Assignment share (%)'), format: (value) => fmtNumber(value) },
         ]}
       >
         <ArchetypeSectionBody
@@ -115,12 +118,11 @@ export function ArchetypeConfidenceDistribution({
                 summary.analyzedDrives > 0
                   ? (ambiguous / summary.analyzedDrives) * 100
                   : 0,
-                1,
               )}
             </Badge>
           </div>
         </ArchetypeSectionBody>
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

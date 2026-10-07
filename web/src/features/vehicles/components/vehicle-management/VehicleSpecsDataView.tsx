@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/feedback'
-import { Badge, Text } from '@/components/ui'
+import { Badge, Table, Text } from '@/components/ui'
 import { isSensitiveManagementKey } from './managementJson'
 import { parseManagementScalarFields } from './managementData'
 import { ManagementRawDetails } from './ManagementRawDetails'
@@ -43,35 +43,34 @@ export function VehicleSpecsDataView({ data }: VehicleSpecsDataViewProps) {
           { count: fields.length },
         )}
       </Text>
-      <dl className="grid gap-2 sm:grid-cols-2">
-        {fields.map((field) => (
-          <div
-            key={field.key}
-            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-          >
-            <dt>
-              <Text variant="label">{field.label}</Text>
-            </dt>
-            <dd className="mt-1">
-              {typeof field.value === 'boolean' ? (
-                <Badge variant={field.value ? 'success' : 'neutral'}>
-                  {field.value
-                    ? t('vehicleManagement.data.true', 'Yes')
-                    : t('vehicleManagement.data.false', 'No')}
-                </Badge>
-              ) : (
-                <Text
-                  variant="body"
-                  weight="semibold"
-                  mono={typeof field.value === 'number'}
-                >
-                  {String(field.value)}
-                </Text>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <Table aria-label={t('vehicleManagement.specs.title', 'Vehicle specifications')}>
+        <tbody>
+          {fields.map((field) => (
+            <tr key={field.key}>
+              <th scope="row" className="font-normal">
+                <Text variant="label">{field.label}</Text>
+              </th>
+              <td className={typeof field.value === 'number' ? 'text-right tabular-nums' : undefined}>
+                {typeof field.value === 'boolean' ? (
+                  <Badge variant={field.value ? 'success' : 'neutral'}>
+                    {field.value
+                      ? t('vehicleManagement.data.true', 'Yes')
+                      : t('vehicleManagement.data.false', 'No')}
+                  </Badge>
+                ) : (
+                  <Text
+                    variant="body"
+                    weight="semibold"
+                    mono={typeof field.value === 'number'}
+                  >
+                    {String(field.value)}
+                  </Text>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
       <ManagementRawDetails value={data} />
     </div>
   )

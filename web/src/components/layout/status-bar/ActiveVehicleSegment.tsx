@@ -54,9 +54,11 @@ export function ActiveVehicleSegment({
   // render a literal "NaN%" / "NaN km".
   const metricsLabel = useMemo<string | null>(() => {
     if (!liveState) return null;
-    const battery = Number.isFinite(liveState.battery_level) ? liveState.battery_level : 0;
-    const ratedRangeM = Number.isFinite(liveState.rated_range) ? liveState.rated_range : 0;
-    const range = Math.round(convertDistanceFromSI(ratedRangeM, distanceLabel));
+    const battery = liveState.battery_level != null && Number.isFinite(liveState.battery_level)
+      ? liveState.battery_level : '—';
+    const ratedRangeM = liveState.rated_range;
+    const range = ratedRangeM != null && Number.isFinite(ratedRangeM)
+      ? Math.round(convertDistanceFromSI(ratedRangeM, distanceLabel)) : '—';
     return `${battery}% · ${range} ${distanceLabel}`;
   }, [liveState, distanceLabel]);
 

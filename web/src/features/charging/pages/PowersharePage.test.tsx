@@ -63,7 +63,7 @@ import {
 // call args (for param-wiring assertions) and routes by signal_name.
 const h = vi.hoisted(() => ({
   selectedVehicleId: 7 as number | null,
-  queries: {} as Record<string, unknown>,
+  queries: {} as Record<string, QueryStub>,
   observe: vi.fn((_vehicleId: unknown, opts?: { signal_name?: string; limit?: number }) => {
     const name = opts?.signal_name ?? '';
     return (
@@ -121,6 +121,10 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
     vehicles: [],
     setVehicleId: vi.fn(),
   }),
+}));
+
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => ['var(--theme-primary)', 'var(--text-secondary)'],
 }));
 
 // The header vehicle picker owns its own store wiring (covered by its own
@@ -284,7 +288,7 @@ describe('PowersharePage', () => {
     expect(kpi.getByText('Active')).toBeInTheDocument();
     expect(kpi.getByText('Home')).toBeInTheDocument();
     expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
-    expect(kpi.getByText('5.5 h')).toBeInTheDocument();
+    expect(kpi.getByText('5.50 h')).toBeInTheDocument();
 
     // Every section renders (titles are unique per panel; stop reason is
     // identified by its help copy which only appears on its panel).
@@ -382,10 +386,12 @@ describe('PowersharePage', () => {
 
     renderPage();
 
-    // `runtimeError` is `status ?? type ?? power ?? hours` — the stop signal is
-    // deliberately excluded — while `snapshotError` is a find() across ALL
-    // five. So exactly two panels blank: StopReasonPanel + SignalSnapshotPanel.
-    expect(screen.getAllByText(/Can't reach server/i)).toHaveLength(2);
+    // Only the failed stop source is fatal. The combined snapshot keeps the
+    // four healthy signals rather than discarding them because of one failure.
+    expect(screen.getAllByText(/Can't reach server/i)).toHaveLength(1);
+    const snapshot = within(screen.getByRole('table', { name: 'charging:powershare-signals' }));
+    expect(snapshot.getByText('3.25 kW')).toBeInTheDocument();
+    expect(snapshot.getByText('5.50 h')).toBeInTheDocument();
 
     // The live-session panel keeps rendering its ready content (StatusPill),
     // proving it was NOT gated on the stop-signal error. KPI + runtime = 2.
@@ -421,6 +427,40 @@ describe('PowersharePage', () => {
     for (const name of Object.values(POWERSHARE_SIGNALS)) {
       expect(h.queries[name].refetch).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it('keeps recorded values and both trends when a background refresh fails', () => {
+    const original = h.queries[POWERSHARE_SIGNALS.power];
+    h.queries[POWERSHARE_SIGNALS.power] = {
+      ...original, error: new Error('refresh failed'), isError: true,
+    };
+    renderPage();
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.getAllByText('Output Power Trend').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps the ready snapshot and runtime when one trend is still initially loading', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    });
+    renderPage();
+    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('5.50 h').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('table', { name: 'charging:powershare-signals' })).toBeInTheDocument();
+  });
+
+  it('marks non-finite observations unknown instead of displaying measured zero', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      data: [numObs(POWERSHARE_SIGNALS.power, Number.NaN, '2024-05-01T10:02:00Z')],
+    });
+    renderPage();
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('—')).toBeInTheDocument();
+    expect(kpi.queryByText('0.00 kW')).not.toBeInTheDocument();
+    expect(screen.getByText(/No power readings yet/i)).toBeInTheDocument();
   });
 });
 

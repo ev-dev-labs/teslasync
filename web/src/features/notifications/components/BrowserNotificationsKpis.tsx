@@ -1,13 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { AppWindow, Bell, BellRing, Volume2 } from 'lucide-react';
-import { MetricCard } from '@/components/data-display';
+import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
 import { useSettings } from '@/api/hooks/useSettings';
 import {
   NOTIFICATION_SOUND_CATEGORIES,
   useNotificationSoundPrefs,
 } from '@/lib/notificationSound';
 import type { WebPushPreferences } from '@/hooks/useNotificationListener';
-import type { NeonColor } from '@/lib/tokens';
+import { neonColorMap, type NeonColor } from '@/lib/tokens';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 interface BrowserNotificationsKpisProps {
   permission: NotificationPermission;
@@ -27,7 +30,9 @@ export function BrowserNotificationsKpis({
   pushPrefs,
 }: BrowserNotificationsKpisProps) {
   const { t } = useTranslation();
-  const { data: settings } = useSettings();
+  const settingsQuery = useSettings();
+  const { data: settings } = settingsQuery;
+  const settingsState = useDataState(settingsQuery);
   const soundPrefs = useNotificationSoundPrefs();
 
   const permissionMeta: { label: string; color: NeonColor } = !notificationsSupported
@@ -56,39 +61,41 @@ export function BrowserNotificationsKpis({
 
   const activeOf = (active: number, total: number) =>
     t('browserNotifications.kpi.activeOfTotal', '{{active}} of {{total}} on', { active, total });
+  const provenance = t('browserNotifications.kpi.brief.provenance', 'Permission and in-tab events belong to this browser; tab signals use saved settings and sounds use device preferences. These are configuration counts, not delivery success rates.');
+  const metrics: StatMetric[] = [
+    { metricId: 'status', occurrenceId: 'browser-permission', rawValue: permissionMeta.label,
+      label: t('browserNotifications.kpi.permission', 'Browser permission'),
+      context: <span className={neonColorMap[permissionMeta.color].text}><Bell className="h-5 w-5" aria-hidden="true" /></span> },
+    { metricId: 'count', occurrenceId: 'browser-push', rawValue: pushActive, display: { countTotal: 2 },
+      label: t('browserNotifications.kpi.pushEvents', 'In-tab events'),
+      context: <><BellRing className="h-5 w-5" aria-hidden="true" />{activeOf(pushActive, 2)}</> },
+    { metricId: 'count', occurrenceId: 'browser-tab', rawValue: tabActive, display: { countTotal: 2 },
+      label: t('browserNotifications.kpi.tabSignals', 'Tab signals'),
+      context: <><AppWindow className="h-5 w-5" aria-hidden="true" />{tabActive === null ? null : activeOf(tabActive, 2)}</> },
+    { metricId: 'count', occurrenceId: 'browser-sounds', rawValue: soundActive, display: { countTotal: totalChannels },
+      label: t('browserNotifications.kpi.soundChannels', 'Sound channels'),
+      context: <><Volume2 className="h-5 w-5" aria-hidden="true" />{activeOf(soundActive, totalChannels)}</> },
+  ];
+  const operationalMetrics = useOperationalMetrics(metrics);
 
   return (
-    <section
-      aria-label={t('browserNotifications.summaryAria', 'Notification status summary')}
-      className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-    >
-      <MetricCard
-        label={t('browserNotifications.kpi.permission', 'Browser permission')}
-        value={permissionMeta.label}
-        icon={<Bell className="h-5 w-5" aria-hidden="true" />}
-        color={permissionMeta.color}
-      />
-      <MetricCard
-        label={t('browserNotifications.kpi.pushEvents', 'In-tab events')}
-        value={`${pushActive}/2`}
-        subtitle={activeOf(pushActive, 2)}
-        icon={<BellRing className="h-5 w-5" aria-hidden="true" />}
-        color="cyan"
-      />
-      <MetricCard
-        label={t('browserNotifications.kpi.tabSignals', 'Tab signals')}
-        value={tabActive === null ? '—' : `${tabActive}/2`}
-        subtitle={tabActive === null ? undefined : activeOf(tabActive, 2)}
-        icon={<AppWindow className="h-5 w-5" aria-hidden="true" />}
-        color="purple"
-      />
-      <MetricCard
-        label={t('browserNotifications.kpi.soundChannels', 'Sound channels')}
-        value={`${soundActive}/${totalChannels}`}
-        subtitle={activeOf(soundActive, totalChannels)}
-        icon={<Volume2 className="h-5 w-5" aria-hidden="true" />}
-        color="green"
-      />
-    </section>
+    <div className="min-w-0 space-y-3">
+      <StaleRefreshWarning state={settingsState} label={t('browserNotifications.kpi.tabSignals', 'Tab signals')} hideRetry />
+      <section
+        aria-label={t('browserNotifications.summaryAria', 'Notification status summary')}
+        className="min-w-0"
+      >
+        <OperationalBrief compact testId="browser-notifications-brief"
+          eyebrow={t('browserNotifications.summaryAria', 'Notification status summary')}
+          title={t('browserNotifications.kpi.brief.title', 'Permission and enabled notification surfaces')}
+          description={provenance} metrics={operationalMetrics}
+          statusLabel={permissionMeta.label}
+          statusTone={permissionMeta.color === 'red' ? 'danger' : permissionMeta.color === 'amber' ? 'warning'
+            : permissionMeta.color === 'green' ? 'success' : 'neutral'}
+          scope={t('browserNotifications.kpi.brief.scope', 'This browser · saved tab settings')}
+          freshness={<DataProvenanceBadge provenance={settingsState.provenance} status={settingsState.status} updatedAt={settingsState.updatedAt} />}
+          provenance={provenance} />
+      </section>
+    </div>
   );
 }

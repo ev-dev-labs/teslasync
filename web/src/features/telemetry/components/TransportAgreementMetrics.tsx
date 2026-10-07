@@ -1,26 +1,53 @@
 import { useTranslation } from 'react-i18next';
 import {
-  CheckCircle2,
   CircleHelp,
   GitCompareArrows,
-  Radio,
-  Rows3,
   TriangleAlert,
-  Webhook,
 } from 'lucide-react';
 
 import type { TransportAgreementResponse } from '@/api/types';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from './operationalbrief-all/TelemetrySummaryBrief';
 import { AlertBanner, EmptyState } from '@/components/feedback';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface TransportAgreementMetricsProps {
   data: TransportAgreementResponse;
+  retained?: boolean;
 }
 
-export function TransportAgreementMetrics({ data }: TransportAgreementMetricsProps) {
+export function TransportAgreementMetrics({ data, retained = false }: TransportAgreementMetricsProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const measured = data.status === 'measured' && data.agreement_pct != null;
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'percent', occurrenceId: 'agreement', rawValue: measured ? data.agreement_pct : null,
+      label: t('signalTransportAgreement.agreement', 'Agreement'),
+      missingReason: measured ? undefined : t('common.notAvailable', 'N/A'),
+      display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
+      description: t('signalTransportAgreement.sourceTimeOnly', 'Producer time only; receipt fallbacks excluded'),
+      context: t('telemetryBrief.transportPairCounts', 'Across comparable pairs: {{agreeing}} agreeing · {{disagreeing}} disagreeing', {
+        agreeing: data.agreeing_pairs, disagreeing: data.disagreeing_pairs,
+      }) },
+    { metricId: 'count', occurrenceId: 'pairs', rawValue: data.comparable_pairs,
+      label: t('signalTransportAgreement.comparablePairs', 'Comparable pairs'),
+      display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
+      description: t('signalTransportAgreement.pairTolerance', 'Within {{seconds}} seconds', {
+        seconds: data.pair_tolerance_ms / 1000,
+      }) },
+    ...([
+      ['http', 'signalTransportAgreement.httpEvidence', 'HTTP evidence', data.http_evidence_rows],
+      ['mqtt', 'signalTransportAgreement.mqttEvidence', 'MQTT evidence', data.mqtt_evidence_rows],
+    ] as const).map(([key, labelKey, label, raw]): StatMetric => ({
+      metricId: 'count', occurrenceId: key, rawValue: raw,
+      label: t(labelKey, label),
+      display: { formatter: (value) => ({ value: fmtInt(value), unit: '' }) },
+      description: key === 'http'
+        ? t('telemetryBrief.httpRows', 'Eligible HTTP observations in the bounded producer-time evidence window.')
+        : t('telemetryBrief.mqttRows', 'Eligible MQTT observations in the bounded producer-time evidence window.'),
+    })),
+  ];
 
   return (
     <>
@@ -48,41 +75,15 @@ export function TransportAgreementMetrics({ data }: TransportAgreementMetricsPro
         </AlertBanner>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard
-          label={t('signalTransportAgreement.agreement', 'Agreement')}
-          value={measured ? fmtPercent(data.agreement_pct, 1) : t('common.notAvailable', 'N/A')}
-          subtitle={t(
-            'signalTransportAgreement.sourceTimeOnly',
-            'Producer time only; receipt fallbacks excluded',
-          )}
-          icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
-          color={measured && data.disagreeing_pairs === 0 ? 'green' : 'amber'}
-        />
-        <MetricCard
-          label={t('signalTransportAgreement.comparablePairs', 'Comparable pairs')}
-          value={fmtInt(data.comparable_pairs)}
-          subtitle={t(
-            'signalTransportAgreement.pairTolerance',
-            'Within {{seconds}} seconds',
-            { seconds: data.pair_tolerance_ms / 1000 },
-          )}
-          icon={<Rows3 className="h-5 w-5" aria-hidden="true" />}
-          color="blue"
-        />
-        <MetricCard
-          label={t('signalTransportAgreement.httpEvidence', 'HTTP evidence')}
-          value={fmtInt(data.http_evidence_rows)}
-          icon={<Webhook className="h-5 w-5" aria-hidden="true" />}
-          color="purple"
-        />
-        <MetricCard
-          label={t('signalTransportAgreement.mqttEvidence', 'MQTT evidence')}
-          value={fmtInt(data.mqtt_evidence_rows)}
-          icon={<Radio className="h-5 w-5" aria-hidden="true" />}
-          color="cyan"
-        />
-      </div>
+      <TelemetrySummaryBrief title={t('telemetryBrief.transportTitle', 'Cross-transport evidence summary')}
+        metrics={metrics} testId="transport-agreement-summary" retained={retained}
+        statusLabel={measured ? t('signalTransportAgreement.measured', 'Measured') : t('signalTransportAgreement.notMeasured', 'Not measured')}
+        scope={`${data.from} → ${data.to}`}
+        freshness={t('telemetryBrief.auditGenerated', 'Audit generated: {{timestamp}}', { timestamp: data.generated_at })}
+        provenance={t('signalTransportAgreement.description', 'Compares only SI-normalized observations with producer timestamps from both Fleet Telemetry transports.')}
+        description={data.truncated
+          ? t('signalTransportAgreement.partialDescription', 'The audit reached its {{limit}}-row safety limit. Results describe only the bounded sample and do not prove full-window agreement.', { limit: fmtInt(data.row_limit) })
+          : t('telemetryBrief.transportScope', 'Agreement describes eligible producer-time evidence in this submitted window; missing overlap is unknown, not zero agreement.')} />
 
       {data.status === 'no_evidence' ? (
         <EmptyState /* no-action: eligible transport evidence is recorded automatically as telemetry arrives. */

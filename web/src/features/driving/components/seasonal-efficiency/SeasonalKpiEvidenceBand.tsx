@@ -6,6 +6,7 @@ import { MetricCard } from '@/components/data-display';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { SeasonalSectionProps } from './types';
 import { fitStatusLabel, formatDecimal, formatInteger, formatIntensityWhPerM, formatSignedIntensityWhPerMPerYear, supportBandLabel } from './formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalKpiEvidenceBand({
   analysis,
@@ -14,6 +15,7 @@ export function SeasonalKpiEvidenceBand({
   units,
   timeZone,
 }: SeasonalSectionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const visibleError = state.error ?? state.refreshError;
@@ -49,7 +51,7 @@ export function SeasonalKpiEvidenceBand({
             label={t('seasonalEfficiency.kpis.actual', 'Observed intensity')}
             value={value(formatIntensityWhPerM(analysis.actualEnergyIntensityWhPerM, units.unitPrefs))}
             subtitle={t('seasonalEfficiency.kpis.distance', '{{distance}} observed distance', {
-              distance: units.formatDistance(analysis.totalDistanceM, { precision: 0 }),
+              distance: units.formatDistance(analysis.totalDistanceM),
             })}
             icon={<Gauge className="h-5 w-5" />}
             color="purple"
@@ -58,7 +60,7 @@ export function SeasonalKpiEvidenceBand({
             label={t('seasonalEfficiency.kpis.fit', 'Fit status')}
             value={resolved ? fitStatusLabel(analysis.fit.status, t) : '—'}
             subtitle={t('seasonalEfficiency.kpis.support', '{{ratio}} samples / 6 parameters', {
-              ratio: formatDecimal(analysis.fit.sampleToParameterRatio, locale, 1),
+              ratio: formatDecimal(analysis.fit.sampleToParameterRatio, locale),
             })}
             icon={<Sigma className="h-5 w-5" />}
             color="green"
@@ -72,7 +74,7 @@ export function SeasonalKpiEvidenceBand({
           />
           <MetricCard
             label={t('seasonalEfficiency.kpis.rSquared', 'In-sample R²')}
-            value={value(formatDecimal(analysis.rSquaredInSample, locale, 2))}
+            value={value(formatDecimal(analysis.rSquaredInSample, locale))}
             subtitle={t('seasonalEfficiency.kpis.rSquaredHint', 'descriptive fit, not a forward claim')}
             icon={<Layers3 className="h-5 w-5" />}
             color="green"
@@ -96,7 +98,7 @@ export function SeasonalKpiEvidenceBand({
             index: analysis.support.index,
           })}</span>
           <span>{t('seasonalEfficiency.kpis.recency', 'Latest included: {{days}} days ago', {
-            days: analysis.daysSinceLatestIncluded == null ? '—' : formatDecimal(analysis.daysSinceLatestIncluded, locale, 1),
+            days: analysis.daysSinceLatestIncluded == null ? '—' : formatDecimal(analysis.daysSinceLatestIncluded, locale),
           })}</span>
           <span>{t(
             analysis.accounting.historyCapReached

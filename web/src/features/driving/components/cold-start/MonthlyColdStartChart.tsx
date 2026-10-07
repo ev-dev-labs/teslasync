@@ -7,11 +7,12 @@ import {
   Line, ResponsiveContainer, Tooltip, XAxis, YAxis, axisTick, chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { MonthlyColdStartRollup } from '../../lib/coldStart';
 import type { ColdStartSectionState } from './types';
 import { useColdStartDisplay } from './useColdStartDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyColdStartChartProps {
   months: MonthlyColdStartRollup[];
@@ -21,6 +22,7 @@ interface MonthlyColdStartChartProps {
 
 /** Descriptive monthly weighted-consumption trend with per-group sample bars. */
 export function MonthlyColdStartChart({ months, state, className }: MonthlyColdStartChartProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { convertEfficiency, efficiencyUnit, formatMonth } = useColdStartDisplay();
   const rows = useMemo(
@@ -74,12 +76,12 @@ export function MonthlyColdStartChart({ months, state, className }: MonthlyColdS
           {
             key: 'cold',
             label: `${coldName} (${efficiencyUnit})`,
-            format: (value) => (typeof value === 'number' ? fmtNumber(value, 1) : '—'),
+            format: (value) => (typeof value === 'number' ? fmtNumber(value) : '—'),
           },
           {
             key: 'warm',
             label: `${warmName} (${efficiencyUnit})`,
-            format: (value) => (typeof value === 'number' ? fmtNumber(value, 1) : '—'),
+            format: (value) => (typeof value === 'number' ? fmtNumber(value) : '—'),
           },
           {
             key: 'coldSamples',
@@ -123,7 +125,7 @@ export function MonthlyColdStartChart({ months, state, className }: MonthlyColdS
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => fmtNumber(value, 0)}
+                  tickFormatter={(value) => fmtNumber(value)}
                   width={48}
                 />
                 <YAxis
@@ -143,7 +145,7 @@ export function MonthlyColdStartChart({ months, state, className }: MonthlyColdS
                           ? t('coldStart.monthly.sampleValue', '{{count}} drives', {
                               count: typeof value === 'number' ? value : 0,
                             })
-                          : `${fmtNumber(value, 1)} ${efficiencyUnit}`
+                          : `${fmtNumber(value)} ${efficiencyUnit}`
                       }
                     />
                   }

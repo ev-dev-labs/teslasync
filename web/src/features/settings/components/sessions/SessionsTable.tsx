@@ -52,6 +52,8 @@ export function SessionsTable({
     () => [
       {
         key: 'device',
+        filterValue: (row) => row.user_agent || null,
+        filterValueLabel: (_value, row) => describeDevice(row.user_agent),
         header: t('account.sessions.columns.device', 'Device'),
         render: (row) => (
           <div className="flex items-center gap-2">
@@ -70,6 +72,7 @@ export function SessionsTable({
       },
       {
         key: 'ip',
+        filterValue: (row) => row.ip || null,
         header: t('account.sessions.columns.ip', 'IP address'),
         render: (row) => (
           <Text color="secondary" className="tabular-nums">{row.ip || '—'}</Text>
@@ -77,6 +80,8 @@ export function SessionsTable({
       },
       {
         key: 'created_at',
+        filterValue: (row) => row.created_at ?? null,
+        filterValueLabel: (_value, row) => formatDateTime(row.created_at),
         header: t('account.sessions.columns.createdAt', 'Signed in'),
         render: (row) => (
           <Text color="secondary">{formatDateTime(row.created_at)}</Text>
@@ -84,6 +89,8 @@ export function SessionsTable({
       },
       {
         key: 'last_seen_at',
+        filterValue: (row) => row.last_seen_at ?? null,
+        filterValueLabel: (_value, row) => formatDateTime(row.last_seen_at),
         header: t('account.sessions.columns.lastSeenAt', 'Last seen'),
         render: (row) => (
           <Text color="secondary">{formatDateTime(row.last_seen_at)}</Text>
@@ -119,8 +126,8 @@ export function SessionsTable({
   const keyExtractor = useCallback((row: ActiveSession) => row.id, [])
 
   return (
-    <section aria-label={t('account.sessions.tableAria', 'Active devices')}>
-      <GlassPanel className="p-4 sm:p-5" data-testid="active-sessions-section">
+    <section className="min-w-0" aria-label={t('account.sessions.tableAria', 'Active devices')}>
+      <GlassPanel className="min-w-0 p-4 sm:p-5" data-testid="active-sessions-section">
         <PanelTitle className="mb-3">
           {t('account.sessions.tableTitle', 'Active devices')}
         </PanelTitle>
@@ -134,6 +141,7 @@ export function SessionsTable({
             columns={columns}
             mobileColumns={['device', 'last_seen_at', 'actions']}
             data={sessions ?? []}
+            enableValueFilters
             keyExtractor={keyExtractor}
             emptyMessage={t('account.sessions.empty', 'No active sessions for this account.')}
             pagination

@@ -108,9 +108,9 @@ import type { FleetAnalyticsQuery } from './constants';
 const SUMMARY_REGION = 'Charging summary metrics';
 const CHARTS_REGION = 'Charging';
 const PANEL_TITLES = [
-  'Charger Types',
-  'Start Battery Distribution',
-  'Hourly Charging Pattern',
+  'Charger types',
+  'Start battery distribution',
+  'Hourly charging pattern',
 ] as const;
 
 function makeStats(overrides: Partial<StatsSummary> = {}): StatsSummary {
@@ -190,7 +190,7 @@ describe('ChargingTab — loading', () => {
 
     // Panel shells (titles) are always present, even mid-load.
     for (const title of PANEL_TITLES) {
-      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
 
     // The KPI band is a skeleton — no metric labels, and no empty/error UI.
@@ -207,11 +207,11 @@ describe('ChargingTab — loaded', () => {
     const region = screen.getByRole('region', { name: SUMMARY_REGION });
     // Top-level totals (sessions / energy / cost via the '$' currency stub).
     expect(within(region).getByText('128')).toBeInTheDocument();
-    expect(within(region).getByText('543.2')).toBeInTheDocument();
+    expect(within(region).getByText('543.20')).toBeInTheDocument();
     expect(within(region).getByText('$87.50')).toBeInTheDocument();
     // Stat-derived KPIs (avg power / charge efficiency).
-    expect(within(region).getByText('48.6')).toBeInTheDocument();
-    expect(within(region).getByText('92.4')).toBeInTheDocument();
+    expect(within(region).getByText('48.60')).toBeInTheDocument();
+    expect(within(region).getByText('92.40')).toBeInTheDocument();
 
     // Loaded, non-empty ⇒ no skeletons, no empty states, no errors.
     expect(screen.queryByRole('status')).toBeNull();
@@ -299,7 +299,7 @@ describe('ChargingTab — error', () => {
     // Regression guard: pre-hardening these rendered "0" / "0.0" / "$0.00",
     // which reads as "actually zero" rather than "unknown".
     expect(screen.queryByText('$0.00')).toBeNull();
-    expect(screen.queryByText('0.0')).toBeNull();
+    expect(screen.queryByText('0.00')).toBeNull();
 
     // Every KPI collapses to the unknown placeholder when there is no data.
     expect(within(region).getAllByText('—').length).toBeGreaterThanOrEqual(3);

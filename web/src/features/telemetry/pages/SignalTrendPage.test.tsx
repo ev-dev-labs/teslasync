@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,6 +27,8 @@ const H = vi.hoisted(() => ({
   history: {
     current: null as unknown as FakeQuery<SignalHistoryResponse>,
   },
+  chartColumns: [] as Array<{ key: string; label: string }>,
+  chartRows: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -90,15 +93,21 @@ vi.mock('@/components/charts', () => ({
   ChartContainer: ({
     title,
     children,
+    dataColumns,
+    data,
   }: {
     title: string;
     children?: ReactNode;
-  }) => (
-    <section>
+    dataColumns?: Array<{ key: string; label: string }>;
+    data?: Array<Record<string, unknown>>;
+  }) => {
+    H.chartColumns = dataColumns ?? [];
+    H.chartRows = data ?? [];
+    return <section>
       <h2>{title}</h2>
       {children}
-    </section>
-  ),
+    </section>;
+  },
   ChartTooltip: () => null,
   ChartLegend: () => null,
   ComposedChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -158,6 +167,8 @@ function pageElement(client: QueryClient) {
 }
 
 beforeEach(() => {
+  H.chartColumns = [];
+  H.chartRows = [];
   H.signals.current = query({
     data: ['BatteryLevel'],
     isSuccess: true,
@@ -169,6 +180,19 @@ beforeEach(() => {
 });
 
 describe('SignalTrendPage partial-data contract', () => {
+  it('keeps both forecast bounds in accessible and export data without changing actual values', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(pageElement(client));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Signal' }), { target: { value: 'BatteryLevel' } });
+    expect(H.chartColumns).toEqual(expect.arrayContaining([
+      { key: 'bandBase', label: 'Forecast low' },
+      { key: 'bandHigh', label: 'Forecast high' },
+    ]));
+    const actualRows = H.chartRows.filter((row) => row.actual != null);
+    expect(actualRows.map((row) => row.actual)).toEqual([50, 51, 52, 53, 54]);
+    expect(actualRows.every((row) => row.bandHigh === null)).toBe(true);
+    expect(H.chartRows.every((row) => Object.prototype.hasOwnProperty.call(row, 'bandHigh'))).toBe(true);
+  });
   it('retains selected history when the cached signal catalog refresh fails', () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -193,7 +217,7 @@ describe('SignalTrendPage partial-data contract', () => {
     expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
     expect(screen.getByText('Selected signal history')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
-    expect(screen.getByText('Robust Baseline & Forecast Band')).toBeInTheDocument();
+    expect(screen.getByText('Robust baseline & forecast band')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
     expect(H.signals.current.refetch).toHaveBeenCalledTimes(1);

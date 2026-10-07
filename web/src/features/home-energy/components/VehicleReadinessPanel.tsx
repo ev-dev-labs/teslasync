@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { CarFront, CheckCircle2, AlertCircle } from 'lucide-react';
-import { GlassPanel, PanelTitle, Badge } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
 import { ProgressRing } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import type { VehiclePlanResult } from '../lib/types';
@@ -17,8 +17,7 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
   const { formatEnergy } = useUnits();
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('homeEnergy.readiness.title', 'Per-Vehicle Readiness')}</PanelTitle>
+    <LayoutCard title={t('homeEnergy.readiness.title', 'Per-vehicle readiness')}>
       {vehicles.length === 0 ? (
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}
@@ -30,7 +29,7 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
           {vehicles.map((v) => (
             <div
               key={v.vehicleId}
-              className="flex items-center gap-4 rounded-lg border border-[var(--border-subtle)] p-3"
+              className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-[var(--border-subtle)] p-3"
             >
               <ProgressRing
                 value={v.finalSocPct}
@@ -43,8 +42,8 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
                 centerSubLabel={t('homeEnergy.readiness.ofTarget', 'of {{target}}%', { target: Math.round(v.targetSocPct) })}
               />
               <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium text-[var(--text-primary)]">{v.name}</span>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <Text variant="bodySm" weight="medium" className="min-w-0 break-words">{v.name}</Text>
                   <Badge variant={v.readinessAchieved ? 'success' : 'warning'} size="sm">
                     {v.readinessAchieved ? (
                       <CheckCircle2 className="h-3 w-3" />
@@ -56,27 +55,27 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
                       : t('homeEnergy.readiness.notReady', 'Not ready')}
                   </Badge>
                 </div>
-                <div className="text-xs text-[var(--text-muted)]">
+                <Text as="p" variant="caption" color="muted">
                   {t('homeEnergy.readiness.delivered', 'Delivered {{delivered}} of {{needed}} needed', {
                     delivered: formatEnergy(v.deliveredWh),
                     needed: formatEnergy(v.neededWh),
                   })}
-                </div>
+                </Text>
                 {v.unmetWh > 0 && (
-                  <div className="text-xs font-medium text-amber-500">
+                  <Text as="p" variant="caption" weight="medium" className="text-amber-300">
                     {t('homeEnergy.readiness.unmet', 'Unmet: {{amount}}', { amount: formatEnergy(v.unmetWh) })}
-                  </div>
+                  </Text>
                 )}
-                <div className="text-xs text-[var(--text-muted)]">
+                <Text as="p" variant="caption" color="muted">
                   {v.departureSlot != null
                     ? t('homeEnergy.readiness.departureSlot', 'Departure slot #{{slot}}', { slot: v.departureSlot })
                     : t('homeEnergy.readiness.noDeadline', 'Opportunistic (no deadline)')}
-                </div>
+                </Text>
               </div>
             </div>
           ))}
         </Grid>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

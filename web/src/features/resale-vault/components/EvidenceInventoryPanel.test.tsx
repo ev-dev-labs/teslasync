@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { deriveDataState } from '@/api/dataState';
+import { makeMinimalReport } from '../lib/testFixtures';
 import { EvidenceInventoryPanel } from './EvidenceInventoryPanel';
 import { DISCLOSURE_PROFILE_SECTIONS } from '../lib/constants';
 import type { VaultEvidence, DisclosureSelection } from '../lib/types';
@@ -29,6 +32,7 @@ describe('EvidenceInventoryPanel', () => {
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading={false} hasPartialErrors={false} />,
     );
     expect(screen.getAllByText('No data').length).toBe(8);
+    expect(within(screen.getByRole('table')).getAllByRole('rowheader')).toHaveLength(8);
   });
 
   it('shows "Data found" for a populated section', () => {
@@ -64,7 +68,7 @@ describe('EvidenceInventoryPanel', () => {
     render(
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading={false} hasPartialErrors={false} />,
     );
-    const row = screen.getByText('Driving History').closest('li')!;
+    const row = screen.getByRole('row', { name: /Driving history/ });
     expect(row).toHaveTextContent('Excluded by profile');
   });
 
@@ -72,7 +76,7 @@ describe('EvidenceInventoryPanel', () => {
     render(
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading={false} hasPartialErrors={false} />,
     );
-    const row = screen.getByText('Battery Health').closest('li')!;
+    const row = screen.getByRole('row', { name: /Battery health/ });
     expect(row).toHaveTextContent('Included');
   });
 
@@ -80,7 +84,7 @@ describe('EvidenceInventoryPanel', () => {
     render(
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading={false} hasPartialErrors />,
     );
-    expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded evidence remains visible/i)).toBeInTheDocument();
   });
 
   it('shows "Loading…" badges while isLoading is true', () => {
@@ -88,5 +92,35 @@ describe('EvidenceInventoryPanel', () => {
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading hasPartialErrors={false} />,
     );
     expect(screen.getAllByText('Loading…').length).toBe(8);
+  });
+
+  it('reports independent initial, failed and retained sources without changing disclosure membership', () => {
+    const batteryRetry = vi.fn();
+    const warrantyRetry = vi.fn();
+    render(
+      <MemoryRouter>
+        <EvidenceInventoryPanel
+          evidence={makeMinimalReport().evidence}
+          selection={selection()}
+          isLoading
+          hasPartialErrors
+          sources={[
+            { id: 'battery', section: 'battery', labelKey: 'resaleVault.battery.title', label: 'Battery health', loading: false, state: deriveDataState({ data: { capacity_wh: 72100 }, error: new Error('battery refresh failed'), refetch: batteryRetry }) },
+            { id: 'software', section: 'software_updates', labelKey: 'resaleVault.software.title', label: 'Software updates', loading: true, state: deriveDataState({ isLoading: true }) },
+            { id: 'warranty', section: 'warranty', labelKey: 'resaleVault.warranty.title', label: 'Warranty', loading: false, state: deriveDataState({ error: new Error('warranty failed'), refetch: warrantyRetry }) },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('row', { name: /Battery health/ })).toHaveTextContent('Data found');
+    expect(screen.getByRole('row', { name: /Battery health/ })).toHaveTextContent('Included');
+    expect(screen.getByRole('row', { name: /Software updates/ })).toHaveTextContent('Loading…');
+    expect(screen.getByRole('row', { name: /Driving history/ })).toHaveTextContent('Excluded by profile');
+    expect(screen.getByText('Warranty could not be loaded.')).toBeInTheDocument();
+    expect(screen.getByRole('row', { name: /Warranty Unavailable/ })).toHaveTextContent('Included');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(batteryRetry).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(warrantyRetry).toHaveBeenCalledOnce();
   });
 });

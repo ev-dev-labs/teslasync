@@ -9,12 +9,13 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type {
   DriveDnaChannelCoverage,
   DriveDnaModel,
 } from '../../lib/driveDNA';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const COVERAGE_COLUMNS = { default: 2, md: 3, xl: 5 } as const;
 
@@ -25,6 +26,7 @@ interface DriveDnaSignalCoverageGridProps {
 export function DriveDnaSignalCoverageGrid({
   model,
 }: DriveDnaSignalCoverageGridProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const value = (coverage: DriveDnaChannelCoverage): string =>
     t('driveDna.coverage.channelValue', '{{available}} / {{valid}}', {
@@ -34,7 +36,7 @@ export function DriveDnaSignalCoverageGrid({
   const subtitle = (coverage: DriveDnaChannelCoverage): string =>
     coverage.availablePct != null
       ? t('driveDna.coverage.channelPercent', '{{percent}}% available', {
-          percent: fmtNumber(coverage.availablePct, 1),
+          percent: fmtNumber(coverage.availablePct),
         })
       : t('driveDna.coverage.channelNoDenominator', 'No valid-row denominator');
 

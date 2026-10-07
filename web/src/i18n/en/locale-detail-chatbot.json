@@ -3,7 +3,7 @@
     "title": "Helix",
     "subtitle": "Evidence-grounded intelligence across your fleet and TeslaSync knowledge",
     "history": "History",
-    "newChat": "New Chat",
+    "newChat": "New chat",
     "sessions": "Sessions",
     "noSessions": "No conversations yet",
     "howCanIHelp": "How can Helix help you?",
@@ -11,7 +11,7 @@
     "thinking": "Helix is thinking…",
     "planning": "Helix is planning the investigation…",
     "grounding": "Helix is grounding the answer in TeslaSync evidence…",
-    "placeholder": "Ask Helix to investigate, compare, or explain… (Shift+Enter for newline)",
+    "placeholder": "Ask Helix to investigate, compare, or explain… (shift+enter for newline)",
     "inputLabel": "Message",
     "aiError": "(AI error: {{message}})",
     "actions": {

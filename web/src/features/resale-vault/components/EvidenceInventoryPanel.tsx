@@ -6,29 +6,30 @@
  * privacy/redaction preview (which shows what would be REMOVED).
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
-import { InlineCallout } from '@/components/feedback';
+import { Badge, Table, HelperText } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { InlineCallout, StaleRefreshWarning } from '@/components/feedback';
 import { AlertTriangle } from 'lucide-react';
 import { ALL_EVIDENCE_SECTIONS, type EvidenceSectionId } from '../lib/constants';
 import type { VaultEvidence, DisclosureSelection } from '../lib/types';
 import { SECTION_LABEL_KEYS } from './sectionLabels';
+import type { VaultEvidenceSource } from '../hooks/useVaultEvidence';
 
 export interface EvidenceInventoryPanelProps {
   evidence: VaultEvidence;
   selection: DisclosureSelection;
   isLoading: boolean;
   hasPartialErrors: boolean;
+  sources?: readonly VaultEvidenceSource[];
 }
 
-export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPartialErrors }: EvidenceInventoryPanelProps) {
+export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPartialErrors, sources }: EvidenceInventoryPanelProps) {
   const { t } = useTranslation();
   const selectedSet = new Set(selection.sections);
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
+    <LayoutCard title={t('resaleVault.inventory.title', 'Evidence inventory')}>
       <div>
-        <PanelTitle>{t('resaleVault.inventory.title', 'Evidence Inventory')}</PanelTitle>
         <HelperText className="mt-1">
           {t('resaleVault.inventory.subtitle', 'What data is available for this vehicle, and whether the current disclosure profile would include it.')}
         </HelperText>
@@ -37,38 +38,66 @@ export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPart
       {hasPartialErrors && (
         <InlineCallout variant="warning" icon={<AlertTriangle />}>
           {t(
-            'resaleVault.inventory.partialError',
-            'One or more evidence sources failed to load. Affected sections are shown as unavailable rather than guessed.',
+            'resaleVault.inventory.sourceFailures',
+            'One or more evidence sources could not refresh. Previously loaded evidence remains visible; missing evidence is not guessed.',
           )}
         </InlineCallout>
       )}
 
-      <ul className="divide-y divide-white/[0.06]">
+      <Table aria-label={t('resaleVault.inventory.title', 'Evidence inventory')}>
+
+        <tbody>
         {ALL_EVIDENCE_SECTIONS.map((section: EvidenceSectionId) => {
           const labels = SECTION_LABEL_KEYS[section];
           const hasData = evidence[section] != null;
           const isSelected = selectedSet.has(section);
+          const pending = sources
+            ? sources.some((source) => source.section === section && source.loading)
+            : isLoading;
+          const failed = sources?.some((source) => source.section === section && source.state.fatalError != null) ?? false;
           return (
-            <li key={section} className="flex items-center justify-between gap-3 py-2.5">
-              <span className="text-sm text-[var(--text-primary)]">{t(labels.key, labels.fallback)}</span>
-              <span className="flex items-center gap-2">
+            <tr key={section}>
+              <th scope="row"><span className="text-sm text-[var(--text-primary)]">{t(labels.key, labels.fallback)}</span></th>
+              <td>
                 <Badge variant={hasData ? 'success' : 'neutral'}>
-                  {isLoading
+                  {pending && !hasData
                     ? t('resaleVault.inventory.loading', 'Loading…')
                     : hasData
                       ? t('resaleVault.inventory.dataFound', 'Data found')
-                      : t('resaleVault.inventory.noData', 'No data')}
+                      : failed
+                        ? t('resaleVault.inventory.unavailable', 'Unavailable')
+                        : t('resaleVault.inventory.noData', 'No data')}
                 </Badge>
+              </td>
+              <td>
                 <Badge variant={isSelected ? 'info' : 'neutral'}>
                   {isSelected
                     ? t('resaleVault.inventory.included', 'Included')
                     : t('resaleVault.inventory.excluded', 'Excluded by profile')}
                 </Badge>
-              </span>
-            </li>
+              </td>
+            </tr>
           );
         })}
-      </ul>
-    </GlassPanel>
+        </tbody>
+      </Table>
+      {sources?.map(({ id, labelKey, label, state, loading }) => (
+        <div key={id}>
+          <StaleRefreshWarning state={state} label={t(labelKey, label)} />
+          {state.fatalError || loading ? (
+            <SourceContent
+              state={state.fatalError ? 'error' : 'loading'}
+              label={t(labelKey, label)}
+              error={state.fatalError}
+              errorMessage={t('resaleVault.inventory.sourceError', '{{source}} could not be loaded.', { source: t(labelKey, label) })}
+              errorRecovery={state.retry ? { onRetry: state.retry } : undefined}
+              emptyMessage=""
+            >
+              {null}
+            </SourceContent>
+          ) : null}
+        </div>
+      ))}
+    </LayoutCard>
   );
 }

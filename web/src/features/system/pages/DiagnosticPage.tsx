@@ -19,17 +19,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
-  Gauge,
-  ListChecks,
   PlayCircle,
   RefreshCw,
   ShieldAlert,
-  ShieldCheck,
-  Timer,
   XCircle,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   Badge,
   Button,
@@ -41,7 +37,8 @@ import {
   MetricLabel,
   SectionTitle,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { CompositionRail } from '@/components/data-display';
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import { AlertBanner, EmptyState, Spinner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useOptionalToast } from '@/components/feedback/Toast';
@@ -58,10 +55,18 @@ import type {
   DiagnosticReport,
 } from '@/api/types';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 // ── helpers ─────────────────────────────────────────────────────────
 
 type StatusTone = 'success' | 'warning' | 'danger';
+
+const CHECK_STATUS_LABELS: Record<DiagnosticCheckStatus, string> = {
+  ok: 'OK',
+  warn: 'Warning',
+  fail: 'Fail',
+};
 
 /** Aggregate derived from the report's checks — computed once in the
  *  page and shared by the hero band + KPI strip (DRY, null-safe). */
@@ -142,7 +147,7 @@ function statusIcon(status: DiagnosticCheckStatus) {
 /** Compact human duration for probe timings (sub-second in ms, else s). */
 function formatMs(ms: number): string {
   const v = Number.isFinite(ms) ? ms : 0;
-  if (v >= 1000) return `${(v / 1000).toFixed(v >= 10_000 ? 0 : 1)}s`;
+  if (v >= 1000) return `${fmtNumber((v / 1000))}s`;
   return `${Math.round(v)}ms`;
 }
 
@@ -216,7 +221,7 @@ function CheckCard({ check }: { check: DiagnosticCheck }) {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <Badge variant={tone}>
-            {t(`diagnostic.status.${check.status}`, check.status.toUpperCase())}
+            {t(`diagnostic.status.${check.status}`, CHECK_STATUS_LABELS[check.status] ?? check.status)}
           </Badge>
           <Caption className="tabular-nums">
             {t('diagnostic.duration', { ms: check.duration_ms })}
@@ -278,93 +283,46 @@ function OverallHero({
         </div>
 
         <div className="mt-4">
-          <div
-            className="flex h-2.5 overflow-hidden rounded-full bg-white/[0.04]"
-            role="img"
-            aria-label={barAria}
-          >
-            {segments.map((s) => {
-              const pct = summary.total > 0 ? (s.count / summary.total) * 100 : 0;
-              if (pct <= 0) return null;
-              return (
-                <div
-                  key={s.key}
-                  className={cn('h-full', toneFill(s.key))}
-                  style={{ width: `${pct}%` }}
-                />
-              );
-            })}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-            {segments.map((s) => (
-              <div key={s.key} className="flex items-center gap-1.5">
-                <span className={cn('inline-block h-2.5 w-2.5 rounded-full', toneFill(s.key))} />
-                <Text variant="bodySm" as="span">
-                  {s.label}
-                </Text>
-                <Text
-                  as="span"
-                  size="xs"
-                  weight="semibold"
-                  color="primary"
-                  className="tabular-nums"
-                >
-                  {s.count}
-                </Text>
-              </div>
-            ))}
-          </div>
+          <CompositionRail
+            summary={barAria}
+            segments={segments.map((segment) => ({
+              id: segment.key,
+              label: segment.label,
+              detail: segment.count,
+              widthPercent: summary.total > 0 ? (segment.count / summary.total) * 100 : 0,
+              hideFromTrack: segment.count <= 0,
+              fillClassName: toneFill(segment.key),
+            }))}
+          />
         </div>
       </GlassPanel>
     </section>
   );
 }
 
-function StatusSummary({ summary }: { summary: DiagnosticSummary }) {
+function StatusSummary({ summary, generatedAt, retained }: { summary: DiagnosticSummary; generatedAt: string; retained: boolean }) {
+  useNumberFormatting();
   const { t } = useTranslation();
   return (
-    <section
-      aria-label={t('diagnostic.summary.title', 'Diagnostic summary')}
-      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
-    >
-      <MetricCard
-        label={t('diagnostic.summary.total', 'Total checks')}
-        value={summary.total}
-        icon={<ListChecks className="h-5 w-5" aria-hidden />}
-        color="cyan"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.passing', 'Passing')}
-        value={summary.ok}
-        icon={<ShieldCheck className="h-5 w-5" aria-hidden />}
-        color="green"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.warnings', 'Warnings')}
-        value={summary.warn}
-        icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
-        color="amber"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.failures', 'Failures')}
-        value={summary.fail}
-        icon={<XCircle className="h-5 w-5" aria-hidden />}
-        color="red"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.totalTime', 'Total time')}
-        value={formatMs(summary.totalMs)}
-        icon={<Timer className="h-5 w-5" aria-hidden />}
-        color="blue"
-      />
-      <MetricCard
-        label={t('diagnostic.summary.slowest', 'Slowest check')}
-        value={summary.slowest ? formatMs(summary.slowest.duration_ms ?? 0) : '—'}
-        subtitle={summary.slowest?.name}
-        icon={<Gauge className="h-5 w-5" aria-hidden />}
-        color="purple"
-      />
-    </section>
+    <SystemSummaryBrief
+      title={t('diagnostic.summary.title', 'Diagnostic summary')}
+      description={t('diagnostic.brief.description', 'Probe outcomes and recorded timings from the displayed diagnostic report.')}
+      scope={t('diagnostic.brief.scope', 'One diagnostic run; total time is the sum of probe durations.')}
+      available
+      retained={retained}
+      freshness={generatedAt}
+      metrics={[
+        { metricId: 'count', occurrenceId: 'total', rawValue: summary.total, label: t('diagnostic.summary.total', 'Total checks') },
+        { metricId: 'count', occurrenceId: 'passing', rawValue: summary.ok, label: t('diagnostic.summary.passing', 'Passing') },
+        { metricId: 'count', occurrenceId: 'warnings', rawValue: summary.warn, label: t('diagnostic.summary.warnings', 'Warnings') },
+        { metricId: 'count', occurrenceId: 'failures', rawValue: summary.fail, label: t('diagnostic.summary.failures', 'Failures') },
+        { metricId: 'latency', occurrenceId: 'total-time', rawValue: summary.totalMs / 1000, label: t('diagnostic.summary.totalTime', 'Total time'),
+          display: { formatter: (raw) => ({ value: formatMs(raw * 1000) }) } },
+        { metricId: 'latency', occurrenceId: 'slowest', rawValue: summary.slowest?.duration_ms != null ? summary.slowest.duration_ms / 1000 : null,
+          label: t('diagnostic.summary.slowest', 'Slowest check'), context: summary.slowest?.name,
+          display: { formatter: (raw) => ({ value: formatMs(raw * 1000) }) } },
+      ]}
+    />
   );
 }
 
@@ -468,13 +426,13 @@ export default function DiagnosticPage() {
   ) : null;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('diagnostic.title', 'System diagnostic')}
       subtitle={t(
         'diagnostic.subtitle',
         'Run an aggregated self-test against the database, MQTT broker, Redis, Tesla API, and resilience monitors.',
       )}
-      actions={runButton}
+      primaryAction={runButton}
     >
       <div className="space-y-4 sm:space-y-6">
         {latestError ? (
@@ -505,7 +463,7 @@ export default function DiagnosticPage() {
             </FadeIn>
 
             <FadeIn delay={0.05}>
-              <StatusSummary summary={summary} />
+              <StatusSummary summary={summary} generatedAt={report.generated_at} retained={!!latestError} />
             </FadeIn>
 
             <FadeIn delay={0.1}>
@@ -551,6 +509,6 @@ export default function DiagnosticPage() {
           </FadeIn>
         )}
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

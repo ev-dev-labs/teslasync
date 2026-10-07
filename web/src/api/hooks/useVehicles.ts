@@ -25,6 +25,7 @@ import type {
   VehicleManagementResult,
   VehiclePricingVariables,
   VehicleState,
+  VehicleStateReadings,
   VehicleStatus,
 } from '../types';
 import { deriveVehicleStatus } from '../types';
@@ -141,7 +142,7 @@ export type VehicleStateFreshness = 'fresh' | 'stale' | 'unknown'
 export type VerifiedVehicleStateField = keyof VehicleState
 
 interface MappedVehicleStateResponse {
-  state?: VehicleState
+  state?: VehicleStateReadings
   live: boolean
   observedAt: number | null
   freshness: VehicleStateFreshness
@@ -201,7 +202,7 @@ function parseVerifiedFields(raw: string[] | null | undefined): VerifiedVehicleS
 /**
  * Normalises a `GET /vehicles/{id}/state` response into `{ state, live }`.
  * Shared by {@link useVehicleState} and {@link fetchVehicleState} so the
- * two-shape decode and the per-field defaults live in exactly one place.
+ * two-shape decode and missing-reading semantics live in exactly one place.
  *
  * Null-safety: a 204 / JSON-null / non-object body resolves to
  * `{ state: undefined, live: false }` instead of throwing on `res.state`. A
@@ -231,27 +232,27 @@ function mapVehicleStateResponse(
   const v = res.vehicle
   const p = res.position
   if (!v && !p) return { state: res.state, live, observedAt, freshness, verifiedFields }
-  const state: VehicleState = {
+  const state: VehicleStateReadings = {
     vehicle_id: v?.id ?? vehicleId,
-    state: v?.state ?? 'offline',
-    latitude: p?.latitude ?? 0,
-    longitude: p?.longitude ?? 0,
-    speed: p?.speed ?? 0,
-    power: p?.power ?? 0,
-    battery_level: p?.battery_level ?? 0,
-    rated_range: p?.rated_range ?? p?.ideal_range ?? 0,
-    ideal_range: p?.ideal_range ?? 0,
-    odometer: p?.odometer ?? 0,
-    inside_temp: p?.inside_temp ?? 0,
-    outside_temp: p?.outside_temp ?? 0,
-    is_climate_on: p?.is_climate_on ?? false,
-    is_charging: res.is_charging ?? false,
-    charger_power: res.charger_power ?? 0,
-    charge_rate: res.charge_rate ?? 0,
-    time_to_full_charge: res.time_to_full_charge ?? 0,
-    is_locked: res.is_locked ?? v?.is_locked ?? true,
-    sentry_mode: res.sentry_mode ?? false,
-    software_version: res.software_version ?? v?.software_version ?? '',
+    state: v?.state ?? null,
+    latitude: p?.latitude ?? null,
+    longitude: p?.longitude ?? null,
+    speed: p?.speed ?? null,
+    power: p?.power ?? null,
+    battery_level: p?.battery_level ?? null,
+    rated_range: p?.rated_range ?? null,
+    ideal_range: p?.ideal_range ?? null,
+    odometer: p?.odometer ?? null,
+    inside_temp: p?.inside_temp ?? null,
+    outside_temp: p?.outside_temp ?? null,
+    is_climate_on: p?.is_climate_on ?? null,
+    is_charging: res.is_charging ?? null,
+    charger_power: res.charger_power ?? null,
+    charge_rate: res.charge_rate ?? null,
+    time_to_full_charge: res.time_to_full_charge ?? null,
+    is_locked: res.is_locked ?? v?.is_locked ?? null,
+    sentry_mode: res.sentry_mode ?? null,
+    software_version: res.software_version ?? v?.software_version ?? null,
   }
   return { state, live, observedAt, freshness, verifiedFields }
 }
@@ -445,6 +446,18 @@ export function useSecurityLatest(vehicleId: number, refetchInterval?: number) {
     queryFn: ({ signal }) => request<import('../types').SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
+  });
+}
+
+export function useSentryEvents(vehicleId: number, limit: number) {
+  return useQuery({
+    queryKey: ['security-events', vehicleId, `sentry-log-${limit}`],
+    queryFn: ({ signal }) => request<import('../types').SecurityEvent[]>(
+      `/security?vehicle_id=${vehicleId}&limit=${limit}`, { signal },
+    ),
+    enabled: vehicleId > 0,
+    refetchInterval: 30_000,
+    select: safeArray,
   });
 }
 
@@ -815,7 +828,7 @@ export interface FleetStateEntry {
    * first. A real `'offline'` classification requires the backend to have
    * returned a snapshot whose `state` field says so.
    */
-  state: VehicleState | null;
+  state: VehicleStateReadings | null;
   outcome: FleetStateOutcome;
   /**
    * Backend-derived freshness of the newest timestamped live signal.
@@ -1003,7 +1016,7 @@ export function deriveCurrentVehicleStatus(
  * do exactly that and turned "we don't know" into "the car is dead".
  */
 export function deriveTrustedVehicleStatus(
-  state: VehicleState | null | undefined,
+  state: Parameters<typeof deriveVehicleStatus>[0],
   trust: VehicleStateTrustMetadata | null | undefined,
   now = Date.now(),
 ): VehicleStatus | null {
@@ -1015,7 +1028,7 @@ export function deriveTrustedVehicleStatus(
   if (isVehicleStateFieldCurrent(trust, 'speed', now) && (state.speed ?? 0) > 0) {
     return 'driving'
   }
-  if (!isVehicleStateFieldCurrent(trust, 'state', now)) return null
+  if (!isVehicleStateFieldCurrent(trust, 'state', now) || state.state == null) return null
 
   return deriveVehicleStatus({
     ...state,

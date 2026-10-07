@@ -70,7 +70,7 @@ describe('Temperature', () => {
   it('exposes the raw caller value with its °C source unit via the title', () => {
     setUnits('metric');
     const { container } = render(<Temperature c={20} precision={0} />);
-    expect(span(container)?.getAttribute('title')).toBe('20.0 °C');
+    expect(span(container)?.getAttribute('title')).toBe('20 °C');
   });
 
   it('converts a °C input to °F when the user prefers imperial', () => {
@@ -78,7 +78,7 @@ describe('Temperature', () => {
     const { container } = render(<Temperature c={20} precision={0} />);
     // 20 °C = 68 °F, but the title still reflects the °C source value.
     expect(container.textContent).toBe('68°F');
-    expect(span(container)?.getAttribute('title')).toBe('20.0 °C');
+    expect(span(container)?.getAttribute('title')).toBe('20 °C');
   });
 
   it('renders a °F input in imperial with a °F hover title (round trip)', () => {
@@ -86,7 +86,7 @@ describe('Temperature', () => {
     const { container } = render(<Temperature f={68} precision={0} />);
     // 68 °F → 20 °C (SI) → 68 °F for display; title keeps the °F source.
     expect(container.textContent).toBe('68°F');
-    expect(span(container)?.getAttribute('title')).toBe('68.0 °F');
+    expect(span(container)?.getAttribute('title')).toBe('68 °F');
   });
 
   it('converts a °F input to °C when the user prefers metric', () => {
@@ -94,7 +94,7 @@ describe('Temperature', () => {
     const { container } = render(<Temperature f={68} precision={0} />);
     // 68 °F = 20 °C; title still reflects the °F source value.
     expect(container.textContent).toBe('20°C');
-    expect(span(container)?.getAttribute('title')).toBe('68.0 °F');
+    expect(span(container)?.getAttribute('title')).toBe('68 °F');
   });
 
   it('prefers the °C branch over °F when both inputs are supplied', () => {
@@ -102,21 +102,21 @@ describe('Temperature', () => {
     const { container } = render(<Temperature c={20} f={999} precision={0} />);
     expect(container.textContent).toBe('20°C');
     // Title proves the °C branch (not °F) produced the value.
-    expect(span(container)?.getAttribute('title')).toBe('20.0 °C');
+    expect(span(container)?.getAttribute('title')).toBe('20 °C');
   });
 
   it('falls back to the °F branch when c is null but f is finite', () => {
     setUnits('metric');
     const { container } = render(<Temperature c={null} f={68} precision={0} />);
     expect(container.textContent).toBe('20°C');
-    expect(span(container)?.getAttribute('title')).toBe('68.0 °F');
+    expect(span(container)?.getAttribute('title')).toBe('68 °F');
   });
 
   it('falls back to the °F branch when c is NaN but f is finite', () => {
     setUnits('metric');
     const { container } = render(<Temperature c={NaN} f={68} precision={0} />);
     expect(container.textContent).toBe('20°C');
-    expect(span(container)?.getAttribute('title')).toBe('68.0 °F');
+    expect(span(container)?.getAttribute('title')).toBe('68 °F');
   });
 
   it('renders an em dash for null c', () => {
@@ -149,7 +149,7 @@ describe('Temperature', () => {
     const { container } = render(<Temperature c={0} precision={0} />);
     expect(container.textContent).toBe('0°C');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0.0 °C');
+    expect(span(container)?.getAttribute('title')).toBe('0 °C');
   });
 
   it('renders negative temperatures with their sign preserved (−40 crossover)', () => {
@@ -157,7 +157,7 @@ describe('Temperature', () => {
     const { container } = render(<Temperature c={-40} precision={0} />);
     // −40 °C == −40 °F (the famous crossover).
     expect(container.textContent).toBe('-40°F');
-    expect(span(container)?.getAttribute('title')).toBe('-40.0 °C');
+    expect(span(container)?.getAttribute('title')).toBe('-40 °C');
   });
 
   it('respects an explicit precision prop', () => {
@@ -178,7 +178,7 @@ describe('Temperature', () => {
     const { container } = render(<Temperature c={36.7} precision={0} />);
     // Display rounds to 0 decimals; the title always carries 1 decimal.
     expect(container.textContent).toBe('37°C');
-    expect(span(container)?.getAttribute('title')).toBe('36.7 °C');
+    expect(span(container)?.getAttribute('title')).toBe('37 °C');
   });
 
   it('applies the className to the rendered value span', () => {
@@ -204,7 +204,7 @@ describe('Temperature', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('42.0 °C');
+    expect(el?.getAttribute('title')).toBe('42 °C');
   });
 
   it('recomputes the display when the user switches unit systems', () => {

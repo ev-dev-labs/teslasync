@@ -118,7 +118,7 @@ function renderBand(query: UseQueryResult<GasPriceStatus, Error>) {
 }
 
 function getRegion() {
-  return screen.getByRole('region', { name: /gas price summary/i })
+  return screen.getByRole('region', { name: /Gas price summary/i })
 }
 
 beforeEach(() => {

@@ -23,9 +23,10 @@
  * `{{var}}` placeholders) are asserted as the user sees them.
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 vi.mock('react-i18next', () => ({
@@ -56,6 +57,10 @@ vi.mock('@/api/client', () => ({
 }))
 
 import { SLOTrackingCard } from '../SLOTrackingCard'
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 const TARGET_KEY = 'teslasync.status.slo.target'
 
@@ -82,20 +87,21 @@ function makePayload(overrides: Partial<UptimeWindow> = {}): UptimeWindow {
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <>{children}</>
+  return <MemoryRouter>{children}</MemoryRouter>
 }
 
 function renderCard() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <Wrapper>
         <SLOTrackingCard />
       </Wrapper>
     </QueryClientProvider>,
   )
+  return { ...view, client: qc }
 }
 
 /** Enter edit mode and return the target input. */
@@ -115,7 +121,8 @@ describe('SLOTrackingCard — data states', () => {
     const { container } = renderCard()
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading uptime…')
-    expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent('—')
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
     // The endpoint is hit exactly once for the default 30d window, with no
     // /api/v1 prefix (the client adds it) and a snake_case-safe query.
     expect(requestMock).toHaveBeenCalledTimes(1)
@@ -130,7 +137,7 @@ describe('SLOTrackingCard — data states', () => {
     expect(container.textContent).toContain('Last 30 days')
     expect(container.textContent).toContain('5 / 6 components healthy')
     // A healthy figure at or above target is painted green, not red/amber.
-    expect(screen.getByText('99.98%')).toHaveClass('text-green-300')
+    expect(screen.getByText('99.98%')).toHaveClass('dark:text-emerald-300')
   })
 
   it('surfaces an alert when the request fails', async () => {
@@ -149,10 +156,10 @@ describe('SLOTrackingCard — finite-percentage guard (bug fix)', () => {
 
     // Wait for the query to settle (counts render once data arrives).
     await waitFor(() => expect(container.textContent).toContain('3 / 4 components healthy'))
-    const value = container.querySelector('[aria-live="polite"]')
+    const value = container.querySelector('[data-operational-metric="uptime"]')
     expect(value).toHaveTextContent('—')
     expect(value).not.toHaveTextContent('0.00%')
-    expect(value).toHaveClass('text-[var(--text-muted)]')
+    expect(value).toHaveAttribute('data-value-state', 'missing')
   })
 
   it('renders "—" when uptime_percent is missing (null) from the payload', async () => {
@@ -189,12 +196,12 @@ describe('SLOTrackingCard — tone thresholds', () => {
 
   it('paints amber when uptime is within one point below the 99% target', async () => {
     const value = await renderWithPct(98.5)
-    expect(value).toHaveClass('text-amber-300')
+    expect(value).toHaveClass('dark:text-amber-300')
   })
 
   it('paints red when uptime is more than one point below target', async () => {
     const value = await renderWithPct(90)
-    expect(value).toHaveClass('text-red-300')
+    expect(value).toHaveClass('dark:text-rose-300')
   })
 })
 
@@ -203,23 +210,64 @@ describe('SLOTrackingCard — window selector', () => {
     requestMock.mockResolvedValue(makePayload())
     renderCard()
 
-    expect(screen.getByRole('tab', { name: '30d' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: '30d · Last 30 days' })).toHaveAttribute('aria-selected', 'true')
 
-    fireEvent.click(screen.getByRole('tab', { name: '7d' }))
+    fireEvent.click(screen.getByRole('tab', { name: '7d · Last 7 days' }))
 
     await waitFor(() =>
       expect(requestMock).toHaveBeenCalledWith('/status/uptime?window=7d'),
     )
-    expect(screen.getByRole('tab', { name: '7d' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: '30d' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: '7d · Last 7 days' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: '30d · Last 30 days' })).toHaveAttribute('aria-selected', 'false')
   })
 
-  it('exposes the full window label as a tooltip while keeping the short code as the accessible name', () => {
+  it('preserves short window codes and promotes their full tooltip descriptions into visible accessible labels', () => {
     requestMock.mockResolvedValue(makePayload())
     renderCard()
 
-    expect(screen.getByRole('tab', { name: '24h' })).toHaveAttribute('title', 'Last 24 hours')
-    expect(screen.getByRole('tab', { name: '1y' })).toHaveAttribute('title', 'Last year')
+    expect(screen.getByRole('tab', { name: '24h · Last 24 hours' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '1y · Last year' })).toBeInTheDocument()
+  })
+
+  it('uses shared arrow/Home/End activation, one tabstop and an associated focused panel', async () => {
+    requestMock.mockResolvedValue(makePayload())
+    renderCard()
+    await screen.findByText('99.98%')
+
+    const current = screen.getByRole('tab', { name: '30d · Last 30 days' })
+    expect(current).toHaveAttribute('tabindex', '0')
+    expect(screen.getAllByRole('tab').filter(tab => tab.tabIndex === 0)).toHaveLength(1)
+    current.focus()
+    fireEvent.keyDown(current, { key: 'ArrowRight' })
+    const quarter = screen.getByRole('tab', { name: '90d · Last 90 days' })
+    await waitFor(() => expect(quarter).toHaveFocus())
+    expect(requestMock).toHaveBeenCalledWith('/status/uptime?window=90d')
+    const panel = screen.getByRole('tabpanel', { name: '90d · Last 90 days' })
+    expect(quarter).toHaveAttribute('aria-controls', panel.id)
+    expect(panel).toHaveAttribute('aria-labelledby', quarter.id)
+    expect(panel).toHaveAttribute('tabindex', '0')
+    fireEvent.keyDown(quarter, { key: 'Home' })
+    const first = screen.getByRole('tab', { name: '24h · Last 24 hours' })
+    await waitFor(() => expect(first).toHaveFocus())
+    fireEvent.keyDown(first, { key: 'End' })
+    await waitFor(() => expect(screen.getByRole('tab', { name: '1y · Last year' })).toHaveFocus())
+    expect(requestMock).toHaveBeenCalledWith('/status/uptime?window=1y')
+  })
+
+  it('retains historical readings and target controls when the same window refresh fails', async () => {
+    requestMock.mockResolvedValue(makePayload({ healthy_count: 5 }))
+    const { client } = renderCard()
+    await screen.findByText('99.98%')
+    requestMock.mockRejectedValue(new Error('refresh failed'))
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['status-uptime', '30d'] })
+    })
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByText('99.98%')).toBeInTheDocument()
+    expect(screen.getByText(/5 \/ 6 components healthy/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled()
+    expect(screen.getByRole('tabpanel', { name: '30d · Last 30 days' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
 

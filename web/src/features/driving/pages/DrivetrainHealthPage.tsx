@@ -1,41 +1,25 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, Cpu, BatteryCharging } from 'lucide-react';
-
-import { PageContainer } from '@/components/layout';
-
-
+import { PageLayout } from '@/components/layout';
+import { FadeIn } from '@/components/motion';
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
-import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useRangeState } from '@/hooks/useRangeState';
-import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
-
+import { useDataState } from '@/hooks/useDataState';
 import {
-  HEALTH_SCORE,
-  type TempSensor,
-  type ChartDataPoint,
-  type MotorChartDataPoint,
-} from '../components/drivetrain-health/constants';
+  ThermalPanels, LiveMotorPanel, ChartPanels, HistoryRecords, DetailPanels, MethodologyPanel,
+} from '../components/drivetrain-health-modernization';
 import {
-  HealthOverview,
-  HealthGaugeGrid,
-  TemperatureGauges,
-  TemperatureMetricCards,
-  ThermalLoadPanel,
-  LiveMotorStatus,
-  StatorTempChart,
-  TorqueHistoryChart,
-  TemperatureTrendChart,
-  PowerOutputChart,
-  HealthRecommendations,
-  DetailCards,
-} from '../components/drivetrain-health';
+  sensorsFor, driveSeries, motorSeries, powerSummary,
+} from '../components/drivetrain-health-modernization/model';
+import { DrivetrainSummary } from '../components/operationalbrief-a-m/DrivetrainSummary';
 
+/** Orchestration only. Workspace controls remain owned by the actual app header;
+ * all original queries, defaults, polling and derived record ordering survive. */
 export default function DrivetrainHealthPage() {
   const { t } = useTranslation();
   const { formatTime, formatDateShort } = useDateFormat();
@@ -43,189 +27,90 @@ export default function DrivetrainHealthPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-
   const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'drivetrain-health.range',
   });
 
+  // Deliberately retain these exact calls. Query keys, cancellation, enablement,
+  // retry and defaults live in the existing hooks, which are read-only here.
   const healthQuery = useDrivetrainHealth(vehicleIdStr);
-  const {
-    data: health,
-    isLoading: healthLoading,
-    isError: healthIsError,
-    error: healthError,
-    refetch: refetchHealth,
-  } = healthQuery;
-  const { data: drives, isLoading: drivesLoading } = useDrives(vehicleIdStr);
-  const { data: stats, isLoading: statsLoading } = useDrivingStats(vehicleIdStr);
-  const { data: motorLatest, isLoading: motorLatestLoading } = useMotorLatest(vehicleId ?? 0, 5_000);
-  const { data: motorHistory, isLoading: motorHistoryLoading } = useMotorHistory(vehicleId ?? 0, 200);
-  const { state: liveState } = useVehicleLive(vehicleId ?? undefined);
+  const drivesQuery = useDrives(vehicleIdStr);
+  const statsQuery = useDrivingStats(vehicleIdStr);
+  const motorLatestQuery = useMotorLatest(vehicleId ?? 0, 5_000);
+  const motorHistoryQuery = useMotorHistory(vehicleId ?? 0, 200);
+  const { state: liveState, connected } = useVehicleLive(vehicleId ?? undefined);
 
-  const { unitPrefs } = useUnits();
-  // Memoise the SI→display converters on the specific unit preference they
-  // depend on. Fresh closures every render would give the derived-series
-  // useMemo()s below (chartData / motorChartData) a new dependency identity on
-  // each pass, silently defeating their memoisation and re-running the
-  // filter/sort/map work on unrelated re-renders.
-  const toDistanceDisplay = useCallback(
-    (value: number) => convertDistanceFromSI(value, unitPrefs.distance),
-    [unitPrefs.distance],
+  const healthState = useDataState(healthQuery, { provenance: 'inferred' });
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const statsState = useDataState(statsQuery, { provenance: 'historical' });
+  const motorLatestState = useDataState(motorLatestQuery);
+  const motorHistoryState = useDataState(motorHistoryQuery, { provenance: 'historical' });
+
+  const health = healthQuery.data;
+  const stats = statsQuery.data;
+  const sensors = useMemo(() => sensorsFor(health), [health]);
+  const chartData = useMemo(
+    () => driveSeries(drivesQuery.data, startDate, endDate, formatDateShort),
+    [drivesQuery.data, startDate, endDate, formatDateShort],
   );
-  const toTemperatureDisplay = useCallback(
-    (value: number) => convertTempFromSI(value, unitPrefs.temperature),
-    [unitPrefs.temperature],
+  const power = useMemo(() => powerSummary(chartData), [chartData]);
+  const motorChartData = useMemo(
+    () => motorSeries(motorHistoryQuery.data, formatTime),
+    [motorHistoryQuery.data, formatTime],
   );
 
-  const hasHealth = health != null;
-  const overallHealth = health?.overallHealth ?? 'good';
-  const healthScore = HEALTH_SCORE[overallHealth];
-
-  const sensors: TempSensor[] = useMemo(() => {
-    if (!health) return [];
-    return [
-      { key: 'frontMotor', labelKey: 'drivetrain.frontMotor', defaultLabel: 'Front Motor', value: health.frontMotorTempC, maxTemp: 150, color: '#06b6d4', icon: <Zap className="h-4 w-4" /> },
-      { key: 'rearMotor', labelKey: 'drivetrain.rearMotor', defaultLabel: 'Rear Motor', value: health.rearMotorTempC, maxTemp: 150, color: '#8b5cf6', icon: <Zap className="h-4 w-4" /> },
-      { key: 'inverter', labelKey: 'drivetrain.inverter', defaultLabel: 'Inverter', value: health.inverterTempC, maxTemp: 120, color: '#f59e0b', icon: <Cpu className="h-4 w-4" /> },
-      { key: 'battery', labelKey: 'drivetrain.battery', defaultLabel: 'Battery', value: health.batteryTempC, maxTemp: 60, color: '#10b981', icon: <BatteryCharging className="h-4 w-4" /> },
-    ];
-  }, [health]);
-
-  const chartData: ChartDataPoint[] = useMemo(() => {
-    if (!drives?.length) return [];
-    // Filter drives to selected date range; chart shows the resulting series
-    // (capped at 30 points so the trend stays readable on small viewports).
-    const startMs = new Date(`${startDate}T00:00:00`).getTime();
-    const endMs = new Date(`${endDate}T23:59:59`).getTime();
-    return drives
-      .filter((d) => {
-        const t = new Date(d.startTs).getTime();
-        return Number.isFinite(t) && t >= startMs && t <= endMs;
-      })
-      .slice()
-      .sort((a, b) => new Date(a.startTs).getTime() - new Date(b.startTs).getTime())
-      .slice(-30)
-      .map((d) => ({
-        date: formatDateShort(d.startTs),
-        powerMax: (d.avgPowerW ?? 0) / 1000,
-        powerMin: 0,
-        outsideTemp: d.outsideTempAvgC ?? null,
-        distance: toDistanceDisplay(d.distanceM ?? 0),
-      }));
-  }, [drives, startDate, endDate, toDistanceDisplay, formatDateShort]);
-
-  const tempTrendData = useMemo(() => chartData.filter((d) => d.outsideTemp !== null), [chartData]);
-
-  const avgPowerMax = useMemo(() => {
-    if (!chartData.length) return 0;
-    return chartData.reduce((acc, d) => acc + d.powerMax, 0) / chartData.length;
-  }, [chartData]);
-
-  const peakPower = useMemo(() => {
-    if (!chartData.length) return 0;
-    return Math.max(...chartData.map((d) => d.powerMax));
-  }, [chartData]);
-
-  const minRegenPower = useMemo(() => {
-    if (!chartData.length) return 0;
-    return Math.min(...chartData.map((d) => d.powerMin));
-  }, [chartData]);
-
-  const motorChartData: MotorChartDataPoint[] = useMemo(() => {
-    const history = motorHistory ?? [];
-    if (history.length === 0) return [];
-    return history.map((s) => ({
-      time: s.ts ? formatTime(s.ts) : '',
-      stator: s.motor_temp_c_front != null ? toTemperatureDisplay(s.motor_temp_c_front) : null,
-      statorRel: s.motor_temp_c_rear != null ? toTemperatureDisplay(s.motor_temp_c_rear) : null,
-      statorRer: s.inverter_temp_c != null ? toTemperatureDisplay(s.inverter_temp_c) : null,
-      torque: s.torque_nm_front ?? s.torque_nm_rear ?? null,
-      speed: null, // no direct power signal in motor pivot; field unused by charts
-      axle: s.motor_rpm_front ?? s.motor_rpm_rear ?? null,
-    }));
-  }, [motorHistory, toTemperatureDisplay, formatTime]);
-
+  // Never supply a page-wide loading/error/empty gate: an independent failed
+  // source keeps every neighbor and shell reachable. Refresh failures retain
+  // their own data and expose retry next to that source's content.
   return (
-    <PageContainer
+    <PageLayout
       title={t('drivetrain.title', 'Drivetrain Health')}
       subtitle={t('drivetrain.subtitle', 'Motor, inverter, and battery thermal status')}
       query={healthQuery}
+      busy={[healthQuery, drivesQuery, statsQuery, motorLatestQuery, motorHistoryQuery].some(query => query.isFetching)}
+      className="w-full min-w-0"
     >
-      {/* 1 — Hero: overall drivetrain health status (alert + panel) */}
-      <HealthOverview
-        overallHealth={overallHealth}
-        healthScore={healthScore}
-        motorStatus={health?.motorStatus ?? ''}
-        hasData={hasHealth}
-        loading={healthLoading}
-        error={healthIsError ? healthError : undefined}
-        onRetry={refetchHealth}
-      />
-
-      {/* 2 — KPI band: temperature + health + peak-power metric cards */}
-      <TemperatureMetricCards
-        sensors={sensors}
-        overallHealth={overallHealth}
-        healthScore={healthScore}
-        peakPower={peakPower}
-        loading={healthLoading}
-      />
-
-      {/* 3 — Health score gauge + motor details + drive statistics */}
-      <HealthGaugeGrid
-        overallHealth={overallHealth}
-        healthScore={healthScore}
-        motorStatus={health?.motorStatus ?? '—'}
-        sensors={sensors}
-        stats={stats}
-        hasHealth={hasHealth}
-        loading={healthLoading}
-        statsLoading={statsLoading}
-      />
-
-      {/* 4 — Thermal bento: gauges + load indicators side-by-side on wide screens */}
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
-        <TemperatureGauges sensors={sensors} loading={healthLoading} />
-        <ThermalLoadPanel
-          sensors={sensors}
-          peakPower={peakPower}
-          avgPowerMax={avgPowerMax}
-          stats={stats}
-          loading={healthLoading}
+      <FadeIn className="min-w-0 space-y-6">
+        {/* 1–3: overview, complete metric band, health gauge, motor details, stats. */}
+        <DrivetrainSummary
+          health={health} stats={stats} sensors={sensors} power={power}
+          healthState={healthState} statsState={statsState} drivesState={drivesState}
+          healthLoading={healthQuery.isLoading} statsLoading={statsQuery.isLoading}
         />
-      </section>
 
-      {/* 5 — Live motor telemetry band (full width) */}
-      <LiveMotorStatus
-        motorLatest={motorLatest}
-        isolationResistance={liveState.isolationResistance}
-        loading={motorLatestLoading}
-      />
+        {/* 4: both thermal sections; source-independent power/stats stay visible. */}
+        <ThermalPanels
+          sensors={sensors} power={power} stats={stats}
+          healthState={healthState} statsState={statsState} drivesState={drivesState}
+          loading={healthQuery.isLoading}
+        />
 
-      {/* 6 — Charts bento: two per row on wide screens, stacked on mobile */}
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
-        <StatorTempChart data={motorChartData} loading={motorHistoryLoading} />
-        <TorqueHistoryChart data={motorChartData} loading={motorHistoryLoading} />
-        <TemperatureTrendChart data={tempTrendData} loading={drivesLoading} />
-        <PowerOutputChart data={chartData} loading={drivesLoading} />
-      </section>
+        {/* 5: all thirteen motor readings and original isolation policy. */}
+        <LiveMotorPanel
+          motorLatest={motorLatestQuery.data} isolationResistance={liveState.isolationResistance}
+          state={motorLatestState} loading={motorLatestQuery.isLoading} connected={connected}
+        />
 
-      {/* 7 — Detail band: temperature/power details + health recommendations */}
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-        <div className="xl:col-span-2">
-          <DetailCards
-            health={health}
-            peakPower={peakPower}
-            avgPowerMax={avgPowerMax}
-            minRegenPower={minRegenPower}
-            stats={stats}
-            loading={healthLoading}
-          />
-        </div>
-        <div className="xl:col-span-1">
-          <HealthRecommendations overallHealth={overallHealth} />
-        </div>
-      </section>
-    </PageContainer>
+        {/* 6: all four charts, original series IDs/legend preferences and actions. */}
+        <ChartPanels
+          motorRows={motorChartData} driveRows={chartData}
+          motorState={motorHistoryState} drivesState={drivesState}
+          motorLoading={motorHistoryQuery.isLoading} drivesLoading={drivesQuery.isLoading}
+        />
+        <HistoryRecords
+          motorRows={motorChartData} driveRows={chartData}
+          motorState={motorHistoryState} drivesState={drivesState}
+          motorLoading={motorHistoryQuery.isLoading} drivesLoading={drivesQuery.isLoading}
+        />
+
+        {/* 7: every original detail and exact specialist recommendation producer. */}
+        <DetailPanels
+          health={health} stats={stats} sensors={sensors} power={power}
+          healthState={healthState} drivesState={drivesState} statsState={statsState}
+          loading={healthQuery.isLoading}
+        />
+        <MethodologyPanel />
+      </FadeIn>
+    </PageLayout>
   );
 }

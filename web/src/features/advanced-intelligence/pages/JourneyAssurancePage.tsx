@@ -1,21 +1,23 @@
 import { type FormEvent, useState } from 'react';
-import { Route, ShieldCheck } from 'lucide-react';
+import { Route } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useRunJourneyAssurance } from '@/api/hooks/useAdvancedIntelligence';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { SI } from '@/lib/unitConversion';
 import type { JourneyAssuranceRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
 
 type JourneyForm = Omit<JourneyAssuranceRequest, 'vehicle_id' | 'confirmed' | 'departure_at'> & {
   departure_at: string;
@@ -29,6 +31,7 @@ function defaultDeparture(): string {
 }
 
 export default function JourneyAssurancePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -41,7 +44,7 @@ export default function JourneyAssurancePage() {
     average_speed_mps: null,
     auxiliary_load_w: null,
   });
-  usePageTitle(t('advancedIntelligence.journey.title', 'Journey Assurance'));
+  usePageTitle(t('advancedIntelligence.journey.title', 'Journey assurance'));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -54,10 +57,24 @@ export default function JourneyAssurancePage() {
     });
   };
   const result = mutation.data;
+  const summaryMetrics: readonly StatMetric[] = [
+    { occurrenceId: 'readiness', metricId: 'percent', rawValue: result?.readiness_score_pct,
+      label: t('advancedIntelligence.journey.readiness', 'Readiness score'),
+      description: t('advancedIntelligence.journey.brief.readiness', 'Returned readiness percentage from supported factors; not a vehicle health assessment or confidence estimate.') },
+    { occurrenceId: 'arrival-low', metricId: 'percent', rawValue: result?.arrival_soc_low_pct,
+      label: t('advancedIntelligence.journey.arrivalLow', 'Arrival SoC low'),
+      description: t('advancedIntelligence.journey.brief.arrivalLow', 'Lower modeled arrival state-of-charge bound for the submitted journey.') },
+    { occurrenceId: 'arrival-high', metricId: 'percent', rawValue: result?.arrival_soc_high_pct,
+      label: t('advancedIntelligence.journey.arrivalHigh', 'Arrival SoC high'),
+      description: t('advancedIntelligence.journey.brief.arrivalHigh', 'Upper modeled arrival state-of-charge bound; unsupported is not zero reserve.') },
+    { occurrenceId: 'energy-required', metricId: 'energy', rawValue: result?.energy_required_wh,
+      label: t('advancedIntelligence.journey.energy', 'Energy required'),
+      description: t('advancedIntelligence.journey.brief.energy', 'Estimated energy requirement for the submitted route, not measured journey consumption.') },
+  ];
 
   return (
-    <PageContainer
-      title={t('advancedIntelligence.journey.title', 'Journey Assurance')}
+    <PageLayout
+      title={t('advancedIntelligence.journey.title', 'Journey assurance')}
       subtitle={t(
         'advancedIntelligence.journey.subtitle',
         'Assess departure readiness and arrival reserve from supported vehicle evidence.',
@@ -164,37 +181,25 @@ export default function JourneyAssurancePage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <InsightPanel
+        <AnalysisBrief
+          id="advanced-intelligence-journey-brief"
           title={t('advancedIntelligence.journey.summary.title', 'Readiness and arrival range')}
-          empty={!result}
+          description={t('advancedIntelligence.journey.brief.description', 'Returned readiness and arrival bounds for the submitted journey; factors and unsupported planning capabilities remain explicit.')}
+          metrics={summaryMetrics}
+          vehicleId={result?.vehicle_id ?? vehicleId}
+          hasResult={result != null}
+          pending={mutation.isPending}
+          error={mutation.error}
+          quality={result?.data_quality}
+          evidence={result?.evidence}
+          limitations={result?.limitations}
+          generatedAt={result?.generated_at}
+          provenance={t('advancedIntelligence.journey.brief.source', 'Journey readiness assessment')}
           emptyMessage={t(
             'advancedIntelligence.journey.summary.empty',
             'Submit a journey scenario to calculate readiness.',
           )}
-        >
-          <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
-            <StatCard
-              label={t('advancedIntelligence.journey.readiness', 'Readiness score')}
-              value={result?.readiness_score_pct != null
-                ? `${fmtNumber(result.readiness_score_pct, 1)}%` : null}
-              icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
-            />
-            <StatCard
-              label={t('advancedIntelligence.journey.arrivalLow', 'Arrival SoC low')}
-              value={result?.arrival_soc_low_pct != null
-                ? `${fmtNumber(result.arrival_soc_low_pct, 1)}%` : null}
-            />
-            <StatCard
-              label={t('advancedIntelligence.journey.arrivalHigh', 'Arrival SoC high')}
-              value={result?.arrival_soc_high_pct != null
-                ? `${fmtNumber(result.arrival_soc_high_pct, 1)}%` : null}
-            />
-            <StatCard
-              label={t('advancedIntelligence.journey.energy', 'Energy required')}
-              value={units.formatEnergy(result?.energy_required_wh)}
-            />
-          </Grid>
-        </InsightPanel>
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>
@@ -212,7 +217,7 @@ export default function JourneyAssurancePage() {
                 </div>
                 <Text as="p" variant="bodySm" className="mt-2">{factor.explanation}</Text>
                 <Text as="p" variant="metricValue" className="mt-3">
-                  {factor.score_pct != null ? `${fmtNumber(factor.score_pct, 1)}%` : '—'}
+                  {factor.score_pct != null ? `${fmtNumber(factor.score_pct)}%` : '—'}
                 </Text>
               </article>
             ))}
@@ -231,6 +236,6 @@ export default function JourneyAssurancePage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

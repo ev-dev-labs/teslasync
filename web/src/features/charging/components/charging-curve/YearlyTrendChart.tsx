@@ -54,6 +54,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
       chartKey="charging-curve-yearly-trend"
       empty={isEmpty}
       data={data}
+      exportData={data.map(({ year, avg10to80, avg20to80, count }) => ({ year, avg10to80, avg20to80, count }))}
       dataColumns={dataColumns}
       height={280}
       exportable

@@ -1,7 +1,7 @@
 /**
  * ArchivedPage — Notifications inbox scoped to archived items only.
  *
- * Full-width modern-ui layout: an archived-backlog KPI band (`ArchivedSummary`)
+ * Data-first layout: a compact archived-backlog strip (`InboxSummary`)
  * over the shared `InboxBody` detail surface (`archived={true}` swaps the
  * bulk-action set from Archive to Restore). The KPI band reads the unfiltered
  * archived set so it stays a stable "backlog overview" while the list below
@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -24,7 +24,7 @@ import {
   type NotificationFilters,
 } from '@/api/hooks/useNotifications';
 import { InboxBody } from '../components/InboxBody';
-import { ArchivedSummary } from '../components/ArchivedSummary';
+import { InboxSummary } from '../components/InboxSummary';
 
 export default function ArchivedPage() {
   const { t } = useTranslation();
@@ -33,15 +33,13 @@ export default function ArchivedPage() {
   const { data: vehicles = [] } = useVehicles();
   const { data: rules = [] } = useAlertRules();
 
-  // Unfiltered archived backlog drives the KPI summary band. Passing the bare
-  // `{ archived: true }` key lets TanStack Query dedupe this with InboxBody's
-  // own default fetch whenever no filters are active — so the summary costs no
-  // extra request in the common case, yet always reflects the full backlog.
+  // This bounded, all-time sample is independent of the workspace-scoped
+  // server-paginated list. Keep its scope explicit instead of claiming a total.
   const archivedFilters = useMemo<NotificationFilters>(() => ({ archived: true }), []);
   const summaryQuery = useNotificationLogs(archivedFilters);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.archived.title', 'Archived notifications')}
       subtitle={t(
         'notifications.archived.subtitle',
@@ -49,7 +47,7 @@ export default function ArchivedPage() {
       )}
       copyLink
       query={summaryQuery}
-      actions={
+      secondaryActions={
         <Link
           to="/notifications/inbox"
           className={cn(
@@ -65,12 +63,11 @@ export default function ArchivedPage() {
       }
     >
       <FadeIn>
-        <ArchivedSummary query={summaryQuery} />
+        <InboxSummary query={summaryQuery} archived />
       </FadeIn>
-
-      <FadeIn delay={0.1}>
+      <FadeIn delay={0.05}>
         <InboxBody archived={true} vehicles={vehicles} rules={rules} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

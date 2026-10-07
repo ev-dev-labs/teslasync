@@ -201,7 +201,7 @@ describe('GeofenceDrawer', () => {
   it('describeFence builds an a11y-friendly label for circles and polygons', () => {
     expect(
       describeFence({ id: 1, name: 'Home', lat: 37.7749, lng: -122.4194, radius: 100 }),
-    ).toBe('Home — 100m circle around 37.7749, -122.4194');
+    ).toBe('Home — 100.00m circle around 37.7749, -122.4194');
     expect(
       describeFence({
         id: 2,

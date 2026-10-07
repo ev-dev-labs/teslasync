@@ -15,20 +15,19 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, RefreshCw, Radio } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button } from '@/components/ui';
-import { PanelTitle } from '@/components/ui/Typography';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Button, PanelTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { LiveIndicator } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry';
 
 import {
   LiveSignalToolbar,
-  LiveSignalKpiBand,
   LiveSignalSourceBreakdown,
   LiveSignalKindBreakdown,
   LiveSignalsTable,
@@ -37,10 +36,11 @@ import {
   computeStats,
   type SectionStatus,
 } from '../components/live-signal-inspector';
+import { LiveSignalsOperationalBrief } from '../components/operationalbrief-h-q/LiveSignalsOperationalBrief';
 
 export default function LiveSignalInspectorPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.liveSignals.pageTitle', 'Live Signal Inspector'));
+  usePageTitle(t('admin.liveSignals.pageTitle', 'Live signal inspector'));
 
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const live = useVehicleLiveSignals(vehicleId ?? undefined, {
@@ -50,28 +50,20 @@ export default function LiveSignalInspectorPage() {
 
   const rows = useMemo(() => rowsFromResponse(live.data), [live.data]);
   const stats = useMemo(() => computeStats(rows), [rows]);
+  const liveState = useDataState(live, { provenance: 'live', unavailable: rows.length === 0 });
 
-  // Each data section renders its own affordance from this single discriminator
-  // rather than gating the whole page behind one `{data && …}`.
-  //
-  // `rows.length > 0` is deliberately evaluated BEFORE `isError`: this page
-  // polls once per second, and TanStack Query keeps the last successful `data`
-  // while flipping `isError`/`error` when a *background* refetch of the same
-  // query key fails. Checking `isError` first would blank the whole inspector
-  // to a `QueryError` on a single dropped poll, throwing away a perfectly good
-  // last-known snapshot. Instead we keep the snapshot on screen and let the
-  // header freshness chip (`query={live}`) surface the transient failure in
-  // red — a hard error is only shown when there is nothing to fall back to.
+  // Only a fatal first-load failure replaces the snapshot. Paused/erroring
+  // refreshes keep retained rows and expose source-specific recovery.
   const status: SectionStatus =
     vehicleId === null
       ? 'no-vehicle'
-      : rows.length > 0
-        ? 'ready'
-        : live.isLoading
-          ? 'loading'
-          : live.isError
-            ? 'error'
-            : 'empty';
+      : liveState.fatalError
+        ? 'error'
+        : rows.length > 0
+          ? liveState.status === 'stale' ? 'retained' : 'ready'
+          : live.isLoading
+            ? 'loading'
+            : liveState.status === 'stale' ? 'retained-empty' : 'empty';
 
   const onRetry = () => {
     void live.refetch();
@@ -103,19 +95,25 @@ export default function LiveSignalInspectorPage() {
   );
 
   return (
-    <PageContainer
-      title={t('admin.liveSignals.pageTitle', 'Live Signal Inspector')}
+    <PageLayout
+      title={t('admin.liveSignals.pageTitle', 'Live signal inspector')}
       subtitle={t(
         'admin.liveSignals.subtitle',
         'Realtime view of the Redis-cached live signal snapshot. Refreshes every second while this tab is in the foreground.',
       )}
-      actions={actions}
+      contextActions={actions}
       query={live}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section aria-label={t('admin.liveSignals.kpis', 'Snapshot summary')}>
-          <LiveSignalKpiBand stats={stats} />
+          <LiveSignalsOperationalBrief
+            stats={stats}
+            status={status}
+            hasSnapshot={vehicleId !== null && live.data?.signals != null}
+            vehicleId={vehicleId}
+            observedAt={vehicleId !== null ? live.data?.at : undefined}
+          />
         </section>
       </FadeIn>
 
@@ -129,14 +127,14 @@ export default function LiveSignalInspectorPage() {
             <LiveSignalSourceBreakdown
               stats={stats}
               status={status}
-              error={live.error}
+              error={liveState.fatalError}
               onRetry={onRetry}
               noVehicleIcon={noVehicleIcon}
             />
             <LiveSignalKindBreakdown
               stats={stats}
               status={status}
-              error={live.error}
+              error={liveState.fatalError}
               onRetry={onRetry}
               noVehicleIcon={noVehicleIcon}
             />
@@ -150,11 +148,11 @@ export default function LiveSignalInspectorPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.liveSignals.panels.snapshot', 'Live Snapshot')}
+              {t('admin.liveSignals.panels.snapshot', 'Live snapshot')}
             </PanelTitle>
             <LiveSectionState
               status={status}
-              error={live.error}
+              error={liveState.fatalError}
               onRetry={onRetry}
               skeletonHeight={320}
               noVehicleIcon={noVehicleIcon}
@@ -172,6 +170,6 @@ export default function LiveSignalInspectorPage() {
           </GlassPanel>
         </SectionErrorBoundary>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

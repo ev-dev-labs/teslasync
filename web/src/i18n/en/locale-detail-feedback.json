@@ -1,6 +1,9 @@
 {
   "feedback": {
-    "title": "Report a bug / Send feedback",
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    },
+    "title": "Report a bug / send feedback",
     "openShort": "Report bug",
     "openAria": "Open feedback / bug report form",
     "submitError": "Failed to submit feedback. Please try again.",

@@ -36,6 +36,7 @@ export function FleetTelemetryHealth() {
   const vinColumns: Column<FleetTelemetryErrorVIN>[] = useMemo(() => [
     {
       key: 'vin',
+      filterValue: (r) => r.vin ?? null,
       header: t('devtools.health.vin', 'VIN'),
       render: (r) => (
         <UiButton
@@ -50,12 +51,14 @@ export function FleetTelemetryHealth() {
     },
     {
       key: 'first_seen_at',
-      header: t('devtools.health.firstSeen', 'First Seen'),
+      filterValue: (r) => r.first_seen_at ?? null,
+      header: t('devtools.health.firstSeen', 'First seen'),
       render: (r) => <TimeStamp value={r.first_seen_at} className="text-xs text-[var(--text-secondary)]" />,
     },
     {
       key: 'last_seen_at',
-      header: t('devtools.health.lastSeen', 'Last Seen'),
+      filterValue: (r) => r.last_seen_at ?? null,
+      header: t('devtools.health.lastSeen', 'Last seen'),
       render: (r) => (
         <TimeStamp
           value={r.last_seen_at}
@@ -68,22 +71,26 @@ export function FleetTelemetryHealth() {
   const errorColumns: Column<FleetTelemetryError>[] = useMemo(() => [
     {
       key: 'vin',
+      filterValue: (r) => r.vin ?? null,
       header: t('devtools.health.vin', 'VIN'),
       render: (r) => <span className="text-xs font-mono text-[var(--text-primary)]">{r.vin}</span>,
     },
     {
       key: 'error_code',
-      header: t('devtools.health.errorCode', 'Error Code'),
+      filterValue: (r) => r.error_code ?? null,
+      header: t('devtools.health.errorCode', 'Error code'),
       render: (r) => r.error_code ? <Badge variant="danger" size="sm">{r.error_code}</Badge> : <span className="text-xs text-[var(--text-muted)]">—</span>,
     },
     {
       key: 'error_message',
+      filterValue: (r) => r.error_message ?? null,
       header: t('devtools.health.message', 'Message'),
       render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.error_message ?? '—'}</span>,
     },
     {
       key: 'reported_at',
-      header: t('devtools.health.reportedAt', 'Reported At'),
+      filterValue: (r) => r.reported_at ?? null,
+      header: t('devtools.health.reportedAt', 'Reported at'),
       render: (r) => (
         <TimeStamp
           value={r.reported_at}
@@ -147,6 +154,7 @@ export function FleetTelemetryHealth() {
               columns={vinColumns}
               mobileColumns={['vin', 'last_seen_at']}
               data={vinList}
+              enableValueFilters
               keyExtractor={(r) => r.vin}
               compact
             />
@@ -162,7 +170,7 @@ export function FleetTelemetryHealth() {
       <ToolCard
         icon={AlertCircle}
         color="amber"
-        title={t('devtools.health.errorLogTitle', 'Error Log')}
+        title={t('devtools.health.errorLogTitle', 'Error log')}
         description={t('devtools.health.errorLogDesc', 'Detailed fleet telemetry error history')}
       >
         <div className="space-y-3">
@@ -192,6 +200,7 @@ export function FleetTelemetryHealth() {
               columns={errorColumns}
               mobileColumns={['vin', 'error_code', 'reported_at']}
               data={errorList}
+              enableValueFilters
               keyExtractor={(r) => String(r.id)}
               compact
               pagination

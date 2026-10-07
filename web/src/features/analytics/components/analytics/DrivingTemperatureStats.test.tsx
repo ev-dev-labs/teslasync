@@ -107,7 +107,7 @@ function stat(min: number, avg: number, max: number, count: number): StatsSummar
 }
 
 // Values chosen so the °C output is exact and the °F conversion lands on stable
-// 1-dp results (e.g. 18.4°C → 65.1°F, -5.3°C → 22.5°F). Negative outside-min
+// 2-dp results (e.g. 18.4°C → 65.12°F, -5.3°C → 22.46°F). Negative outside-min
 // exercises sub-zero formatting.
 const INSIDE = stat(18.4, 21.7, 25.9, 100);
 const OUTSIDE = stat(-5.3, 12.6, 30.1, 80);
@@ -166,24 +166,24 @@ describe('DrivingTemperatureStats — populated (metric °C)', () => {
   it('mounts the panel heading as a level-3 heading', () => {
     renderPanel(makeQuery({ data: FULL }));
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
   });
 
-  it('renders all six labelled cards with 1-dp °C values and no "—" fallback', () => {
+  it('renders all six labelled cards with Settings precision and no "—" fallback', () => {
     renderPanel(makeQuery({ data: FULL }));
 
     // Labels for every card.
-    for (const label of ['Inside Min', 'Inside Avg', 'Inside Max', 'Outside Min', 'Outside Avg', 'Outside Max']) {
+    for (const label of ['Inside min', 'Inside avg', 'Inside max', 'Outside min', 'Outside avg', 'Outside max']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
-    // Identity conversion at °C, formatted to a single decimal.
-    expect(screen.getByText('18.4')).toBeInTheDocument();
-    expect(screen.getByText('21.7')).toBeInTheDocument();
-    expect(screen.getByText('25.9')).toBeInTheDocument();
-    expect(screen.getByText('-5.3')).toBeInTheDocument();
-    expect(screen.getByText('30.1')).toBeInTheDocument();
+    // Identity conversion at °C, formatted using Settings precision.
+    expect(screen.getByText('18.40')).toBeInTheDocument();
+    expect(screen.getByText('21.70')).toBeInTheDocument();
+    expect(screen.getByText('25.90')).toBeInTheDocument();
+    expect(screen.getByText('-5.30')).toBeInTheDocument();
+    expect(screen.getByText('30.10')).toBeInTheDocument();
 
     // Every card carries the °C unit subtitle; none fell back to the em-dash.
     expect(screen.getAllByText('°C')).toHaveLength(6);
@@ -196,16 +196,16 @@ describe('DrivingTemperatureStats — imperial (°F) conversion', () => {
     unitsMock.mockReturnValue({ unitPrefs: { ...UNIT_PREFS_C, temperature: '°F' } });
     renderPanel(makeQuery({ data: FULL }));
 
-    // 18.4°C → 65.1°F and -5.3°C → 22.5°F prove it is not the °C identity path.
-    expect(screen.getByText('65.1')).toBeInTheDocument();
-    expect(screen.getByText('22.5')).toBeInTheDocument();
-    // 25.9°C → 78.6°F (inside max).
-    expect(screen.getByText('78.6')).toBeInTheDocument();
+    // 18.4°C → 65.12°F and -5.3°C → 22.46°F prove it is not the °C identity path.
+    expect(screen.getByText('65.12')).toBeInTheDocument();
+    expect(screen.getByText('22.46')).toBeInTheDocument();
+    // 25.9°C → 78.62°F (inside max).
+    expect(screen.getByText('78.62')).toBeInTheDocument();
 
     expect(screen.getAllByText('°F')).toHaveLength(6);
     expect(screen.queryByText('°C')).toBeNull();
     // The raw °C figure must not leak through once converted.
-    expect(screen.queryByText('18.4')).toBeNull();
+    expect(screen.queryByText('18.40')).toBeNull();
   });
 });
 
@@ -213,12 +213,12 @@ describe('DrivingTemperatureStats — partial data', () => {
   it('shows inside values and dashes the outside cards when outside has no samples', () => {
     renderPanel(makeQuery({ data: analytics(INSIDE, ZEROED) }));
 
-    expect(screen.getByText('18.4')).toBeInTheDocument();
+    expect(screen.getByText('18.40')).toBeInTheDocument();
     // The three outside cards fall back to "—" (count 0 → no data).
     expect(screen.getAllByText(DASH)).toHaveLength(3);
     // Panel stays mounted, not gated to the empty state.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('No temperature stats')).toBeNull();
   });
@@ -226,8 +226,8 @@ describe('DrivingTemperatureStats — partial data', () => {
   it('shows outside values and dashes the inside cards when inside has no samples', () => {
     renderPanel(makeQuery({ data: analytics(ZEROED, OUTSIDE) }));
 
-    expect(screen.getByText('30.1')).toBeInTheDocument();
-    expect(screen.getByText('-5.3')).toBeInTheDocument();
+    expect(screen.getByText('30.10')).toBeInTheDocument();
+    expect(screen.getByText('-5.30')).toBeInTheDocument();
     expect(screen.getAllByText(DASH)).toHaveLength(3);
     expect(screen.queryByText('No temperature stats')).toBeNull();
   });
@@ -239,10 +239,10 @@ describe('DrivingTemperatureStats — loading', () => {
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
     // Data must not bleed through the skeleton.
-    expect(screen.queryByText('18.4')).toBeNull();
+    expect(screen.queryByText('18.40')).toBeNull();
   });
 });
 
@@ -256,14 +256,14 @@ describe('DrivingTemperatureStats — error + retry', () => {
     fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledTimes(1);
     // No card content renders behind the error.
-    expect(screen.queryByText('18.4')).toBeNull();
+    expect(screen.queryByText('18.40')).toBeNull();
   });
 
   it('ignores a stale error object when isError is false (err = isError ? error : undefined)', () => {
     renderPanel(makeQuery({ data: FULL, isError: false, error: new ApiError('stale', 500) }));
 
     expect(screen.queryByText('Server error')).toBeNull();
-    expect(screen.getByText('18.4')).toBeInTheDocument();
+    expect(screen.getByText('18.40')).toBeInTheDocument();
   });
 });
 
@@ -273,15 +273,15 @@ describe('DrivingTemperatureStats — empty states (count-aware)', () => {
 
     // Regression guard: zeroed StatsSummary (count 0) is treated as "no data".
     expect(screen.getByText('No temperature stats')).toBeInTheDocument();
-    expect(screen.queryByText('0.0')).toBeNull();
-    expect(screen.queryByText('Inside Min')).toBeNull();
+    expect(screen.queryByText('0.00')).toBeNull();
+    expect(screen.queryByText('Inside min')).toBeNull();
   });
 
   it('shows the empty state when the query produced no analytics payload', () => {
     renderPanel(makeQuery({ data: undefined }));
 
     expect(screen.getByText('No temperature stats')).toBeInTheDocument();
-    expect(screen.queryByText('Inside Min')).toBeNull();
+    expect(screen.queryByText('Inside min')).toBeNull();
   });
 });
 
@@ -292,11 +292,11 @@ describe('DrivingTemperatureStats — null safety', () => {
     renderPanel(makeQuery({ data: analytics(malformedInside, undefined) }));
 
     // Three inside cards render "0.0" via safe(); heading stays mounted.
-    expect(screen.getAllByText('0.0')).toHaveLength(3);
+    expect(screen.getAllByText('0.00')).toHaveLength(3);
     // Outside is entirely absent → three "—" fallbacks.
     expect(screen.getAllByText(DASH)).toHaveLength(3);
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
   });
 });

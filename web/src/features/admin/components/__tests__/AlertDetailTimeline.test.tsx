@@ -62,7 +62,7 @@ describe('AlertDetailTimeline — empty states', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No events yet')).toBeInTheDocument();
     // No timeline rows are drawn in the empty branch.
-    expect(container.querySelectorAll('.pl-6')).toHaveLength(0);
+    expect(container.querySelectorAll('ol > li')).toHaveLength(0);
   });
 
   it('forwards className to the EmptyState container', () => {
@@ -264,7 +264,7 @@ describe('AlertDetailTimeline — timestamp + ordering + wiring', () => {
         ]}
       />,
     );
-    expect(container.querySelectorAll('.pl-6')).toHaveLength(3);
+    expect(container.querySelectorAll('ol > li')).toHaveLength(3);
     expect(titleTexts(container)).toEqual([
       'Alert created',
       'Acknowledged by alice',

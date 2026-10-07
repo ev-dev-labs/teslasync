@@ -5,7 +5,7 @@ import { ChartContainer } from '@/components/charts';
 import { Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
-import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 
 import type { RegenEfficiencyModel } from '../../lib/regenEfficiency';
 import { DetailScopeNotice } from './DetailScopeNotice';
@@ -14,6 +14,7 @@ import type {
   MonthlyRecoveryChartRow,
   RegenSectionState,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyRecoveryTrendProps {
   model: RegenEfficiencyModel;
@@ -24,6 +25,7 @@ export function MonthlyRecoveryTrend({
   model,
   state,
 }: MonthlyRecoveryTrendProps) {
+  const { fmtNumber, fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const energySeries = t(
@@ -148,7 +150,7 @@ export function MonthlyRecoveryTrend({
             label: recoveredEnergyLabel,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 1)} ${unitPrefs.energy}`
+                ? `${fmtNumber(value)} ${unitPrefs.energy}`
                 : '—',
           },
           {
@@ -156,14 +158,14 @@ export function MonthlyRecoveryTrend({
             label: driveEnergyLabel,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 1)} ${unitPrefs.energy}`
+                ? `${fmtNumber(value)} ${unitPrefs.energy}`
                 : '—',
           },
           {
             key: 'recoveryRatio',
             label: weightedRatioLabel,
             format: (value) =>
-              typeof value === 'number' ? fmtPercent(value, 1) : '—',
+              typeof value === 'number' ? fmtPercent(value) : '—',
           },
           {
             key: 'eligible',

@@ -13,7 +13,7 @@ import {
   Select,
   Toggle,
 } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDeviceNotificationPrefs } from '@/hooks/useDeviceNotificationPrefs';
 import { useWebPush } from '@/hooks/useWebPush';
@@ -25,6 +25,7 @@ import {
   type NotificationSeverity,
 } from '@/sw/notificationPolicy';
 import { cn } from '@/lib/cn';
+import { useDataState } from '@/hooks/useDataState';
 
 /**
  * Per-device notification preferences (PWA-05).
@@ -106,7 +107,9 @@ export function DeviceNotificationPrefsPanel({
   const { prefs, updatePrefs, resetPrefs, hasFilters } = useDeviceNotificationPrefs();
   const { permission, isSupported } = useWebPush();
   const vehiclesQuery = useVehicles();
+  const vehiclesState = useDataState(vehiclesQuery);
   const vehicles = vehiclesQuery.data ?? [];
+  const unavailableVehicleIds = prefs.vehicleIds.filter(id => !vehicles.some(vehicle => vehicle.id === id));
   const [testResult, setTestResult] = useState<string | null>(null);
 
   const severityOptions = useMemo(
@@ -316,7 +319,19 @@ export function DeviceNotificationPrefsPanel({
             />
             {prefs.vehicleScope === 'selected' && (
               <div className="mt-2 space-y-2">
-                {vehicles.length === 0 ? (
+                <StaleRefreshWarning state={vehiclesState} label={t('notifications.device.vehicleScope', 'Vehicle scope')} />
+                {unavailableVehicleIds.length > 0 && (
+                  <HelperText>
+                    {t('notifications.device.retainedVehicleIds', 'Selected vehicle IDs remain saved while their details are unavailable: {{ids}}', {
+                      ids: unavailableVehicleIds.join(', '),
+                    })}
+                  </HelperText>
+                )}
+                {vehiclesQuery.isLoading && !vehiclesState.hasData ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : vehiclesState.fatalError ? (
+                  <QueryError error={vehiclesState.fatalError} onRetry={() => { void vehiclesQuery.refetch(); }} />
+                ) : vehicles.length === 0 ? (
                   // no-action: adding a vehicle happens in onboarding / the
                   // Vehicles page, not from a notification-scope selector.
                   <EmptyState
@@ -358,7 +373,7 @@ export function DeviceNotificationPrefsPanel({
               }
             />
             {prefs.quietHours.enabled && (
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Input
                   type="time"
                   label={t('notifications.device.quietStart', 'From')}
@@ -416,6 +431,7 @@ export function DeviceNotificationPrefsPanel({
         {/* ── Test delivery + reset ────────────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
           <Button
+            wrapLabel
             size="sm"
             variant="secondary"
             onClick={() => void sendTest()}
@@ -424,7 +440,7 @@ export function DeviceNotificationPrefsPanel({
             <Send className="h-4 w-4" aria-hidden="true" />
             {t('notifications.device.test.action', 'Send test notification')}
           </Button>
-          <Button size="sm" variant="ghost" onClick={resetPrefs} data-testid="device-prefs-reset">
+          <Button wrapLabel size="sm" variant="ghost" onClick={resetPrefs} data-testid="device-prefs-reset">
             {t('notifications.device.reset', 'Reset device rules')}
           </Button>
         </div>

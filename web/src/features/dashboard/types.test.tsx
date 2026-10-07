@@ -11,7 +11,7 @@
  * the component that owns it and checks the DERIVED render output — never the
  * fixture asserted back against itself:
  *
- *   Vehicle / VehicleState              → <VehicleHero>       (header + gauges + asleep)
+ *   Vehicle / VehicleState              → <VehicleHero>       (header + gauges + unknown readings)
  *   FleetAnalytics / Drive / Charging…  → <FleetStatsBar>     (KPI tiles + raw-value converters)
  *   Drive / ChargingSession / Fleet…    → <RecentActivity>    (SI→display timeline + perf)
  *   Motor/Climate/Security/Tire/Media/  → <LiveTelemetry>     (six panels, null-safety)
@@ -19,7 +19,7 @@
  *   Alert                               → inbox reducer       (no component consumes it)
  *
  * Every consumer is exercised across multiple facets: full data, empty/undefined
- * (no hidden panels), null-heavy frames (em-dash / 0 fallbacks), and the
+ * (no hidden panels), null-heavy frames (explicit unknown readings), and the
  * unit-converter contract (each converter must receive the RAW SI/base value off
  * the DTO, so a double-conversion or wrong-field bug is caught). `react-i18next`
  * is stubbed with a passthrough `t(key, default)` (repo convention) and
@@ -158,14 +158,21 @@ describe('Vehicle + VehicleState (via <VehicleHero>)', () => {
     expect(toDistanceDisplay).toHaveBeenCalledWith(400);
   });
 
-  it('shows the asleep placeholder (no gauges) when VehicleState is null', () => {
-    const { toSpeedDisplay } = renderHero(null);
+  it('preserves unknown status and visible unknown gauges when VehicleState is null', () => {
+    const { toSpeedDisplay, toDistanceDisplay } = renderHero(null);
 
-    expect(screen.getByText('Vehicle asleep — wake to see live data')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wake Up' })).toBeInTheDocument();
-    // Gauges + their converters must not run without a live state.
-    expect(screen.queryByText('Battery')).toBeNull();
+    expect(screen.getByText('No vehicle readings available')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Vehicle asleep — wake to see live data')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Wake up' })).toBeNull();
+    for (const name of ['Battery', 'Range', 'Inside', 'Outside']) {
+      const gauge = screen.getByRole('group', { name });
+      expect(gauge).toHaveTextContent('—');
+      expect(gauge).not.toHaveAttribute('aria-valuenow');
+    }
+    expect(screen.queryByRole('meter')).toBeNull();
     expect(toSpeedDisplay).not.toHaveBeenCalled();
+    expect(toDistanceDisplay).not.toHaveBeenCalled();
   });
 });
 
@@ -322,11 +329,11 @@ describe('Drive + ChargingSession + FleetAnalytics (via <RecentActivity>)', () =
 
     const timeline = screen.getByTestId('activity-timeline');
     // 12 000 m → 12 km ; 25 000 Wh → 25 kWh — the SI→display contract for these DTOs.
-    expect(timeline.textContent).toMatch(/12(\.\d)?\s*km/);
-    expect(timeline.textContent).toMatch(/25(\.\d)?\s*kWh/);
+    expect(timeline.textContent).toContain('12.00 km');
+    expect(timeline.textContent).toContain('25.00 kWh');
     // FleetAnalytics scalars land in the performance panel.
-    expect(screen.getByText('Total Drives (30d)').parentElement).toHaveTextContent('42');
-    expect(screen.getByText('Charge Sessions').parentElement).toHaveTextContent('7');
+    expect(screen.getByText('Total drives (30d)').parentElement).toHaveTextContent('42');
+    expect(screen.getByText('Charge sessions').parentElement).toHaveTextContent('7');
   });
 
   it('shows the empty state (not a blank panel) when there is no drive or charge activity', () => {
@@ -418,8 +425,8 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     const { container, toTemperatureDisplay, toDistanceDisplay, toPressureDisplay } = renderLive(true);
 
     // Motor
-    expect(screen.getByText('320 Nm')).toBeInTheDocument();
-    expect(screen.getByText('45°C')).toBeInTheDocument();
+    expect(screen.getByText('320.00 Nm')).toBeInTheDocument();
+    expect(screen.getByText('45.00°C')).toBeInTheDocument();
     expect(screen.getByText('D').className).toContain('green'); // gear → success badge
     // Media
     expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
@@ -427,7 +434,7 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     // Security + Location + Tire
     expect(container.textContent).toContain('Locked');
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('2.3')).toBeInTheDocument(); // front_left
+    expect(screen.getByText('2.30')).toBeInTheDocument(); // front_left
 
     // Converters receive raw SI: inside_temp °C, front_left bar, miles_to_arrival.
     expect(toTemperatureDisplay).toHaveBeenCalledWith(21);
@@ -443,7 +450,7 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     expect(screen.getByRole('heading', { name: 'Navigation' })).toBeInTheDocument();
     // Loading state: skeletons present, no concrete value or progressbar leaks.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('320 Nm')).toBeNull();
+    expect(screen.queryByText('320.00 Nm')).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 });

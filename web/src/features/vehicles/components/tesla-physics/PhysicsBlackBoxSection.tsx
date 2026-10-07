@@ -1,11 +1,13 @@
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, time, unknown, yesNo } from './PhysicsPageShell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsBlackBoxSection({ physics }: { physics: PhysicsPage }) {
+  const { fmtNumber } = useNumberFormatting();
   const { report, t } = physics;
   const box = report?.black_box;
   const frames = box?.frames ?? [];
@@ -29,7 +31,7 @@ export default function PhysicsBlackBoxSection({ physics }: { physics: PhysicsPa
       </Grid>
       <Text as="p" variant="bodySm">{t('teslaOnly.blackBoxWindow', 'Evidence window: {{from}} to {{to}}', { from: time(box?.from, t), to: time(box?.to, t) })}</Text>
       <Text as="p" variant="bodySm">{t('teslaOnly.blackBoxSpan', 'Selected window span: {{span}}; first returned frame: {{first}}', {
-        span: windowSpan != null && windowSpan >= 0 ? `${fmtNumber(windowSpan, 0)} s` : unknown(t), first: time(ordered[0]?.at, t),
+        span: windowSpan != null && windowSpan >= 0 ? `${fmtNumber(windowSpan)} s` : unknown(t), first: time(ordered[0]?.at, t),
       })}</Text>
       <Text as="p" variant="bodySm">{t('teslaOnly.blackBoxLatest', 'Latest returned frame: {{at}} · gear {{gear}} · firmware {{firmware}}', {
         at: time(newest?.at, t), gear: newest?.gear || unknown(t), firmware: newest?.firmware || unknown(t),
@@ -63,7 +65,7 @@ export default function PhysicsBlackBoxSection({ physics }: { physics: PhysicsPa
           { key: 'firmware', header: t('teslaOnly.firmware', 'Firmware'), render: (r) => r.firmware || unknown(t) },
           { key: 'latch', header: t('teslaOnly.latch', 'Latch'), render: (r) => r.latch || unknown(t) },
           { key: 'door', header: t('teslaOnly.door', 'Door'), render: (r) => yesNo(r.door_open, t) },
-          { key: 'current', header: t('teslaOnly.packCurrent', 'Pack current'), render: (r) => r.pack_current_a == null ? unknown(t) : `${fmtNumber(r.pack_current_a, 1)} A` },
+          { key: 'current', align: 'right', header: t('teslaOnly.packCurrent', 'Pack current'), render: (r) => r.pack_current_a == null ? unknown(t) : `${fmtNumber(r.pack_current_a)} A` },
           { key: 'schedule', header: t('teslaOnly.scheduleMode', 'Schedule mode'), render: (r) => r.scheduled_mode || unknown(t) },
         ]} />
     </Evidence>

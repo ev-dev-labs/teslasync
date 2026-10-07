@@ -2,12 +2,14 @@ import { CalendarRange } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-import { fmtPercent } from '@/lib/numberFormat';
+
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorWeekdayProfile({ analysis, state }: ChargeAdvisorComponentProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -34,23 +36,23 @@ export function ChargeAdvisorWeekdayProfile({ analysis, state }: ChargeAdvisorCo
               labels[profile.weekday] ?? 'Day',
             )}</Text>
             <Text className="mt-1 text-lg font-semibold text-cyan-300">
-              {profile.medianPct == null ? '—' : fmtPercent(profile.medianPct, 1)}
+              {profile.medianPct == null ? '—' : fmtPercent(profile.medianPct)}
             </Text>
             <Text variant="caption">{t('chargeAdvisor.weekday.median', 'Calendar-day median drop')}</Text>
             <div className="mt-3 space-y-1">
               <Text variant="caption">
                 {t('chargeAdvisor.weekday.mean', 'Calendar-day mean {{value}}', {
-                  value: profile.meanPct == null ? '—' : fmtPercent(profile.meanPct, 1),
+                  value: profile.meanPct == null ? '—' : fmtPercent(profile.meanPct),
                 })}
               </Text>
               <Text variant="caption">
                 {t('chargeAdvisor.weekday.p75', 'Calendar-day p75 {{value}}', {
-                  value: profile.p75Pct == null ? '—' : fmtPercent(profile.p75Pct, 1),
+                  value: profile.p75Pct == null ? '—' : fmtPercent(profile.p75Pct),
                 })}
               </Text>
               <Text variant="caption">
                 {t('chargeAdvisor.weekday.p90', 'Calendar-day p90 {{value}}', {
-                  value: profile.p90Pct == null ? '—' : fmtPercent(profile.p90Pct, 1),
+                  value: profile.p90Pct == null ? '—' : fmtPercent(profile.p90Pct),
                 })}
               </Text>
               <Text variant="caption">
@@ -77,7 +79,7 @@ export function ChargeAdvisorWeekdayProfile({ analysis, state }: ChargeAdvisorCo
                       ? 'warning'
                       : 'neutral'
               }>
-                {fmtPercent(profile.driveDayShare * 100, 0)} {t('chargeAdvisor.weekday.share', 'active')} · {t(
+                {fmtPercent(profile.driveDayShare * 100)} {t('chargeAdvisor.weekday.share', 'active')} · {t(
                   `chargeAdvisor.support.band.${profile.support.band}`,
                   profile.support.band === 'strong'
                     ? 'strong'

@@ -89,6 +89,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
     () => [
       {
         key: 'model',
+        filterValue: (row) => row.model || null,
         header: t('admin.teslaOrders.cols.model', 'Model'),
         sortable: true,
         visibleOnMobile: true,
@@ -100,6 +101,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       },
       {
         key: 'order_id',
+        filterValue: (row) => row.order_id || null,
         header: t('admin.teslaOrders.cols.orderId', 'Order ID'),
         render: (row) => (
           <Text as="span" size="xs" color="secondary" mono title={row.order_id}>
@@ -109,6 +111,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       },
       {
         key: 'vin',
+        filterValue: (row) => row.vin || null,
         header: t('admin.teslaOrders.cols.vin', 'VIN'),
         render: (row) =>
           row.vin ? (
@@ -121,6 +124,8 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       },
       {
         key: 'status',
+        filterValue: (row) => row.status ?? null,
+        filterValueLabel: (_value, row) => formatOrderStatus(row.status),
         header: t('admin.teslaOrders.cols.status', 'Status'),
         sortable: true,
         visibleOnMobile: true,
@@ -132,6 +137,8 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       },
       {
         key: 'delivery',
+        filterValue: (row) => row.delivery_date || null,
+        filterValueLabel: (_value, row) => row.delivery_date ? formatDate(row.delivery_date) : '—',
         header: t('admin.teslaOrders.cols.delivery', 'Delivery'),
         sortable: true,
         render: (row) => (
@@ -142,6 +149,8 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       },
       {
         key: 'upgradable',
+        filterValue: (row) => row.is_upgradable ?? null,
+        filterValueLabel: (_value, row) => row.is_upgradable == null ? '—' : row.is_upgradable ? t('common.yes', 'Yes') : t('common.no', 'No'),
         header: t('admin.teslaOrders.cols.upgradable', 'Upgradable'),
         align: 'center',
         render: (row) =>
@@ -158,7 +167,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="relative max-w-md">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
@@ -178,6 +187,8 @@ export function OrdersTable({ orders }: OrdersTableProps) {
         name="tesla-orders"
         columns={columns}
         data={sorted}
+        enableValueFilters
+        filterData={orders ?? []}
         keyExtractor={keyExtractor}
         sortKey={sortKey}
         sortDir={sortDir}

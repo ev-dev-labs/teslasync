@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, PanelTitle, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { Icons } from '@/lib/icons';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { CalculationDetails } from './CalculationDetails';
 import type {
   OperationalConfidenceLabel,
@@ -46,6 +47,7 @@ export function OperationalNarrativeDetails({
   className,
 }: OperationalNarrativeDetailsProps) {
   const { t, i18n } = useTranslation();
+  const { fmtPercent } = useNumberFormatting();
   const confidenceLabel = t(
     `operations.narrative.confidence.${narrative.confidence.label}`,
     CONFIDENCE_FALLBACK[narrative.confidence.label],
@@ -129,8 +131,8 @@ export function OperationalNarrativeDetails({
               size="sm"
             >
               {confidenceLabel}
-              {narrative.confidence.score != null
-                ? ` · ${Math.round(narrative.confidence.score * 100)}%`
+              {narrative.confidence.score != null && Number.isFinite(narrative.confidence.score)
+                ? ` · ${fmtPercent(narrative.confidence.score * 100)}`
                 : ''}
             </Badge>
           </div>

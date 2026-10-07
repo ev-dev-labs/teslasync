@@ -117,4 +117,13 @@ describe('BridgeStatus', () => {
     expect(heading.id).not.toBe('');
     expect(region).toHaveAccessibleName('GitHub bridge');
   });
+
+  it('unknown: does not claim the bridge is unconfigured when its source could not be read', () => {
+    const { container } = render(<BridgeStatus enabled={false} repo="" loading={false} unknown />);
+    expect(screen.getByRole('status', { name: 'GitHub bridge' })).toHaveTextContent('Unknown');
+    expect(screen.queryByText('Not configured')).toBeNull();
+    expect(screen.queryByText(/Set TESLASYNC_GITHUB_REPO/)).toBeNull();
+    expect(screen.queryByText(/Connected/)).toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+  });
 });

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { GlassPanel, PanelTitle, Select } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import {
   RANGE_BUFFER_THRESHOLDS,
   type RangeBufferResult,
@@ -23,6 +23,7 @@ import {
 } from './labels';
 import { RangeBufferQueryStatus } from './RangeBufferQueryStatus';
 import type { RangeBufferQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferKpiBandProps {
   result: RangeBufferResult;
@@ -39,6 +40,7 @@ export function RangeBufferKpiBand({
   thresholdPct,
   onThresholdChange,
 }: RangeBufferKpiBandProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unresolvedSubtitle = !state.vehicleSelected
@@ -215,7 +217,7 @@ export function RangeBufferKpiBand({
             label={t('rangeBuffer.kpis.support', 'Evidence support')}
             value={
               resolved
-                ? `${rangeBufferNumber(result.coverage.support.index, locale, 1)}/100`
+                ? `${rangeBufferNumber(result.coverage.support.index, locale)}/100`
                 : '—'
             }
             subtitle={

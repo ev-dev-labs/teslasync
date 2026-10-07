@@ -262,18 +262,18 @@ describe('TimeOfUseAnalysis — insight cards', () => {
 
     expect(screen.getByText('Cheapest Hour')).toBeInTheDocument();
     expect(screen.getByText('03:00')).toBeInTheDocument();
-    expect(screen.getByText('avg 0.120 / session')).toBeInTheDocument();
+    expect(screen.getByText('avg 0.12 / session')).toBeInTheDocument();
 
     expect(screen.getByText('Priciest Hour')).toBeInTheDocument();
     expect(screen.getByText('17:00')).toBeInTheDocument();
-    expect(screen.getByText('avg 0.350 / session')).toBeInTheDocument();
+    expect(screen.getByText('avg 0.35 / session')).toBeInTheDocument();
 
     expect(screen.getByText('Busiest Hour')).toBeInTheDocument();
     expect(screen.getByText('18:00')).toBeInTheDocument();
     expect(screen.getByText('9 sessions')).toBeInTheDocument();
 
     expect(screen.getByText('Off-Peak Charging')).toBeInTheDocument();
-    expect(screen.getByText('42.5%')).toBeInTheDocument();
+    expect(screen.getByText('42.50%')).toBeInTheDocument();
   });
 
   it('falls back to an empty state (keeping the chart) when there are no insights', () => {

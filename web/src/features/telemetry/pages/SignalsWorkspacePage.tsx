@@ -26,7 +26,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
   AlertCircle,
-  ArrowUpDown,
   Bell,
   Database,
   GitCompare,
@@ -37,18 +36,16 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption } from '@/components/ui';
-import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
+import { PageLayout, SourceContent } from '@/components/layout';
+import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption, GlossaryTerm } from '@/components/ui';
 
-import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
-import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
-import { EmptyState, AlertBanner, Skeleton } from '@/components/feedback';
-import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
+import { OperationalBrief, BulkActionsToolbar, SavedViewMenu, type BulkAction } from '@/components/data-display';
+import { EmptyState, EmptyStateGuidanceDetails, AlertBanner, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUrlArray, useUrlBoolean, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
@@ -58,7 +55,7 @@ import { useSignals, useSignalDiffServer, type SignalDiffRow } from '@/api/hooks
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { request } from '@/api/client';
 import { getErrorMessage } from '@/lib/errorMessage';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 import type { SignalHistoryResp } from '@/api/types';
 import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
@@ -77,6 +74,9 @@ import {
 } from '../components/SignalCompareControls';
 import { useLiveSignalStream, type SignalStat } from '../hooks/useLiveSignalStream';
 import { pLimit } from '@/lib/pLimit';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { signalsWorkspaceSummary, signalsDiffSummary } from '../components/statstrip-signals-mqtt/signalsSummary';
 
 // Bound the parallel signal-history fetches so a "select all 80 signals"
 // click can't fire 80 simultaneous requests at the backend. 6 keeps the
@@ -99,6 +99,7 @@ const PER_PAGE_OPTIONS = [
 type CombinedHistoryRow = SignalLogEntry;
 
 export default function SignalsWorkspacePage() {
+  const { locale } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('signalsWorkspace.title', 'Signals'));
@@ -113,7 +114,9 @@ export default function SignalsWorkspacePage() {
 
   // ── Selection state (URL-synced) ─────────────────────────────
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
-  const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
+  const signalsQuery = useSignals(vehicleId);
+  const { data: availableSignals } = signalsQuery;
+  const catalogState = useDataState(signalsQuery);
 
   // ── Catalog tree state (URL-synced) ──────────────────────────
   const [catalogSearch, setCatalogSearch] = useUrlString('catq', '');
@@ -185,13 +188,15 @@ export default function SignalsWorkspacePage() {
     () => (availableSignals && availableSignals.length > 0 ? availableSignals.join(',') : ''),
     [availableSignals],
   );
-  const { data: diffResp, isLoading: diffLoading, error: diffError } = useSignalDiffServer(
+  const diffQuery = useSignalDiffServer(
     vehicleId,
     atAIso,
     atBIso,
     signalsCsv,
     { enabled: isCompare && vehicleId > 0 && Boolean(atAIso) && Boolean(atBIso) },
   );
+  const { data: diffResp, isLoading: diffLoading } = diffQuery;
+  const diffState = useDataState(diffQuery, { provenance: 'historical' });
   const diffAllRows: SignalDiffRow[] = diffResp?.data ?? [];
   const diffFilteredRows = useMemo(() => {
     let rows = diffAllRows;
@@ -216,7 +221,7 @@ export default function SignalsWorkspacePage() {
     setExploreKey(Date.now());
   }, [canExplore, setPage]);
 
-  const { data: historicalRows, isLoading: historicalLoading, isFetching: historicalFetching, error: historicalError } = useQuery<CombinedHistoryRow[]>({
+  const historicalQuery = useQuery<CombinedHistoryRow[]>({
     queryKey: ['signals-workspace-history', vehicleId, exploreKey],
     queryFn: async () => {
       // Bound parallel signal fetches: a "select all" with 80 signals
@@ -238,6 +243,8 @@ export default function SignalsWorkspacePage() {
     },
     enabled: !isLive && !isCompare && exploreKey !== null,
   });
+  const { data: historicalRows, isLoading: historicalLoading, isFetching: historicalFetching } = historicalQuery;
+  const historicalState = useDataState(historicalQuery, { provenance: 'historical' });
 
   // ── Live SSE — chart + tail share one subscription ───────────
   const live = useLiveSignalStream({
@@ -358,23 +365,40 @@ export default function SignalsWorkspacePage() {
     return `${window.location.origin}${window.location.pathname}?${currentQuery}`;
   }, [currentQuery]);
 
-  const anyError = signalsError ?? historicalError ?? diffError;
+  const anyError = catalogState.fatalError
+    ?? (isCompare ? diffState.fatalError : !isLive && exploreKey !== null ? historicalState.fatalError : null);
   const hasHistorical = exploreKey !== null;
+  const workspaceSummary = signalsWorkspaceSummary({
+    selected: selectedSignals.length, pinned: pinnedSignals.size, isLive, isCompare,
+    rate: live.tailRate, connected: live.connected, locale,
+  }, t);
+  const diffUnavailable = !diffResp || diffState.fatalError != null;
+  const diffSummary = signalsDiffSummary({
+    changed: diffUnavailable ? null : diffAllRows.length,
+    visible: diffUnavailable ? null : diffFilteredRows.length,
+    pinned: pinnedSignals.size, atA: atAIso, atB: atBIso,
+  }, t);
+  const workspaceBriefMetrics = useOperationalMetrics(workspaceSummary.metrics);
+  const diffBriefMetrics = useOperationalMetrics(diffSummary.metrics);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('signalsWorkspace.title', 'Signals')}
       subtitle={t(
         'signalsWorkspace.subtitle',
         'Browse the live catalog, inspect history, monitor live, or compare snapshots — all in one place.',
       )}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {isLive ? (
             <Badge variant={live.connected ? 'success' : 'danger'} dot>
               {live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
             </Badge>
           ) : null}
+        </div>
+      }
+      overflowActions={
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <SavedViewMenu route="/signals" currentQuery={currentQuery} onApply={apply} />
           {permalinkUrl ? (
             <CopyButton text={permalinkUrl} label={t('signalsWorkspace.share', 'Share')} size="sm" />
@@ -387,6 +411,10 @@ export default function SignalsWorkspacePage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       ) : null}
+      <StaleRefreshWarning state={catalogState} label={t('dataSources.labels.signalCatalog', 'Signal catalog')} />
+      {!isLive && !isCompare && hasHistorical && (
+        <StaleRefreshWarning state={historicalState} label={t('signalsWorkspace.historyTitle', 'Signal history')} />
+      )}
 
       {vehicleId === 0 ? (
         // no-action: vehicle picker is in the page header; no inline CTA needed.
@@ -411,29 +439,18 @@ export default function SignalsWorkspacePage() {
 
       {/* ── KPI headline strip ─────────────────────────────────── */}
       <FadeIn>
-        <section
-          aria-label={t('signalsWorkspace.kpis', 'Workspace summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <StatCard
-            label={t('signalsWorkspace.selected', 'Selected')}
-            value={fmtInt(selectedSignals.length)}
-            icon={<ArrowUpDown className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('signalsWorkspace.mode', 'Mode')}
-            value={isCompare ? t('signalsWorkspace.compare', 'Compare') : isLive ? t('signalsWorkspace.live', 'Live') : t('signalsWorkspace.historical', 'Historical')}
-            icon={isCompare ? <GitCompare className="h-4 w-4" aria-hidden="true" /> : isLive ? <Radio className="h-4 w-4" aria-hidden="true" /> : <Database className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('signalsWorkspace.liveRate', 'Live rate')}
-            value={isLive ? `${fmtInt(live.tailRate)} /s` : '—'}
-            icon={<Radio className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('signalsWorkspace.pinned', 'Pinned signals')}
-            value={fmtInt(pinnedSignals.size)}
-            icon={<Pin className="h-4 w-4" aria-hidden="true" />}
+        <section aria-label={t('signalsWorkspace.kpis', 'Workspace summary')}>
+          <OperationalBrief
+            compact
+            testId="signals-workspace-summary"
+            eyebrow={t('signalsWorkspace.title', 'Signals')}
+            title={t('signalsWorkspace.summary.title', 'Selection and stream context')}
+            description={workspaceSummary.period.kind === 'snapshot' ? workspaceSummary.period.provenance : workspaceSummary.period.label}
+            metrics={workspaceBriefMetrics}
+            scope={workspaceSummary.period.label}
+            statusLabel={isCompare ? t('signalsWorkspace.compare', 'Compare')
+              : isLive ? t('signalsWorkspace.live', 'Live') : t('signalsWorkspace.historical', 'Historical')}
+            freshness={isLive ? live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected') : undefined}
           />
         </section>
       </FadeIn>
@@ -476,7 +493,7 @@ export default function SignalsWorkspacePage() {
               <div className="flex flex-wrap items-end gap-2">
                 {!isLive && !isCompare ? (
                   <Select
-                    label={t('signalsWorkspace.perPage', 'Per Page')}
+                    label={t('signalsWorkspace.perPage', 'Per page')}
                     value={String(perPage)}
                     onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
                     options={PER_PAGE_OPTIONS}
@@ -539,21 +556,26 @@ export default function SignalsWorkspacePage() {
               />
 
               <FadeIn delay={0.05}>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <StatCard label={t('signalDiff.totalChanged', 'Changed signals')} value={diffLoading ? '—' : String(diffAllRows.length)} />
-                  <StatCard label={t('signalDiff.visible', 'Visible after filter')} value={diffLoading ? '—' : String(diffFilteredRows.length)} />
-                  <StatCard label={t('signalDiff.pinnedCount', 'Pinned')} value={String(pinnedSignals.size)} />
-                  <StatCard
-                    label={t('signalDiff.windowSpan', 'Window span')}
-                    value={atAIso && atBIso
-                      ? `${Math.abs(new Date(atBIso).getTime() - new Date(atAIso).getTime()) / 1000} s`
-                      : '—'}
-                  />
-                </div>
+                <OperationalBrief
+                  compact
+                  testId="signals-diff-summary"
+                  eyebrow={t('signalsWorkspace.compare', 'Compare')}
+                  title={t('signalDiff.tableTitle', 'Signal differences')}
+                  description={diffSummary.period.kind === 'unknown' ? diffSummary.period.reason ?? diffSummary.period.label : diffSummary.period.label}
+                  metrics={diffBriefMetrics}
+                  scope={diffSummary.period.label}
+                  statusLabel={diffLoading && !diffResp ? t('common.loading', 'Loading')
+                    : diffState.fatalError ? t('error.loadFailed', 'Failed to load data')
+                      : diffState.refreshError || diffState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
+                        : diffResp ? t('signalsWorkspace.summary.diffAvailable', 'Snapshot comparison available')
+                          : t('signalsWorkspace.summary.diffUnavailable', 'Snapshot comparison unavailable')}
+                  statusTone={diffState.fatalError ? 'danger' : diffState.refreshError || diffState.isRefreshBlocked ? 'warning' : 'neutral'}
+                />
               </FadeIn>
 
               <BulkActionsToolbar
                 selectedIds={diffBulkSelection}
+                selectionScope="selected"
                 total={diffFilteredRows.length}
                 onClear={() => setDiffBulkSelection([])}
                 actions={diffBulkActions}
@@ -561,6 +583,14 @@ export default function SignalsWorkspacePage() {
 
               <FadeIn delay={0.1}>
                 <GlassPanel className="p-4 sm:p-5">
+                  <SourceContent
+                    state={vehicleId === 0 ? 'empty' : diffState.fatalError ? 'error' : diffState.refreshError || diffState.isRefreshBlocked ? 'retained' : 'ready'}
+                    label={t('signalDiff.tableTitle', 'Signal differences')}
+                    error={diffState.fatalError}
+                    errorMessage={t('error.loadFailed', 'Failed to load data')}
+                    emptyMessage={t('signalsWorkspace.noVehicleDesc', 'Pick a vehicle from the picker above to see its signals.')}
+                    errorRecovery={{ onRetry: diffState.retry ?? undefined }}
+                  >
                   {diffLoading && !diffResp ? (
                     <div className="space-y-2">
                       {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
@@ -582,6 +612,7 @@ export default function SignalsWorkspacePage() {
                       pinnedSignals={pinnedSignals}
                     />
                   )}
+                  </SourceContent>
                   {pinnedSignals.size > 0 ? (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
                       <Caption>
@@ -608,14 +639,14 @@ export default function SignalsWorkspacePage() {
                   {/* Hero chart — spans most of the width on wide screens */}
                   <div
                     className={cn(
-                      'space-y-3',
+                      'min-w-0 max-w-full space-y-3',
                       selectedSignals.length > 0
                         ? 'xl:col-span-2 3xl:col-span-3'
                         : 'xl:col-span-3 3xl:col-span-4',
                     )}
                   >
                     {selectedSignals.length >= 2 ? (
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
                         <Label>{t('signalsWorkspace.chartMode', 'Chart layout')}</Label>
                         <TabNav
                           tabs={[
@@ -634,6 +665,8 @@ export default function SignalsWorkspacePage() {
                       stats={activeStats}
                       isLive={isLive}
                       loading={historicalLoading && !isLive}
+                      error={!isLive ? historicalState.fatalError : null}
+                      onRetry={historicalState.retry ?? undefined}
                       pointsLoaded={historicalRows?.length}
                       liveEventCount={live.chartPointCount}
                       chartMode={chartMode}
@@ -642,11 +675,13 @@ export default function SignalsWorkspacePage() {
 
                   {/* Stats rail — sits beside the chart on wide screens */}
                   {selectedSignals.length > 0 ? (
-                    <div className="xl:col-span-1">
+                    <div className="min-w-0 xl:col-span-1">
                       <SignalStatsPanel
                         stats={activeStats}
                         selectedSignals={selectedSignals}
                         loading={historicalLoading && !isLive}
+                        error={!isLive ? historicalState.fatalError : null}
+                        onRetry={historicalState.retry ?? undefined}
                       />
                     </div>
                   ) : null}
@@ -674,6 +709,8 @@ export default function SignalsWorkspacePage() {
                   totalRows={totalTableRows}
                   onPageChange={setPage}
                   loading={historicalLoading}
+                  error={historicalState.fatalError}
+                  onRetry={historicalState.retry ?? undefined}
                   title={t('signalsWorkspace.historyTitle', 'Signal history')}
                 />
               ) : (
@@ -685,7 +722,7 @@ export default function SignalsWorkspacePage() {
                       title={t('signalsWorkspace.emptyTitle', 'Pick signals and run a query')}
                       message={t(
                         'signalsWorkspace.emptyDesc',
-                        'Pick signals from the catalog, choose a time range, then click Run for historical data — or toggle Live to stream in real time.',
+                        'Pick signals from the catalog, choose a time range, then click run for historical data — or toggle live to stream in real time.',
                       )}
                     />
                     {/* HELP-02 — a sleeping vehicle is the single most common
@@ -708,6 +745,6 @@ export default function SignalsWorkspacePage() {
             <Caption>{t('signalGap.refreshInterval', 'Catalog refreshes every 5s')}</Caption>
           </div>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

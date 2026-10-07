@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import {
   ArrivalReliabilityEvidenceMetricGroup,
   type ArrivalReliabilityEvidenceMetric,
 } from './ArrivalReliabilityEvidenceMetricGroup';
 import { arrivalPercent } from './labels';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityCoverageMetricsProps {
   analysis: ArrivalReliabilityResult;
@@ -20,6 +21,7 @@ export function ArrivalReliabilityCoverageMetrics({
   locale,
   timeZone,
 }: ArrivalReliabilityCoverageMetricsProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = analysis.coverage;
   const date = (value: number | null) =>
@@ -27,7 +29,7 @@ export function ArrivalReliabilityCoverageMetrics({
       ? formatDateTime(new Date(value), { locale, tz: timeZone })
       : '—';
   const days = (value: number | null) =>
-    value != null ? fmtNumber(value, 1, locale) : '—';
+    value != null ? fmtNumber(value, undefined, locale) : '—';
   const metrics: ArrivalReliabilityEvidenceMetric[] = [
     {
       label: t('arrivalReliability.quality.supportedRoutes', 'Supported routes'),

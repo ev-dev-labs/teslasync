@@ -2,11 +2,15 @@ import {
   Children,
   cloneElement,
   isValidElement,
+  useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
+  useState,
   type ReactElement,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { cn } from '@/lib/cn';
 
@@ -41,6 +45,8 @@ export interface TooltipProps {
    * forcing `whitespace-nowrap`. Used by `HelpTooltip` for long help bodies.
    */
   multiline?: boolean;
+  /** Optional allocated surface that contains the bubble, such as a scrubber track. */
+  boundaryRef?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }
 
@@ -135,8 +141,51 @@ const sideClasses = {
  * - The reveal transition is disabled globally via the `motion-reduce`
  *   variant when the user has `prefers-reduced-motion: reduce`.
  */
-export function Tooltip({ content, side = 'top', multiline, children }: TooltipProps) {
+export function Tooltip({ content, side = 'top', multiline, boundaryRef, children }: TooltipProps) {
   const tooltipId = useId();
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+  const [horizontalOffset, setHorizontalOffset] = useState(0);
+  const [maxWidth, setMaxWidth] = useState<number>();
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!trigger || !tooltip) return;
+    const viewportWidth = document.documentElement.clientWidth;
+    if (!tooltip.offsetWidth || !viewportWidth) return;
+    const boundary = boundaryRef?.current?.getBoundingClientRect();
+    const leftBound = Math.max(12, boundary && boundary.width > 0 ? boundary.left : 12);
+    const rightBound = Math.min(viewportWidth - 12,
+      boundary && boundary.width > 0 ? boundary.right : viewportWidth - 12);
+    const availableWidth = rightBound - leftBound;
+    if (availableWidth <= 0) return;
+    if (multiline || boundaryRef) setMaxWidth(availableWidth);
+    const width = multiline || boundaryRef
+      ? Math.min(tooltip.offsetWidth, availableWidth) : tooltip.offsetWidth;
+    const bounds = trigger.getBoundingClientRect();
+    const desiredLeft = side === 'left'
+      ? bounds.left - width - 8
+      : side === 'right'
+        ? bounds.right + 8
+        : bounds.left + bounds.width / 2 - width / 2;
+    const left = Math.max(leftBound, Math.min(desiredLeft, rightBound - width));
+    setHorizontalOffset(left - desiredLeft);
+  }, [side, multiline, boundaryRef]);
+
+  // Opacity-hidden bubbles still expand scrollable bounds before interaction.
+  useLayoutEffect(() => {
+    updatePosition();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(updatePosition) : null;
+    if (triggerRef.current) observer?.observe(triggerRef.current);
+    if (tooltipRef.current) observer?.observe(tooltipRef.current);
+    if (boundaryRef?.current) observer?.observe(boundaryRef.current);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [content, updatePosition, boundaryRef]);
 
   // Stable per-mount fingerprint for the dev-time warn so we don't
   // de-duplicate across distinct callsites that happen to share the same
@@ -177,14 +226,26 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
       : children;
 
   return (
-    <span className="relative inline-flex group/tip">
+    <span
+      ref={triggerRef}
+      className="relative inline-flex group/tip"
+      onMouseEnter={updatePosition}
+      onFocus={updatePosition}
+    >
       {enrichedChild}
       <span
         id={tooltipId}
+        ref={tooltipRef}
         role="tooltip"
+        style={{
+          ...(horizontalOffset ? { translate: `${horizontalOffset}px 0` } : {}),
+          ...(maxWidth !== undefined ? { maxWidth } : {}),
+        }}
         className={cn(
           'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
-          multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
+          multiline || boundaryRef
+            ? 'w-80 max-w-[calc(100vw-1.5rem)] whitespace-normal break-words px-4 py-3 text-sm font-normal leading-relaxed'
+            : 'whitespace-nowrap',
           'bg-gray-900 text-[var(--text-inverse)] shadow-lg dark:bg-gray-100',
           // Forced-colors mode suppresses
           // box-shadow and remaps the bg-gray to Canvas, so the tooltip
@@ -193,7 +254,8 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
           // surface still reads as a separate floating layer in
           // Windows High Contrast.
           'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
-          'opacity-0 scale-95 transition-all duration-fast motion-reduce:transition-none',
+          // Viewport corrections must not animate with the hover/focus reveal.
+          'opacity-0 scale-95 transition-[opacity,transform] duration-fast motion-reduce:transition-none',
           'group-hover/tip:opacity-100 group-hover/tip:scale-100',
           'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
           sideClasses[side],

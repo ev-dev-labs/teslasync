@@ -1,13 +1,14 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BatteryCharging, Zap, Gauge, TrendingUp, Timer, Wallet } from 'lucide-react';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import type { NeonColor } from '@/lib/tokens';
 import type { SummaryStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SummaryStatsGridProps {
   stats: SummaryStats | null;
@@ -25,6 +26,7 @@ interface CardSpec {
 }
 
 export default function SummaryStatsGrid({ stats, loading }: SummaryStatsGridProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -73,7 +75,7 @@ export default function SummaryStatsGrid({ stats, loading }: SummaryStatsGridPro
         color: 'green',
       },
     ],
-    [t, stats, formatCurrency],
+    [t, stats, formatCurrency, fmtInt, fmtNumber],
   );
 
   if (loading) {

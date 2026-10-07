@@ -7,10 +7,11 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Timeline } from '@/components/data-display/Timeline';
 import { Currency } from '@/components/data-display';
 import { AreaChartWrapper } from '@/components/charts/AreaChartWrapper';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatDateShort } from '@/lib/dateFormat';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import type { FleetAnalytics, Drive, ChargingSession } from '../types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type ActivityKind = 'drive' | 'charge';
 
@@ -62,6 +63,7 @@ export function RecentActivity({
   recentDrives, recentCharges, analytics,
   toEfficiencyDisplay, distanceUnit, efficiencyUnit,
 }: RecentActivityProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatCurrency } = useFormatting();
 
@@ -74,23 +76,23 @@ export function RecentActivity({
     (recentDrives ?? []).forEach((d) =>
       items.push({
         type: 'drive',
-        title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
-        subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_soc_pct ?? '?'}% → ${d.end_soc_pct ?? '?'}%`,
+        title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'))} ${distanceUnit} ${t('activity.drive', 'drive')}`,
+        subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_soc_pct == null ? '?' : fmtNumber(d.start_soc_pct)}% → ${d.end_soc_pct == null ? '?' : fmtNumber(d.end_soc_pct)}%`,
         timeMs: toEpochMs(d.started_at),
       }),
     );
     (recentCharges ?? []).forEach((s) =>
       items.push({
         type: 'charge',
-        title: `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'), 1)} kWh ${t('activity.charged', 'charged')}`,
-        subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost, 2)}` : ''}`,
+        title: `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh ${t('activity.charged', 'charged')}`,
+        subtitle: `${s.start_soc_pct == null ? '?' : fmtNumber(s.start_soc_pct)}% → ${s.end_soc_pct == null ? '?' : fmtNumber(s.end_soc_pct)}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost)}` : ''}`,
         timeMs: toEpochMs(s.started_at),
       }),
     );
     const rank = (ms: number) => (Number.isFinite(ms) ? ms : -Infinity);
     items.sort((a, b) => rank(b.timeMs) - rank(a.timeMs));
     return items;
-  }, [recentDrives, recentCharges, distanceUnit, t, formatCurrency]);
+  }, [recentDrives, recentCharges, distanceUnit, t, formatCurrency, fmtNumber, fmtInt]);
 
   // Battery trend for chart (oldest → newest along the x-axis).
   const batteryTrend = useMemo(
@@ -104,7 +106,7 @@ export function RecentActivity({
       <GlassPanel className="p-5 lg:col-span-1 h-full">
         <div className="flex items-center justify-between mb-4">
           <h3 className="section-title flex items-center gap-2">
-            <Activity aria-hidden="true" className="h-4 w-4 text-cyan-300" /> {t('activity.title', 'Recent Activity')}
+            <Activity aria-hidden="true" className="h-4 w-4 text-cyan-300" /> {t('activity.title', 'Recent activity')}
           </h3>
           <Link to="/drives" className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors">
             {t('activity.viewAll', 'View all')}
@@ -137,7 +139,7 @@ export function RecentActivity({
         {/* Battery Trend Chart */}
         <GlassPanel className="p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
-            <BatteryCharging aria-hidden="true" className="h-4 w-4 text-emerald-300" /> {t('battery.title', 'Battery Trend')}
+            <BatteryCharging aria-hidden="true" className="h-4 w-4 text-emerald-300" /> {t('battery.title', 'Battery trend')}
           </h3>
           {batteryTrend.length > 1 ? (
             <div className="h-36 sm:h-48">
@@ -159,31 +161,31 @@ export function RecentActivity({
         {/* Fleet Performance */}
         <GlassPanel className="p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
-            <TrendingUp aria-hidden="true" className="h-4 w-4 text-purple-300" /> {t('perf.title', 'Fleet Performance')}
+            <TrendingUp aria-hidden="true" className="h-4 w-4 text-purple-300" /> {t('perf.title', 'Fleet performance')}
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">{t('perf.drives', 'Total Drives (30d)')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('perf.drives', 'Total drives (30d)')}</span>
               <span className="text-sm font-bold text-[var(--text-primary)]">{analytics?.total_drives ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">{t('perf.charges', 'Charge Sessions')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('perf.charges', 'Charge sessions')}</span>
               <span className="text-sm font-bold text-[var(--text-primary)]">{analytics?.total_charging_sessions ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">{t('perf.cost', 'Total Cost')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('perf.cost', 'Total cost')}</span>
               <Currency value={analytics?.total_cost ?? 0} className="text-sm font-bold text-amber-300" />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">{t('perf.co2', 'CO₂ Saved')}</span>
-              <span className="text-sm font-bold text-emerald-300">{fmtInt((analytics?.total_energy_kwh ?? 0) * 0.42)} kg</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('perf.co2', 'CO₂ saved')}</span>
+              <span className="text-sm font-bold text-emerald-300">{fmtNumber((analytics?.total_energy_kwh ?? 0) * 0.42)} kg</span>
             </div>
             {analytics?.most_efficient_vehicle && (
               <div className="mt-3 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
-                <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">{t('perf.mostEfficient', 'Most Efficient')}</p>
+                <p className="text-2xs text-[var(--text-muted)] tracking-wider">{t('perf.mostEfficient', 'Most efficient')}</p>
                 <p className="text-sm font-semibold text-emerald-300">{analytics.most_efficient_vehicle.name || '—'}</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {fmtInt(toEfficiencyDisplay(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
+                  {fmtNumber(toEfficiencyDisplay(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
                 </p>
               </div>
             )}

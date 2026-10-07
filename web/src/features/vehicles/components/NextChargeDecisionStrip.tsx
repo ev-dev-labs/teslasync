@@ -2,14 +2,19 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 
-import { Badge, Button, GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { Badge, Button, GlassPanel, PanelTitle, Caption } from '@/components/ui';
+import { OperationalBrief, type StatMetric } from '@/components/data-display';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { SourceContent } from '@/components/layout';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useNextChargeDecision } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { useVehicleDetailSummary } from './statstrip-vehicle-detail/useVehicleDetailSummary';
+
 import type { NextChargeDecision, NextChargeVerdict } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface NextChargeDecisionStripProps {
   vehicleId?: number;
@@ -34,12 +39,14 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
   const { formatCurrency } = useFormatting();
   const { formatTime } = useDateFormat();
   const query = useNextChargeDecision(vehicleId, currentSoc);
-  const { data, isLoading, error, refetch } = query;
+  const { data, isLoading, refetch } = query;
+  const trust = useDataState(query, { provenance: 'inferred' });
+  const summary = useVehicleDetailSummary(t('nextCharge.resource', 'Next charge decision'), query);
 
   return (
     <GlassPanel className="p-4" data-testid="next-charge-decision">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <PanelTitle>{t('nextCharge.title', 'Next Charge')}</PanelTitle>
+        <PanelTitle>{t('nextCharge.title', 'Next charge')}</PanelTitle>
         {data ? (
           <Badge variant={VERDICT_BADGE[data.verdict] ?? 'neutral'}>
             {t(`nextCharge.verdict.${data.verdict}`, verdictLabel(data.verdict))}
@@ -47,15 +54,16 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
         ) : null}
       </div>
 
-      {isLoading ? (
+      <StaleRefreshWarning state={trust} label={t('nextCharge.resource', 'Next charge decision')} />
+      {isLoading && !trust.hasData ? (
         <Skeleton lines={3} height={18} />
-      ) : error ? (
+      ) : trust.fatalError ? (
         <QueryError
-          error={error}
+          error={trust.fatalError}
           onRetry={() => { void refetch(); }}
           resourceName={t('nextCharge.resource', 'Next charge decision')}
         />
-      ) : currentSoc == null || !Number.isFinite(currentSoc) ? (
+      ) : !data && (currentSoc == null || !Number.isFinite(currentSoc)) ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Zap className="h-5 w-5" />}
           message={t('nextCharge.waitingSoc', 'Waiting for live battery level')}
@@ -69,13 +77,18 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
           className="py-8"
         />
       ) : (
-        <DecisionBody
-          data={data}
-          formatCurrency={formatCurrency}
-          formatTime={formatTime}
-          t={t}
-          onOpen={() => navigate('/smart-charge')}
-        />
+        <SourceContent state="ready" label={t('nextCharge.resource', 'Next charge decision')}
+          emptyMessage={t('nextCharge.noData', 'No charge decision yet')}
+          errorMessage={t('nextCharge.resource', 'Next charge decision')}>
+          <DecisionBody
+            data={data}
+            formatCurrency={formatCurrency}
+            formatTime={formatTime}
+            t={t}
+            brief={summary.brief}
+            onOpen={() => navigate('/smart-charge')}
+          />
+        </SourceContent>
       )}
     </GlassPanel>
   );
@@ -86,14 +99,17 @@ function DecisionBody({
   formatCurrency,
   formatTime,
   t,
+  brief,
   onOpen,
 }: {
   data: NextChargeDecision;
   formatCurrency: (n: number, d?: number) => string;
   formatTime: (iso: string) => string;
   t: (key: string, fallback: string, opts?: Record<string, unknown>) => string;
+  brief: ReturnType<typeof useVehicleDetailSummary>['brief'];
   onOpen: () => void;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const save = data.home_savings ?? 0;
   const site = data.supercharger_site ?? '';
   const waitAt = data.home_wait_start ? formatTime(data.home_wait_start) : '—';
@@ -106,36 +122,38 @@ function DecisionBody({
     soc: data.current_soc,
     target: data.target_soc,
   });
+  const socLine = t('nextCharge.socLine', '{{soc}}% → {{target}}% · {{kwh}} kWh needed', {
+    soc: data.current_soc, target: data.target_soc, kwh: fmtNumber(data.kwh_needed),
+  });
+  const currencyDisplay = (raw: number) => ({ value: formatCurrency(raw), unit: '' });
+  const rawMetrics: readonly StatMetric[] = [
+    { metricId: 'currency', occurrenceId: 'home-now', label: t('nextCharge.homeNow', 'Home now'),
+      rawValue: data.home_now_cost, display: { formatter: currencyDisplay } },
+    { metricId: 'currency', occurrenceId: 'wait-window', label: t('nextCharge.waitWindow', 'Wait window'),
+      rawValue: data.home_wait_cost, display: { formatter: currencyDisplay },
+      context: data.home_wait_start ? waitAt : undefined },
+    { metricId: 'currency', occurrenceId: 'supercharger', label: t('nextCharge.supercharger', 'Supercharger'),
+      rawValue: data.supercharger_cost, display: { formatter: currencyDisplay }, context: site || undefined },
+  ];
+  const metrics = useOperationalMetrics(rawMetrics);
 
   return (
     <div className="space-y-3">
-      <Text as="p">{reason}</Text>
-      <Caption>
-        {t('nextCharge.socLine', '{{soc}}% → {{target}}% · {{kwh}} kWh needed', {
-          soc: data.current_soc,
-          target: data.target_soc,
-          kwh: fmtNumber(data.kwh_needed, 1),
-        })}
-      </Caption>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <MetricCard
-          label={t('nextCharge.homeNow', 'Home now')}
-          value={data.home_now_cost != null ? formatCurrency(data.home_now_cost) : '—'}
-        />
-        <MetricCard
-          label={t('nextCharge.waitWindow', 'Wait window')}
-          value={data.home_wait_cost != null ? formatCurrency(data.home_wait_cost) : '—'}
-          subtitle={data.home_wait_start ? waitAt : undefined}
-        />
-        <MetricCard
-          label={t('nextCharge.supercharger', 'Supercharger')}
-          value={data.supercharger_cost != null ? formatCurrency(data.supercharger_cost) : '—'}
-          subtitle={site || undefined}
-        />
-      </div>
-      <Button variant="secondary" onClick={onOpen}>
-        {t('nextCharge.openAutopilot', 'Open Autopilot')}
-      </Button>
+      <Caption>{socLine}</Caption>
+      <OperationalBrief compact testId="vehicle-next-charge-summary" {...brief}
+        eyebrow={t('nextCharge.resource', 'Next charge decision')}
+        title={t('vehicles.detail.brief.chargeTitle', 'Charging options')}
+        description={reason} metrics={metrics}
+        narrative={{
+          whatChanged: reason, whyItMatters: socLine,
+          confidence: { label: 'not_scored', score: null, basis: [] },
+          likelyCause: null,
+          recommendedResponse: t(`nextCharge.verdict.${data.verdict}`, verdictLabel(data.verdict)),
+          limitations: [], evidence: [], provenance: [{ source: brief.provenance }],
+        }}
+        actions={<Button variant="secondary" onClick={onOpen}>
+          {t('nextCharge.openAutopilot', 'Open Autopilot')}
+        </Button>} />
     </div>
   );
 }

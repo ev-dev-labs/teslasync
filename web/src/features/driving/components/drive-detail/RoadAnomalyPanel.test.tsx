@@ -55,9 +55,8 @@ function setQuery(data?: RoadAnomalyResponse, error?: Error) {
 
 function renderPanel() {
   render(<MemoryRouter><RoadAnomalyPanel driveId="42" /></MemoryRouter>);
-  expect(mock.query).toHaveBeenCalledWith('42', false);
-  fireEvent.click(screen.getByRole('button', { name: 'Review road surface' }));
   expect(mock.query).toHaveBeenLastCalledWith('42', true);
+  expect(screen.getByRole('button', { name: 'Hide analysis' })).toHaveAttribute('aria-expanded', 'true');
 }
 
 describe('RoadAnomalyPanel', () => {
@@ -66,11 +65,32 @@ describe('RoadAnomalyPanel', () => {
     mock.refetch.mockReset();
   });
 
-  it('does not scan history until opened and distinguishes insufficient samples', () => {
+  it('shows inline evidence immediately and distinguishes insufficient samples', () => {
     setQuery({ drive_id: 42, status: 'insufficient_data', analyzed_samples: 0, candidates: [], limitations: [] });
     renderPanel();
     expect(screen.getByText('Not enough synchronized samples')).toBeInTheDocument();
     expect(screen.getByText(/Missing evidence is not a smooth-road result/)).toBeInTheDocument();
+  });
+
+  it('can independently collapse and reopen without introducing tabs', () => {
+    setQuery({ drive_id: 42, status: 'no_candidates', analyzed_samples: 17, candidates: [], limitations: [] });
+    renderPanel();
+    const disclosure = screen.getByRole('button', { name: 'Hide analysis' });
+    fireEvent.click(disclosure);
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    expect(mock.query).toHaveBeenLastCalledWith('42', false);
+    fireEvent.click(disclosure);
+    expect(screen.getByText('No candidates in recorded samples')).toBeVisible();
+    expect(mock.query).toHaveBeenLastCalledWith('42', true);
+    for (const role of ['tab', 'tablist', 'tabpanel']) {
+      expect(screen.queryByRole(role, { hidden: true })).toBeNull();
+    }
+  });
+
+  it('shows an explicit loading state in the initially open section', () => {
+    setQuery();
+    renderPanel();
+    expect(screen.getByRole('status', { name: 'Loading…' })).toBeVisible();
   });
 
   it('distinguishes a screened drive with no candidates from missing data', () => {

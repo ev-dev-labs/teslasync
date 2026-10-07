@@ -158,20 +158,20 @@ describe('ChargingRepairForm', () => {
     expect(region).toHaveAttribute('id', 'repair-form-charging-77');
 
     // ended_at always starts blank, with a machine-parseable placeholder.
-    const endedAt = screen.getByLabelText('End Date/Time (ISO)');
+    const endedAt = screen.getByLabelText('End date/time (ISO)');
     expect(endedAt).toHaveDisplayValue('');
     expect(screen.getByPlaceholderText('2026-03-30T04:00:00Z')).toBe(endedAt);
 
     // Numeric columns are seeded verbatim (SI units).
-    expect(screen.getByLabelText('Energy Added (Wh)')).toHaveDisplayValue('5000');
-    expect(screen.getByLabelText('End Battery (%)')).toHaveDisplayValue('82');
-    expect(screen.getByLabelText('Peak Power (W)')).toHaveDisplayValue('11000');
-    expect(screen.getByLabelText('Avg Power (W)')).toHaveDisplayValue('7000');
+    expect(screen.getByLabelText('Energy added (Wh)')).toHaveDisplayValue('5000');
+    expect(screen.getByLabelText('End battery (%)')).toHaveDisplayValue('82');
+    expect(screen.getByLabelText('Peak power (w)')).toHaveDisplayValue('11000');
+    expect(screen.getByLabelText('Avg power (w)')).toHaveDisplayValue('7000');
     expect(screen.getByLabelText('Cost')).toHaveDisplayValue('3.5');
 
     // All four actions are reachable by accessible name.
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Close Session' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close session' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Move to quarantine' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
@@ -187,8 +187,8 @@ describe('ChargingRepairForm', () => {
   it('omits hints and leaves inputs blank when the session has no metrics', () => {
     renderForm({ session: makeSession(EMPTY_METRICS) });
 
-    expect(screen.getByLabelText('Energy Added (Wh)')).toHaveDisplayValue('');
-    expect(screen.getByLabelText('Peak Power (W)')).toHaveDisplayValue('');
+    expect(screen.getByLabelText('Energy added (Wh)')).toHaveDisplayValue('');
+    expect(screen.getByLabelText('Peak power (w)')).toHaveDisplayValue('');
     expect(screen.getByLabelText('Cost')).toHaveDisplayValue('');
 
     // No numeric hint is rendered for empty fields.
@@ -199,12 +199,12 @@ describe('ChargingRepairForm', () => {
   it('patches only filled non-boundary fields (num drops empties)', () => {
     renderForm({ session: makeSession(EMPTY_METRICS) });
 
-    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+    fireEvent.change(screen.getByLabelText('End date/time (ISO)'), {
       target: { value: '  2026-03-30T04:00:00Z  ' },
     });
-    fireEvent.change(screen.getByLabelText('Energy Added (Wh)'), { target: { value: '5000' } });
-    fireEvent.change(screen.getByLabelText('End Battery (%)'), { target: { value: '80' } });
-    fireEvent.change(screen.getByLabelText('Peak Power (W)'), { target: { value: '11000' } });
+    fireEvent.change(screen.getByLabelText('Energy added (Wh)'), { target: { value: '5000' } });
+    fireEvent.change(screen.getByLabelText('End battery (%)'), { target: { value: '80' } });
+    fireEvent.change(screen.getByLabelText('Peak power (w)'), { target: { value: '11000' } });
     fireEvent.change(screen.getByLabelText('Cost'), { target: { value: '4.25' } });
     // Avg Power is deliberately left blank -> must be dropped from the patch.
 
@@ -250,10 +250,10 @@ describe('ChargingRepairForm', () => {
       (_input: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
     );
     const { onClose } = renderForm();
-    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+    fireEvent.change(screen.getByLabelText('End date/time (ISO)'), {
       target: { value: '2026-03-30T04:00:00Z' },
     });
-    confirmAction('Close Session');
+    confirmAction('Close session');
     expect(H.closeFn).toHaveBeenCalledWith(
       {
         id: 77,
@@ -276,11 +276,11 @@ describe('ChargingRepairForm', () => {
     );
     renderForm();
 
-    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+    fireEvent.change(screen.getByLabelText('End date/time (ISO)'), {
       target: { value: '2026-03-30T04:00:00Z' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Close Session' }));
-    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+    fireEvent.click(screen.getByRole('button', { name: 'Close session' }));
+    fireEvent.change(screen.getByLabelText('End date/time (ISO)'), {
       target: { value: '2026-03-30T05:00:00Z' },
     });
     act(() => finishPreview?.());
@@ -335,7 +335,7 @@ describe('ChargingRepairForm', () => {
     const save = screen.getByRole('button', { name: 'Save' });
     expect(save).toBeDisabled();
     expect(save).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('button', { name: 'Close Session' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Close session' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Move to quarantine' })).toBeDisabled();
     // Cancel has no async work and stays operable as an escape hatch.
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();

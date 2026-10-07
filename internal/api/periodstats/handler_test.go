@@ -5,7 +5,7 @@
 //   - Handler.Get request validation (missing / invalid vehicle_id).
 //   - The exact 6-key JSON envelope + rounding the chart and AI narration quote.
 //   - The SI → display-unit conversion and Wh/km efficiency math.
-//   - The charging-query fold-to-zero contract (never a 500 for the SPA).
+//   - Charging-query failures are errors, not successful measured zeros.
 //   - The drives-query error path (wrapped, surfaced as 500).
 //   - Parameterisation of the trailing window ($2, never string-interpolated).
 //   - Nil-handle guards that return errors instead of panicking.
@@ -13,6 +13,7 @@
 package periodstats
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,9 +23,17 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -56,17 +65,21 @@ type fakeQuerier struct {
 	driveArgs   []any
 	chargeArgs  []any
 	unexpected  []string
+	driveCtx    context.Context
+	chargeCtx   context.Context
 }
 
-func (f *fakeQuerier) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
+func (f *fakeQuerier) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	switch {
 	case strings.Contains(sql, "FROM drives"):
 		f.driveCalls++
+		f.driveCtx = ctx
 		f.driveSQL = sql
 		f.driveArgs = args
 		return fakeRow{scan: orErr(f.drives, "fakeQuerier: no drives scan configured")}
 	case strings.Contains(sql, "FROM charging_sessions"):
 		f.chargeCalls++
+		f.chargeCtx = ctx
 		f.chargeSQL = sql
 		f.chargeArgs = args
 		return fakeRow{scan: orErr(f.charging, "fakeQuerier: no charging scan configured")}
@@ -132,6 +145,12 @@ func chargingOK(energyWh, cost *float64) scanFunc {
 
 func f64(v float64) *float64 { return &v }
 
+type querierFunc func(context.Context, string, ...any) pgx.Row
+
+func (f querierFunc) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	return f(ctx, sql, args...)
+}
+
 // --- computePeriodStats: core aggregate math -------------------------------
 
 func TestComputePeriodStats_Core(t *testing.T) {
@@ -144,6 +163,7 @@ func TestComputePeriodStats_Core(t *testing.T) {
 		drives   scanFunc
 		charging scanFunc
 		want     PeriodStats
+		wantErr  string
 	}{
 		{
 			name:     "canonical windowed",
@@ -240,19 +260,15 @@ func TestComputePeriodStats_Core(t *testing.T) {
 			},
 		},
 		{
-			name:     "charging query error folds to zero energy/cost",
+			// Intentional behavior correction: this original fixture used to
+			// assert successful fabricated zeros. Original bytes preserved in
+			// append-only session evidence; failure must now reach every caller.
+			name:     "charging query error returns error, not zero energy/cost",
 			vehicle:  99,
 			days:     7,
 			drives:   drivesOK(10, f64(200000)), // 200 km
 			charging: scanErr("charging_sessions: relation schema drift"),
-			want: PeriodStats{
-				TotalDistance: 200,
-				TotalDrives:   10,
-				EnergyUsed:    0,
-				AvgEfficiency: 0,
-				TotalCost:     0,
-				CO2Saved:      24, // 200 * 0.120
-			},
+			wantErr:  "periodstats: charging aggregate query: charging_sessions: relation schema drift",
 		},
 	}
 
@@ -262,7 +278,11 @@ func TestComputePeriodStats_Core(t *testing.T) {
 			t.Parallel()
 			q := &fakeQuerier{drives: tc.drives, charging: tc.charging}
 			got, err := computePeriodStats(context.Background(), q, tc.vehicle, tc.days)
-			if err != nil {
+			if tc.wantErr != "" {
+				if err == nil || err.Error() != tc.wantErr {
+					t.Fatalf("error = %v, want %q", err, tc.wantErr)
+				}
+			} else if err != nil {
 				t.Fatalf("computePeriodStats returned error: %v", err)
 			}
 			if got != tc.want {
@@ -341,11 +361,12 @@ func TestComputePeriodStats_Parameterisation(t *testing.T) {
 }
 
 // TestComputePeriodStats_DrivesError proves a drives-query failure is wrapped
-// with package context and surfaced (not swallowed like the charging fold).
+// with package context and surfaced, just like charging-query failures.
 func TestComputePeriodStats_DrivesError(t *testing.T) {
 	t.Parallel()
+	cause := errors.New("connection reset by peer")
 	q := &fakeQuerier{
-		drives:   scanErr("connection reset by peer"),
+		drives:   func(...any) error { return cause },
 		charging: chargingOK(f64(0), f64(0)),
 	}
 	got, err := computePeriodStats(context.Background(), q, 1, 0)
@@ -358,12 +379,52 @@ func TestComputePeriodStats_DrivesError(t *testing.T) {
 	if !strings.Contains(err.Error(), "connection reset by peer") {
 		t.Errorf("error = %q, want wrapped cause", err.Error())
 	}
+	if !errors.Is(err, cause) {
+		t.Errorf("error = %v, want original cause preserved", err)
+	}
 	if got != (PeriodStats{}) {
 		t.Errorf("stats on error = %+v, want zero value", got)
 	}
 	// A drives failure must short-circuit before the charging query runs.
 	if q.chargeCalls != 0 {
 		t.Errorf("charge query calls = %d, want 0 after drives failure", q.chargeCalls)
+	}
+}
+
+// This is the core directly delegated to by the exported helper used by AI.
+// Even a scan that populates some targets before failing cannot yield stats.
+func TestComputePeriodStats_ChargingErrorPreservesCause(t *testing.T) {
+	t.Parallel()
+	for _, cause := range []error{
+		errors.New("charging unavailable"),
+		context.Canceled,
+		context.DeadlineExceeded,
+		pgx.ErrNoRows, // An aggregate Scan failure is not a healthy empty sum.
+	} {
+		t.Run(cause.Error(), func(t *testing.T) {
+			t.Parallel()
+			q := &fakeQuerier{
+				drives: drivesOK(10, f64(200000)),
+				charging: func(dest ...any) error {
+					if err := chargingOK(f64(85200), f64(32.4))(dest...); err != nil {
+						return err
+					}
+					return cause
+				},
+			}
+			got, err := computePeriodStats(context.Background(), q, 99, 7)
+			if !errors.Is(err, cause) || !strings.Contains(err.Error(), "periodstats: charging aggregate query") {
+				t.Fatalf("error = %v, want contextual wrapped %v", err, cause)
+			}
+			if got != (PeriodStats{}) {
+				t.Errorf("stats on error = %+v, want zero value with non-nil error", got)
+			}
+			for label, args := range map[string][]any{"drives": q.driveArgs, "charging": q.chargeArgs} {
+				if len(args) != 2 || args[0] != int64(99) || args[1] != 7 {
+					t.Errorf("%s bindings = %v, want [int64(99), int(7)]", label, args)
+				}
+			}
+		})
 	}
 }
 
@@ -534,6 +595,17 @@ func TestGet_SuccessEnvelope(t *testing.T) {
 		want         map[string]float64
 	}{
 		{
+			name:         "healthy empty window remains measured zero",
+			query:        "vehicle_id=42&days=90",
+			drives:       drivesOK(0, f64(0)),
+			charging:     chargingOK(f64(0), f64(0)),
+			wantArgCount: 2,
+			want: map[string]float64{
+				"total_distance": 0, "total_drives": 0, "energy_used": 0,
+				"avg_efficiency": 0, "total_cost": 0, "co2_saved": 0,
+			},
+		},
+		{
 			name:         "windowed",
 			query:        "vehicle_id=42&days=30",
 			drives:       drivesOK(24, f64(450500)),
@@ -633,6 +705,14 @@ func TestGet_SuccessEnvelope(t *testing.T) {
 			if len(q.driveArgs) != tc.wantArgCount {
 				t.Errorf("drive args = %v, want %d args", q.driveArgs, tc.wantArgCount)
 			}
+			if len(q.chargeArgs) != len(q.driveArgs) {
+				t.Fatalf("charging args = %v, want same bindings as drives %v", q.chargeArgs, q.driveArgs)
+			}
+			for i, arg := range q.driveArgs {
+				if q.chargeArgs[i] != arg {
+					t.Errorf("charging args[%d] = %v, want %v", i, q.chargeArgs[i], arg)
+				}
+			}
 		})
 	}
 }
@@ -666,9 +746,10 @@ func TestGet_DrivesErrorReturns500(t *testing.T) {
 	}
 }
 
-// TestGet_ChargingErrorStill200 proves the charging fold-to-zero contract at
-// the HTTP boundary: distance/drives survive, energy/cost are zero, status 200.
-func TestGet_ChargingErrorStill200(t *testing.T) {
+// TestGet_ChargingErrorReturns500 intentionally corrects the old
+// TestGet_ChargingErrorStill200 contract with the same failure fixture.
+// Unavailable energy/cost must not be presented as measured-zero success.
+func TestGet_ChargingErrorReturns500(t *testing.T) {
 	t.Parallel()
 	q := &fakeQuerier{
 		drives:   drivesOK(12, f64(360000)), // 360 km
@@ -679,16 +760,24 @@ func TestGet_ChargingErrorStill200(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/period-stats?vehicle_id=42&days=90", nil)
 	h.Get(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body=%q)", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (body=%q)", rec.Code, rec.Body.String())
 	}
 	body := decodeObj(t, rec.Body.Bytes())
-	assertNum(t, body, "total_distance", 360)
-	assertNum(t, body, "total_drives", 12)
-	assertNum(t, body, "energy_used", 0)
-	assertNum(t, body, "total_cost", 0)
-	assertNum(t, body, "avg_efficiency", 0)
-	assertNum(t, body, "co2_saved", 43.2) // 360 * 0.120
+	if body["error"] != "failed to query period stats" || body["code"] != "INTERNAL_ERROR" {
+		t.Errorf("body = %v, want standard INTERNAL_ERROR envelope", body)
+	}
+	if strings.Contains(rec.Body.String(), "drift") {
+		t.Errorf("500 body leaks internal cause: %q", rec.Body.String())
+	}
+	for _, key := range []string{"total_distance", "total_drives", "energy_used", "total_cost", "avg_efficiency", "co2_saved"} {
+		if _, ok := body[key]; ok {
+			t.Errorf("500 body contains successful stats key %q", key)
+		}
+	}
+	if q.driveCalls != 1 || q.chargeCalls != 1 {
+		t.Errorf("query calls drives=%d charging=%d, want 1/1", q.driveCalls, q.chargeCalls)
+	}
 }
 
 // TestGet_NilQuerierReturns500 proves a handler built from a nil DB (a wiring
@@ -706,6 +795,154 @@ func TestGet_NilQuerierReturns500(t *testing.T) {
 	body := decodeObj(t, rec.Body.Bytes())
 	if body["error"] != "failed to query period stats" {
 		t.Errorf("error = %v, want %q", body["error"], "failed to query period stats")
+	}
+}
+
+func TestGet_ContextTimeoutAndCancellation(t *testing.T) {
+	t.Parallel()
+	type contextKey struct{}
+	for _, mode := range []string{"healthy", "parent deadline", "parent canceled", "canceled after drives"} {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			parent := context.WithValue(context.Background(), contextKey{}, "request marker")
+			var cancel context.CancelFunc
+			if mode == "parent deadline" {
+				parent, cancel = context.WithDeadline(parent, time.Now().Add(-time.Second))
+			} else {
+				parent, cancel = context.WithCancel(parent)
+			}
+			defer cancel()
+			if mode == "parent canceled" {
+				cancel()
+			}
+			q := &fakeQuerier{
+				drives:   drivesOK(0, f64(0)),
+				charging: chargingOK(f64(0), f64(0)),
+			}
+			if mode == "canceled after drives" {
+				q.drives = func(dest ...any) error {
+					err := drivesOK(0, f64(0))(dest...)
+					cancel()
+					return err
+				}
+			}
+			var contexts []context.Context
+			qctx := querierFunc(func(ctx context.Context, sql string, args ...any) pgx.Row {
+				contexts = append(contexts, ctx)
+				if ctx.Value(contextKey{}) != "request marker" {
+					t.Error("query lost request context value")
+				}
+				deadline, ok := ctx.Deadline()
+				if !ok || time.Until(deadline) > computeTimeout {
+					t.Errorf("query deadline = %v (present=%v), want at most %v", deadline, ok, computeTimeout)
+				}
+				if mode == "parent deadline" {
+					want, _ := parent.Deadline()
+					if !deadline.Equal(want) {
+						t.Errorf("query deadline = %v, want inherited earlier deadline %v", deadline, want)
+					}
+				} else if mode == "healthy" && time.Until(deadline) < computeTimeout-time.Second {
+					t.Errorf("healthy query timeout unexpectedly shortened: %v", time.Until(deadline))
+				}
+				row := q.QueryRow(ctx, sql, args...)
+				return fakeRow{scan: func(dest ...any) error {
+					if err := ctx.Err(); err != nil {
+						return err
+					}
+					return row.Scan(dest...)
+				}}
+			})
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/period-stats?vehicle_id=42&days=30", nil).WithContext(parent)
+			(&Handler{q: qctx}).Get(rec, req)
+			wantStatus, wantQueries := http.StatusInternalServerError, 1
+			if mode == "healthy" {
+				wantStatus, wantQueries = http.StatusOK, 2
+			} else if mode == "canceled after drives" {
+				wantQueries = 2
+			}
+			if rec.Code != wantStatus {
+				t.Fatalf("status = %d, want %d (body=%q)", rec.Code, wantStatus, rec.Body.String())
+			}
+			if len(contexts) != wantQueries {
+				t.Fatalf("query contexts = %d, want %d", len(contexts), wantQueries)
+			}
+			for _, ctx := range contexts {
+				if !errors.Is(ctx.Err(), context.Canceled) && mode != "parent deadline" {
+					t.Errorf("query context after handler = %v, want canceled by deferred cleanup", ctx.Err())
+				}
+			}
+			if len(contexts) == 2 && contexts[0] != contexts[1] {
+				t.Error("aggregates did not receive the same bounded context")
+			}
+			if mode != "healthy" {
+				body := decodeObj(t, rec.Body.Bytes())
+				if body["code"] != "INTERNAL_ERROR" || body["energy_used"] != nil {
+					t.Errorf("failure body = %v, want standard error without stats", body)
+				}
+			}
+		})
+	}
+}
+
+// Non-parallel: temporarily replaces process-wide tracing/logging providers,
+// restoring them before the parallel tests resume.
+func TestGet_ChargingFailureRecordsSpanAndTraceLog(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	originalProvider := otel.GetTracerProvider()
+	otel.SetTracerProvider(provider)
+	defer otel.SetTracerProvider(originalProvider)
+	defer func() {
+		if err := provider.Shutdown(context.Background()); err != nil {
+			t.Errorf("tracer shutdown: %v", err)
+		}
+	}()
+	var logs bytes.Buffer
+	originalLogger := log.Logger
+	log.Logger = zerolog.New(&logs)
+	defer func() { log.Logger = originalLogger }()
+
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1},
+		SpanID:     trace.SpanID{2},
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	cause := errors.New("charging aggregate unavailable")
+	q := &fakeQuerier{
+		drives:   drivesOK(12, f64(360000)),
+		charging: func(...any) error { return cause },
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/period-stats?vehicle_id=42&days=90", nil).
+		WithContext(trace.ContextWithRemoteSpanContext(context.Background(), parent))
+	rec := httptest.NewRecorder()
+	(&Handler{q: q}).Get(rec, req)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", rec.Code)
+	}
+	spans := recorder.Ended()
+	if len(spans) != 1 {
+		t.Fatalf("ended spans = %d, want 1", len(spans))
+	}
+	span := spans[0]
+	if span.Name() != "api.periodstats.get" || span.InstrumentationScope().Name != "api" {
+		t.Errorf("span = %q / %q, want API boundary span", span.Name(), span.InstrumentationScope().Name)
+	}
+	if !span.Parent().Equal(parent) || span.SpanContext().TraceID() != parent.TraceID() {
+		t.Error("span lost incoming trace parent")
+	}
+	if span.Status().Code != codes.Error || len(span.Events()) != 1 || span.Events()[0].Name != "exception" {
+		t.Errorf("span status/events = %v / %v, want recorded error", span.Status(), span.Events())
+	}
+	if !trace.SpanContextFromContext(q.chargeCtx).Equal(span.SpanContext()) {
+		t.Error("charging query did not inherit active API span")
+	}
+	entry := decodeObj(t, logs.Bytes())
+	if entry["level"] != "error" || entry["trace_id"] != parent.TraceID().String() ||
+		entry["vehicle_id"] != float64(42) || entry["days"] != float64(90) ||
+		entry["error"] != "periodstats: charging aggregate query: charging aggregate unavailable" {
+		t.Errorf("log = %v, want contextual traced aggregate error", entry)
 	}
 }
 

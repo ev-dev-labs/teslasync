@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Zap, TrendingUp, Car, Activity } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui';
 import {
   ChartTooltip,
@@ -10,9 +10,11 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   LinearGauge, EmbeddedChart,
 } from '@/components/charts';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
 import { FadeIn } from '@/components/motion';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 
 
 import { useRangeState } from '@/hooks/useRangeState';
@@ -21,10 +23,11 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { getEfficiency } from '@/lib/drivesAggregation';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -58,6 +61,7 @@ export { getEfficiency };
 /* ------------------------------------------------------------------ */
 
 export default function SpeedProfilePage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('speedProfile.title', 'Speed Profile'));
 
@@ -69,13 +73,18 @@ export default function SpeedProfilePage() {
     defaultPresetId: 'all',
   });
 
-  const { data, isLoading, error, refetch } = useSpeedProfile(vehicleIdStr, start, end);
-  const {
-    data: allDrives,
-    isLoading: drivesLoading,
-    error: drivesError,
-    refetch: refetchDrives,
-  } = useDrives(vehicleIdStr);
+  const profileQuery = useSpeedProfile(vehicleIdStr, start, end);
+  const drivesQuery = useDrives(vehicleIdStr);
+  const profileState = useDataState(profileQuery, { provenance: 'historical' });
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const data = profileState.data;
+  const allDrives = drivesState.data;
+  const isLoading = profileQuery.isLoading && !profileState.hasData;
+  const drivesLoading = drivesQuery.isLoading && !drivesState.hasData;
+  const error = profileState.fatalError;
+  const drivesError = drivesState.fatalError;
+  const { refetch } = profileQuery;
+  const { refetch: refetchDrives } = drivesQuery;
 
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
@@ -186,52 +195,49 @@ export default function SpeedProfilePage() {
 
   const hasDistribution = distributionChartData.length > 0;
 
-  const kpiSpeed = (mps: number | null | undefined) =>
-    data ? fmtNumber(toSpeedDisplay(mps ?? 0), 0) : '—';
+  const displaySpeed = (mps: number | null | undefined) =>
+    mps != null && Number.isFinite(mps) ? toSpeedDisplay(mps) : null;
+  const gaugeSpeed = (mps: number | null | undefined) => {
+    const value = displaySpeed(mps);
+    return value != null ? Math.round(value) : null;
+  };
+  const summaryMetrics: readonly StatMetric[] = [
+    { metricId: 'speed', occurrenceId: 'average-speed', rawValue: data?.avgSpeedMps,
+      label: t('speedProfile.avgSpeed', 'Avg Speed') },
+    { metricId: 'speed', occurrenceId: 'peak-speed', rawValue: data?.peakSpeedMps,
+      label: t('speedProfile.peakSpeed', 'Peak Speed') },
+    { metricId: 'speed', occurrenceId: 'optimal-speed', rawValue: data?.optimalSpeedMps,
+      label: t('speedProfile.optimalSpeed', 'Optimal Speed') },
+    { metricId: 'count', occurrenceId: 'samples', rawValue: data ? totalReadings : null,
+      label: t('speedProfile.samples', 'Samples'),
+      context: drivesState.hasData
+        ? t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', { count: drives.length })
+        : t('speedProfile.brief.driveCoverageUnknown', 'Drive sample coverage is unavailable independently of the speed profile.') },
+  ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('speedProfile.title', 'Speed Profile')}
       subtitle={t('speedProfile.subtitle', 'Speed distribution and driving pattern analysis')}
-      loading={isLoading && !data}
+      query={[profileQuery, drivesQuery]}
+      busy={profileQuery.isFetching || drivesQuery.isFetching}
     >
+      <StaleRefreshWarning state={profileState} label={t('speedProfile.title', 'Speed Profile')} />
+      <StaleRefreshWarning state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('speedProfile.summaryAria', 'Speed summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 xl:gap-5"
-        >
-          <MetricCard
-            label={t('speedProfile.avgSpeed', 'Avg Speed')}
-            value={kpiSpeed(data?.avgSpeedMps)}
-            subtitle={speedUnit}
-            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('speedProfile.peakSpeed', 'Peak Speed')}
-            value={kpiSpeed(data?.peakSpeedMps)}
-            subtitle={speedUnit}
-            icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
-            color="red"
-          />
-          <MetricCard
-            label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
-            value={kpiSpeed(data?.optimalSpeedMps)}
-            subtitle={speedUnit}
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('speedProfile.samples', 'Samples')}
-            value={data ? fmtNumber(totalReadings, 0) : '—'}
-            subtitle={t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', {
-              count: drives.length,
-            })}
-            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-            color="blue"
-          />
-        </section>
+        <DrivingSummaryBrief
+          id="speed-profile-brief"
+          title={t('speedProfile.summaryAria', 'Speed summary metrics')}
+          description={t('speedProfile.brief.description', 'Recorded speed statistics and distribution readings; drive evidence is a separately returned sample.')}
+          metrics={summaryMetrics}
+          scope={`${start} — ${end}`}
+          provenance={t('speedProfile.brief.provenance', 'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.')}
+          loading={isLoading}
+          unavailable={!profileState.hasData}
+          retained={profileState.isRefreshBlocked || drivesState.isRefreshBlocked}
+          actions={error ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
+        />
       </FadeIn>
 
       {/* 2 — Hero bento: distribution chart + speed-envelope gauges */}
@@ -293,7 +299,7 @@ export default function SpeedProfilePage() {
             ) : (
               <div className="grid grid-cols-3 items-start gap-1 sm:gap-2">
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.avgSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.avgSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
                   unit={speedUnit}
@@ -301,7 +307,7 @@ export default function SpeedProfilePage() {
                   size={96}
                 />
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.peakSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.peakSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(69.44)))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
                   unit={speedUnit}
@@ -309,7 +315,7 @@ export default function SpeedProfilePage() {
                   size={96}
                 />
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.optimalSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.optimalSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
                   unit={speedUnit}
@@ -371,13 +377,13 @@ export default function SpeedProfilePage() {
                       <div className="flex items-center justify-between gap-2">
                         <Text as="dt" variant="caption">{t('speedProfile.timeShare', 'Time share')}</Text>
                         <Text as="dd" size="sm" weight="bold" className={chip.text}>
-                          {fmtNumber(bucket.pct, 1)}%
+                          {fmtNumber(bucket.pct)}%
                         </Text>
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <Text as="dt" variant="caption">{t('speedProfile.readings', 'Readings')}</Text>
                         <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                          {fmtNumber(bucket.readings, 0)}
+                          {fmtInt(bucket.readings)}
                         </Text>
                       </div>
                       {effData ? (
@@ -385,7 +391,7 @@ export default function SpeedProfilePage() {
                           <div className="flex items-center justify-between gap-2">
                             <Text as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
                             <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                              {fmtNumber(toSpeedDisplay(effData.avgSpeedMps), 0)} {speedUnit}
+                              {fmtNumber(toSpeedDisplay(effData.avgSpeedMps))} {speedUnit}
                             </Text>
                           </div>
                           <div className="flex items-center justify-between gap-2">
@@ -396,7 +402,7 @@ export default function SpeedProfilePage() {
                               weight="bold"
                               className={cn('tabular-nums', efficiencyClass(effData.avgEff))}
                             >
-                              {fmtNumber(toEfficiencyDisplay(effData.avgEff), 0)}
+                              {fmtNumber(toEfficiencyDisplay(effData.avgEff))}
                             </Text>
                           </div>
                         </>
@@ -482,7 +488,7 @@ export default function SpeedProfilePage() {
                 <Zap className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
                 <Text as="p" size="sm" color="secondary">
                   {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
-                    speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0), 0),
+                    speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0)),
                     unit: speedUnit,
                   })}
                 </Text>
@@ -497,7 +503,7 @@ export default function SpeedProfilePage() {
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }
 

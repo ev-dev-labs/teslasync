@@ -6,7 +6,7 @@ import { Avatar } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/dateFormat';
 import type { ChatLink, ChatMessage } from '@/api/types';
-import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail';
+import { HelixEvidenceTrail } from '@/components/ai';
 import type { AiToolActivity, AiUsage } from '@/hooks/useAiStream';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { KnowledgeCitations } from './KnowledgeCitations';

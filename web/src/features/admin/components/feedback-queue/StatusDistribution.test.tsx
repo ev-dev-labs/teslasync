@@ -11,7 +11,8 @@
  *   • the coloured bar is the single role="img"; its aria-label interpolates
  *     the live counts, it draws one segment per status wider than 0.3% (sub-
  *     pixel slivers are dropped from the bar but KEPT in the legend), and each
- *     segment width is clamped to ≤100% so a degenerate `total` (smaller than
+ *     descriptive titles remain on the readable legend; segment width is
+ *     clamped to ≤100% so a degenerate `total` (smaller than
  *     a facet count) can never overflow the track or print ">100%".
  *
  * react-i18next is mocked to echo the English fallback AND interpolate
@@ -79,9 +80,9 @@ describe('StatusDistribution', () => {
   it('renders each count and its share of the caller-supplied total', () => {
     render(<StatusDistribution counts={{ new: 5, triaged: 3, closed: 2 }} total={10} />)
     // total = 10 → 50% / 30% / 20%
-    expect(screen.getByText('5 · 50%')).toBeInTheDocument()
-    expect(screen.getByText('3 · 30%')).toBeInTheDocument()
-    expect(screen.getByText('2 · 20%')).toBeInTheDocument()
+    expect(screen.getByText('5 · 50.00%')).toBeInTheDocument()
+    expect(screen.getByText('3 · 30.00%')).toBeInTheDocument()
+    expect(screen.getByText('2 · 20.00%')).toBeInTheDocument()
   })
 
   it('exposes the bar to assistive tech with an aria-label that reflects the live counts', () => {
@@ -92,20 +93,20 @@ describe('StatusDistribution', () => {
     )
   })
 
-  it('draws one coloured segment per status with proportional width and a descriptive title', () => {
+  it('draws proportional coloured segments and keeps their descriptive titles on the readable legend', () => {
     render(<StatusDistribution counts={{ new: 5, triaged: 3, closed: 2 }} total={10} />)
     const segs = getSegments()
     expect(segs).toHaveLength(3)
     expect(segs[0].style.width).toBe('50%')
     expect(segs[0]).toHaveStyle({ backgroundColor: '#f59e0b' })
-    expect(segs[0].getAttribute('title')).toBe('New: 5 (50%)')
-    expect(segs[2].getAttribute('title')).toBe('Closed: 2 (20%)')
+    expect(screen.getByTitle('New: 5 (50.00%)')).toHaveTextContent('5 · 50.00%')
+    expect(screen.getByTitle('Closed: 2 (20.00%)')).toHaveTextContent('2 · 20.00%')
   })
 
   it('treats a missing facet count as 0 without crashing (null-safety)', () => {
     render(<StatusDistribution counts={{ new: 4 }} total={4} />)
-    expect(screen.getByText('4 · 100%')).toBeInTheDocument()
-    expect(screen.getAllByText('0 · 0%')).toHaveLength(2)
+    expect(screen.getByText('4 · 100.00%')).toBeInTheDocument()
+    expect(screen.getAllByText('0 · 0.00%')).toHaveLength(2)
     expect(getBar()).toHaveAttribute(
       'aria-label',
       'Status distribution: 4 new, 0 triaged, 0 closed',
@@ -114,7 +115,7 @@ describe('StatusDistribution', () => {
 
   it('renders three 0% legend rows and no bar segments when the total is 0 (no divide-by-zero, no blank panel)', () => {
     render(<StatusDistribution counts={{}} total={0} />)
-    expect(screen.getAllByText('0 · 0%')).toHaveLength(3)
+    expect(screen.getAllByText('0 · 0.00%')).toHaveLength(3)
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
     // Bar still present (named), but carries no proportional segments.
     expect(getSegments()).toHaveLength(0)
@@ -125,10 +126,10 @@ describe('StatusDistribution', () => {
     // new = 0.1% (hidden), triaged = 0% (hidden), closed = 99.9% (shown).
     const segs = getSegments()
     expect(segs).toHaveLength(1)
-    expect(segs[0].getAttribute('title')).toBe('Closed: 999 (100%)')
-    // Legend keeps all three, including the hidden sliver rounded to 0%.
+    expect(screen.getByTitle('Closed: 999 (99.90%)')).toHaveTextContent('999 · 99.90%')
+    // Legend keeps all three, including the hidden sliver's exact share.
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.getByText('1 · 0%')).toBeInTheDocument()
+    expect(screen.getByText('1 · 0.10%')).toBeInTheDocument()
   })
 
   it('clamps a degenerate total so a facet count above it never overflows or prints >100%', () => {
@@ -136,12 +137,21 @@ describe('StatusDistribution', () => {
     // raw new share = 200% → clamped to 100%.
     const segs = getSegments()
     expect(segs[0].style.width).toBe('100%')
-    expect(screen.getByText('10 · 100%')).toBeInTheDocument()
-    expect(screen.queryByText(/200%/)).toBeNull()
+    expect(screen.getByText('10 · 100.00%')).toBeInTheDocument()
+    expect(screen.queryByText(/200(?:\.00)?%/)).toBeNull()
   })
 
   it('locale-formats large integer counts with thousands separators', () => {
     render(<StatusDistribution counts={{ new: 1234, triaged: 0, closed: 0 }} total={1234} />)
-    expect(screen.getByText('1,234 · 100%')).toBeInTheDocument()
+    expect(screen.getByText('1,234 · 100.00%')).toBeInTheDocument()
+  })
+
+  it('retains the tiny category evidence and title even when its decorative fill is omitted', () => {
+    render(<StatusDistribution counts={{ new: 1, triaged: 0, closed: 999 }} total={1000} />)
+    const newRow = screen.getAllByRole('listitem')[0]
+    expect(within(newRow).getByText('New')).toBeInTheDocument()
+    expect(within(newRow).getByTitle('New: 1 (0.10%)')).toHaveTextContent('1 · 0.10%')
+    expect(getSegments()).toHaveLength(1)
+    expect(getBar()).not.toHaveAttribute('aria-valuenow')
   })
 })

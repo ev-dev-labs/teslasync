@@ -31,8 +31,8 @@
  * codebase — interactions use `fireEvent`, consistent with the other widget
  * tests.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act, cleanup, render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -110,6 +110,7 @@ import VehicleUpgradesWidget, {
 } from './VehicleUpgradesWidget';
 import type { ShareToken } from '@/types/sharing';
 import type { WidgetSize } from './types';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 const SIZE_COMPACT: WidgetSize = { cols: 1, rows: 2 };
@@ -162,6 +163,12 @@ interface UpgradeQueryOverrides {
   isError?: boolean;
   dataUpdatedAt?: number;
   refetch?: () => void;
+  error?: Error | null;
+}
+
+function query(data: unknown, overrides: Record<string, unknown> = {}) {
+  return { data, isLoading: false, isFetching: false, isStale: false, isError: false,
+    error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(), ...overrides };
 }
 
 /** Wraps a raw upgrades record in the query-result the widget consumes. */
@@ -188,15 +195,23 @@ function renderWidget(node: ReactElement) {
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   vehiclesMock.mockReset();
   upgradesMock.mockReset();
   shareLinksMock.mockReset();
   drivesMock.mockReset();
   // Sensible defaults: one vehicle, two upgrades, one drive, no share links.
-  vehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
+  vehiclesMock.mockReturnValue(query([{ id: 1 }]));
   upgradesMock.mockReturnValue(upgradesResult(UPGRADES_TWO));
-  drivesMock.mockReturnValue({ data: [{ id: 55 }] });
-  shareLinksMock.mockReturnValue({ data: [] });
+  drivesMock.mockReturnValue(query([{ id: 55 }]));
+  shareLinksMock.mockReturnValue(query([]));
+});
+
+afterEach(() => {
+  cleanup();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
 });
 
 // ── parseUpgrades (pure) ──────────────────────────────────────────────────────
@@ -285,15 +300,15 @@ describe('VehicleUpgradesWidget — compact tile', () => {
     // Two upgrades, one eligible → count of 1.
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('available')).toBeInTheDocument();
-    // The compact tile never renders the section chrome.
-    expect(screen.queryByText('Upgrades & Sharing')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Upgrades & sharing', level: 3 })).toBeInTheDocument();
   });
 
-  it('shows the "Up to date" badge when there are no upgrades', () => {
+  it('shows the known zero available count without claiming all upgrades were applied', () => {
     upgradesMock.mockReturnValue(upgradesResult({ upgrades: [] }));
     renderWidget(<VehicleUpgradesWidget size={SIZE_COMPACT} />);
-    expect(screen.getByText('Up to date')).toBeInTheDocument();
-    expect(screen.queryByText('available')).not.toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('available')).toBeInTheDocument();
+    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
   });
 });
 
@@ -302,24 +317,25 @@ describe('VehicleUpgradesWidget — standard feed', () => {
   it('renders the title, each upgrade row with its price + eligibility badge', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
-    expect(screen.getByText('Upgrades & Sharing')).toBeInTheDocument();
-    expect(screen.getByText('Available Upgrades')).toBeInTheDocument();
+    expect(screen.getByText('Upgrades & sharing')).toBeInTheDocument();
+    expect(screen.getByText('Available upgrades')).toBeInTheDocument();
 
     expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
-    expect(screen.getByText('$99')).toBeInTheDocument();
+    expect(screen.getByText('99.00')).toBeInTheDocument();
     expect(screen.getByText('Autopilot suite')).toBeInTheDocument();
     expect(screen.getByText('Eligible')).toBeInTheDocument();
 
     expect(screen.getByText('Acceleration Boost')).toBeInTheDocument();
-    expect(screen.getByText('$2000')).toBeInTheDocument();
+    expect(screen.getByText('2,000.00')).toBeInTheDocument();
     expect(screen.getByText('Not eligible')).toBeInTheDocument();
   });
 
-  it('renders the "all applied" state when the upgrade list is empty', () => {
+  it('renders the empty evidence state without inventing an all-applied conclusion', () => {
     upgradesMock.mockReturnValue(upgradesResult({ upgrades: [] }));
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
-    expect(screen.getByText('All upgrades applied')).toBeInTheDocument();
+    expect(screen.getByText('This widget has no qualifying data yet.')).toBeInTheDocument();
+    expect(screen.queryByText('All upgrades applied')).not.toBeInTheDocument();
     expect(screen.queryByText('Full Self-Driving')).not.toBeInTheDocument();
   });
 
@@ -335,8 +351,8 @@ describe('VehicleUpgradesWidget — standard feed', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
     // Both same-named rows survive reconciliation (no key collision).
     expect(screen.getAllByText('Bundle')).toHaveLength(2);
-    expect(screen.getByText('$1')).toBeInTheDocument();
-    expect(screen.getByText('$2')).toBeInTheDocument();
+    expect(screen.getByText('1.00')).toBeInTheDocument();
+    expect(screen.getByText('2.00')).toBeInTheDocument();
   });
 });
 
@@ -417,20 +433,121 @@ describe('VehicleUpgradesWidget — vehicle selection', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
     expect(upgradesMock).toHaveBeenCalledWith(undefined);
-    expect(screen.getByText('All upgrades applied')).toBeInTheDocument();
-    expect(screen.getByText('No active share links')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle')).toBeInTheDocument();
+    expect(screen.queryByText('All upgrades applied')).not.toBeInTheDocument();
+    expect(screen.queryByText('No active share links')).not.toBeInTheDocument();
+    expect(shareLinksMock).toHaveBeenCalledWith('');
   });
 });
 
 // ── Loading / error states + refresh interaction ─────────────────────────────
 describe('VehicleUpgradesWidget — states + interaction', () => {
+  it('keeps missing upgrade evidence unknown in compact mode', () => {
+    upgradesMock.mockReturnValue(query({ data: null }));
+    renderWidget(<VehicleUpgradesWidget size={SIZE_COMPACT} />);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
+  });
+
+  it('retains sharing when the independent upgrades request fails and recovers that source', () => {
+    const refetch = vi.fn();
+    upgradesMock.mockReturnValue(query(undefined, { isError: true, error: new Error('Upgrades unavailable'), refetch }));
+    shareLinksMock.mockReturnValue(query([makeShare()]));
+    const { container } = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.getByText('Active links')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('retains upgrades when sharing fails and retries the resolver and links together', () => {
+    const refetchDrives = vi.fn();
+    const refetchShares = vi.fn();
+    drivesMock.mockReturnValue(query([{ id: 55 }], { refetch: refetchDrives }));
+    shareLinksMock.mockReturnValue(query(undefined, { isError: true, error: new Error('Shares unavailable'), refetch: refetchShares }));
+    renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
+    expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
+    expect(screen.queryByText('No active share links')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(refetchDrives).toHaveBeenCalledOnce();
+    expect(refetchShares).toHaveBeenCalledOnce();
+  });
+
+  it('recovers vehicle discovery without refetching disabled upgrades or fleet-wide drives', () => {
+    const refetchVehicles = vi.fn();
+    const refetchUpgrades = vi.fn();
+    const refetchDrives = vi.fn();
+    vehiclesMock.mockReturnValue(query(undefined, { isError: true, error: new Error('Vehicles unavailable'), refetch: refetchVehicles }));
+    upgradesMock.mockReturnValue(upgradesResult(undefined, { refetch: refetchUpgrades }));
+    drivesMock.mockReturnValue(query([{ id: 55 }], { refetch: refetchDrives }));
+    renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
+    expect(shareLinksMock).toHaveBeenCalledWith('');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(refetchVehicles).toHaveBeenCalledOnce();
+    expect(refetchUpgrades).not.toHaveBeenCalled();
+    expect(refetchDrives).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1, Number.NaN, 1.5, Number.POSITIVE_INFINITY])('never attributes fleet fallback sharing to invalid vehicle %s', vehicleId => {
+    drivesMock.mockReturnValue(query([{ id: 55 }]));
+    shareLinksMock.mockReturnValue(query([makeShare()]));
+    renderWidget(<VehicleUpgradesWidget vehicleId={vehicleId} size={SIZE_STD} />);
+    expect(upgradesMock).toHaveBeenCalledWith(undefined);
+    expect(shareLinksMock).toHaveBeenCalledWith('');
+    expect(screen.getByText('No vehicle')).toBeInTheDocument();
+    expect(screen.queryByText('Active links')).not.toBeInTheDocument();
+  });
+
+  it('keeps null array responses safe and excludes invalid expiry evidence from known-active links', () => {
+    drivesMock.mockReturnValue(query(null));
+    shareLinksMock.mockReturnValue(query(null));
+    const view = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
+    expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
+    drivesMock.mockReturnValue(query([{ id: 55 }]));
+    shareLinksMock.mockReturnValue(query([makeShare({ expires_at: 'invalid' })]));
+    view.rerender(<MemoryRouter><VehicleUpgradesWidget size={SIZE_STD} /></MemoryRouter>);
+    expect(screen.queryByText('Active links')).not.toBeInTheDocument();
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+  });
+
+  it('reacts to locale and precision changes without inventing a price currency', () => {
+    const view = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
+    expect(screen.getByText('2,000.00')).toBeInTheDocument();
+    act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+    expect(screen.getByText('2.000,0')).toBeInTheDocument();
+    expect(screen.getByText('99,0')).toBeInTheDocument();
+    expect(view.container.textContent).not.toContain('$');
+  });
+
+  it('preserves vendor-formatted price text without adding a second currency symbol', () => {
+    upgradesMock.mockReturnValue(upgradesResult({ upgrades: [{ name: 'Bundle', price: '€99 / month' }] }));
+    renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
+    expect(screen.getByText('€99 / month')).toBeInTheDocument();
+  });
+
+  it('retains stale upgrades and refreshes all contributing sources together', () => {
+    const refetch = vi.fn();
+    const refetchDrives = vi.fn();
+    const refetchShares = vi.fn();
+    upgradesMock.mockReturnValue(upgradesResult(UPGRADES_TWO, { isError: true, refetch }));
+    drivesMock.mockReturnValue(query([{ id: 55 }], { refetch: refetchDrives }));
+    shareLinksMock.mockReturnValue(query([makeShare()], { refetch: refetchShares }));
+    renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
+    expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(refetchDrives).toHaveBeenCalledOnce();
+    expect(refetchShares).toHaveBeenCalledOnce();
+  });
+
   it('renders a loading skeleton with no feed while the first fetch is in flight', () => {
     upgradesMock.mockReturnValue(upgradesResult(undefined, { isLoading: true }));
 
     const { container } = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Upgrades & Sharing')).not.toBeInTheDocument();
+    expect(screen.queryByText('Upgrades & sharing')).toBeInTheDocument();
     expect(screen.queryByText('Full Self-Driving')).not.toBeInTheDocument();
   });
 
@@ -441,7 +558,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
 
     // Error is surfaced by the freshness chip; the feed still renders.
     expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
-    expect(screen.getByText('Upgrades & Sharing')).toBeInTheDocument();
+    expect(screen.getByText('Upgrades & sharing')).toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

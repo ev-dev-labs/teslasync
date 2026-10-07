@@ -33,7 +33,7 @@ function rule(id: number, name: string): AlertRule {
 }
 
 const VEHICLES: Vehicle[] = [vehicle(1, 'Model 3'), vehicle(2, 'Model Y')];
-const RULES: AlertRule[] = [rule(10, 'Tire Pressure Low'), rule(20, 'Battery Cold')];
+const RULES: AlertRule[] = [rule(10, 'Tire pressure Low'), rule(20, 'Battery Cold')];
 
 function renderBar(overrides: Omit<Partial<NotificationFilterBarProps>, 'onChange'> = {}) {
   const onChange = vi.fn();
@@ -43,6 +43,8 @@ function renderBar(overrides: Omit<Partial<NotificationFilterBarProps>, 'onChang
       onChange={onChange}
       vehicles={overrides.vehicles ?? VEHICLES}
       rules={overrides.rules ?? RULES}
+      section={overrides.section}
+      includeReadState={overrides.includeReadState}
     />,
   );
   return { onChange };
@@ -214,5 +216,27 @@ describe('NotificationFilterBar — empty state', () => {
     for (const name of [/^info$/i, /^warn$/i, /^critical$/i]) {
       expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
     }
+  });
+
+  describe('NotificationFilterBar — header control reuse', () => {
+    it.each(['severity', 'source', 'search'] as const)('renders only the requested %s controls without a second chip rail', section => {
+      renderBar({ section, filters: { severity: ['warn'], vehicle_id: [1], q: 'brake' } });
+      expect(Boolean(screen.queryByRole('group', { name: 'Severity' }))).toBe(section === 'severity');
+      expect(Boolean(screen.queryByRole('combobox', { name: 'Vehicle' }))).toBe(section === 'source');
+      expect(Boolean(screen.queryByPlaceholderText('Search messages…'))).toBe(section === 'search');
+      expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
+    });
+
+    it('clears mobile read-state along with business filters without changing workspace bounds or archive scope', () => {
+      const { onChange } = renderBar({
+        includeReadState: true,
+        filters: { read: false, severity: ['critical'], archived: true, from: '2026-01-01T00:00:00Z', to_exclusive: '2026-02-01T00:00:00Z' },
+      });
+      expect(screen.getByLabelText('Filter by read state')).toHaveValue('unread');
+      fireEvent.click(screen.getByRole('button', { name: 'Clear all' }));
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+        read: undefined, severity: undefined, archived: true, from: '2026-01-01T00:00:00Z', to_exclusive: '2026-02-01T00:00:00Z',
+      }));
+    });
   });
 });

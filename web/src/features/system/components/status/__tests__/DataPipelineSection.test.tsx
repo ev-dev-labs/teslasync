@@ -76,7 +76,7 @@ function renderSection() {
 }
 
 function header(): HTMLElement {
-  return screen.getByRole('button', { name: /Data Pipeline/i })
+  return screen.getByRole('button', { name: /Data pipeline/i })
 }
 
 function expand() {
@@ -105,12 +105,12 @@ describe('DataPipelineSection', () => {
 
     const btn = header()
     expect(btn).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('Export Job Queue')).not.toBeInTheDocument()
+    expect(screen.queryByText('Export job queue')).not.toBeInTheDocument()
 
     fireEvent.click(btn)
 
     expect(btn).toHaveAttribute('aria-expanded', 'true')
-    expect(await screen.findByText('Export Job Queue')).toBeInTheDocument()
+    expect(await screen.findByText('Export job queue')).toBeInTheDocument()
   })
 
   it('surfaces the compression savings and active-job count as header badges', async () => {
@@ -151,8 +151,8 @@ describe('DataPipelineSection', () => {
     expand()
 
     await waitFor(() => expect(container.querySelector('.animate-pulse')).not.toBeNull())
-    expect(screen.queryByText('Compression Statistics')).not.toBeInTheDocument()
-    expect(screen.queryByText('Export Job Queue')).not.toBeInTheDocument()
+    expect(screen.queryByText('Compression statistics')).not.toBeInTheDocument()
+    expect(screen.queryByText('Export job queue')).not.toBeInTheDocument()
   })
 
   it('renders compression statistics and the savings gauge once data loads', async () => {
@@ -161,10 +161,10 @@ describe('DataPipelineSection', () => {
     renderSection()
     expand()
 
-    expect(await screen.findByText('Compression Statistics')).toBeInTheDocument()
-    expect(screen.getByText('Compression Ratio')).toBeInTheDocument()
+    expect(await screen.findByText('Compression statistics')).toBeInTheDocument()
+    expect(screen.getByText('Compression ratio')).toBeInTheDocument()
     expect(screen.getByText('42.50%')).toBeInTheDocument()
-    expect(screen.getByText('15.0 MB')).toBeInTheDocument()
+    expect(screen.getByText('15.00 MB')).toBeInTheDocument()
     expect(screen.getByText('1,000,000')).toBeInTheDocument()
     expect(screen.getByText('700,000')).toBeInTheDocument()
     expect(screen.getByText('Savings')).toBeInTheDocument() // gauge label
@@ -184,7 +184,7 @@ describe('DataPipelineSection', () => {
     renderSection()
     expand()
 
-    expect(await screen.findByText('Export Job Queue')).toBeInTheDocument()
+    expect(await screen.findByText('Export job queue')).toBeInTheDocument()
     expect(within(statCard('Pending')).getByText('1')).toBeInTheDocument()
     expect(within(statCard('Processing')).getByText('2')).toBeInTheDocument()
     expect(within(statCard('Completed')).getByText('3')).toBeInTheDocument()
@@ -215,7 +215,7 @@ describe('DataPipelineSection', () => {
     renderSection()
     expand()
 
-    expect(await screen.findByText('Compression Statistics')).toBeInTheDocument()
+    expect(await screen.findByText('Compression statistics')).toBeInTheDocument()
     expect(screen.getByText('No compression statistics are available yet.')).toBeInTheDocument()
     expect(screen.getByText(/TimescaleDB compression policies/)).toBeInTheDocument()
     expect(screen.getByText('still-here.csv')).toBeInTheDocument()
@@ -237,7 +237,7 @@ describe('DataPipelineSection', () => {
 
     await waitFor(() => expect(compressionMock).toHaveBeenCalledTimes(2))
     // Successful refetch replaces the alert with the real metrics.
-    expect(await screen.findByText('Compression Ratio')).toBeInTheDocument()
+    expect(await screen.findByText('Compression ratio')).toBeInTheDocument()
   })
 
   it('surfaces an error instead of a misleading empty state when the export query fails', async () => {
@@ -248,7 +248,7 @@ describe('DataPipelineSection', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     // The compression half still renders from its own successful query...
-    expect(screen.getByText('Compression Statistics')).toBeInTheDocument()
+    expect(screen.getByText('Compression statistics')).toBeInTheDocument()
     // ...and we must NOT claim the queue is empty when the request errored.
     expect(screen.queryByText('No export jobs are queued.')).not.toBeInTheDocument()
   })

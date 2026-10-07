@@ -80,9 +80,9 @@ beforeEach(() => {
 describe('MediaNavigationPanel', () => {
   it('always renders the accessible section heading and both column labels', () => {
     render(<MediaNavigationPanel mediaData={null} locationData={null} />);
-    expect(screen.getByRole('heading', { name: 'Media & Navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Media & navigation' })).toBeInTheDocument();
     // The sub-section labels render regardless of data so the panel is never blank.
-    expect(screen.getByText('Now Playing')).toBeInTheDocument();
+    expect(screen.getByText('Now playing')).toBeInTheDocument();
     expect(screen.getByText('Navigation')).toBeInTheDocument();
   });
 
@@ -180,7 +180,7 @@ describe('MediaNavigationPanel', () => {
     // 5 000 m ÷ 1000 = 5.00 km — proves the value is treated as metres, not a raw scalar.
     expect(screen.getByText('5.00 km')).toBeInTheDocument();
     expect(screen.queryByText(/5,000/)).not.toBeInTheDocument();
-    expect(screen.getByText('15 min')).toBeInTheDocument();
+    expect(screen.getByText('15.00 min')).toBeInTheDocument();
   });
 
   it('honours the imperial display preference (metres → miles)', () => {

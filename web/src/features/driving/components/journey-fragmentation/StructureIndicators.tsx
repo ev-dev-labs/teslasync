@@ -7,12 +7,14 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import { JourneyFragmentationSectionProps, percent } from './_types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function StructureIndicators({ result }: JourneyFragmentationSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance, unitPrefs } = useUnits();
   const shortDistance = result.shortFragmentDistanceM > 0
-    ? formatDistance(result.shortFragmentDistanceM, { precision: 1 })
+    ? formatDistance(result.shortFragmentDistanceM)
     : '—';
   const observedDistance = convertDistanceFromSI(result.totalDistanceM, unitPrefs.distance);
   return (
@@ -40,10 +42,10 @@ export function StructureIndicators({ result }: JourneyFragmentationSectionProps
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <Route className="mb-2 h-5 w-5 text-cyan-300" aria-hidden="true" />
             <Text as="p" variant="label">{t('journeyFragmentation.structure.distance', 'Included distance')}</Text>
-            <MetricValue>{formatDistance(result.totalDistanceM, { precision: 1 })}</MetricValue>
+            <MetricValue>{formatDistance(result.totalDistanceM)}</MetricValue>
             <Text as="p" variant="caption">
               {t('journeyFragmentation.structure.distanceBoundary', '{{distance}} at the display-unit render boundary', {
-                distance: `${observedDistance.toFixed(1)} ${unitPrefs.distance}`,
+                distance: `${fmtNumber(observedDistance)} ${unitPrefs.distance}`,
               })}
             </Text>
           </div>

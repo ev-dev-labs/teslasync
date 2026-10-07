@@ -315,6 +315,24 @@ beforeEach(() => {
 });
 
 describe('StatisticsPage', () => {
+  it('reviews totals, kilometre cost denominators and mixed mileage windows without another request', async () => {
+    renderPage();
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await within(totals).findByText('500 km');
+    expect(totals.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
+    const averages = screen.getByTestId('statistics-averages-brief');
+    expect(averages.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    const mileage = screen.getByTestId('statistics-mileage-brief');
+    expect(within(mileage).getByText('Mixed lifetime and last-30-day windows')).toBeInTheDocument();
+    expect(within(mileage).getByText('Last 30 days divided by 30')).toBeInTheDocument();
+    const calls = periodStatsCallCount();
+    fireEvent.click(within(averages).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Recorded cost divided by source kilometres; not display-distance units.')).toBeInTheDocument();
+    expect(within(drawer).getByText('$0.50')).toBeInTheDocument();
+    expect(periodStatsCallCount()).toBe(calls);
+  });
+
   it('renders the page shell (h1 + subtitle) and sets the document title', async () => {
     renderPage();
 
@@ -334,19 +352,19 @@ describe('StatisticsPage', () => {
     renderPage();
 
     const totals = await screen.findByRole('region', { name: 'Statistics' });
-    expect(within(totals).getByText('Total Distance')).toBeInTheDocument();
-    expect(within(totals).getByText('500 km')).toBeInTheDocument();
+    expect(within(totals).getByText('Total distance')).toBeInTheDocument();
+    expect(await within(totals).findByText('500 km')).toBeInTheDocument();
     expect(within(totals).getByText('42')).toBeInTheDocument();
     expect(within(totals).getByText('100.00 kWh')).toBeInTheDocument();
-    expect(within(totals).getByText('$250')).toBeInTheDocument();
+    expect(within(totals).getByText('$250.00')).toBeInTheDocument();
     expect(within(totals).getByText('50.00 kg')).toBeInTheDocument();
 
     const averages = screen.getByRole('region', { name: 'Averages' });
     // 500 km / 42 drives = 11.90 km
     expect(within(averages).getByText('11.90 km')).toBeInTheDocument();
     expect(within(averages).getByText('160.00 Wh/km')).toBeInTheDocument();
-    // 250 cost / 500 km = 0.500
-    expect(within(averages).getByText('$0.500')).toBeInTheDocument();
+    // 250 cost / 500 km = 0.50 at the selected two decimals.
+    expect(within(averages).getByText('$0.50')).toBeInTheDocument();
   });
 
   it('shows loading skeletons while the period-stats query is pending', async () => {
@@ -354,8 +372,9 @@ describe('StatisticsPage', () => {
 
     renderPage();
 
-    expect(await screen.findAllByTestId('stat-grid-skeleton')).toHaveLength(2);
-    expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('statistics-totals-brief')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('statistics-averages-brief')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('statistics-totals-brief').querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No statistics yet')).not.toBeInTheDocument();
   });
 
@@ -366,7 +385,7 @@ describe('StatisticsPage', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Statistics' }).querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
   });
 
   it('re-fetches the period stats when the error retry button is clicked', async () => {
@@ -392,7 +411,7 @@ describe('StatisticsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Complete a drive or charging session/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
-    expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Statistics' }).querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
   });
 
   it('renders the battery-health gauge and its stat cards on the happy path', async () => {
@@ -400,9 +419,9 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(screen.getByText('Health')).toBeInTheDocument();
-    expect(screen.getByText('92')).toBeInTheDocument();
+    expect(screen.getByText('92.00')).toBeInTheDocument();
     expect(screen.getByText('Capacity')).toBeInTheDocument();
-    expect(screen.getByText('71.5 kWh')).toBeInTheDocument();
+    expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
     expect(screen.getByText('412')).toBeInTheDocument();
     expect(screen.getByText('30 mo')).toBeInTheDocument();
   });
@@ -412,21 +431,21 @@ describe('StatisticsPage', () => {
     const { unmount } = renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No battery health data available')).toBeInTheDocument();
-    expect(screen.queryByText('Capacity')).not.toBeInTheDocument();
+    expect(screen.getByTestId('statistics-battery-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
     unmount();
 
     mockBattery.mockReturnValue(qr({ error: new Error('battery down') }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Capacity')).not.toBeInTheDocument();
+    expect(screen.getByTestId('statistics-battery-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
   });
 
   it('renders the mileage summary cards on the happy path', async () => {
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
-    expect(screen.getByText('Daily Average')).toBeInTheDocument();
-    expect(screen.getByText('Yearly Projection')).toBeInTheDocument();
+    expect(screen.getByText('Daily average')).toBeInTheDocument();
+    expect(screen.getByText('Yearly projection')).toBeInTheDocument();
     expect(screen.getByText('8,000 km')).toBeInTheDocument();
   });
 
@@ -435,14 +454,14 @@ describe('StatisticsPage', () => {
     const { unmount } = renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No mileage data available')).toBeInTheDocument();
-    expect(screen.queryByText('Daily Average')).not.toBeInTheDocument();
+    expect(screen.getByTestId('statistics-mileage-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
     unmount();
 
     mockMileage.mockReturnValue(qr({ error: new Error('mileage down') }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Daily Average')).not.toBeInTheDocument();
+    expect(screen.getByTestId('statistics-mileage-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
   });
 
   it('renders the state-distribution chart figure when data is present', async () => {
@@ -450,7 +469,7 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'State Distribution' }),
+      screen.getByRole('heading', { level: 3, name: 'State distribution' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
@@ -485,7 +504,7 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Vehicle Comparison' }),
+      screen.getByRole('heading', { level: 3, name: 'Vehicle comparison' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
   });
@@ -568,7 +587,7 @@ describe('StatisticsPage', () => {
 
     const totals = await screen.findByRole('region', { name: 'Statistics' });
     // 500 km → 310.69 mi → fmtInt → 311 mi
-    expect(within(totals).getByText('311 mi')).toBeInTheDocument();
+    expect(await within(totals).findByText('311 mi')).toBeInTheDocument();
 
     const averages = screen.getByRole('region', { name: 'Averages' });
     // 160 Wh/km × 1.609344 → 257.50 Wh/mi

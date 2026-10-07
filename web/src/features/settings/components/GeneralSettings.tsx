@@ -111,6 +111,7 @@ export function GeneralSettings() {
     },
   })
   const [saved, setSaved] = useState(false)
+  const [costValidity, setCostValidity] = useState({ electricity: true, gas: true })
 
   // In-app navigation guard. The settings form has no explicit isDirty flag,
   // so diff the in-progress draft against the persisted server snapshot. This
@@ -198,10 +199,10 @@ export function GeneralSettings() {
         ) : (
           <>
             {carPrefs && (carPrefs.setting_distance_unit || carPrefs.setting_temperature_unit) && (
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5 p-4 mb-5">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5 p-4 mb-5">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Car className="h-5 w-5 text-neon-cyan shrink-0" />
-                  <div>
+                  <div className="min-w-0 break-words">
                     <Text as="p" variant="body" className="font-medium">
                       {t('app.carUses', 'Car uses')} {parseSettingEnum(carPrefs.setting_distance_unit, 'distance')} / {parseSettingEnum(carPrefs.setting_temperature_unit, 'temperature')} / {parseSettingEnum(carPrefs.setting_tire_pressure_unit, 'pressure')}
                     </Text>
@@ -210,8 +211,8 @@ export function GeneralSettings() {
                     </HelperText>
                   </div>
                 </div>
-                <Button variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar} className="shrink-0">
-                  {t('app.syncFromCar', 'Sync from Car')}
+                <Button variant="primary" size="sm" wrapLabel icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar}>
+                  {t('app.syncFromCar', 'Sync from car')}
                 </Button>
               </div>
             )}
@@ -239,25 +240,25 @@ export function GeneralSettings() {
               <Heading level="section" id="settings-units-heading">{t('settings.organization.units', 'Units & measurements')}</Heading>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Select
-                  label={t('app.distanceUnit', 'Distance Unit')}
+                  label={t('app.distanceUnit', 'Distance unit')}
                   value={form.unit_of_length}
                   onChange={e => setForm({ ...form, unit_of_length: e.target.value })}
                   options={[{ value: 'km', label: t('app.kilometers', 'Kilometers') }, { value: 'mi', label: t('app.miles', 'Miles') }]}
                 />
                 <Select
-                  label={t('app.temperatureUnit', 'Temperature Unit')}
+                  label={t('app.temperatureUnit', 'Temperature unit')}
                   value={form.unit_of_temp}
                   onChange={e => setForm({ ...form, unit_of_temp: e.target.value })}
                   options={[{ value: 'C', label: t('app.celsius', 'Celsius') }, { value: 'F', label: t('app.fahrenheit', 'Fahrenheit') }]}
                 />
                 <Select
-                  label={t('app.pressureUnit', 'Pressure Unit')}
+                  label={t('app.pressureUnit', 'Pressure unit')}
                   value={form.unit_of_pressure ?? 'bar'}
                   onChange={e => setForm({ ...form, unit_of_pressure: e.target.value })}
                   options={[{ value: 'bar', label: t('app.bar', 'Bar') }, { value: 'psi', label: t('app.psi', 'PSI') }]}
                 />
                 <Select
-                  label={t('app.preferredRange', 'Preferred Range')}
+                  label={t('app.preferredRange', 'Preferred range')}
                   value={form.preferred_range}
                   onChange={e => setForm({ ...form, preferred_range: e.target.value })}
                   options={[{ value: 'rated', label: t('app.rated', 'Rated') }, { value: 'ideal', label: t('app.ideal', 'Ideal') }]}
@@ -265,7 +266,7 @@ export function GeneralSettings() {
 
                 <div>
                   <Input
-                    label={t('app.decimalPrecision', 'Decimal Precision')}
+                    label={t('app.decimalPrecision', 'Decimal precision')}
                     type="number"
                     min={0}
                     max={20}
@@ -304,8 +305,8 @@ export function GeneralSettings() {
                     { value: '$', label: 'USD ($)' },
                     { value: '€', label: 'EUR (€)' },
                     { value: '£', label: 'GBP (£)' },
-                    { value: 'C$', label: 'CAD (C$)' },
-                    { value: 'A$', label: 'AUD (A$)' },
+                    { value: 'C$', label: 'CAD (c$)' },
+                    { value: 'A$', label: 'AUD (a$)' },
                     { value: '¥', label: 'JPY (¥)' },
                     { value: '元', label: 'CNY (元)' },
                     { value: 'CHF', label: 'CHF (CHF)' },
@@ -315,7 +316,7 @@ export function GeneralSettings() {
                 />
 
                 <Select
-                  label={t('app.locale', 'Number & Date Locale')}
+                  label={t('app.locale', 'Number & date locale')}
                   value={form.locale ?? 'en-US'}
                   onChange={e => setForm({ ...form, locale: e.target.value })}
                   options={[
@@ -330,7 +331,7 @@ export function GeneralSettings() {
                 />
 
                 <Select
-                  label={t('app.tzDisplayDefault', 'Time Zone Display')}
+                  label={t('app.tzDisplayDefault', 'Time zone display')}
                   value={form.tz_display_default ?? 'vehicle'}
                   onChange={e => setForm({ ...form, tz_display_default: e.target.value as 'vehicle' | 'user' | 'utc' })}
                   options={[
@@ -340,7 +341,7 @@ export function GeneralSettings() {
                   ]}
                 />
 
-                <SettingField label={t('app.timezoneUser', 'My Time Zone Override')}>
+                <SettingField label={t('app.timezoneUser', 'My time zone override')}>
                   <Input
                     type="text"
                     value={form.timezone_user ?? ''}
@@ -359,7 +360,7 @@ export function GeneralSettings() {
               <Heading level="section" id="settings-costs-heading">{t('settings.organization.costs', 'Energy & comparison costs')}</Heading>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <SettingField
-                  label={t('app.electricityCost', 'Electricity Cost (per kWh)')}
+                  label={t('app.electricityCost', 'Electricity cost (per kWh)')}
                   help={{
                     i18nKey: 'help.fields.settings.electricityCost',
                     content: 'Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above.',
@@ -367,26 +368,28 @@ export function GeneralSettings() {
                   }}
                 >
                   <CurrencyInput
-                    ariaLabel={t('app.electricityCost', 'Electricity Cost (per kWh)')}
+                    ariaLabel={t('app.electricityCost', 'Electricity cost (per kWh)')}
                     currency={symbolToIsoCode(form.currency_symbol)}
                     locale={form.locale ?? 'en-US'}
                     precision={clampDecimals(form.decimal_precision)}
                     valueMicro={valueToMicro(form.base_cost_per_kwh)}
+                    onValidityChange={electricity => setCostValidity(previous => ({ ...previous, electricity }))}
                     onChange={({ valueMicro }) =>
                       setForm({ ...form, base_cost_per_kwh: microToValue(valueMicro) ?? 0 })
                     }
                   />
                 </SettingField>
 
-                <SettingField label={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
+                <SettingField label={t('app.gasPrice', 'Gas price (for EV vs ICE comparison)')}>
+                  <div className="flex min-w-0 flex-wrap gap-2">
+                    <div className="min-w-0 flex-1 basis-40">
                       <CurrencyInput
-                        ariaLabel={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}
+                        ariaLabel={t('app.gasPrice', 'Gas price (for EV vs ICE comparison)')}
                         currency={symbolToIsoCode(form.currency_symbol)}
                         locale={form.locale ?? 'en-US'}
                         precision={clampDecimals(form.decimal_precision)}
                         valueMicro={valueToMicro(form.gas_price_per_unit)}
+                        onValidityChange={gas => setCostValidity(previous => ({ ...previous, gas }))}
                         onChange={({ valueMicro }) =>
                           setForm({ ...form, gas_price_per_unit: microToValue(valueMicro) ?? 0 })
                         }
@@ -402,7 +405,7 @@ export function GeneralSettings() {
                   </div>
                 </SettingField>
 
-                <SettingField label={t('app.comparisonMPG', 'Comparison Vehicle MPG')}>
+                <SettingField label={t('app.comparisonMPG', 'Comparison vehicle MPG')}>
                   <Input
                     type="number"
                     step="0.5"
@@ -417,12 +420,12 @@ export function GeneralSettings() {
           </>
         )}
 
-        <div className="flex items-center gap-4">
-          <Button variant="primary" icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form, {
+        <div className="flex flex-wrap items-center gap-4">
+          <Button variant="primary" wrapLabel icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form, {
             onSuccess: () => { toast.success(t('toast.saved', 'Settings saved'), t('toast.savedDesc', 'Your preferences have been updated')); setSaved(true); setTimeout(() => setSaved(false), 3000) },
             onError: () => toast.error(t('toast.saveFailed', 'Failed to save'), t('toast.saveFailedDesc', 'Could not update settings')),
-          })} loading={settingsMut.isPending}>
-            {t('app.save', 'Save Settings')}
+          })} loading={settingsMut.isPending} disabled={!costValidity.electricity || !costValidity.gas}>
+            {t('app.save', 'Save settings')}
           </Button>
           {saved && (
             <Text size="sm" className="flex items-center gap-1 text-emerald-300 animate-in fade-in">

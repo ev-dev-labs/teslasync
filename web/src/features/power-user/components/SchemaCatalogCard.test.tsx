@@ -11,7 +11,7 @@
  *   1. Header — the table name renders as an <h3>, the description sits beneath
  *      it, and the count chip reflects `columns.length`.
  *   2. Column rows — every column surfaces its name, type, and description, one
- *      semantic <li> per column inside a <ul>.
+ *      semantic row per column inside the shared Table.
  *   3. Primary-key detection — a column whose description is the "primary key"
  *      marker gets a labelled key icon, and the match is case-insensitive AND
  *      whitespace-tolerant (the trim-guard hardening), so status is conveyed by
@@ -114,6 +114,22 @@ describe('SchemaCatalogCard — header & layout', () => {
     // "{{count}} cols" fallback interpolated to the real column count.
     expect(screen.getByText('3 cols')).toBeInTheDocument();
   });
+
+  it('keeps long table and column identities visible without hover-only disclosure', () => {
+    const name = 'historical_signal_evidence_catalog_'.repeat(5);
+    const columnName = 'producer_timestamp_and_normalized_value_'.repeat(4);
+    const { container } = renderCard(makeTable({
+      name,
+      columns: [makeColumn({ name: columnName, type: 'double precision', description: 'complete SI evidence' })],
+    }));
+    const heading = screen.getByRole('heading', { level: 3, name });
+    expect(heading).toHaveClass('[overflow-wrap:anywhere]');
+    expect(heading).not.toHaveClass('truncate');
+    expect(screen.getByText(columnName)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.getByRole('table', { name })).toBeInTheDocument();
+    expect(screen.getByText('complete SI evidence')).toBeInTheDocument();
+    expect(container.querySelector('[data-print-card]')).toHaveClass('min-w-0', 'max-w-full');
+  });
 });
 
 // ── Column rows ──────────────────────────────────────────────────────────────────
@@ -135,12 +151,12 @@ describe('SchemaCatalogCard — column rows', () => {
     expect(screen.getByText('avg speed m/s (SI)')).toBeInTheDocument();
   });
 
-  it('renders one semantic list item per column', () => {
-    const { container } = renderCard(makeTable());
-
-    const list = container.querySelector('ul');
-    expect(list).not.toBeNull();
-    expect(within(list as HTMLElement).getAllByRole('listitem')).toHaveLength(3);
+  it('renders every column in a shared semantic table with accessible headers', () => {
+    renderCard(makeTable());
+    const table = screen.getByRole('table', { name: 'drives' });
+    expect(within(table).getAllByRole('row')).toHaveLength(4);
+    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual(['Name', 'Type', 'Description']);
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(3);
   });
 });
 
@@ -255,7 +271,7 @@ describe('SchemaCatalogCard — column description rendering', () => {
       }),
     );
 
-    const li = screen.getByText('col').closest('li') as HTMLElement;
+    const li = screen.getByText('col').closest('tr') as HTMLElement;
     expect(li).not.toBeNull();
     expect(within(li).getByText('documented note')).toBeInTheDocument();
     expect(li.querySelector('p')).not.toBeNull();
@@ -266,7 +282,7 @@ describe('SchemaCatalogCard — column description rendering', () => {
       makeTable({ columns: [{ name: 'nodesc', type: 'int', description: '' }] }),
     );
 
-    const li = screen.getByText('nodesc').closest('li') as HTMLElement;
+    const li = screen.getByText('nodesc').closest('tr') as HTMLElement;
     expect(li).not.toBeNull();
     // No stray empty <p> when the description is blank.
     expect(li.querySelector('p')).toBeNull();

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, DataTable, Select, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, pagination } from './PhysicsPageShell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsNervousSystemSection({ physics }: { physics: PhysicsPage }) {
+  const { fmtNumber } = useNumberFormatting();
   const { report, t } = physics;
   const nerves = report?.nervous_system?.nerves ?? [];
   const alive = nerves.filter((r) => r.status === 'alive');
@@ -36,7 +38,7 @@ export default function PhysicsNervousSystemSection({ physics }: { physics: Phys
       <div className="flex flex-wrap gap-2">{statuses.map((status) =>
         <Badge key={status} variant={status === 'alive' ? 'success' : 'warning'} size="sm">{status}: {nerves.filter((r) => r.status === status).length}</Badge>)}</div>
       <Text as="p" variant="bodySm">{t('teslaOnly.nervousShare', 'Alive among returned fields: {{value}}', {
-        value: nerves.length ? `${fmtNumber(100 * alive.length / nerves.length, 1)}%` : t('teslaOnly.unknown', 'unknown'),
+        value: nerves.length ? `${fmtNumber(100 * alive.length / nerves.length)}%` : t('teslaOnly.unknown', 'unknown'),
       })}</Text>
       <Text as="p" variant="caption">{t('teslaOnly.nerveNote', 'Status compares the latest frame against the freshness window. A silent signal is not a measured zero; contradicting fields require inspecting their actual observations. Returned fields are not every sensor in the vehicle.')}</Text>
     </Evidence>
@@ -45,12 +47,12 @@ export default function PhysicsNervousSystemSection({ physics }: { physics: Phys
       <Text as="p" variant="bodySm">{t('teslaOnly.nervousAttention', 'Signals needing attention')}</Text>
       <DataTable tableId="physics:nerves-attention" data={[...conflicting, ...other]} columns={columns} pagination={pagination}
         mobileColumns={['field', 'status']} keyExtractor={(r) => r.field} emptyMessage={t('teslaOnly.nervousNone', 'No non-alive signals returned in this frame.')} />
-      <Text as="p" variant="bodySm">{t('teslaOnly.nervousMatchedBudgets', 'Non-alive fields with a same-named Unknown OS budget: {{count}} / {{total}}', {
+      <Text as="p" variant="bodySm">{t('teslaOnly.nervousMatchedBudgets', 'Non-alive fields with a same-named unknown OS budget: {{count}} / {{total}}', {
         count: matchedBudgets.length, total: conflicting.length + other.length,
       })}</Text>
       {matchedBudgets.length ? matchedBudgets.slice(0, 5).map(({ nerve, budget }) =>
         <Text key={nerve.field} as="p" variant="caption">{t('teslaOnly.nervousBudgetReading', '{{field}}: {{status}} now; {{hours}} h unknown in returned budget', {
-          field: nerve.field, status: nerve.status, hours: fmtNumber(budget.hours, 1),
+          field: nerve.field, status: nerve.status, hours: fmtNumber(budget.hours),
         })}</Text>) : <Text as="p" variant="caption">{t('teslaOnly.nervousNoBudgetMatch', 'No matching signal budget was returned; signal-specific unknown hours cannot be inferred.')}</Text>}
       <Text as="p" variant="caption">{t('teslaOnly.nervousBudgetCaution', 'Name matching is an exact cross-reference, not proof that a currently silent field was silent throughout its historical unknown budget.')}</Text>
       <Select label={t('teslaOnly.nervousFilter', 'Filter returned signals by status')} value={selected} onChange={(event) => setFilter(event.target.value)}

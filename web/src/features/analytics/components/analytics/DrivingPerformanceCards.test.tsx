@@ -70,12 +70,12 @@ import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 const EM_DASH = '\u2014';
 
 const LABELS = {
-  topSpeed: 'Top Speed',
-  avgSpeed: 'Avg Speed',
-  peakPower: 'Peak Power',
-  peakRegen: 'Peak Regen',
-  avgDriveDist: 'Avg Drive Distance',
-  longestDrive: 'Longest Drive',
+  topSpeed: 'Top speed',
+  avgSpeed: 'Avg speed',
+  peakPower: 'Peak power',
+  peakRegen: 'Peak regen',
+  avgDriveDist: 'Avg drive distance',
+  longestDrive: 'Longest drive',
 } as const;
 
 /** Minimal settings bag — `useUnits()` only reads these five fields. */
@@ -146,14 +146,14 @@ describe('DrivingPerformanceCards', () => {
     render(<DrivingPerformanceCards query={queryWith(FULL_STATS)} />);
 
     // Speed: km/h passes straight through the km/h→km/h conversion.
-    expect(readTile(LABELS.topSpeed)).toEqual({ value: '200', subtitle: 'km/h' });
-    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '65', subtitle: 'km/h' });
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: '200.00', subtitle: 'km/h' });
+    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '65.00', subtitle: 'km/h' });
     // Power / regen are already kW and are not unit-converted.
-    expect(readTile(LABELS.peakPower)).toEqual({ value: '250', subtitle: 'kW' });
-    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80', subtitle: 'kW' });
+    expect(readTile(LABELS.peakPower)).toEqual({ value: '250.00', subtitle: 'kW' });
+    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80.00', subtitle: 'kW' });
     // Distance: km→km at one decimal.
-    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '42.5', subtitle: 'km' });
-    expect(readTile(LABELS.longestDrive)).toEqual({ value: '128.3', subtitle: 'km' });
+    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '42.50', subtitle: 'km' });
+    expect(readTile(LABELS.longestDrive)).toEqual({ value: '128.30', subtitle: 'km' });
   });
 
   it('converts speed to mph and distance to mi when the user prefers imperial units', () => {
@@ -161,14 +161,14 @@ describe('DrivingPerformanceCards', () => {
     render(<DrivingPerformanceCards query={queryWith(FULL_STATS)} />);
 
     // 200 km/h → 124.27 mph (0 dp); 65 km/h → 40.39 mph.
-    expect(readTile(LABELS.topSpeed)).toEqual({ value: '124', subtitle: 'mph' });
-    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '40', subtitle: 'mph' });
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: '124.27', subtitle: 'mph' });
+    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '40.39', subtitle: 'mph' });
     // 42.5 km → 26.41 mi (1 dp); 128.3 km → 79.72 mi.
-    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '26.4', subtitle: 'mi' });
-    expect(readTile(LABELS.longestDrive)).toEqual({ value: '79.7', subtitle: 'mi' });
+    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '26.41', subtitle: 'mi' });
+    expect(readTile(LABELS.longestDrive)).toEqual({ value: '79.72', subtitle: 'mi' });
     // Power / regen are unit-agnostic — unchanged across unit systems.
-    expect(readTile(LABELS.peakPower)).toEqual({ value: '250', subtitle: 'kW' });
-    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80', subtitle: 'kW' });
+    expect(readTile(LABELS.peakPower)).toEqual({ value: '250.00', subtitle: 'kW' });
+    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80.00', subtitle: 'kW' });
   });
 
   it('degrades every tile to a placeholder (never a blank band) when the payload carries no stats', () => {
@@ -203,8 +203,8 @@ describe('DrivingPerformanceCards', () => {
     render(<DrivingPerformanceCards query={queryWith({ speed_stats: stat({ max: 200, avg: 65 }) })} />);
 
     // Speed tiles have data…
-    expect(readTile(LABELS.topSpeed).value).toBe('200');
-    expect(readTile(LABELS.avgSpeed).value).toBe('65');
+    expect(readTile(LABELS.topSpeed).value).toBe('200.00');
+    expect(readTile(LABELS.avgSpeed).value).toBe('65.00');
     // …while the four tiles without a backing stat fall back.
     expect(readTile(LABELS.peakPower).value).toBe(EM_DASH);
     expect(readTile(LABELS.peakRegen).value).toBe(EM_DASH);
@@ -221,9 +221,9 @@ describe('DrivingPerformanceCards', () => {
     );
 
     // safe(NaN) → 0; the sibling finite value in the same stat still converts.
-    expect(readTile(LABELS.topSpeed).value).toBe('0');
+    expect(readTile(LABELS.topSpeed).value).toBe('0.00');
     expect(readTile(LABELS.topSpeed).value).not.toContain('NaN');
-    expect(readTile(LABELS.avgSpeed).value).toBe('50');
+    expect(readTile(LABELS.avgSpeed).value).toBe('50.00');
   });
 
   it('exposes the band as a labelled group with one decorative icon per tile', () => {

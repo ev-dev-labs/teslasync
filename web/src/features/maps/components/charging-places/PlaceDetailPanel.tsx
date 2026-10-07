@@ -4,6 +4,8 @@ import { Archive, ArchiveRestore, CheckCircle2 } from 'lucide-react';
 
 import { Modal, Button, Tabs, Badge, Text, EditableText, Select, Toggle } from '@/components/ui';
 import { QueryError, Skeleton } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import {
   useGeofenceRates,
   useDeleteGeofenceRate,
@@ -58,6 +60,8 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
     place?.id,
     place?.is_charging_location === true,
   );
+  const ratesState = deriveDataState(ratesQuery);
+  const firstSessionState = deriveDataState(firstSessionQuery);
   const deleteRate = useDeleteGeofenceRate();
   const archive = useArchiveGeofence();
   const unarchive = useUnarchiveGeofence();
@@ -155,6 +159,7 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
               {t('chargingPlaces.detail.needsReviewBadge', 'Needs review')}
             </Badge>
             <Button
+              wrapLabel
               size="sm"
               variant="secondary"
               icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
@@ -167,6 +172,7 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
         )}
         {place.archived_at ? (
           <Button
+            wrapLabel
             size="sm"
             variant="secondary"
             icon={<ArchiveRestore className="h-4 w-4" aria-hidden="true" />}
@@ -177,6 +183,7 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
           </Button>
         ) : (
           <Button
+            wrapLabel
             size="sm"
             variant="outline"
             icon={<Archive className="h-4 w-4" aria-hidden="true" />}
@@ -251,8 +258,8 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
       <Tabs
         className="mb-4"
         tabs={[
-          { key: 'pricing', label: t('chargingPlaces.detail.pricingTab', 'Rates & Pricing') },
-          { key: 'activity', label: t('chargingPlaces.detail.activityTab', 'Charging Activity') },
+          { key: 'pricing', label: t('chargingPlaces.detail.pricingTab', 'Rates & pricing') },
+          { key: 'activity', label: t('chargingPlaces.detail.activityTab', 'Charging activity') },
         ]}
         activeTab={tab}
         onChange={(k) => setTab(k as DetailTab)}
@@ -267,18 +274,24 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
               'Rates preserve actual costs. The first rate starts the day before the earliest matching charge; preview and apply to price eligible past sessions.',
             )}
           </Text>
-          {firstSessionQuery.isError ? (
-            <QueryError error={firstSessionQuery.error} onRetry={() => void firstSessionQuery.refetch()} />
-          ) : firstSessionQuery.isLoading && firstSessionQuery.fetchStatus !== 'idle' ? (
-            <Skeleton className="h-40" />
-          ) : (
+          <SourceContent
+            state={ratesState.fatalError || firstSessionState.fatalError ? 'error'
+              : ratesState.refreshError || firstSessionState.refreshError ? 'retained'
+              : (ratesQuery.isLoading && !ratesState.hasData) || (firstSessionQuery.isLoading && firstSessionQuery.fetchStatus !== 'idle' && !firstSessionState.hasData) ? 'loading' : 'ready'}
+            label={t('chargingPlaces.rateForm.title', 'Add a rate')}
+            error={ratesState.fatalError ?? firstSessionState.fatalError}
+            errorMessage={t('chargingPlaces.detail.pricingLoadFailed', 'Rate setup data could not be loaded.')}
+            emptyMessage={t('chargingPlaces.rateHistory.empty', 'No rate configured yet — use the form above to start pricing sessions at this place.')}
+            loadingContent={<Skeleton className="h-40" />}
+            errorRecovery={{ onRetry: () => { void ratesQuery.refetch(); void firstSessionQuery.refetch(); } }}
+          >
             <RateForm
               key={place.id}
               geofenceId={place.id}
               currentRate={currentRate}
               firstSessionAt={firstSessionQuery.data?.started_at}
             />
-          )}
+          </SourceContent>
           <RateHistoryPanel
             rates={ratesQuery.data}
             isLoading={ratesQuery.isLoading}
@@ -312,6 +325,9 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
           />
           <ChargingActivityList geofenceId={place.id} />
         </div>
+      )}
+      {[deleteRate.error, archive.error, unarchive.error, markReviewed.error, updateCategory.error, updatePurpose.error].map((error, index) =>
+        error ? <QueryError key={index} error={error} /> : null,
       )}
     </Modal>
   );

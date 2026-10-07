@@ -128,7 +128,7 @@ describe('FSMHealthPanel', () => {
     expect(screen.getByTestId('fsm-health-panel')).toBeInTheDocument();
     const alert = screen.getByTestId('fsm-health-alert-flap');
     expect(alert).toHaveAttribute('role', 'status');
-    expect(within(alert).getByText('State Flapping')).toBeInTheDocument();
+    expect(within(alert).getByText('State flapping')).toBeInTheDocument();
     expect(within(alert).getByText(/6 transitions flagged as state flapping/)).toBeInTheDocument();
     // The big count and the icon are decorative — the message already states the count.
     expect(within(alert).getByText('6')).toHaveAttribute('aria-hidden', 'true');
@@ -148,7 +148,7 @@ describe('FSMHealthPanel', () => {
     );
 
     const alert = screen.getByTestId('fsm-health-alert-stuck');
-    expect(within(alert).getByText('Stuck Sessions')).toBeInTheDocument();
+    expect(within(alert).getByText('Stuck sessions')).toBeInTheDocument();
     expect(within(alert).getByText(/1 session\(s\) stuck in pending\/active/)).toBeInTheDocument();
   });
 
@@ -180,7 +180,7 @@ describe('FSMHealthPanel', () => {
     );
 
     const alert = screen.getByTestId('fsm-health-alert-recovery');
-    expect(within(alert).getByText('Pod Recoveries')).toBeInTheDocument();
+    expect(within(alert).getByText('Pod recoveries')).toBeInTheDocument();
     expect(within(alert).getByText(/2 session\(s\) recovered after pod restart/)).toBeInTheDocument();
     // Informational alerts use the blue accent, not the amber warning accent.
     expect(alert.className).toContain('border-blue-500/20');

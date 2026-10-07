@@ -5,12 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
 import { HourlyDistributionPlot } from './HourlyDistributionPlot';
 import type { DrivingRhythmSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HourlyDistributionProps {
   summary: DrivingRhythm;
@@ -23,6 +24,7 @@ export function HourlyDistribution({
   state,
   className,
 }: HourlyDistributionProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const driveName = t('rhythm.hourly.drives', 'Drive starts');
@@ -90,13 +92,13 @@ export function HourlyDistribution({
             label: `${distanceName} (${unitPrefs.distance})`,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 1)} ${unitPrefs.distance}`
+                ? `${fmtNumber(value)} ${unitPrefs.distance}`
                 : '—',
           },
           {
             key: 'share',
             label: t('rhythm.hourly.share', 'Drive share'),
-            format: (value) => `${fmtNumber(value, 1)}%`,
+            format: (value) => `${fmtNumber(value)}%`,
           },
         ]}
       >

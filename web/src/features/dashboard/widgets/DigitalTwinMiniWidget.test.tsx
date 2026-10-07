@@ -23,7 +23,7 @@
  * Network is never touched.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -98,13 +98,14 @@ function makeSecurity(over: Partial<SecurityEvent> = {}): SecurityEvent {
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <DigitalTwinMiniWidget size={{ cols: 2, rows: 2 }} {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...view, queryClient: client };
 }
 
 beforeEach(() => {
@@ -172,21 +173,21 @@ describe('DigitalTwinMiniWidget — empty state', () => {
 });
 
 describe('DigitalTwinMiniWidget — loading states', () => {
-  it('renders a skeleton (no twin, no empty state) while security is loading', () => {
+  it('retains state evidence while security is loading', () => {
     mockSecurity.mockReturnValue(makeQuery({ data: null, isLoading: true }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByRole('img')).toBeInTheDocument();
   });
 
-  it('renders a skeleton while the vehicle state is loading', () => {
+  it('retains security evidence while vehicle state is loading', () => {
     mockState.mockReturnValue(makeQuery({ data: null, isLoading: true }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByRole('img')).toBeInTheDocument();
   });
 
   it('renders a skeleton (not the empty state) while the vehicle list itself is loading', () => {
@@ -212,7 +213,7 @@ describe('DigitalTwinMiniWidget — twin + header chrome', () => {
   it('surfaces the widget title and an Open link to the full digital-twin route', () => {
     renderWidget();
 
-    expect(screen.getByRole('heading', { name: 'Digital Twin' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /open/i });
     expect(link).toHaveAttribute('href', '/digital-twin');
   });
@@ -307,6 +308,14 @@ describe('DigitalTwinMiniWidget — responsive badge visibility', () => {
 });
 
 describe('DigitalTwinMiniWidget — refresh + error resilience', () => {
+  it('retains the scene when a security refresh fails with cached lock evidence', () => {
+    mockSecurity.mockReturnValue(makeQuery({ data: makeSecurity({ locked: true }), isError: true, error: new Error('refresh failed') }));
+    const { container } = renderWidget();
+    expect(screen.getByRole('img', { name: /digital twin/i })).toBeInTheDocument();
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+  });
+
   it('refetches the vehicle state when the refresh control is activated', () => {
     const refetch = vi.fn();
     mockState.mockReturnValue(
@@ -328,5 +337,112 @@ describe('DigitalTwinMiniWidget — refresh + error resilience', () => {
     // The twin is driven by the vehicle list, so a state error never blanks it.
     expect(screen.getByRole('img', { name: /digital twin/i })).toBeInTheDocument();
     expect(screen.getByText('Locked')).toBeInTheDocument();
+  });
+});
+
+describe('DigitalTwinMiniWidget — discovery trust regressions', () => {
+  function query<T>(data: T | undefined) {
+    return {
+      data,
+      error: null as Error | null,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      dataUpdatedAt: Date.now(),
+      refetch: vi.fn(),
+    };
+  }
+
+  function sources() {
+    const queries = {
+      vehicles: query([makeVehicle()]),
+      state: query({ state: { state: 'online' }, live: false }),
+      security: query(makeSecurity({ locked: false, sentry_mode: true })),
+      charging: query({ charging_state: 'Stopped' }),
+    };
+    mockVehicles.mockImplementation(() => queries.vehicles);
+    mockState.mockImplementation(() => queries.state);
+    mockSecurity.mockImplementation(() => queries.security);
+    mockCharging.mockImplementation(() => queries.charging);
+    return queries;
+  }
+
+  function expectRetainedScene() {
+    const twin = screen.getByRole('img', { name: /digital twin/i });
+    expect(twin.querySelector('svg')).not.toBeNull();
+    expect(twin.querySelector('svg.lucide-lock-open')).toHaveAttribute('stroke', 'rgba(239,68,68,0.9)');
+    expect(twin.querySelector('svg.lucide-shield')).toBeInTheDocument();
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+    expect(screen.getByText('Sentry')).toBeInTheDocument();
+  }
+
+  function rerenderWidget(view: ReturnType<typeof renderWidget>) {
+    view.rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={view.queryClient}>
+          <DigitalTwinMiniWidget size={{ cols: 2, rows: 2 }} />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('retains the actual twin and measured badges with a warning when vehicle discovery refresh fails', () => {
+    const queries = sources();
+    const view = renderWidget();
+    expectRetainedScene();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+
+    queries.vehicles.isError = true;
+    queries.vehicles.error = new Error('Vehicle discovery refresh failed');
+    rerenderWidget(view);
+
+    expectRetainedScene();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toHaveAttribute('aria-live', 'polite');
+    expect(warning).toHaveAttribute('data-data-state', 'stale');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(queries.vehicles.refetch).toHaveBeenCalledOnce();
+
+    queries.vehicles.isError = false;
+    queries.vehicles.error = null;
+    rerenderWidget(view);
+    expectRetainedScene();
+    expect(view.container.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('retries vehicle discovery itself after an initial fatal discovery failure', () => {
+    const queries = sources();
+    for (const query of Object.values(queries)) query.data = undefined;
+    queries.vehicles.isError = true;
+    queries.vehicles.error = new Error('Vehicle discovery unavailable');
+    renderWidget();
+
+    const alert = screen.getByRole('alert');
+    expect(screen.queryByRole('img', { name: /digital twin/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+    expect(queries.vehicles.refetch).toHaveBeenCalledOnce();
+  });
+
+  it('does not let healthy retained vehicle metadata mask all telemetry initial failures', () => {
+    const queries = sources();
+    for (const source of ['state', 'security', 'charging'] as const) {
+      queries[source].data = undefined;
+      queries[source].isError = true;
+      queries[source].error = new Error(`${source} unavailable`);
+    }
+    const { container } = renderWidget();
+
+    expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="partial"]')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /digital twin/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sentry')).not.toBeInTheDocument();
+    expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
   });
 });

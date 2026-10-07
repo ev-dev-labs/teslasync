@@ -121,8 +121,7 @@ function AdminConnectionControl({
     disabled: t('statusBar.connectionDiagnostics.status.disabled', 'Disabled'),
   };
   const formatDiagnosticStatus = (value: string) =>
-    diagnosticStatusLabels[value] ??
-    (value.charAt(0).toUpperCase() + value.slice(1));
+    diagnosticStatusLabels[value] ?? value;
   const streamStatus =
     typeof stream?.status === 'string'
       ? formatDiagnosticStatus(stream.status)

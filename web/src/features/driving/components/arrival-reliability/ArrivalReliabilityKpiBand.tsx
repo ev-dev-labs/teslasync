@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import { arrivalIndex, arrivalPercent } from './labels';
 import { ArrivalReliabilityQueryStatus } from './ArrivalReliabilityQueryStatus';
@@ -18,6 +18,7 @@ import type {
   ArrivalReliabilityQueryState,
   DurationFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityKpiBandProps {
   analysis: ArrivalReliabilityResult;
@@ -32,6 +33,7 @@ export function ArrivalReliabilityKpiBand({
   locale,
   formatDuration,
 }: ArrivalReliabilityKpiBandProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unresolvedSubtitle = !state.vehicleSelected
@@ -178,7 +180,6 @@ export function ArrivalReliabilityKpiBand({
               resolved
                 ? formatDuration(
                     analysis.aggregate.sampleWeightedP90BufferS,
-                    { precision: 1 },
                   )
                 : '—'
             }

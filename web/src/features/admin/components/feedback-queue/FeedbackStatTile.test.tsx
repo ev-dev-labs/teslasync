@@ -136,4 +136,16 @@ describe('FeedbackStatTile', () => {
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.queryByText('0')).toBeNull()
   })
+
+  it('explicit unknown: keeps the metric identity and em-dash without announcing an indefinite load', () => {
+    const { container } = render(
+      <FeedbackStatTile label="Total feedback" icon={icon} color="cyan" value={undefined} loading={false} unknown />,
+    )
+    expect(screen.getByText('Total feedback')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('0')).toBeNull()
+    expect(screen.getByTestId('tile-icon')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(container.querySelector('.animate-pulse')).toBeNull()
+  })
 })

@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
 
 import type { Column } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import {
@@ -22,24 +21,27 @@ import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { FSMTransition, FSMType } from '@/types/fsm';
 import { FSM_TYPE_OPTIONS } from '@/types/fsm';
 import { StateBadge } from '../components/StateBadge';
 import { TimeStamp } from '@/components/data-display';
 import { FSMStateDiagram } from '../components/FSMStateDiagram';
-import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
+import { FSMHealthPanel } from '../components/FSMHealthPanel';
 import { FSMTimelineChart } from '../components/FSMTimelineChart';
 import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
 import { StateTimeline } from '../components/state-machine/StateTimeline';
 import { LiveControls } from '../components/state-machine/LiveControls';
 import { SnapshotInspector } from '../components/state-machine/SnapshotInspector';
-import { AIStateMachineDebuggerNarrator } from '@/components/ai/AIStateMachineDebuggerNarrator';
+import { AIStateMachineDebuggerNarrator } from '@/components/ai';
 import {
   windowTransitions,
   nextWiderPreset,
 } from '../components/state-machine/windowTransitions';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FSMOperationalBrief } from '../components/statstrip-fsm/FSMOperationalBrief';
+import type { StatPeriod } from '@/lib/metric-reference';
 
 /* ─── Vehicle state styling (for live state hero) ─── */
 const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
@@ -90,8 +92,9 @@ interface StatSummaryRow {
 
 /* ─── Page Component ─── */
 export default function StateMachineDebuggerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('fsm.title', 'FSM Debugger'));
+  usePageTitle(t('fsm.title', 'FSM debugger'));
 
   /* ─── Vehicle selector — global sticky picker ─── */
   const { vehicleId: selectedVehicleId, vehicles } = useSelectedVehicle();
@@ -174,10 +177,6 @@ export default function StateMachineDebuggerPage() {
   } = transQuery;
   const transError = transTrust.fatalError;
 
-  // The KPI band mixes transition-derived cards with the live-state card, so
-  // either query failing poisons it; retry refetches both sources.
-  const kpiError = transError ?? stateError;
-  const kpiLoading = (stateLoading || transLoading) && !kpiError;
   const retryKpiQueries = useCallback(() => {
     refetchTrans();
     refetchState();
@@ -192,7 +191,6 @@ export default function StateMachineDebuggerPage() {
   const transitions: FSMTransition[] = transData?.data ?? [];
   const totalRows = transData?.total ?? 0;
 
-  const flapIds = useMemo(() => computeFlapIds(transitions), [transitions]);
 
   /* ─── Pie chart data — state distribution ─── */
   const pieData = useMemo(() => {
@@ -248,6 +246,7 @@ export default function StateMachineDebuggerPage() {
       },
       {
         key: 'count',
+        align: 'right',
         header: t('fsm.count', 'Transitions'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
@@ -256,7 +255,8 @@ export default function StateMachineDebuggerPage() {
       },
       {
         key: 'avg_interval',
-        header: t('fsm.avgInterval', 'Avg Interval'),
+        align: 'right',
+        header: t('fsm.avgInterval', 'Avg interval'),
         className: 'text-right',
         render: (row: StatSummaryRow) => (
           <Text mono color="secondary">
@@ -265,7 +265,7 @@ export default function StateMachineDebuggerPage() {
         ),
       },
     ],
-    [t, fsmType],
+    [t, fsmType, fmtInt],
   );
 
   /* ─── DataTable columns — transition timeline with color-coded state badges ─── */
@@ -273,6 +273,7 @@ export default function StateMachineDebuggerPage() {
     () => [
       {
         key: 'index',
+        align: 'right',
         header: '#',
         className: 'w-12 text-right',
         render: (_row: FSMTransition, _idx?: number) => {
@@ -295,7 +296,7 @@ export default function StateMachineDebuggerPage() {
         key: 'fsm_name',
         header: t('fsm.type', 'FSM'),
         render: (row: FSMTransition) => (
-          <Text size="xs" color="secondary" mono className="capitalize">{row.fsm_name?.replace('_', ' ') ?? 'vehicle'}</Text>
+          <Text size="xs" color="secondary" mono className="">{row.fsm_name?.replace('_', ' ') ?? 'vehicle'}</Text>
         ),
       },
       {
@@ -369,8 +370,17 @@ export default function StateMachineDebuggerPage() {
     { value: '100', label: '100' },
   ];
 
-  // Compute totals from transitions data
-  const totalTransitionsOnPage = transitions.length;
+  const summaryPeriod: StatPeriod = startInstant && endInstantExclusive ? {
+    kind: 'analysis', label: activeRangeLabel, start: startInstant, endExclusive: endInstantExclusive,
+    timezone: vehicleTz, completeness: 'subset',
+    provenance: t('fsm.statstrip.provenance', 'Page and flap counts cover the loaded server page; total covers matching transitions in the selected window. Current state comes from a separate live-state snapshot.'),
+  } : !start && !end ? {
+    kind: 'alltime', label: activeRangeLabel,
+    provenance: t('fsm.statstrip.alltimeProvenance', 'All matching transition history; page and flap counts cover only loaded rows. Current state is a separate live snapshot.'),
+  } : {
+    kind: 'unknown', label: activeRangeLabel,
+    reason: t('fsm.statstrip.unknownPeriod', 'Transition bounds were not supplied. Page and flap counts remain page-scoped; current state is a separate live snapshot.'),
+  };
 
   // Map transitions for timeline chart: use to_state as the grouping key
   const timelineTransitions = useMemo(() =>
@@ -506,11 +516,11 @@ export default function StateMachineDebuggerPage() {
   const subFsmType = fsmType === 'all' ? 'vehicle' : fsmType;
 
   return (
-    <PageContainer
-      title={t('fsm.title', 'FSM Debugger')}
+    <PageLayout
+      title={t('fsm.title', 'FSM debugger')}
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
-      actions={
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2" data-tour="debugger-share">
           <Text as="span" size="xs" color="muted" className="hidden items-center gap-1 sm:flex">
             <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} aria-hidden="true" />
@@ -526,50 +536,13 @@ export default function StateMachineDebuggerPage() {
         </div>
       }
     >
-      <StaleRefreshWarning state={stateTrust} label={t('fsm.vehicleLiveState', 'Vehicle Live State')} />
+      <StaleRefreshWarning state={stateTrust} label={t('fsm.vehicleLiveState', 'Vehicle live state')} />
       <StaleRefreshWarning state={statsTrust} label={t('fsm.subFsms', 'Active sub-FSMs')} />
-      <StaleRefreshWarning state={transTrust} label={t('fsm.timelineTitle', 'Transition Log')} />
+      <StaleRefreshWarning state={transTrust} label={t('fsm.timelineTitle', 'Transition log')} />
       {/* ──── 1 — KPI band: full-width responsive metric grid ──── */}
       <FadeIn>
-        <section
-          aria-label={t('fsm.kpis', 'FSM summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          {kpiLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
-            ))
-          ) : kpiError ? (
-            <QueryError
-              error={kpiError}
-              onRetry={retryKpiQueries}
-              className="col-span-2 lg:col-span-4"
-            />
-          ) : (
-            <>
-          <StatCard
-            label={t('fsm.totalOnPage', 'Transitions (Page)')}
-            value={`${fmtInt(totalTransitionsOnPage)} / ${fmtInt(totalRows)}`}
-            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('fsm.totalTransitions', 'Total Transitions')}
-            value={fmtInt(totalRows)}
-            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('fsm.flapCount', 'Flap Warnings')}
-            value={fmtInt(flapIds.size)}
-            icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
-          />
-          <StatCard
-            label={t('fsm.currentState', 'Current State')}
-            value={stateName ?? '—'}
-            icon={<Zap className="h-4 w-4" aria-hidden="true" />}
-          />
-            </>
-          )}
-        </section>
+        <FSMOperationalBrief transitions={transQuery} stateQuery={stateQuery} currentState={stateName}
+          period={summaryPeriod} onRetry={retryKpiQueries} />
       </FadeIn>
 
       {/* ──── 2 — Page-specific filters (FSM Type + Per Page) ──── */}
@@ -580,7 +553,7 @@ export default function StateMachineDebuggerPage() {
               <div className="w-full sm:w-64">
                 <Select
                   id="fsm-type-select"
-                  label={t('fsm.fsmType', 'FSM Type')}
+                  label={t('fsm.fsmType', 'FSM type')}
                   help={{
                     i18nKey: 'help.fsm.type',
                     content:
@@ -656,7 +629,7 @@ export default function StateMachineDebuggerPage() {
         >
           <GlassPanel className="p-4 sm:p-6 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-1">
-              {t('fsm.vehicleLiveState', 'Vehicle Live State')}
+              {t('fsm.vehicleLiveState', 'Vehicle live state')}
               <HelpTooltip
                 size="xs"
                 i18nKey="help.fsm.liveState"
@@ -672,7 +645,7 @@ export default function StateMachineDebuggerPage() {
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-8">
                 <div
                   className={cn(
-                    'rounded-2xl px-6 py-4 text-2xl font-bold uppercase tracking-wider sm:px-8 sm:text-4xl',
+                    'rounded-2xl px-6 py-4 text-2xl font-bold tracking-wider sm:px-8 sm:text-4xl',
                     style.bg,
                     style.text,
                   )}
@@ -688,7 +661,7 @@ export default function StateMachineDebuggerPage() {
                 </div>
                 <div className="space-y-1">
                   <Text as="p" size="sm" color="secondary">
-                    <Text color="muted">{t('fsm.type', 'FSM Type')}:</Text>{' '}
+                    <Text color="muted">{t('fsm.type', 'FSM type')}:</Text>{' '}
                     <Text weight="medium" color="primary">{t('fsm.fsmTypeVehicle', 'Vehicle')}</Text>
                   </Text>
                   <Text as="p" size="sm" color="secondary">
@@ -803,7 +776,7 @@ export default function StateMachineDebuggerPage() {
           className="grid grid-cols-1 gap-4 lg:grid-cols-2"
         >
           <ChartContainer
-            title={t('fsm.distributionByState', 'State Distribution')}
+            title={t('fsm.distributionByState', 'State distribution')}
             ariaLabel={t('fsm.distributionByState.aria', 'FSM state distribution donut chart with per-state counts')}
             data={pieData.map((p) => ({ name: p.name, value: p.value }))}
             dataColumns={[
@@ -856,7 +829,7 @@ export default function StateMachineDebuggerPage() {
 
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4">
-              {t('fsm.transitionCounts', 'Transition Counts')}
+              {t('fsm.transitionCounts', 'Transition counts')}
             </PanelTitle>
             {transLoading ? (
               <Skeleton height={200} />
@@ -865,6 +838,7 @@ export default function StateMachineDebuggerPage() {
             ) : summaryRows.length > 0 ? (
               <DataTable<StatSummaryRow>
                 tableId="system:fsm-summary"
+                enableValueFilters={false}
                 columns={summaryColumns}
                 mobileColumns={['to_state', 'count', 'avg_interval']}
                 data={summaryRows}
@@ -890,7 +864,7 @@ export default function StateMachineDebuggerPage() {
       <FadeIn delay={0.27}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-4 flex flex-wrap items-center gap-2">
-            {t('fsm.timelineTitle', 'Transition Log')}
+            {t('fsm.timelineTitle', 'Transition log')}
             {totalRows > 0 && (
               <Text size="sm" weight="regular" color="muted">
                 {fmtInt(totalRows)} {t('fsm.total', 'total')}
@@ -909,6 +883,7 @@ export default function StateMachineDebuggerPage() {
             <>
               <DataTable<FSMTransition>
                 tableId="system:fsm-transitions"
+                enableValueFilters={false}
                 columns={timelineColumns}
                 mobileColumns={['time', 'from_state', 'to_state']}
                 data={transitions}
@@ -940,14 +915,14 @@ export default function StateMachineDebuggerPage() {
           <FadeIn key={selectedId}>
             <GlassPanel className="p-4 sm:p-5">
               <PanelTitle className="mb-4">
-                {t('fsm.detailTitle', 'Transition Detail')}
+                {t('fsm.detailTitle', 'Transition detail')}
               </PanelTitle>
               <TransitionDetail transition={selected} />
             </GlassPanel>
           </FadeIn>
         ) : null;
       })()}
-    </PageContainer>
+    </PageLayout>
   );
 }
 
@@ -966,16 +941,16 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       </div>
       {transition.fsm_name && (
         <div>
-          <Caption className="mb-1 block">{t('fsm.detail.name', 'FSM Name')}</Caption>
+          <Caption className="mb-1 block">{t('fsm.detail.name', 'FSM name')}</Caption>
           <Text mono color="primary">{transition.fsm_name}</Text>
         </div>
       )}
       <div>
-        <Caption className="mb-1 block">{t('fsm.detail.from', 'From State')}</Caption>
+        <Caption className="mb-1 block">{t('fsm.detail.from', 'From state')}</Caption>
         <StateBadge state={transition.from_state} fsmType={transition.fsm_name || 'vehicle'} />
       </div>
       <div>
-        <Caption className="mb-1 block">{t('fsm.detail.to', 'To State')}</Caption>
+        <Caption className="mb-1 block">{t('fsm.detail.to', 'To state')}</Caption>
         <StateBadge state={transition.to_state} fsmType={transition.fsm_name || 'vehicle'} />
       </div>
       <div>
@@ -990,7 +965,7 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       )}
       {typeof transition.details?.duration_in_state_ms === 'number' && transition.details.duration_in_state_ms > 0 && (
         <div>
-          <Caption className="mb-1 block">{t('fsm.detail.duration', 'Duration in State')}</Caption>
+          <Caption className="mb-1 block">{t('fsm.detail.duration', 'Duration in state')}</Caption>
           <Text mono color="primary">{formatDuration((transition.details.duration_in_state_ms as number) / 1000)}</Text>
         </div>
       )}

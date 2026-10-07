@@ -392,7 +392,7 @@ function renderPage(entries: string[] = ['/vehicles']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
         <VehicleListPage />
@@ -400,6 +400,7 @@ function renderPage(entries: string[] = ['/vehicles']) {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...view, client };
 }
 
 /** The vehicle-card grid `<section>` — robust scope for per-card assertions. */
@@ -425,6 +426,19 @@ beforeEach(() => {
 /* ─────────────────────────────── Happy path ─────────────────────────────── */
 
 describe('VehicleListPage — happy path', () => {
+  it('uses real raw bridges for both fleet summaries and reviews verified charge-state coverage', () => {
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]')).toHaveAttribute('data-value-state', 'value');
+    expect(briefMetric('Live utilization')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Charging / live state')).toBeInTheDocument();
+    expect(within(drawer).getByText('1 / 2')).toBeInTheDocument();
+    expect(within(drawer).getByText(/no common observation timestamp/)).toBeInTheDocument();
+  });
+
   it('renders the shell, the fleet KPI band, and a card per vehicle', async () => {
     renderPage();
 
@@ -438,9 +452,9 @@ describe('VehicleListPage — happy path', () => {
 
     // KPI band — scoped to its labelled landmark to avoid cross-panel collisions.
     const summary = screen.getByRole('region', { name: 'Fleet summary' });
-    expect(within(summary).getByText('Total Vehicles')).toBeInTheDocument();
-    expect(within(summary).getByText('Avg Battery')).toBeInTheDocument();
-    expect(within(summary).getByText('Total Range (km)')).toBeInTheDocument();
+    expect(within(summary).getByText('Total vehicles')).toBeInTheDocument();
+    expect(within(summary).getByText('Avg battery')).toBeInTheDocument();
+    expect(within(summary).getByText('Total range (km)')).toBeInTheDocument();
     // 1 charging (V1) of 2 vehicles reporting live state (V1, V2).
     expect(within(summary).getByText('1 / 2')).toBeInTheDocument();
 
@@ -498,7 +512,7 @@ describe('VehicleListPage — happy path', () => {
     unitState.length = 'mi';
     renderPage();
     const summary = await screen.findByRole('region', { name: 'Fleet summary' });
-    expect(within(summary).getByText('Total Range (mi)')).toBeInTheDocument();
+    expect(within(summary).getByText('Total range (mi)')).toBeInTheDocument();
     // 650_000 m / 1609.344 ≈ 403.89 mi — read through the real SI converter.
     const expected = fmtNumber(convertDistanceFromSI(650_000, 'mi'));
     expect(within(summary).getByText(expected)).toBeInTheDocument();
@@ -507,8 +521,8 @@ describe('VehicleListPage — happy path', () => {
 
   it('summarises battery bars and a per-status breakdown in the overview bento', async () => {
     renderPage();
-    expect(await screen.findByText('Fleet Battery Status')).toBeInTheDocument();
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(await screen.findByText('Fleet battery status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet status')).toBeInTheDocument();
 
     // Each loaded vehicle contributes a battery bar labelled with its name; the
     // same name also appears on its card, so a loaded vehicle renders ≥ 2 times.
@@ -541,13 +555,66 @@ describe('VehicleListPage — happy path', () => {
 /* ─────────────────────────────── Accessibility ──────────────────────────── */
 
 describe('VehicleListPage — accessibility & derived per-card data', () => {
+  it('keeps the selected preview open while fresh evidence becomes retained and recovers', async () => {
+    const { rerender, client } = renderPage();
+    fireEvent.click(within(cardGrid()).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
+    expect(within(drawer).getByText('Live')).toBeInTheDocument();
+    expect(within(drawer).getByText('80.00%')).toBeInTheDocument();
+
+    const rerenderPage = () => rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <VehicleListPage />
+          <LocationProbe />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    mockFleetStates.mockReturnValue(qr({ data: [
+      retainedEntry(V1, S1, Date.now() - 600_000),
+      resolvedEntry(V2, S2),
+      missingEntry(V3),
+    ] }));
+    rerenderPage();
+
+    expect(screen.getByRole('dialog', { name: 'Model 3 Alpha' })).toBe(drawer);
+    expect(within(drawer).getByText('Unknown')).toBeInTheDocument();
+    expect(within(drawer).getByText('Last known')).toBeInTheDocument();
+    expect(within(drawer).queryByText('Live')).not.toBeInTheDocument();
+    expect(within(drawer).queryByText('80.00%')).not.toBeInTheDocument();
+    expect(within(drawer).getByText(/Last known: 80\.00% .* not currently verified/)).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Open vehicle details' })).toBeEnabled();
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' })).toHaveAttribute('href', '/signals');
+
+    const recovered = makeState({ ...S1, battery_level: 63, rated_range: 315_000 });
+    mockFleetStates.mockReturnValue(qr({ data: [
+      resolvedEntry(V2, S2),
+      missingEntry(V3),
+      resolvedEntry(V1, recovered),
+    ] }));
+    rerenderPage();
+    expect(screen.getByRole('dialog', { name: 'Model 3 Alpha' })).toBe(drawer);
+    expect(within(drawer).getByText('Live')).toBeInTheDocument();
+    expect(within(drawer).getByText('63.00%')).toBeInTheDocument();
+    expect(within(drawer).getByText('315.00 km')).toBeInTheDocument();
+    expect(within(drawer).queryByText(/Last known: .*%/)).not.toBeInTheDocument();
+    expect(within(drawer).queryByText(/Last known: (400|315)\.00 km/)).not.toBeInTheDocument();
+    // Recovery verifies battery/range, not the unchanged sparse-feed fields.
+    expect(within(drawer).getAllByText(/Last known:/)).toHaveLength(2);
+    expect(within(drawer).getByText(/Last known: 100\.00 km .* not currently verified/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Last known: Locked .* not currently verified/)).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Open vehicle details' }));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles/1');
+  });
+
   it('exposes labelled landmarks and accessible names on icon-only controls', async () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
 
     expect(screen.getByRole('region', { name: 'Fleet summary' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fleet overview' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'All Vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'All vehicles' })).toBeInTheDocument();
 
     const grid = cardGrid();
     // One labelled battery progressbar per card; aria-valuenow tracks the level.
@@ -690,6 +757,21 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
 /* ─────────────────────────── User interactions ──────────────────────────── */
 
 describe('VehicleListPage — sync & compare actions', () => {
+  it('compares the first two retained roster members, not pinned display order or current-state coverage', async () => {
+    mockVehicles.mockReturnValue(qr({ data: [V2, V3, V1], isError: true, error: new Error('Roster refresh failed') }));
+    mockPinned.mockReturnValue(qr({ data: [{ id: 9, item_type: 'vehicle', item_id: 1, position: 0 }] }));
+    mockFleetStates.mockReturnValue(qr({ data: [
+      resolvedEntry(V1, S1), failedEntry(V2), missingEntry(V3),
+    ] }));
+    renderPage();
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .+ details$/ })[0])
+      .toHaveAccessibleName('Open Model 3 Alpha details');
+    fireEvent.click(await screen.findByRole('button', { name: 'Compare vehicles' }));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicle-comparison');
+    const params = new URLSearchParams(screen.getByTestId('location').getAttribute('data-search') ?? '');
+    expect([...params.entries()]).toEqual([['leftId', '2'], ['rightId', '3']]);
+  });
+
   it('fires the sync mutation when the header Sync button is pressed', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Sync from Tesla' }));
@@ -838,6 +920,28 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(syncMut.mutate).toHaveBeenCalled();
   });
 
+  it('keeps every empty fleet section with the existing shared sync recovery rather than duplicating mutations', () => {
+    mockVehicles.mockReturnValue(qr({ data: [] }));
+    mockFleetStates.mockReturnValue(qr({ data: [] }));
+    renderPage();
+
+    for (const section of ['Fleet posture', 'Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByText(`No fleet records for ${section}.`)).toBeInTheDocument();
+    }
+    for (const section of ['Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByRole('region', { name: section })).toBeInTheDocument();
+    }
+    expect(screen.queryByTestId('fleet-operational-brief')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total range (km)')).not.toBeInTheDocument();
+    const syncButtons = screen.getAllByRole('button', { name: 'Sync from Tesla' });
+    expect(syncButtons).toHaveLength(2);
+    fireEvent.click(syncButtons[1]!);
+    expect(syncMut.mutate).toHaveBeenCalledTimes(1);
+    expect(syncMut.mutate).toHaveBeenCalledWith(undefined, expect.objectContaining({
+      onSuccess: expect.any(Function),
+    }));
+  });
+
   it('shows fleet-states skeletons while keeping every card visible', () => {
     mockFleetStates.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderPage();
@@ -865,7 +969,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     // The breakdown bar is a progressbar labelled with the status name.
     expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
     // The panel header still anchors the section — nothing is hidden.
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet status')).toBeInTheDocument();
   });
 
   it('keeps the retained status breakdown during a BACKGROUND fleet-state refresh', () => {

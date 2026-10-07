@@ -104,10 +104,13 @@ export function StatusAwareError({
         role: 'status',
         tone: 'info',
         title: t('error.waiting.title', 'Waiting for upstream'),
-        message: t(
-          'error.waiting.message',
-          "We're pausing requests briefly. Data will refresh automatically.",
-        ),
+        message: onRetry
+          ? t('error.waiting.retryMessage', 'Requests are paused briefly. Wait before retrying.')
+          : t(
+            'error.waiting.message',
+            "We're pausing requests briefly. Data will refresh automatically.",
+          ),
+        action: retryAction,
       }
       break
     case 'not_found': {

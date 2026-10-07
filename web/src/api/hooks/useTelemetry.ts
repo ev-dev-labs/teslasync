@@ -3,6 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { queryPolicy } from '../queryPolicy';
+import { deriveDataState, type DataState } from '../dataState';
 import { useToast } from '@/components/feedback/Toast';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
 import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
@@ -52,8 +53,14 @@ export interface SignalEvidenceBundleSeries {
   response: SignalHistoryResponse;
 }
 
+export interface SignalEvidenceBundleSource {
+  signal: string;
+  state: DataState<SignalHistoryResponse>;
+}
+
 export interface SignalEvidenceBundleResult {
   data: SignalEvidenceBundleSeries[];
+  sources: SignalEvidenceBundleSource[];
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -219,6 +226,8 @@ export function useSignalAnalysisHistory(
  * Loads a bounded set of signal histories for local evidence analysis.
  * Each signal keeps an independent cache entry and cancellation signal so
  * changing the focal signal does not strand obsolete multi-request work.
+ * Sources include pending and failed identities; retained responses remain
+ * in data after refresh failure, with historical trust and retry metadata.
  */
 export function useSignalEvidenceBundle(
   vehicleId: number,
@@ -254,6 +263,15 @@ export function useSignalEvidenceBundle(
       refetchInterval: false,
     })),
     combine: (results): SignalEvidenceBundleResult => ({
+      sources: results.map((result, index) => ({
+        signal: normalizedSignals[index]!,
+        state: deriveDataState(result, {
+          provenance: 'historical',
+          unavailable: result.isSuccess
+            && Array.isArray(result.data?.data)
+            && result.data.data.length === 0,
+        }),
+      })),
       data: results.flatMap((result, index) =>
         result.data == null
           ? []

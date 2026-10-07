@@ -1,20 +1,43 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { InsightsEngine } from './InsightsEngine'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 
 vi.mock('@/hooks/useFormatting', () => ({
-  useFormatting: () => ({
-    formatCurrency: (amount: number, decimals = 2) =>
-      `$${Number(amount).toFixed(decimals)}`,
-    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
-    currencySymbol: '$',
-    costPerKwh: 0.12,
-    costPerDistanceUnit: () => null,
-    estimateGasCost: () => null,
-  }),
+  useFormatting: () => {
+    const { fmtNumber } = useNumberFormatting()
+    return {
+      formatCurrency: (amount: number, decimals?: number) => `$${fmtNumber(amount, decimals)}`,
+      formatEnergyCost: (kwh: number) => `$${fmtNumber(kwh * 0.12)}`,
+      currencySymbol: '$',
+      costPerKwh: 0.12,
+      costPerDistanceUnit: () => null,
+      estimateGasCost: () => null,
+    }
+  },
 }))
 
 describe('InsightsEngine', () => {
+  it('refreshes memoized insights for the same data while preserving counts and severity', () => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+    const data = {
+      chargingSessions: [
+        { cost: 1.23456, charge_energy_added: 1 },
+        { cost: 1.23456, charge_energy_added: 1 },
+      ],
+      vampireDrainStats: { avg_drain_pct_per_day: 3.4567, p95_drain_pct_per_day: 4.5678, event_count: 1234 },
+    }
+    const { container } = render(<InsightsEngine data={data as never} />)
+    expect(screen.getByText('Your average charging cost is $1.23/kWh.')).toBeInTheDocument()
+    expect(screen.getByText(/3.46% per day; P95 is 4.57% across 1,234 observed windows/)).toBeInTheDocument()
+    const classes = container.innerHTML.match(/border[^"]*/g)
+    act(() => setGlobalPrecision(3))
+    expect(screen.getByText('Your average charging cost is $1.235/kWh.')).toBeInTheDocument()
+    expect(screen.getByText(/3.457% per day; P95 is 4.568% across 1,234 observed windows/)).toBeInTheDocument()
+    expect(container.innerHTML.match(/border[^"]*/g)).toEqual(classes)
+  })
   it('renders nothing with empty data', () => {
     const { container } = render(<InsightsEngine data={{}} />)
     expect(container.innerHTML).toBe('')

@@ -464,8 +464,8 @@ describe('CommandDeck', () => {
       suggestions: [{ ...alertsItem, reason: '1 need attention', kind: 'now' as const }],
     })
     fireEvent.click(desktopRail().getByRole('button', { name: 'Suggested' }))
-    expect(secondaryPanel().getByText('Recently Used')).toBeInTheDocument()
-    // Recently Used starts collapsed so suggestions own the first paint.
+    expect(secondaryPanel().getByText('Recently used')).toBeInTheDocument()
+    // Recently used starts collapsed so suggestions own the first paint.
     expect(secondaryPanel().queryByRole('link', { name: 'Trips' })).not.toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Show recently used' }))
     expect(secondaryPanel().getByRole('link', { name: 'Trips' })).toBeInTheDocument()

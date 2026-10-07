@@ -9,7 +9,10 @@ import { useQueuedCheckIn } from '../hooks/useQueuedCheckIn';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { Badge, Button, Text } from '@/components/ui';
-import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
+import { MetricBar } from '@/components/data-display';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { EmptyState, ListSkeleton } from '@/components/feedback';
+import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
 import { formatTime } from '@/lib/dateFormat';
 import { safeArray } from '@/lib/safeArray';
 
@@ -58,6 +61,13 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
 
   const { checkIn, queued, isPending: checkInPending } = useQueuedCheckIn(session.id);
   const busy = liveQuery.isLoading || checkInPending;
+  const emptyTrip = (
+    <EmptyState
+      icon={<Icons.navigation className="h-10 w-10" aria-hidden="true" />}
+      message={t('journey.live.empty', 'No fixes yet. Check in to drop the first trail point.')}
+      action={{ label: t('journey.live.checkIn', 'Check in'), onClick: checkIn }}
+    />
+  );
 
   const pct =
     view?.progress != null && view.progress.total_m > 0
@@ -65,13 +75,10 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
       : null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Text as="p" variant="label" className="flex items-center gap-2">
-          <Icons.satellite className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('journey.live.title', 'Live trip')}
-        </Text>
-        <div className="flex items-center gap-2">
+    <LayoutCard
+      title={t('journey.live.title', 'Live trip')}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
           {queued > 0 ? (
             <Text as="p" variant="caption" className="tabular-nums">
               {t('journey.live.queued', '{{count}} queued', { count: queued })}
@@ -79,6 +86,7 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
           ) : null}
           {view?.latest != null ? (
             <Button
+              wrapLabel
               variant="secondary"
               size="sm"
               loading={checkInPending}
@@ -88,25 +96,20 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
             </Button>
           ) : null}
         </div>
-      </div>
-
-      {busy ? (
-        <ListSkeleton label={t('journey.live.loading', 'Loading live trip…')} />
-      ) : liveState.fatalError ? (
-        <QueryError error={liveState.fatalError} onRetry={() => liveState.retry?.()} />
-      ) : view == null || view.latest == null ? (
-        <EmptyState
-          icon={<Icons.navigation className="h-10 w-10" aria-hidden="true" />}
-          message={t(
-            'journey.live.empty',
-            'No fixes yet. Check in to drop the first trail point.',
-          )}
-          action={{
-            label: t('journey.live.checkIn', 'Check in'),
-            onClick: checkIn,
-          }}
-        />
-      ) : (
+      }
+    >
+      <SourceContent
+        state={busy && view?.latest == null ? 'loading' : liveState.fatalError ? 'error'
+          : liveState.status === 'stale' ? 'retained' : view?.latest == null ? 'empty' : 'ready'}
+        label={t('journey.live.title', 'Live trip')}
+        emptyMessage={t('journey.live.empty', 'No fixes yet. Check in to drop the first trail point.')}
+        errorMessage={t('journey.live.loadFailed', 'The live trip could not be loaded.')}
+        error={liveState.fatalError}
+        errorRecovery={{ onRetry: liveState.retry ?? undefined }}
+        loadingContent={<ListSkeleton label={t('journey.live.loading', 'Loading live trip…')} />}
+        emptyContent={emptyTrip}
+      >
+      {view?.latest != null ? (
         <div className="space-y-3">
           {pct != null && view.progress != null ? (
             <div>
@@ -119,19 +122,14 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
                   {t('journey.live.remaining', 'remaining')}
                 </Text>
               </div>
-              <div
-                role="progressbar"
-                aria-valuenow={Math.round(pct)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={t('journey.live.progress', 'Progress')}
-                className="h-2 overflow-hidden rounded-full bg-white/[0.07]"
-              >
-                <div
-                  className="h-full rounded-full bg-emerald-500/70 transition-[width]"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
+              <MetricBar
+                value={pct}
+                max={100}
+                color="var(--color-emerald-500, #10b981)"
+                fill="solid"
+                showHeader={false}
+                ariaLabel={t('journey.live.progress', 'Progress')}
+              />
             </div>
           ) : null}
 
@@ -183,17 +181,10 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
             · {t('journey.live.fixes', '{{count}} fixes', { count: trail.length })}
           </Text>
 
-          {liveEvidence.length > 0 ? (
-            <ul className="space-y-1">
-              {liveEvidence.map((line) => (
-                <Text as="li" key={line} size="xs" color="muted">
-                  · {line}
-                </Text>
-              ))}
-            </ul>
-          ) : null}
+          <JourneyEvidenceList evidence={liveEvidence} />
         </div>
-      )}
-    </div>
+      ) : emptyTrip}
+      </SourceContent>
+    </LayoutCard>
   );
 }

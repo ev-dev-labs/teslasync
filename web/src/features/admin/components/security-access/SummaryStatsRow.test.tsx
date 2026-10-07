@@ -61,10 +61,10 @@ type Props = {
 
 /** English fallbacks the mocked `t` echoes for each card label. */
 const LABELS = {
-  status: 'Current Status',
-  lastLock: 'Last Lock Change',
-  sentryUptime: 'Sentry Uptime',
-  totalEvents: 'Total Events',
+  status: 'Current status',
+  lastLock: 'Last lock change',
+  sentryUptime: 'Sentry uptime',
+  totalEvents: 'Total events',
 } as const;
 
 function renderRow(props: Partial<Props> = {}) {

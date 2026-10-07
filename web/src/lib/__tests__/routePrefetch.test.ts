@@ -29,6 +29,12 @@ describe('routePrefetch', () => {
   })
 
   describe('isPrefetchablePath', () => {
+    it('includes developer references in development only', () => {
+      for (const path of ['/dev/grid-states', '/dev/layout', '/dev/stats']) {
+        expect(isPrefetchablePath(path)).toBe(import.meta.env.DEV)
+      }
+    })
+
     it('returns true for known top-level routes', () => {
       expect(isPrefetchablePath('/')).toBe(true)
       expect(isPrefetchablePath('/battery')).toBe(true)

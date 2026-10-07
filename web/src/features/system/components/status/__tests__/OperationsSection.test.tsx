@@ -130,7 +130,7 @@ describe('OperationsSection — header success-rate badge', () => {
     renderSection()
 
     const badge = await screen.findByText(/success rate/i)
-    expect(badge).toHaveTextContent('95.0%')
+    expect(badge).toHaveTextContent('95.00%')
     expect(badge.className).toContain('bg-green-100')
     // Header title/description are visible even while the accordion is collapsed.
     expect(screen.getByText('Operations')).toBeInTheDocument()
@@ -142,7 +142,7 @@ describe('OperationsSection — header success-rate badge', () => {
     mockGetStats.mockResolvedValue(makeStats({ total_sent: 100, sent: 90, failed: 10 }))
     const { unmount } = renderSection()
     const warn = await screen.findByText(/success rate/i)
-    expect(warn).toHaveTextContent('90.0%')
+    expect(warn).toHaveTextContent('90.00%')
     expect(warn.className).toContain('bg-yellow-100')
     unmount()
 
@@ -150,7 +150,7 @@ describe('OperationsSection — header success-rate badge', () => {
     mockGetStats.mockResolvedValue(makeStats({ total_sent: 100, sent: 70, failed: 30 }))
     renderSection()
     const danger = await screen.findByText(/success rate/i)
-    expect(danger).toHaveTextContent('70.0%')
+    expect(danger).toHaveTextContent('70.00%')
     expect(danger.className).toContain('bg-red-100')
   })
 })
@@ -166,7 +166,7 @@ describe('OperationsSection — loading', () => {
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1)
     // Body content has not resolved yet.
-    expect(screen.queryByText('Notification Delivery')).toBeNull()
+    expect(screen.queryByText('Notification delivery')).toBeNull()
     expect(screen.getByRole('button', { name: /Operations/i })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -191,11 +191,11 @@ describe('OperationsSection — populated', () => {
     expand()
 
     // Section headings.
-    expect(await screen.findByText('Notification Delivery')).toBeInTheDocument()
-    expect(screen.getByText('Audit Log')).toBeInTheDocument()
+    expect(await screen.findByText('Notification delivery')).toBeInTheDocument()
+    expect(screen.getByText('Audit log')).toBeInTheDocument()
 
     // Metric cards (label + formatted value).
-    expect(screen.getByText('Total Sent')).toBeInTheDocument()
+    expect(screen.getByText('Total sent')).toBeInTheDocument()
     expect(screen.getByText('200')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
     expect(screen.getByText('10')).toBeInTheDocument()
@@ -203,7 +203,7 @@ describe('OperationsSection — populated', () => {
     expect(screen.getByText('3/5')).toBeInTheDocument()
 
     // Gauge renders the integer success value and its label.
-    expect(screen.getByText('95')).toBeInTheDocument()
+    expect(screen.getByText('95.00')).toBeInTheDocument()
     expect(screen.getByText('Success')).toBeInTheDocument()
 
     // Notification-log row.
@@ -229,8 +229,8 @@ describe('OperationsSection — populated', () => {
     expect(await screen.findByText('No recent notifications')).toBeInTheDocument()
     expect(screen.getByText('No audit log entries')).toBeInTheDocument()
     // Metrics still render alongside the empty tables (never a blank panel).
-    expect(screen.getByText('Total Sent')).toBeInTheDocument()
-    expect(screen.getByText('Notification Delivery')).toBeInTheDocument()
+    expect(screen.getByText('Total sent')).toBeInTheDocument()
+    expect(screen.getByText('Notification delivery')).toBeInTheDocument()
   })
 })
 
@@ -261,7 +261,7 @@ describe('OperationsSection — failure paths', () => {
     expect(alerts.length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText(/reach server/i).length).toBeGreaterThanOrEqual(1)
     // No metric cards and no header badge when stats failed.
-    expect(screen.queryByText('Total Sent')).toBeNull()
+    expect(screen.queryByText('Total sent')).toBeNull()
     expect(screen.queryByText(/success rate/i)).toBeNull()
   })
 
@@ -282,7 +282,7 @@ describe('OperationsSection — failure paths', () => {
     expand()
 
     // Delivery metrics still render despite the logs failure.
-    expect(await screen.findByText('Total Sent')).toBeInTheDocument()
+    expect(await screen.findByText('Total sent')).toBeInTheDocument()
     expect(screen.getByText('2/4')).toBeInTheDocument()
     // The failed logs query surfaces its own inline error.
     expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1)
@@ -307,11 +307,11 @@ describe('OperationsSection — null safety', () => {
 
     renderSection()
     const badge = await screen.findByText(/success rate/i)
-    expect(badge).toHaveTextContent('100.0%')
+    expect(badge).toHaveTextContent('100.00%')
     expect(badge.className).toContain('bg-green-100')
 
     expand()
     expect(await screen.findByText('0/0')).toBeInTheDocument()
-    expect(screen.getByText('Total Sent')).toBeInTheDocument()
+    expect(screen.getByText('Total sent')).toBeInTheDocument()
   })
 })

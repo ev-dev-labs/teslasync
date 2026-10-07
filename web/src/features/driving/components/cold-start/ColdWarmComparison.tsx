@@ -14,12 +14,13 @@ import {
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { ColdStartSummary } from '../../lib/coldStart';
 import { ColdStartSectionBody } from './ColdStartSectionBody';
 import type { ColdStartSectionState } from './types';
 import { useColdStartDisplay } from './useColdStartDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ColdWarmComparisonProps {
   summary: ColdStartSummary;
@@ -35,6 +36,7 @@ export function ColdWarmComparison({
   state,
   className,
 }: ColdWarmComparisonProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEfficiency, formatEnergy } = useColdStartDisplay();
   const classified = summary.cold.drives + summary.warm.drives;
@@ -51,7 +53,7 @@ export function ColdWarmComparison({
     summary.penaltyShare != null
       ? t('coldStart.penaltyVsWarm', '{{sign}}{{pct}}% vs warm starts', {
           sign: summary.penaltyShare > 0 ? '+' : summary.penaltyShare < 0 ? '−' : '',
-          pct: fmtNumber(Math.abs(summary.penaltyShare) * 100, 0),
+          pct: fmtNumber(Math.abs(summary.penaltyShare) * 100),
         })
       : t('coldStart.comparison.awaitingDelta', 'Aggregate difference withheld');
 
@@ -145,7 +147,7 @@ export function ColdWarmComparison({
                           'coldStart.takeawayCost',
                           'Warm-up overhead added {{energy}} across this period — about {{cost}} at your electricity rate. Preconditioning while plugged in shifts that energy to the wall.',
                           {
-                            energy: formatEnergy(summary.totalPenaltyWh, { precision: 1 }),
+                            energy: formatEnergy(summary.totalPenaltyWh),
                             cost: penaltyCostLabel,
                           },
                         )
@@ -153,7 +155,7 @@ export function ColdWarmComparison({
                           'coldStart.takeaway',
                           'Warm-up overhead added {{energy}} across this period. Preconditioning while plugged in shifts that energy to the wall.',
                           {
-                            energy: formatEnergy(summary.totalPenaltyWh, { precision: 1 }),
+                            energy: formatEnergy(summary.totalPenaltyWh),
                           },
                         )
                     : t(

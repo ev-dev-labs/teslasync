@@ -149,6 +149,39 @@ describe('BrowserPushChannelCard', () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
+  it('retains complete registered-device names and endpoint identity after a list refresh failure', () => {
+    const ua = 'Complete browser and device description that remains readable without truncation';
+    const endpoint = 'https://push.example/retained-device';
+    const retry = vi.fn();
+    subsMock.mockReturnValue({
+      data: [makeRow(7, endpoint, { user_agent: ua })],
+      isError: true, error: new Error('device list offline'), refetch: retry,
+    });
+    renderCard();
+    expect(screen.getByText(ua)).toHaveClass('break-words');
+    expect(screen.getByText(ua)).not.toHaveClass('truncate');
+    expect(subscribeFn).not.toHaveBeenCalled();
+    expect(unsubMutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove this device' }));
+    expect(unsubMutateAsync).toHaveBeenCalledWith(endpoint);
+  });
+
+  it('keeps retained key availability distinct from a fatal key failure', () => {
+    publicKeyMock.mockReturnValue({
+      data: 'VAPID_PUBLIC_KEY', isLoading: false, isError: true,
+      error: new Error('key refresh offline'), refetch: refetchKey,
+    });
+    renderCard();
+    expect(screen.getByRole('button', { name: 'Enable on this device' })).toBeEnabled();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't check browser push availability.")).not.toBeInTheDocument();
+    expect(subscribeFn).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchKey).toHaveBeenCalledOnce();
+  });
+
   // ── Ready state ─────────────────────────────────────────────────────────────
   it('renders the channel header, "Not subscribed" badge, Enable button and iOS note', () => {
     renderCard();

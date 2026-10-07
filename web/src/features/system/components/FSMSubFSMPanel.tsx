@@ -25,8 +25,8 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
   if (subs.length === 0) {
     return (
       <GlassPanel className="p-4">
-        <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-2">
-          {t('fsm.subFSMs', 'Active Sub-FSMs')}
+        <h2 className="text-xs font-medium text-[var(--text-secondary)] tracking-wider mb-2">
+          {t('fsm.subFSMs', 'Active sub-FSMs')}
         </h2>
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noSubFSMs', 'No active drive or charge sessions')} />
       </GlassPanel>
@@ -35,15 +35,15 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
 
   return (
     <GlassPanel className="p-4">
-      <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-        {t('fsm.subFSMs', 'Active Sub-FSMs')}
+      <h2 className="text-xs font-medium text-[var(--text-secondary)] tracking-wider mb-3">
+        {t('fsm.subFSMs', 'Active sub-FSMs')}
       </h2>
       <Grid cols={{ default: 1, md: 2 }} gap={3}>
         {subs.map((sub) => {
           const Icon = sub.type === 'drive' ? Car : Zap;
           const label = sub.type === 'drive'
-            ? t('fsm.activeDrive', 'Drive Session')
-            : t('fsm.activeCharge', 'Charge Session');
+            ? t('fsm.activeDrive', 'Drive session')
+            : t('fsm.activeCharge', 'Charge session');
           const terminalStates = sub.type === 'drive'
             ? ['completed', 'recovered']
             : ['done', 'recovered'];

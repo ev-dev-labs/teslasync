@@ -33,7 +33,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -286,7 +286,7 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const result = render(
     <MemoryRouter initialEntries={['/admin/backup']}>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -295,11 +295,18 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...result, client };
 }
 
 // Wait until both queries have resolved and the KPI band replaced its skeleton.
 async function waitForLoaded() {
-  await screen.findByText('Total Configs');
+  await waitFor(() => {
+    const summary = screen.getByTestId('backup-restore-summary');
+    expect(summary.querySelector('[data-operational-metric="configs"]')).toHaveAttribute('data-value-state', 'value');
+    expect(summary.querySelector('[data-operational-metric="backups"]')).toHaveAttribute('data-value-state', 'value');
+  });
+  expect(screen.getByText('Total configs')).toBeInTheDocument();
+  expect(screen.getByText('Total backups')).toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -312,6 +319,21 @@ afterEach(() => {
 });
 
 describe('BackupRestorePage — data rendering', () => {
+  it('preserves returned-list scope and all six measurements in the real brief and drawer', async () => {
+    renderPage();
+    await waitForLoaded();
+    const summary = screen.getByTestId('backup-restore-summary');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(summary.querySelector('[data-operational-metric="size"]')).toHaveAttribute('data-value-state', 'value');
+    expect(summary).toHaveTextContent('not a server-wide total');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('returned run list');
+    expect(screen.getByRole('button', { name: 'Quick backup' })).toBeInTheDocument();
+    expect(screen.getByText('Backup history')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+  });
+
   it('renders the KPI band with derived totals, success-rate and size', async () => {
     renderPage();
     await waitForLoaded();
@@ -320,14 +342,14 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.getByRole('region', { name: 'Backup overview' })).toBeInTheDocument();
 
     // Labels for all six KPIs.
-    expect(screen.getByText('Total Configs')).toBeInTheDocument();
-    expect(screen.getByText('Total Backups')).toBeInTheDocument();
-    expect(screen.getByText('Failed Runs')).toBeInTheDocument();
-    expect(screen.getByText('Total Size')).toBeInTheDocument();
+    expect(screen.getByText('Total configs')).toBeInTheDocument();
+    expect(screen.getByText('Total backups')).toBeInTheDocument();
+    expect(screen.getByText('Failed runs')).toBeInTheDocument();
+    expect(screen.getByText('Total size')).toBeInTheDocument();
 
     // Derived values: 3 completed of 4 → 75%, total size 8.0 MB.
-    expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
-    expect(screen.getByText('8.0 MB')).toBeInTheDocument();
+    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
+    expect(screen.getByText('8.00 MB')).toBeInTheDocument();
   });
 
   it('lists backup configurations and flags disabled ones', async () => {
@@ -344,12 +366,12 @@ describe('BackupRestorePage — data rendering', () => {
     renderPage();
     await waitForLoaded();
 
-    expect(screen.getByText('Reliability & Storage')).toBeInTheDocument();
+    expect(screen.getByText('Reliability & storage')).toBeInTheDocument();
     // Completed-vs-total sublabel.
     expect(screen.getByText('3 / 4')).toBeInTheDocument();
     // s3 accumulates 6MB across 2 runs (sorted first by size).
-    expect(screen.getByText('6.0 MB · 2')).toBeInTheDocument();
-    expect(screen.getByText('2.0 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText('6.00 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText('2.00 MB · 2')).toBeInTheDocument();
     // The single failed run surfaces in Recent Errors.
     expect(screen.getByText(/disk full/)).toBeInTheDocument();
   });
@@ -385,7 +407,7 @@ describe('BackupRestorePage — data rendering', () => {
     await waitForLoaded();
 
     expect(await screen.findByText('Partial data')).toBeInTheDocument();
-    expect(screen.getByText('Backup configurations')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Backup configurations' })).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Backup runs')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
@@ -394,6 +416,52 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.queryByText('Nightly Full')).not.toBeInTheDocument();
     expect(screen.getByText('backup-101.sql.gz')).toBeInTheDocument();
   });
+
+  it('retains both independent sources and every completed-run action after refresh failure', async () => {
+    const { client } = renderPage();
+    await waitForLoaded();
+    await screen.findByText('backup-101.sql.gz');
+    routeState.configsError = new Error('config refresh failed');
+    routeState.runsError = new Error('run refresh failed');
+
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['backup-configs'] });
+      await client.refetchQueries({ queryKey: ['backup-runs'] });
+    });
+    await waitFor(() => expect(screen.getAllByText('Data may be stale').length).toBeGreaterThan(0));
+    expect(screen.getByText('Nightly Full')).toBeInTheDocument();
+    expect(screen.getByText('Weekly Local')).toBeInTheDocument();
+    expect(screen.getByText('backup-101.sql.gz')).toBeInTheDocument();
+    expect(screen.getByText('3 / 4')).toBeInTheDocument();
+    expect(screen.getByText('6.00 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText(/disk full/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Download' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Verify' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
+    expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
+  });
+
+  it('keeps the known config count while failed run-source metrics remain unknown', async () => {
+    configureRoutes({ runsError: new Error('runs unavailable') });
+    renderPage();
+    await waitForLoaded();
+    const band = screen.getByRole('region', { name: 'Backup overview' });
+    expect(within(band).getByText('2')).toBeInTheDocument();
+    expect(within(band).getAllByText('—')).toHaveLength(5);
+    expect(screen.getByText('Nightly Full')).toBeInTheDocument();
+    expect(screen.queryByText('0 B')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New config' })).toBeInTheDocument();
+  });
+
+  it('retains an authoritative zero-byte file rather than rendering it as missing', async () => {
+    configureRoutes({ runs: [makeRun({ file_name: 'zero-length-backup.sql.gz', file_size: 0 })] });
+    renderPage();
+    await waitForLoaded();
+    const row = screen.getByRole('row', { name: /zero-length-backup\.sql\.gz/ });
+    expect(within(row).getByText(/^0(?:[.,]0+)?\s*B$/)).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Download' })).toBeInTheDocument();
+  });
 });
 
 describe('BackupRestorePage — actions & mutations', () => {
@@ -401,7 +469,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Quick Backup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Quick backup' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -416,7 +484,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Config' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New config' }));
 
     const dialog = await screen.findByRole('dialog');
     const createBtn = within(dialog).getByRole('button', { name: 'Create' });
@@ -448,7 +516,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Config' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New config' }));
     const dialog = await screen.findByRole('dialog');
 
     // Default provider is local → a single Path field.
@@ -462,7 +530,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     // S3 reveals bucket/region/credentials and drops the local Path field.
     expect(within(dialog).getByLabelText(/Bucket/)).toBeInTheDocument();
     expect(within(dialog).getByLabelText(/Region/)).toBeInTheDocument();
-    expect(within(dialog).getByLabelText(/Secret Key/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Secret key/)).toBeInTheDocument();
     expect(within(dialog).queryByLabelText(/Path/)).not.toBeInTheDocument();
   });
 
@@ -478,7 +546,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     expect(nameInput.value).toBe('Nightly Full');
 
     fireEvent.change(nameInput, { target: { value: 'Nightly Full v2' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save Changes' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -627,6 +695,6 @@ describe('BackupRestorePage — restore preview', () => {
 
     expect(await screen.findByText('Failed to load preview')).toBeInTheDocument();
     // The restore-preview modal never opened.
-    expect(screen.queryByText('Restore Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Restore preview')).not.toBeInTheDocument();
   });
 });

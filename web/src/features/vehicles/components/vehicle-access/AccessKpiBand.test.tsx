@@ -12,13 +12,11 @@
  *      disagree" contract with the detail tables below — verified by pairing
  *      each value to its own card container, not just asserting it exists
  *      somewhere on screen.
- *   3. Null-safety: a partial/undefined figure collapses that card to `0`
- *      rather than a blank value, so the band never disappears (matching the
- *      `?? 0` guard and the sibling LiveSignalKpiBand contract).
+ *   3. Null-safety: missing figures stay unknown, distinct from real zero.
  *   4. An explicit all-zero snapshot still renders the full four-card band.
  *
  * react-i18next is stubbed to echo the English fallback so the copy we assert
- * on is decoupled from the locale bundle. <MetricCard> renders for real — it is
+ * on is decoupled from the locale bundle. <StatStrip> renders for real — it is
  * a stable shared primitive with its own tests — so the assertions exercise the
  * true label → value → icon wiring end-to-end.
  */
@@ -48,17 +46,14 @@ function expectAllFourCards() {
   expect(screen.getByText('Drivers')).toBeInTheDocument();
   expect(screen.getByText('Invitations')).toBeInTheDocument();
   expect(screen.getByText('Pending')).toBeInTheDocument();
-  expect(screen.getByText('Expiring Soon')).toBeInTheDocument();
+  expect(screen.getByText('Expiring soon')).toBeInTheDocument();
 }
 
 /**
- * Resolve the card-content container for a given label. The label text lives in
- * a `<span>` nested in the metric-label `<p>`; its nearest `<div>` ancestor is
- * the MetricCard content column that also holds the value — so scoping queries
- * to it proves a value belongs to THIS card and not a sibling.
+ * Resolve the semantic tile containing the label and value.
  */
 function cardFor(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('div');
+  const el = screen.getByText(label).closest('[data-stat]');
   if (!el) throw new Error(`no card container found for label "${label}"`);
   return el as HTMLElement;
 }
@@ -101,7 +96,7 @@ describe('AccessKpiBand — value surfacing', () => {
     expect(within(cardFor('Drivers')).getByText('3')).toBeInTheDocument();
     expect(within(cardFor('Invitations')).getByText('12')).toBeInTheDocument();
     expect(within(cardFor('Pending')).getByText('5')).toBeInTheDocument();
-    expect(within(cardFor('Expiring Soon')).getByText('2')).toBeInTheDocument();
+    expect(within(cardFor('Expiring soon')).getByText('2')).toBeInTheDocument();
   });
 
   it('does not leak a value into the wrong card', () => {
@@ -119,35 +114,33 @@ describe('AccessKpiBand — value surfacing', () => {
 // ── Null-safety & empty snapshot ──────────────────────────────────────────────
 
 describe('AccessKpiBand — null-safety & empty state', () => {
-  it('collapses every undefined figure to 0 instead of a blank card value', () => {
-    // A malformed/mid-flight payload: all four props absent at runtime. The
-    // `?? 0` guard must render "0" for each card while the band stays whole.
+  it('keeps every undefined figure unknown instead of fabricating zero', () => {
     render(
       <AccessKpiBand
-        drivers={undefined as unknown as number}
-        invitations={undefined as unknown as number}
-        pending={undefined as unknown as number}
-        expiringSoon={undefined as unknown as number}
+        drivers={undefined}
+        invitations={undefined}
+        pending={undefined}
+        expiringSoon={undefined}
       />,
     );
 
     expectAllFourCards();
-    expect(screen.getAllByText('0')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
-  it('collapses only the missing figure, leaving well-formed counts intact', () => {
+  it('marks only the missing figure unknown, leaving well-formed counts intact', () => {
     render(
       <AccessKpiBand
-        drivers={undefined as unknown as number}
+        drivers={undefined}
         invitations={12}
         pending={5}
         expiringSoon={2}
       />,
     );
 
-    // Only `drivers` is missing → exactly one "0", and it belongs to Drivers.
-    expect(within(cardFor('Drivers')).getByText('0')).toBeInTheDocument();
-    expect(screen.getAllByText('0')).toHaveLength(1);
+    expect(within(cardFor('Drivers')).getByText('—')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(1);
     expect(within(cardFor('Invitations')).getByText('12')).toBeInTheDocument();
     expect(within(cardFor('Pending')).getByText('5')).toBeInTheDocument();
   });

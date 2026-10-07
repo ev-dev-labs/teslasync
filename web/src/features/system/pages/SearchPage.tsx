@@ -10,17 +10,15 @@ import {
   Car,
   Compass,
   Filter,
-  Layers,
   MapPin,
   MapPinned,
   RefreshCw,
   Route,
   Search as SearchIcon,
-  Star,
   Workflow,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import {
   Badge,
   Button,
@@ -30,11 +28,13 @@ import {
   SectionTitle,
   Text,
 } from '@/components/ui'
-import { MetricCard, TimeStamp } from '@/components/data-display'
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
+import { TimeStamp } from '@/components/data-display'
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
-import { AINLSearch } from '@/components/ai/AINLSearch'
+import { AINLSearch } from '@/components/ai'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDataState } from '@/hooks/useDataState'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
 import type { SearchHit, SearchHitType } from '@/api/types'
@@ -102,7 +102,9 @@ export default function SearchPage() {
     limit: 25,
     disabled: tooShort,
   })
-  const { data, isFetching, error, refetch } = searchQuery
+  const { data, isFetching, refetch } = searchQuery
+  const state = useDataState(searchQuery)
+  const error = state.fatalError
 
   const hits = data?.hits ?? []
 
@@ -146,14 +148,14 @@ export default function SearchPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('search.title', 'Search')}
       subtitle={t(
         'search.subtitle',
         'Find vehicles, drives, charging, alerts and more across your fleet',
       )}
       query={isActiveSearch ? searchQuery : undefined}
-      actions={
+      secondaryActions={
         isActiveSearch ? (
           <Button
             variant="ghost"
@@ -173,6 +175,7 @@ export default function SearchPage() {
         default install never see this surface — kept unwrapped so the null
         render leaves no empty spacer.
       */}
+      {!isIdle && !tooShort && <StaleRefreshWarning state={state} />}
       <AINLSearch />
 
       {/* Query + facet toolbar — full-width hero */}
@@ -229,57 +232,26 @@ export default function SearchPage() {
       {/* KPI summary band — derived from the active result set, full-width */}
       {isActiveSearch && (
         <FadeIn delay={0.1}>
-          <section
-            aria-label={t('search.kpis', 'Search summary')}
-            className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-          >
-            {initialLoading ? (
-              [0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} height={92} className="w-full rounded-xl" />
-              ))
-            ) : (
-              <>
-                <MetricCard
-                  label={t('search.kpi.totalResults', 'Total Results')}
-                  value={hits.length}
-                  icon={<SearchIcon className="h-5 w-5" />}
-                  color="cyan"
-                  subtitle={t('search.kpi.forQuery', 'for “{{query}}”', { query: trimmed })}
-                />
-                <MetricCard
-                  label={t('search.kpi.categories', 'Categories')}
-                  value={groupedHits.length}
-                  icon={<Layers className="h-5 w-5" />}
-                  color="blue"
-                  subtitle={t('search.kpi.ofTypes', 'of {{n}} searchable', {
-                    n: ALL_TYPES.length,
-                  })}
-                />
-                <MetricCard
-                  label={t('search.kpi.topMatch', 'Top Match')}
-                  value={topGroup ? searchSectionLabel(topGroup.type, t) : '—'}
-                  icon={<Star className="h-5 w-5" />}
-                  color="green"
-                  subtitle={
-                    topGroup
-                      ? t('search.kpi.topCount', '{{n}} results', { n: topGroup.hits.length })
-                      : t('search.kpi.noMatches', 'No matches')
-                  }
-                />
-                <MetricCard
-                  label={t('search.kpi.activeFilters', 'Active Filters')}
-                  value={typesFilter.length}
-                  icon={<Filter className="h-5 w-5" />}
-                  color="amber"
-                  subtitle={
-                    typesFilter.length > 0
-                      ? t('search.kpi.filtered', 'of {{n}} types', { n: ALL_TYPES.length })
-                      : t('search.kpi.allTypes', 'All types shown')
-                  }
-                />
-              </>
-            )}
-          </section>
+          <SystemSummaryBrief
+            title={t('search.kpis', 'Search summary')}
+            description={t('search.brief.description', 'Result counts and category coverage for the current query and selected type filters.')}
+            scope={t('search.kpi.forQuery', 'for “{{query}}”', { query: trimmed })}
+            available={state.hasData} loading={initialLoading} retained={state.hasData && searchQuery.isError}
+            metrics={[
+              { metricId: 'count', occurrenceId: 'results', rawValue: state.hasData ? hits.length : null, label: t('search.kpi.totalResults', 'Total results'),
+                context: t('search.brief.scope', 'Returned search hits, not an unbounded server total.') },
+              { metricId: 'count', occurrenceId: 'categories', rawValue: state.hasData ? groupedHits.length : null, label: t('search.kpi.categories', 'Categories'),
+                context: t('search.kpi.ofTypes', 'of {{n}} searchable', { n: ALL_TYPES.length }) },
+              { metricId: 'count', occurrenceId: 'filters', rawValue: typesFilter.length, label: t('search.kpi.activeFilters', 'Active filters'),
+                context: typesFilter.length > 0 ? t('search.kpi.filtered', 'of {{n}} types', { n: ALL_TYPES.length }) : t('search.kpi.allTypes', 'All types shown') },
+            ]}
+            textMetrics={[{
+              key: 'top-match', label: t('search.kpi.topMatch', 'Top match'),
+              value: topGroup ? searchSectionLabel(topGroup.type, t) : '—',
+              valueState: topGroup ? 'value' : 'missing',
+              detail: topGroup ? t('search.kpi.topCount', '{{n}} results', { n: topGroup.hits.length }) : t('search.kpi.noMatches', 'No matches'),
+            }]}
+          />
         </FadeIn>
       )}
 
@@ -367,8 +339,9 @@ export default function SearchPage() {
                             aria-label={t('search.result.open', 'Open {{title}}', {
                               title: hit.title,
                             })}
+                            wrapLabel
                             className={cn(
-                              'w-full justify-start gap-3 rounded-lg px-2 py-3 text-left',
+                              'w-full justify-start gap-3 rounded-lg px-2 py-3 text-start',
                               typography.weight.regular,
                             )}
                           >
@@ -376,11 +349,11 @@ export default function SearchPage() {
                               {searchHitIconSm(hit.type)}
                             </span>
                             <span className="min-w-0 flex-1">
-                              <Text as="span" variant="body" className="block truncate">
+                              <Text as="span" variant="body" className="block break-words">
                                 {hit.title}
                               </Text>
                               {hit.subtitle && (
-                                <Text as="span" variant="caption" className="block truncate">
+                                <Text as="span" variant="caption" className="block break-words">
                                   {hit.subtitle}
                                 </Text>
                               )}
@@ -388,7 +361,7 @@ export default function SearchPage() {
                             {hit.when && (
                               <TimeStamp
                                 value={hit.when}
-                                className={cn('hidden shrink-0 sm:inline', typography.role.caption)}
+                                className={cn('shrink-0 max-w-full break-words', typography.role.caption)}
                               />
                             )}
                             <ArrowRight
@@ -406,7 +379,7 @@ export default function SearchPage() {
           </section>
         )}
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }
 

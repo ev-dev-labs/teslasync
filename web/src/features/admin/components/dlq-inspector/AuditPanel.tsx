@@ -39,12 +39,14 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
     () => [
     {
       key: 'replayed_at',
+      filterValue: (row) => row.replayed_at ?? null,
       header: t('admin.dlq.audit.cols.replayedAt', 'Replayed at'),
       visibleOnMobile: true,
       render: (row) => <TimeStamp value={row.replayed_at} format="absolute" />,
     },
     {
       key: 'actor',
+      filterValue: (row) => row.actor || null,
       header: t('admin.dlq.audit.cols.actor', 'Actor'),
       visibleOnMobile: true,
       render: (row) => (
@@ -55,11 +57,14 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
     },
     {
       key: 'dlq_id',
+      filterValue: (row) => row.dlq_id ?? null,
+      align: 'right',
       header: t('admin.dlq.audit.cols.dlqId', 'DLQ ID'),
       render: (row) => <Text mono size="xs">{row.dlq_id}</Text>,
     },
     {
       key: 'result',
+      filterValue: (row) => row.result ?? null,
       header: t('admin.dlq.audit.cols.result', 'Result'),
       visibleOnMobile: true,
       render: (row) => (
@@ -70,6 +75,7 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
     },
     {
       key: 'dst_topic',
+      filterValue: (row) => row.dst_topic || null,
       header: t('admin.dlq.audit.cols.dstTopic', 'Destination'),
       render: (row) => (
         <Text mono size="xs" color="muted">
@@ -79,11 +85,13 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
     },
     {
       key: 'error',
+      filterValue: (row) => row.error || null,
       header: t('admin.dlq.audit.cols.error', 'Error'),
       render: (row) => <Caption>{row.error || '—'}</Caption>,
     },
     {
       key: 'trace_id',
+      filterValue: (row) => row.trace_id || null,
       header: t('admin.dlq.audit.cols.traceId', 'Trace ID'),
       render: (row) => (
         <Text mono size="xs" color="muted">
@@ -121,6 +129,7 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       name="dlq-audit"
       columns={columns}
       data={safeRows}
+      enableValueFilters
       keyExtractor={(row) => row.id}
       emptyMessage={
         loading

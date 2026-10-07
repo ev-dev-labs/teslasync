@@ -1,88 +1,75 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HeartPulse } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { LinearGauge } from '@/components/charts';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { WidgetShell } from './WidgetShell';
-import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
-import type { WidgetProps } from './types';
 
-function scoreColor(score: number): string {
-  if (score >= 80) return '#10b981';
-  if (score >= 50) return '#f59e0b';
-  return '#ef4444';
-}
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : null;
 
+  const query = useBatteryHealthAnalytics(vehicleIdStr);
   const {
     data, isLoading, error,
     isFetching, isStale, isError,
     dataUpdatedAt, refetch,
-  } = useBatteryHealthAnalytics(vehicleIdStr);
+  } = query;
+  const trust = useDataState(query, { provenance: 'inferred' });
 
   const isCompact = size.cols <= 1;
-  const hasData = !!data;
-  // Only replace the whole widget with a full-panel error on the INITIAL
-  // load failure, when there is no cached data to fall back on. Once we have
-  // data, a transient background-refetch failure must not blank out
-  // otherwise-valid numbers — it is surfaced through the freshness
-  // indicator's error state instead (WidgetShell forwards `isError` to
-  // <DataFreshness>).
-  const blockingError = !hasData && error ? String(error) : null;
+  const healthScore = knownNumber(data?.current_soh);
+  const reading = (value: unknown, precision = getGlobalPrecision()) => {
+    const number = knownNumber(value);
+    return number == null ? null : fmtNumber(number, precision);
+  };
 
-  const healthScore = data?.current_soh ?? 0;
-  const color = useMemo(() => scoreColor(healthScore), [healthScore]);
-
-  const gaugeConfig = useMemo(() => ({
-    value: healthScore,
-    max: 100,
-    label: `${fmtInt(healthScore)}`,
-    unit: t('widget.batteryHealthAnalytics.score', 'health'),
-    color,
-  }), [healthScore, color, t]);
-
-  const stats: GaugeHeroStat[] = useMemo(() => [
+  const stats = [
     {
       label: t('widget.batteryHealthAnalytics.totalCycles', 'Cycles'),
-      value: fmtInt(data?.total_cycles ?? 0),
+      value: knownNumber(data?.total_cycles) != null ? fmtInt(data?.total_cycles) : null,
     },
     {
-      label: t('widget.batteryHealthAnalytics.avgChargeDepth', 'Charge Depth'),
-      value: fmtNumber((data?.full_charge_pct ?? 0), 0),
+      label: t('widget.batteryHealthAnalytics.avgChargeDepth', 'Charge depth'),
+      value: reading(data?.full_charge_pct),
       unit: '%',
     },
     {
       label: t('widget.batteryHealthAnalytics.avgDischargeDepth', 'Discharge'),
-      value: fmtNumber((data?.avg_depth_of_discharge_pct ?? 0), 0),
+      value: reading(data?.avg_depth_of_discharge_pct),
       unit: '%',
     },
     {
-      label: t('widget.batteryHealthAnalytics.dcFastRatio', 'DC Fast'),
-      value: fmtNumber((data?.fast_charge_pct ?? 0), 0),
+      label: t('widget.batteryHealthAnalytics.dcFastRatio', 'DC fast'),
+      value: reading(data?.fast_charge_pct),
       unit: '%',
     },
     {
-      label: t('widget.batteryHealthAnalytics.tempExposure', 'Temp Score'),
-      value: fmtInt(data?.temp_exposure_score ?? 0),
+      label: t('widget.batteryHealthAnalytics.tempExposure', 'Temp score'),
+      value: reading(data?.temp_exposure_score),
       unit: `/ 100`,
     },
     {
       label: t('widget.batteryHealthAnalytics.chargeHabits', 'Habits'),
-      value: fmtInt(data?.charge_habits_score ?? 0),
+      value: reading(data?.charge_habits_score),
       unit: `/ 100`,
     },
-  ], [data, t]);
+  ];
 
   const shellProps = {
     loading: isLoading,
-    error: blockingError,
+    dataState: data != null || isLoading || isError || error ? trust : undefined,
     updatedAt: dataUpdatedAt ?? 0,
     isFetching,
     isStale,
@@ -90,39 +77,34 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
     onRefresh: () => refetch(),
   };
 
-  if (isCompact) {
-    return (
-      <WidgetShell {...shellProps}>
-        <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
-          {hasData ? (
-            <WidgetGaugeHero gauge={gaugeConfig} compact />
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<HeartPulse className="h-5 w-5" />}
-              message={t('widget.batteryHealthAnalytics.noData', 'No battery health data')}
-              className="py-2"
-            />
-          )}
-        </div>
-      </WidgetShell>
-    );
-  }
-
   return (
     <WidgetShell
-      title={t('widget.batteryHealthAnalytics.title', 'Battery Analytics')}
-      icon={<HeartPulse className="h-3.5 w-3.5 text-emerald-400" />}
+      title={t('widget.batteryHealthAnalytics.title', 'Battery analytics')}
+      icon={<HeartPulse className="h-3.5 w-3.5" />}
       {...shellProps}
     >
-      {hasData ? (
-        <WidgetGaugeHero gauge={gaugeConfig} stats={stats} />
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<HeartPulse className="h-5 w-5" />}
-          message={t('widget.batteryHealthAnalytics.noData', 'No battery health data')}
-          className="py-4"
-        />
-      )}
+      <div className="flex min-w-0 flex-col gap-3">
+        {healthScore != null ? (
+          <LinearGauge
+            preserveReadingAndScale
+            value={healthScore}
+            max={100}
+            label={t('widget.batteryHealthAnalytics.score', 'health')}
+            unit="%"
+            tone={healthScore >= 80 ? 'success' : healthScore >= 50 ? 'warning' : 'danger'}
+            size={isCompact ? 70 : 110}
+          />
+        ) : data ? (
+          <WidgetBigNumber value={null} label={t('widget.batteryHealthAnalytics.score', 'health')} />
+        ) : (
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<HeartPulse className="h-5 w-5" />}
+            message={t('widget.batteryHealthAnalytics.noData', 'No battery health data')}
+            className="py-4"
+          />
+        )}
+        {!isCompact && <WidgetStatGrid stats={stats} cols={3} />}
+      </div>
     </WidgetShell>
   );
 }

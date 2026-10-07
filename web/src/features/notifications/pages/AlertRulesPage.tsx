@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel,
   Badge,
@@ -16,7 +16,7 @@ import {
   useSortToggle,
   type Column,
 } from '@/components/ui';
-import { MetricCard, MetricBar, SeverityBadge } from '@/components/data-display';
+import { OperationalBrief, DataProvenanceBadge, MetricBar, SeverityBadge, type StatMetric } from '@/components/data-display';
 import {
   PieChart,
   Pie,
@@ -31,11 +31,13 @@ import {
   Skeleton,
   QueryError,
   EditConflictBanner,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput } from '@/components/forms';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useEditLease } from '@/hooks/useEditLease';
 import { useConfirm } from '@/hooks/useConfirm';
 
@@ -50,8 +52,10 @@ import {
 import type { AlertRule, AlertRuleKind } from '@/api/types';
 import { Icons } from '@/lib/icons';
 import { normalizeSeverity, chartTokens } from '@/lib/tokens';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { AlertRuleEditor } from '../components/AlertRuleEditor';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ─── Constants ──────────────────────────────────────────── */
 
@@ -105,6 +109,7 @@ export function isSnoozed(r: AlertRule, now: number): boolean {
  * Rule creation lives in Studio; this page owns edits and bulk management.
  */
 export default function AlertRulesPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const kindLabels: Record<AlertRuleKind, string> = {
     signal: t('alertRules.kind.signal', 'Signal'),
@@ -125,7 +130,11 @@ export default function AlertRulesPage() {
   useEditLease(leaseKey);
 
   const rulesQuery = useAlertRules();
-  const { data: rulesRaw, isLoading, isError, error, refetch } = rulesQuery;
+  const { data: rulesRaw, refetch } = rulesQuery;
+  const rulesState = useDataState(rulesQuery);
+  const isLoading = !rulesState.hasData && rulesQuery.isLoading;
+  const error = rulesState.fatalError;
+  const isError = error != null;
   const rules: AlertRule[] = useMemo(() => rulesRaw ?? [], [rulesRaw]);
   const channelsQuery = useNotificationChannels();
   const channels = useMemo(() => channelsQuery.data ?? [], [channelsQuery.data]);
@@ -335,6 +344,8 @@ export default function AlertRulesPage() {
       {
         key: 'name',
         header: t('alertRules.col.name', 'Name'),
+        filterValue: (r) => r.id,
+        filterValueLabel: (_value, r) => r.name,
         sortable: true,
         render: (r) => (
           <EditableText
@@ -370,6 +381,8 @@ export default function AlertRulesPage() {
       {
         key: 'kind',
         header: t('alertRules.col.type', 'Type'),
+        filterValue: (r) => r.kind ?? null,
+        filterValueLabel: (_value, r) => r.kind ? kindLabels[r.kind] : '—',
         render: (r) => (
           <Badge variant="neutral" size="sm">
             {kindLabels[r.kind ?? 'signal']}
@@ -379,6 +392,11 @@ export default function AlertRulesPage() {
       {
         key: 'signal_name',
         header: t('alertRules.col.signal', 'Subject'),
+        filterValue: (r) => r.kind === 'computed_metric' ? r.metric_id ? `metric:${r.metric_id}` : null
+          : r.kind === 'system_component' ? r.component_name ? `system:${r.component_name}:${r.transition ?? ''}` : null
+          : r.kind === 'place' ? r.place_id != null ? `place:${r.place_id}:${r.transition ?? ''}` : null
+          : r.signal_name ? `signal:${r.signal_name}` : null,
+        filterValueLabel: (_value, r) => subjectOf(r),
         sortable: true,
         render: (r) => (
           <Text as="span" color="secondary">
@@ -389,12 +407,19 @@ export default function AlertRulesPage() {
       {
         key: 'severity',
         header: t('alertRules.col.severity', 'Severity'),
+        filterValue: (r) => r.severity ?? null,
+        filterValueLabel: (_value, r) => r.severity ? t(`severity.${r.severity}`, r.severity) : '—',
         sortable: true,
         render: (r) => <SeverityBadge severity={r.severity} size="sm" />,
       },
       {
         key: 'scope',
         header: t('alertRules.col.scope', 'Scope'),
+        filterValue: (r) => r.all_vehicles ? 'all_vehicles'
+          : r.vehicle_ids?.length ? [...r.vehicle_ids].sort((a, b) => a - b).join(',') : null,
+        filterValueLabel: (_value, r) => r.all_vehicles
+          ? t('alertRules.scope.all', 'All vehicles')
+          : r.vehicle_ids?.length ? t('alertRules.scope.count', '{{count}} vehicles', { count: r.vehicle_ids.length }) : '—',
         render: (r) => {
           const count = r.vehicle_ids?.length ?? 0;
           const label = r.all_vehicles
@@ -412,6 +437,11 @@ export default function AlertRulesPage() {
       {
         key: 'status',
         header: t('alertRules.col.status', 'Status'),
+        filterValue: (r) => isSnoozed(r, Date.now()) ? 'snoozed' : r.enabled == null ? null : r.enabled ? 'enabled' : 'disabled',
+        filterValueLabel: (_value, r) => isSnoozed(r, Date.now())
+          ? t('alertRules.status.snoozed', 'Snoozed')
+          : r.enabled == null ? '—' : r.enabled ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+        groupStart: true,
         sortable: true,
         render: (r) => (
           <span className="inline-flex items-center gap-1.5">
@@ -437,41 +467,58 @@ export default function AlertRulesPage() {
   );
 
   /* ─── Header actions ─── */
-  const actions = (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => refetch()}
-        aria-label={t('common.refresh', 'Refresh')}
-        icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
-      />
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => navigate('/notifications/studio')}
-        icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
-      >
-        {t('alertRules.openStudio', 'Create rule')}
-      </Button>
-    </div>
+  const secondaryActions = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => refetch()}
+      aria-label={t('common.refresh', 'Refresh')}
+      icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+    />
   );
+  const primaryAction = (
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={() => navigate('/notifications/studio')}
+      icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
+    >
+      {t('alertRules.openStudio', 'Create rule')}
+    </Button>
+  );
+  const ruleProvenance = t('alertRules.brief.provenance', 'Counts cover the loaded rule set before search and channel filtering. Snoozed rules can overlap enabled or disabled rules; snooze status uses the current browser time.');
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'rules-total', rawValue: rulesState.hasData ? stats.total : null,
+      label: t('alertRules.kpi.total', 'Total rules'), context: <Icons.notifications className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-enabled', rawValue: rulesState.hasData ? stats.enabled : null,
+      label: t('common.enabled', 'Enabled'), context: <Icons.power className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-disabled', rawValue: rulesState.hasData ? stats.disabled : null,
+      label: t('common.disabled', 'Disabled'), context: <Icons.pause className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-critical', rawValue: rulesState.hasData ? stats.critical : null,
+      label: t('severity.critical', 'Critical'), context: <Icons.alertCircle className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-snoozed', rawValue: rulesState.hasData ? stats.snoozed : null,
+      label: t('alertRules.status.snoozed', 'Snoozed'), context: <Icons.moon className="h-5 w-5" aria-hidden="true" /> },
+    { metricId: 'count', occurrenceId: 'rules-computed', rawValue: rulesState.hasData ? stats.computed : null,
+      label: t('alertRules.kpi.computed', 'Computed'), context: <Icons.activity className="h-5 w-5" aria-hidden="true" /> },
+  ];
+  const operationalMetrics = useOperationalMetrics(metrics);
 
   if (editIdParam !== null) {
     const editId = /^\d+$/.test(editIdParam) ? Number(editIdParam) : NaN;
     const editingRule = Number.isSafeInteger(editId) ? rules.find(rule => rule.id === editId) : undefined;
     return (
-      <PageContainer
+      <PageLayout
         title={editingRule
           ? t('alertRules.editNamed', 'Edit {{name}}', { name: editingRule.name })
           : t('alertRules.editTitle', 'Edit notification rule')}
-        actions={
+        secondaryActions={
           <Button variant="secondary" onClick={() => setSearchParams({}, { replace: true })}>
             {t('alertRules.backToRules', 'Back to rules')}
           </Button>
         }
         query={rulesQuery}
       >
+        <StaleRefreshWarning state={rulesState} label={t('alertRules.title', 'Alert rules')} />
         {isLoading ? <Skeleton height={240} /> : isError ? (
           <QueryError error={error} onRetry={() => refetch()} />
         ) : editingRule ? (
@@ -487,20 +534,22 @@ export default function AlertRulesPage() {
             actionTo={{ label: t('alertRules.backToRules', 'Back to rules'), to: '/notifications/rules' }}
           />
         )}
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('alertRules.title', 'Alert rules')}
       subtitle={t(
         'alertRules.subtitle',
-        'Manage and edit notification rules. Create new rules in Studio.',
+        'Manage and edit notification rules. Create new rules in studio.',
       )}
-      actions={actions}
+      secondaryActions={secondaryActions}
+      primaryAction={primaryAction}
       query={rulesQuery}
     >
+      <StaleRefreshWarning state={rulesState} label={t('alertRules.title', 'Alert rules')} />
       <EditConflictBanner
         resourceKey={leaseKey}
         resourceLabel={t('editConflict.resource.alertRules', 'Your alert rules')}
@@ -510,44 +559,21 @@ export default function AlertRulesPage() {
       <FadeIn>
         <section
           aria-label={t('alertRules.kpis', 'Alert rule metrics')}
-          className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6"
+          className="min-w-0"
         >
-          <MetricCard
-            label={t('alertRules.kpi.total', 'Total rules')}
-            value={fmtInt(stats.total)}
-            icon={<Icons.notifications className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('common.enabled', 'Enabled')}
-            value={fmtInt(stats.enabled)}
-            icon={<Icons.power className="h-5 w-5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('common.disabled', 'Disabled')}
-            value={fmtInt(stats.disabled)}
-            icon={<Icons.pause className="h-5 w-5" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t('severity.critical', 'Critical')}
-            value={fmtInt(stats.critical)}
-            icon={<Icons.alertCircle className="h-5 w-5" />}
-            color="red"
-          />
-          <MetricCard
-            label={t('alertRules.status.snoozed', 'Snoozed')}
-            value={fmtInt(stats.snoozed)}
-            icon={<Icons.moon className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('alertRules.kpi.computed', 'Computed')}
-            value={fmtInt(stats.computed)}
-            icon={<Icons.activity className="h-5 w-5" />}
-            color="blue"
-          />
+          <OperationalBrief compact loading={isLoading} testId="alert-rules-brief"
+            eyebrow={t('alertRules.kpis', 'Alert rule metrics')}
+            title={t('alertRules.brief.title', 'Rule configuration and current snoozes')}
+            description={ruleProvenance} metrics={operationalMetrics}
+            statusLabel={isLoading ? t('common.loading', 'Loading…') : rulesState.status === 'stale'
+              ? t('dataState.stale.title', 'Data may be stale')
+              : rulesState.status === 'offline' ? t('dataState.offline.title', 'Offline')
+                : isError ? t('alertRules.brief.unavailable', 'Rules unavailable')
+                  : t('alertRules.brief.available', 'Rule set loaded')}
+            statusTone={isError || rulesState.status === 'stale' || rulesState.status === 'offline' ? 'warning' : 'neutral'}
+            scope={t('alertRules.brief.scope', 'All loaded rules · before filters')}
+            freshness={<DataProvenanceBadge provenance={rulesState.provenance} status={rulesState.status} updatedAt={rulesState.updatedAt} />}
+            provenance={ruleProvenance} />
         </section>
       </FadeIn>
 
@@ -736,7 +762,7 @@ export default function AlertRulesPage() {
               title={t('alertRules.empty.title', 'No alert rules yet')}
               message={t(
                 'alertRules.empty.body',
-                'Create your first notification rule in Studio.',
+                'Create your first notification rule in studio.',
               )}
               actionTo={{
                 label: t('alertRules.empty.cta', 'Create rule'),
@@ -748,6 +774,7 @@ export default function AlertRulesPage() {
               tableId="notifications:alert-rules"
               columns={columns}
               data={sortedRules}
+              enableValueFilters
               keyExtractor={(r) => r.id}
               selectable="multi"
               selectedKeys={selectedKeys}
@@ -784,6 +811,6 @@ export default function AlertRulesPage() {
       </FadeIn>
 
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

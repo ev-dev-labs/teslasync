@@ -59,6 +59,7 @@ vi.mock('@/components/data-display', () => ({
     max: number;
     color: string;
     sublabel?: string;
+    showHeader?: boolean;
   }) => (
     <div
       data-testid="metric-bar"
@@ -66,6 +67,7 @@ vi.mock('@/components/data-display', () => ({
       data-value={String(props.value)}
       data-max={String(props.max)}
       data-color={String(props.color)}
+      data-show-header={String(props.showHeader)}
     >
       <span data-testid="metric-sublabel">{props.sublabel}</span>
     </div>
@@ -104,7 +106,7 @@ describe('TopSignalsPanel — header', () => {
     const { container } = render(<TopSignalsPanel signals={[]} />);
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Most Active Signals' }),
+      screen.getByRole('heading', { level: 3, name: 'Most active signals' }),
     ).toBeInTheDocument();
     // The header glyph is decorative so a screen reader announces the title,
     // not the icon.
@@ -245,12 +247,14 @@ describe('TopSignalsPanel — bar scale and latest value', () => {
     }
   });
 
-  it('renders the latest value as the bar sublabel', () => {
+  it('renders the complete latest value independently of the passive ranking track', () => {
     render(<TopSignalsPanel signals={SIGNALS} />);
 
     expect(
-      within(rowFor('charging_state')).getByTestId('metric-sublabel'),
+      within(rowFor('charging_state')).getByText('Charging'),
     ).toHaveTextContent('Charging');
+    expect(within(rowFor('charging_state')).getByTestId('metric-bar')).toHaveAttribute('data-show-header', 'false');
+    expect(within(rowFor('charging_state')).getByText('Latest')).toBeInTheDocument();
   });
 
   it('falls back to an em dash when the latest value is an empty string', () => {
@@ -260,8 +264,23 @@ describe('TopSignalsPanel — bar scale and latest value', () => {
     render(<TopSignalsPanel signals={signals} />);
 
     expect(
-      within(rowFor('empty_val')).getByTestId('metric-sublabel'),
+      within(rowFor('empty_val')).getByText(EM_DASH),
     ).toHaveTextContent(EM_DASH);
+  });
+
+  it('keeps unbroken signal identities and full latest values wrap-ready without reordering', () => {
+    const name = 'BatteryPackModuleTelemetrySignal'.repeat(5);
+    const value = 'producer-state-value-'.repeat(15);
+    const signals: TopSignal[] = [
+      { name, count: 1, value, type: 'string' },
+      { name: 'HigherCountButCallerSecond', count: 8, value: 'false', type: 'boolean' },
+    ];
+    render(<TopSignalsPanel signals={signals} />);
+    expect(screen.getByText(name)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.getByText(value)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.getAllByRole('listitem').map(row => row.querySelector('code')?.textContent))
+      .toEqual([name, 'HigherCountButCallerSecond']);
+    expect(within(rowFor(name)).getByTestId('metric-bar')).toHaveAttribute('data-max', '8');
   });
 });
 

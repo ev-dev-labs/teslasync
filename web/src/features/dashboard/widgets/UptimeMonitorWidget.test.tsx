@@ -6,7 +6,7 @@
  * behaviour surface — the thing under test:
  *
  *   1. Two layouts driven by `size.cols`:
- *        - compact  (cols <= 1): a title-less shell with the Overall badge + a
+ *        - compact  (cols <= 1): a titled shell with the Overall badge + a
  *          single "healthy / total" count (role="img" with an accessible
  *          "services healthy" label). The widget's registered minSize is 1×2, so
  *          this branch MUST be reachable at one column (the hardened bug: the
@@ -163,13 +163,13 @@ describe('UptimeMonitorWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.getByText('Overall')).toBeInTheDocument();
     expect(screen.getByText('All OK')).toBeInTheDocument();
     // Service labels derive from the key when the i18n default falls through.
     expect(screen.getByText('Database')).toBeInTheDocument();
-    expect(screen.getByText('Mqtt')).toBeInTheDocument();
-    expect(screen.getByText('Tesla Api')).toBeInTheDocument();
+    expect(screen.getByText('MQTT')).toBeInTheDocument();
+    expect(screen.getByText('Tesla API')).toBeInTheDocument();
     expect(screen.getByText('Fleet Telemetry')).toBeInTheDocument();
     // All four services healthy → four "OK" status badges.
     expect(screen.getAllByText('OK')).toHaveLength(4);
@@ -182,7 +182,7 @@ describe('UptimeMonitorWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 3 });
 
-    expect(screen.getByText('DB Size')).toBeInTheDocument();
+    expect(screen.getByText('DB size')).toBeInTheDocument();
     expect(screen.getByText('512 MB')).toBeInTheDocument();
     expect(screen.getByText('Tables')).toBeInTheDocument();
     expect(screen.getByText('87')).toBeInTheDocument();
@@ -272,7 +272,7 @@ describe('UptimeMonitorWidget — status classification', () => {
     // None of the raw backend status strings leak into the DOM.
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
     expect(screen.queryByText('failed')).not.toBeInTheDocument();
-    expect(container.querySelector('.bg-red-500')).toBeTruthy();
+    expect(container.querySelector('.bg-red-400')).toBeTruthy();
   });
 
   it('maps an "unknown" service to a neutral Unknown badge + gray dot', () => {
@@ -290,10 +290,10 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(container.querySelector('.bg-gray-400')).toBeTruthy();
+    expect(screen.getByText('Unknown').parentElement?.parentElement?.className).toContain('bg-[var(--surface-2)]');
   });
 });
 
@@ -341,11 +341,9 @@ describe('UptimeMonitorWidget — failure + last-error surfacing', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // The failure count is exposed to assistive tech, not just as a "×3" glyph.
-    expect(screen.getByRole('img', { name: '3 consecutive failures' })).toBeInTheDocument();
+    expect(screen.getByText(/×3 consecutive failures/)).toBeInTheDocument();
     // lastError is reachable as the row's native tooltip.
-    const row = screen.getByText('Database').closest('[title]');
-    expect(row).not.toBeNull();
-    expect(row).toHaveAttribute('title', 'connection refused');
+    expect(screen.getByText(/connection refused/)).toBeInTheDocument();
   });
 
   it('omits the failure indicator for a healthy service with zero failures', () => {
@@ -365,15 +363,14 @@ describe('UptimeMonitorWidget — compact layout', () => {
 
     renderWidget({ cols: 1, rows: 2 });
 
-    // Compact drops the title and the per-service rows …
-    expect(screen.queryByText('Uptime Monitor')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Uptime monitor' })).toBeInTheDocument();
     expect(screen.queryByText('Database')).not.toBeInTheDocument();
     // … and shows the accessible count + the Overall badge.
     expect(screen.getByText('4/4')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: '4/4 services healthy' })).toBeInTheDocument();
+    expect(screen.getByText('Services healthy')).toBeInTheDocument();
     expect(screen.getByText('All OK')).toBeInTheDocument();
     // The tall detail strip is suppressed in compact mode.
-    expect(screen.queryByText('DB Size')).not.toBeInTheDocument();
+    expect(screen.queryByText('DB size')).not.toBeInTheDocument();
   });
 
   it('reflects the number of healthy services in the compact count', () => {
@@ -394,7 +391,7 @@ describe('UptimeMonitorWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('3/4')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: '3/4 services healthy' })).toBeInTheDocument();
+    expect(screen.getByText('Services healthy')).toBeInTheDocument();
   });
 });
 
@@ -405,8 +402,18 @@ describe('UptimeMonitorWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Uptime Monitor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
+  });
+
+  describe('UptimeMonitorWidget — missing component honesty', () => {
+    it('keeps absent tracked components neutral even if overall status is healthy', () => {
+      useSystemHealthMock.mockReturnValue(makeQuery({ data: makeHealth({ components: {} }) }));
+      renderWidget({ cols: 3, rows: 2 });
+      expect(screen.getAllByText('Unknown')).toHaveLength(4);
+      expect(screen.queryByText('Down')).not.toBeInTheDocument();
+      expect(screen.queryByText('%')).not.toBeInTheDocument();
+    });
   });
 
   it('renders the full-panel QueryError on an initial load failure (no cached data)', () => {
@@ -418,7 +425,7 @@ describe('UptimeMonitorWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Uptime Monitor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.queryByText('Overall')).not.toBeInTheDocument();
   });
 
@@ -430,20 +437,19 @@ describe('UptimeMonitorWidget — query states', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // Titled shell still renders; the body degrades to the placeholder.
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.getByText('No system health data')).toBeInTheDocument();
-    expect(screen.queryByText('Overall')).not.toBeInTheDocument();
+    expect(screen.getByText('Overall')).toBeInTheDocument();
   });
 
   it('degrades a partial {} payload to per-service defaults without throwing (null-safety)', () => {
     useSystemHealthMock.mockReturnValue(makeQuery({ data: {} as SystemHealth }));
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
-    // Missing components default to danger → four "Down" badges; the missing
-    // overall status resolves to the neutral "Unknown".
-    expect(screen.getAllByText('Down')).toHaveLength(4);
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
+    // Neither absent components nor an absent overall status imply downtime.
+    expect(screen.queryByText('Down')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Unknown')).toHaveLength(5);
   });
 });
 
@@ -490,7 +496,7 @@ describe('UptimeMonitorWidget — graceful degradation on transient error', () =
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     // Content is still on screen …
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.getByText('All OK')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();

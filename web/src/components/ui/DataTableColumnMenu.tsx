@@ -5,7 +5,6 @@ import { cn } from '@/lib/cn'
 import { Checkbox } from './Checkbox'
 import {
   applyColumnLayout,
-  defaultColumnLayout,
   effectiveColumnOrder,
   moveColumn,
   toggleHiddenColumn,
@@ -105,14 +104,19 @@ export function DataTableColumnMenu({
     [safeColumns, layout],
   )
 
-  const ensureLayout = (): ColumnLayout =>
-    layout ?? defaultColumnLayout(safeColumns)
+  const ensureLayout = (): ColumnLayout => ({
+    order: orderedKeys,
+    hidden: Array.from(effectiveHidden),
+  })
 
   // Effective hidden set used to drive checkbox `checked` state. When the
   // user hasn't touched anything yet, we honor `defaultVisible: false` so
   // the menu reflects the table's initial render.
   const effectiveHidden = useMemo(
-    () => new Set((layout ?? defaultColumnLayout(safeColumns)).hidden),
+    () => {
+      const visible = new Set(applyColumnLayout(safeColumns, layout).map((column) => column.key))
+      return new Set(safeColumns.filter((column) => !visible.has(column.key)).map((column) => column.key))
+    },
     [layout, safeColumns],
   )
 
@@ -126,6 +130,19 @@ export function DataTableColumnMenu({
     // programmatic / keyboard toggle can never violate it.
     if (!isHidden && (col?.required || visibleCount <= 1)) return
     onChange(toggleHiddenColumn(base, key))
+  }
+
+  const allVisible = safeColumns.length > 0 && visibleCount === safeColumns.length
+  const handleToggleAll = () => {
+    const base = ensureLayout()
+    if (!allVisible) {
+      onChange({ order: base.order, hidden: [] })
+      return
+    }
+    // A usable table always retains required columns, or its first ordered column.
+    const retained = new Set(safeColumns.filter(column => column.required).map(column => column.key))
+    if (retained.size === 0 && orderedKeys[0]) retained.add(orderedKeys[0])
+    onChange({ order: base.order, hidden: orderedKeys.filter(key => !retained.has(key)) })
   }
 
   const handleMove = (key: string, direction: -1 | 1) => {
@@ -155,9 +172,9 @@ export function DataTableColumnMenu({
           aria-expanded={open}
           aria-label={triggerLabel}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
-            'border border-white/[0.08] bg-white/[0.03]',
-            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
+            'inline-flex h-9 items-center gap-1.5 rounded-md px-2 py-1 text-xs',
+            'border border-[var(--control-border)] bg-[var(--control-bg)]',
+            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
             'transition-colors',
           )}
@@ -195,6 +212,20 @@ export function DataTableColumnMenu({
               <span>{t('table.columns.reset', 'Reset')}</span>
             </button>
           </div>
+          {toggleable && safeColumns.length > 0 && (
+            <div className="mb-1 border-b border-[var(--border-subtle)] px-2 pb-2">
+              <Checkbox
+                label={t('table.columns.selectAll', 'Select all')}
+                aria-label={t('table.columns.selectAll', 'Select all')}
+                checked={allVisible}
+                indeterminate={!allVisible && visibleCount > 0}
+                aria-checked={allVisible ? true : visibleCount > 0 ? 'mixed' : false}
+                disabled={allVisible && (safeColumns.length === 1 || safeColumns.every(column => column.required))}
+                onChange={handleToggleAll}
+                className="min-h-11 w-full"
+              />
+            </div>
+          )}
           <ul className="space-y-0.5 max-h-72 overflow-y-auto" role="presentation">
             {orderedKeys.map((key, idx) => {
               const col = colByKey.get(key)

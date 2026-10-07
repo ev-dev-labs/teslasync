@@ -11,13 +11,14 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Server, ArrowLeft, ShieldCheck, Radio, Braces, Plug, ExternalLink,
+  Server, ArrowLeft, ShieldCheck, Radio, Plug, ExternalLink,
   Activity, Boxes, Cpu, Clock, AlertTriangle, BarChart3, Home, HeartPulse,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { GlassPanel, Button, Badge, SectionTitle, PanelTitle, Text, Caption } from '@/components/ui'
-import { MetricCard, KVList } from '@/components/data-display'
+import { KVList } from '@/components/data-display'
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
 import { InlineCallout } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -166,8 +167,8 @@ export default function StatusApiDocsPage() {
           </Text>
         ),
       },
-      { label: t('statusApi.facts.auth', 'Authentication'), value: t('statusApi.facts.authValue', 'ForwardAuth or Authorization header') },
-      { label: t('statusApi.facts.contentType', 'Content-Type'), value: 'application/json' },
+      { label: t('statusApi.facts.auth', 'Authentication'), value: t('statusApi.facts.authValue', 'ForwardAuth or authorization header') },
+      { label: t('statusApi.facts.contentType', 'Content-type'), value: 'application/json' },
       { label: t('statusApi.facts.versioning', 'Versioning'), value: t('statusApi.facts.versioningValue', 'Additive-only (v1)') },
     ],
     [t],
@@ -177,7 +178,7 @@ export default function StatusApiDocsPage() {
   const integrations = useMemo<IntegrationTarget[]>(
     () => [
       { name: 'Grafana', how: t('statusApi.integrations.grafana', 'JSON datasource'), icon: BarChart3 },
-      { name: 'Uptime Kuma', how: t('statusApi.integrations.kuma', 'HTTP(s) JSON Query monitor'), icon: Activity },
+      { name: 'Uptime Kuma', how: t('statusApi.integrations.kuma', 'HTTP(s) JSON query monitor'), icon: Activity },
       { name: 'Home Assistant', how: t('statusApi.integrations.hass', 'REST sensor'), icon: Home },
       { name: 'Healthchecks.io', how: t('statusApi.integrations.healthchecks', 'Synthetic monitor'), icon: HeartPulse },
     ],
@@ -191,51 +192,31 @@ export default function StatusApiDocsPage() {
       icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
       onClick={() => navigate('/system-status')}
     >
-      {t('statusApi.back', 'Back to System Status')}
+      {t('statusApi.back', 'Back to system status')}
     </Button>
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('statusApi.title', 'Status API')}
       subtitle={t('statusApi.subtitle', 'Stable contract for external integrations')}
-      actions={actions}
+      secondaryActions={actions}
     >
       {/* 1 — Quick-reference KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('statusApi.kpi.label', 'API surface summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <MetricCard
-            label={t('statusApi.kpi.endpoints', 'Endpoints')}
-            value={String(endpoints.length)}
-            subtitle={t('statusApi.kpi.endpointsSub', 'Documented routes')}
-            icon={<Server className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.transport', 'Transport')}
-            value="REST + SSE"
-            subtitle={t('statusApi.kpi.transportSub', 'Poll or stream')}
-            icon={<Radio className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.payload', 'Payload')}
-            value="JSON"
-            subtitle={t('statusApi.kpi.payloadSub', 'application/json')}
-            icon={<Braces className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('statusApi.kpi.contract', 'Contract')}
-            value={t('statusApi.kpi.contractValue', 'Additive-only')}
-            subtitle={t('statusApi.kpi.contractSub', 'v1 stable')}
-            icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-          />
-        </section>
+        <SystemSummaryBrief
+          title={t('statusApi.kpi.label', 'API surface summary')}
+          description={t('statusApi.brief.description', 'Documented endpoint count, transport, payload, and compatibility policy.')}
+          scope={t('statusApi.brief.scope', 'Bundled documentation, not a runtime availability probe.')}
+          available
+          metrics={[{ metricId: 'count', occurrenceId: 'endpoints', rawValue: endpoints.length,
+            label: t('statusApi.kpi.endpoints', 'Endpoints'), context: t('statusApi.kpi.endpointsSub', 'Documented routes') }]}
+          textMetrics={[
+            { key: 'transport', label: t('statusApi.kpi.transport', 'Transport'), value: 'REST + SSE', detail: t('statusApi.kpi.transportSub', 'Poll or stream') },
+            { key: 'payload', label: t('statusApi.kpi.payload', 'Payload'), value: 'JSON', detail: t('statusApi.kpi.payloadSub', 'application/json') },
+            { key: 'contract', label: t('statusApi.kpi.contract', 'Contract'), value: t('statusApi.kpi.contractValue', 'Additive-only'), detail: t('statusApi.kpi.contractSub', 'v1 stable') },
+          ]}
+        />
       </FadeIn>
 
       {/* 2 — Overview + Integrations bento */}
@@ -323,6 +304,6 @@ export default function StatusApiDocsPage() {
           </InlineCallout>
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

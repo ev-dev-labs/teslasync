@@ -2,6 +2,7 @@ export interface CabinThermalQueryState {
   vehicleSelected: boolean;
   isLoading: boolean;
   isResolved: boolean;
+  isPaused?: boolean;
   error: unknown;
   refreshError: unknown;
   onRetry: () => void;

@@ -8,10 +8,12 @@ import { Grid } from '@/components/layout';
 import { useVampireSplit } from '@/api/hooks/useTeslaPhysics';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { VampireWindow } from '@/types/teslaPhysics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const query = useVampireSplit(vehicleId);
   const state = useDataState(query, { provenance: 'historical' });
@@ -34,7 +36,7 @@ export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined
     {
       key: 'drain_pct',
       header: t('vampireDrain.split.drain', 'Drain'),
-      render: (row) => (row.drain_pct == null ? '—' : `${fmtNumber(row.drain_pct, 2)}%`),
+      render: (row) => (row.drain_pct == null ? '—' : `${fmtNumber(row.drain_pct)}%`),
     },
   ];
 
@@ -54,12 +56,12 @@ export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined
           <Grid cols={{ default: 1, sm: 2 }} gap={4}>
             <MetricCard
               label={t('vampireDrain.split.completePct', 'At-limit plugged')}
-              value={split.complete_plugged_drain_pct == null ? '—' : `${fmtNumber(split.complete_plugged_drain_pct, 2)}%`}
+              value={split.complete_plugged_drain_pct == null ? '—' : `${fmtNumber(split.complete_plugged_drain_pct)}%`}
               color="amber"
             />
             <MetricCard
               label={t('vampireDrain.split.unpluggedPct', 'After unplug')}
-              value={split.unplugged_drain_pct == null ? '—' : `${fmtNumber(split.unplugged_drain_pct, 2)}%`}
+              value={split.unplugged_drain_pct == null ? '—' : `${fmtNumber(split.unplugged_drain_pct)}%`}
               color="purple"
             />
           </Grid>

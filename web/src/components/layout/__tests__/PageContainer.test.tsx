@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PageContainer } from '../PageContainer';
+import { PageHeader } from '../PageHeader';
+import { Button } from '@/components/ui';
 import type { FreshnessQuery } from '@/components/data-display';
 
 // Mock react-i18next so PageContainer + DataFreshnessAuto get fallback strings
@@ -28,6 +30,10 @@ vi.mock('framer-motion', () => ({
   useReducedMotion: () => false,
 }));
 
+vi.mock('@/components/motion/FadeIn', () => ({
+  FadeIn: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
 function makeQuery(overrides: Partial<FreshnessQuery> = {}): FreshnessQuery {
   return {
     isFetching: false,
@@ -49,6 +55,11 @@ function renderWith(ui: React.ReactNode, route = '/drives') {
 }
 
 describe('PageContainer', () => {
+  it('preserves product names and acronyms in the default empty message', () => {
+    renderWith(<PageContainer title="Tesla API" empty />);
+    expect(screen.getByText('No Tesla API found.')).toBeInTheDocument();
+  });
+
   it('renders the page title', () => {
     const { container } = renderWith(
       <PageContainer title="Drives">
@@ -58,13 +69,59 @@ describe('PageContainer', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Drives' })).toBeInTheDocument();
     expect(screen.getByText('body')).toBeInTheDocument();
     expect(container.querySelector('[data-role="page-header"]')).toHaveClass(
-      'rounded-panel',
-      'shadow-e1',
+      'rounded-none',
+      'bg-transparent',
+      'border-0',
+      'shadow-none',
     );
     expect(container.querySelector('[data-role="page-header"] span[aria-hidden="true"]')).toHaveClass(
       'w-1',
       'bg-[var(--theme-primary)]',
     );
+  });
+
+  it('defaults all pages to a compact header while retaining accessible descriptions', () => {
+    const { container } = renderWith(
+      <PageContainer title="Drive history" subtitle="Measured energy intensity and route evidence">
+        <div>body</div>
+      </PageContainer>,
+    );
+    const header = container.querySelector('[data-role="page-header"]');
+    expect(header).toHaveClass('py-1', 'overflow-visible', 'bg-transparent', 'border-0', 'shadow-none');
+    expect(container.querySelector('[data-role="page-container"]')).toHaveClass('space-y-3');
+    const trigger = screen.getByRole('button', { name: 'More info: Drive history' });
+    expect(trigger).toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Measured energy intensity and route evidence');
+    expect(header?.querySelector('p')).toBeNull();
+  });
+
+  it('preserves an explicitly requested expanded header and visible description', () => {
+    const { container } = renderWith(
+      <PageContainer title="Setup" subtitle="Required setup instructions" compactHeader={false}>
+        <div>body</div>
+      </PageContainer>,
+    );
+    expect(container.querySelector('[data-role="page-header"]')).toHaveClass('rounded-panel', 'shadow-e1');
+    expect(screen.getByText('Required setup instructions')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'More info: Setup' })).not.toBeInTheDocument();
+  });
+
+  it('applies the same compact defaults to standalone page headers without losing actions', () => {
+    const { container } = renderWith(
+      <PageHeader
+        title="Telemetry"
+        subtitle="Live signal readings"
+        actions={<Button>Export</Button>}
+      />,
+    );
+    expect(container.querySelector('[data-role="page-header"]')).toHaveClass(
+      'bg-transparent', 'border-0', 'shadow-none', 'py-1',
+    );
+    expect(screen.getByRole('heading', { name: 'Telemetry' })).toHaveAttribute('data-route-focus-target', 'true');
+    expect(screen.getByRole('button', { name: 'Export' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'More info: Telemetry' })).toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Live signal readings');
+    expect(container.querySelector('[data-role="page-actions"]')).toHaveClass('bg-transparent', 'border-0', 'p-0');
   });
 
   // ── page-tier DataFreshnessAuto wiring ───────
@@ -113,6 +170,8 @@ describe('PageContainer', () => {
     const copyAction = screen.getByRole('button', { name: /copy link to this view/i });
     expect(legacyAction.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'secondary');
     expect(copyAction.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'overflow');
+    expect(copyAction.textContent).toBe('');
+    expect(copyAction.querySelector('svg')).not.toBeNull();
     expect(container.querySelector('[data-action-group="metadata"]')).toBeInTheDocument();
   });
 

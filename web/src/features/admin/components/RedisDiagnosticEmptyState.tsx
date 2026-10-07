@@ -288,7 +288,7 @@ function DiagnosticBanner({
           )}
           {otherKeys && otherKeys.length > 0 && (
             <div className="space-y-2 pt-2" data-testid="redis-diagnostic-other-vehicles">
-              <Text as="p" size="xs" color="muted" className="uppercase tracking-wide">
+              <Text as="p" size="xs" color="muted" className="tracking-wide">
                 {t('redis.diagnostic.otherVehicles', 'Other vehicles with cached signals')}
               </Text>
               <div className="flex flex-wrap gap-2">

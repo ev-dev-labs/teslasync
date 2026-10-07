@@ -203,8 +203,8 @@ describe('BatteryRangeCharts — structure & a11y', () => {
   it('always renders both panel headings with decorative, aria-hidden icons', () => {
     render(<BatteryRangeCharts state={makeState()} drives={[]} />)
 
-    const batteryHeading = screen.getByRole('heading', { level: 3, name: 'Battery Overview' })
-    const trendHeading = screen.getByRole('heading', { level: 3, name: 'Drive Distance Trend' })
+    const batteryHeading = screen.getByRole('heading', { level: 3, name: 'Battery overview' })
+    const trendHeading = screen.getByRole('heading', { level: 3, name: 'Drive distance trend' })
     expect(batteryHeading).toBeInTheDocument()
     expect(trendHeading).toBeInTheDocument()
 

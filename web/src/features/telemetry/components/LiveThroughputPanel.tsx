@@ -28,9 +28,10 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { formatTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { ThroughputPoint } from '../hooks/useThroughputHistory';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const LINE_COLOR = chartTokens.series[5];
 const GRADIENT_ID = 'live-throughput-gradient';
@@ -55,6 +56,7 @@ export function LiveThroughputPanel({
   connected,
   className,
 }: LiveThroughputPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const points = history ?? [];
   const hasData = points.length >= 2;
@@ -64,16 +66,16 @@ export function LiveThroughputPanel({
   );
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <PanelTitle className="flex items-center gap-2">
+    <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
           <Radio
-            className={connected ? 'h-4 w-4 text-rose-400' : 'h-4 w-4 text-[var(--text-muted)]'}
+            className={connected ? 'h-4 w-4 shrink-0 text-rose-400' : 'h-4 w-4 shrink-0 text-[var(--text-muted)]'}
             aria-hidden="true"
           />
-          {t('liveMonitor.throughputTitle', 'Signal Throughput')}
+          {t('liveMonitor.throughputTitle', 'Signal throughput')}
         </PanelTitle>
-        <Caption className="sm:ml-auto">
+        <Caption className="min-w-0 break-words tabular-nums sm:ms-auto">
           {t('liveMonitor.throughputNow', 'Now')}: {fmtInt(rate ?? 0)}/s ·{' '}
           {t('liveMonitor.throughputPeak', 'Peak')}: {fmtInt(peak ?? 0)}/s
         </Caption>
@@ -87,7 +89,7 @@ export function LiveThroughputPanel({
       </div>
 
       <EmbeddedChart
-        title={t('liveMonitor.throughputTitle', 'Signal Throughput')}
+        title={t('liveMonitor.throughputTitle', 'Signal throughput')}
         ariaLabel={t(
           'liveMonitor.throughputAria',
           'Live signals per second over the recent window',

@@ -3,6 +3,7 @@ package chargeopt
 import (
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -398,6 +399,9 @@ func TestBuildOptimizerRecommendations(t *testing.T) {
 		if got.Priority != "medium" {
 			t.Errorf("priority = %q, want medium", got.Priority)
 		}
+		if got.Title != "Compare charging costs by start hour" {
+			t.Errorf("unverified home charging claim: %+v", got)
+		}
 		if !approx(got.EstimatedSavings, 10, eps) {
 			t.Errorf("EstimatedSavings = %v, want 10", got.EstimatedSavings)
 		}
@@ -445,11 +449,20 @@ func TestBuildOptimizerRecommendations(t *testing.T) {
 		}
 	})
 
-	t.Run("cost_rec_when_home_ratio_low", func(t *testing.T) {
+	t.Run("cost_rec_compares_recorded_locations_without_claiming_home", func(t *testing.T) {
 		t.Parallel()
 		recs := buildOptimizerRecommendations(currentSchedule{AvgChargeToPct: 50, HomeChargingPct: 30}, costAnalysis{}, 100, nonMorningLowPower())
-		if findRec(recs, "cost") == nil {
+		rec := findRec(recs, "cost")
+		if rec == nil {
 			t.Fatalf("no cost rec in %+v", recs)
+		}
+		if rec.Title != "Compare costs at your charging locations" ||
+			!strings.Contains(rec.Detail, "30% of sessions") ||
+			!strings.Contains(rec.Detail, "do not confirm home charging") {
+			t.Errorf("location evidence misrepresented: %+v", rec)
+		}
+		if strings.Contains(rec.Detail, "sessions are at home") || strings.Contains(rec.Detail, "cheaper") {
+			t.Errorf("unverified home/cost claim: %+v", rec)
 		}
 	})
 

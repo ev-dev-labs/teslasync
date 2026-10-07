@@ -62,7 +62,7 @@ export default function PhysicsContradictionsSection({ physics }: { physics: Phy
         mobileColumns={['kind', 'window', 'observations']} keyExtractor={(r) => `${r.at}-${r.kind}-${r.detail}`} columns={[
           { key: 'kind', header: t('teslaOnly.kind', 'Kind'), render: (r) => r.kind },
           { key: 'window', header: t('teslaOnly.workbench.episodeWindow', 'First → last'), render: (r) => `${time(r.at, t)} → ${time(r.last_at ?? r.at, t)}` },
-          { key: 'observations', header: t('teslaOnly.workbench.observations', 'Reported observations'), render: (r) => r.observations ?? 1 },
+          { key: 'observations', align: 'right', header: t('teslaOnly.workbench.observations', 'Reported observations'), render: (r) => r.observations ?? 1 },
           { key: 'detail', header: t('teslaOnly.detail', 'Detail'), render: (r) => r.detail },
           { key: 'unknown', header: t('teslaOnly.unknownFlag', 'Unknown flag'), render: (r) => yesNo(r.unknown, t) },
         ]} emptyMessage={t('teslaOnly.noMatchingFindings', 'No findings match this filter.')} /> :

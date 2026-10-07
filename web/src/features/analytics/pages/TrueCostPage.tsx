@@ -2,10 +2,9 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
-import { AITCONarration } from '@/components/ai/AITCONarration';
+import { AITCONarration } from '@/components/ai';
 
-import { PageContainer } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
+import { CardGrid, PageLayout, Section, type CardGridItem } from '@/components/layout';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
@@ -16,25 +15,27 @@ import {
   TrueCostBreakEven,
   TrueCostCumulativeChart,
   TrueCostEnergyCostTrend,
-  TrueCostEvidenceLedger,
-  TrueCostFixedLedger,
   TrueCostMethodology,
   TrueCostMonthlyCostChart,
   TrueCostMonthlyDeltaChart,
   TrueCostMonthlyDirectory,
   TrueCostPerDistanceChart,
-  TrueCostSavingsEnvelope,
   TrueCostSensitivityMatrix,
   TrueCostSourceScopeLedger,
   TrueCostTemporalCoverage,
   trueCostQueryState,
   useTrueCostDisplay,
 } from '../components/true-cost';
+import { TrueCostSavingsEnvelope } from '../components/operationalbrief-n-z/TrueCostSavingsEnvelope';
+import { TrueCostEvidenceLedger } from '../components/operationalbrief-n-z/TrueCostEvidenceLedger';
+import { TrueCostFixedLedger, TrueCostLayoutSlot } from '../components/true-cost-modernization';
 import { analyzeTrueCost } from '../lib/trueCost';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function TrueCostPage() {
+  useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('tco.title', 'Lifetime Operating Cost'));
+  usePageTitle(t('tco.title', 'Lifetime operating cost'));
   const { vehicleId } = useSelectedVehicle();
   const { settings } = useSettings();
   const vehicleIdString = vehicleId != null ? String(vehicleId) : '';
@@ -69,9 +70,121 @@ export default function TrueCostPage() {
   const sectionProps = { analysis, state, display, gasUnit };
   const narrationProps = { vehicleId: vehicleId ?? undefined };
 
+  // Keep source order, source-specific states and specialist formatting intact.
+  // One CardGrid observes the allocated content width; slots consume its
+  // existing placement context instead of creating another packing engine.
+  const items: CardGridItem[] = [
+    {
+      id: 'evidence', size: 'full',
+      content: <TrueCostLayoutSlot delay={0}>
+        <TrueCostEvidenceLedger {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'source-scope', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.02}>
+        <TrueCostSourceScopeLedger {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'boundary', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.03}>
+        <TrueCostBoundaryDisclosure {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'savings', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.04}>
+        <TrueCostSavingsEnvelope {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'fixed-ledger', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.045}>
+        <TrueCostFixedLedger
+          vehicleId={vehicleId ?? undefined}
+          totalKm={query.data?.total_km ?? 0}
+          totalChargingCost={query.data?.total_charging_cost ?? 0}
+        />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'cumulative', size: 'half',
+      content: <TrueCostLayoutSlot delay={0.05}>
+        <TrueCostCumulativeChart {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'monthly-cost', size: 'half',
+      content: <TrueCostLayoutSlot delay={0.06}>
+        <TrueCostMonthlyCostChart {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'monthly-delta', size: 'half',
+      content: <TrueCostLayoutSlot delay={0.07}>
+        <TrueCostMonthlyDeltaChart {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'energy-trend', size: 'half',
+      content: <TrueCostLayoutSlot delay={0.08}>
+        <TrueCostEnergyCostTrend {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'per-distance', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.09}>
+        <TrueCostPerDistanceChart {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'monthly-directory', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.1}>
+        <TrueCostMonthlyDirectory {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'assumptions', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.11}>
+        <TrueCostAssumptionsLedger {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'temporal-coverage', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.12}>
+        <TrueCostTemporalCoverage {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'break-even', size: 'half',
+      content: <TrueCostLayoutSlot delay={0.13}>
+        <TrueCostBreakEven {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'sensitivity', size: 'half',
+      content: <TrueCostLayoutSlot delay={0.14}>
+        <TrueCostSensitivityMatrix {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'accounting', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.15}>
+        <TrueCostAccountingIdentities {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+    {
+      id: 'methodology', size: 'full',
+      content: <TrueCostLayoutSlot delay={0.16}>
+        <TrueCostMethodology {...sectionProps} />
+      </TrueCostLayoutSlot>,
+    },
+  ];
+
   return (
-    <PageContainer
-      title={t('tco.title', 'Lifetime Operating Cost')}
+    <PageLayout
+      title={t('tco.title', 'Lifetime operating cost')}
       subtitle={t(
         'tco.subtitle',
         'Evidence-backed recorded charging versus modeled gasoline operating cost',
@@ -82,69 +195,15 @@ export default function TrueCostPage() {
         <AITCONarration {...narrationProps} />
       </div>
 
-      <FadeIn>
-        <TrueCostEvidenceLedger {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.02}>
-        <TrueCostSourceScopeLedger {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.03}>
-        <TrueCostBoundaryDisclosure {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.04}>
-        <TrueCostSavingsEnvelope {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.045}>
-        <TrueCostFixedLedger
-          vehicleId={vehicleId ?? undefined}
-          totalKm={query.data?.total_km ?? 0}
-          totalChargingCost={query.data?.total_charging_cost ?? 0}
+      <Section
+        id="tco-operating-evidence"
+        title={t('tco.modernization.evidence.title', 'Operating-cost evidence')}
+      >
+        <CardGrid
+          label={t('tco.kpis.aria', 'True cost KPI and evidence ledger')}
+          items={items}
         />
-      </FadeIn>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <FadeIn delay={0.05}>
-          <TrueCostCumulativeChart {...sectionProps} />
-        </FadeIn>
-        <FadeIn delay={0.06}>
-          <TrueCostMonthlyCostChart {...sectionProps} />
-        </FadeIn>
-        <FadeIn delay={0.07}>
-          <TrueCostMonthlyDeltaChart {...sectionProps} />
-        </FadeIn>
-        <FadeIn delay={0.08}>
-          <TrueCostEnergyCostTrend {...sectionProps} />
-        </FadeIn>
-      </div>
-
-      <FadeIn delay={0.09}>
-        <TrueCostPerDistanceChart {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.1}>
-        <TrueCostMonthlyDirectory {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.11}>
-        <TrueCostAssumptionsLedger {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.12}>
-        <TrueCostTemporalCoverage {...sectionProps} />
-      </FadeIn>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <FadeIn delay={0.13}>
-          <TrueCostBreakEven {...sectionProps} />
-        </FadeIn>
-        <FadeIn delay={0.14}>
-          <TrueCostSensitivityMatrix {...sectionProps} />
-        </FadeIn>
-      </div>
-
-      <FadeIn delay={0.15}>
-        <TrueCostAccountingIdentities {...sectionProps} />
-      </FadeIn>
-      <FadeIn delay={0.16}>
-        <TrueCostMethodology {...sectionProps} />
-      </FadeIn>
-    </PageContainer>
+      </Section>
+    </PageLayout>
   );
 }

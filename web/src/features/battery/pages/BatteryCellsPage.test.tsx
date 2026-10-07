@@ -34,7 +34,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -119,13 +119,13 @@ vi.mock('@/hooks/useUnits', () => ({
       duration: 'h',
       power: 'kW',
       locale: 'en-US',
-      precision: undefined,
+      precision: 2,
     },
     // SI (°C) → user preference at the render boundary. Deterministic and
     // network-free so temperature branches are assertable in both units.
     formatTemperature: (v: number | null | undefined, opts?: { precision?: number }) => {
       const c = typeof v === 'number' ? v : 0;
-      const p = opts?.precision ?? 0;
+      const p = opts?.precision ?? 2;
       const val = h.temp === '°F' ? c * 1.8 + 32 : c;
       return `${val.toFixed(p)}${h.temp}`;
     },
@@ -276,46 +276,47 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByRole('region', { name: 'At a glance' })).toBeInTheDocument();
 
     // KPI band — space-before-unit strings are unique to the KPI cards.
-    expect(screen.getByText('3.9025 V')).toBeInTheDocument(); // avg voltage
-    expect(screen.getByText('Cell Voltage Heatmap').closest('section')).toHaveClass('items-start');
+    const metrics = within(screen.getByRole('region', { name: 'Summary metrics' }));
+    expect(metrics.getByText('3.9025 V')).toBeInTheDocument(); // avg voltage
+    expect(screen.getByText('Cell voltage heatmap').closest('[data-card-grid]')).toBeInTheDocument();
     expect(screen.getByText('#3 3.8500 V')).toBeInTheDocument(); // min cell → cell 3
     expect(screen.getByText('#4 3.9500 V')).toBeInTheDocument(); // max cell → cell 4
-    expect(screen.getByText('12.5 mV')).toBeInTheDocument(); // imbalance
-    expect(screen.getByText('398.5 V')).toBeInTheDocument(); // pack voltage
+    expect(metrics.getByText('12.50 mV')).toBeInTheDocument(); // imbalance
+    expect(metrics.getByText('398.50 V')).toBeInTheDocument(); // pack voltage
 
     // Temperature summary — SI °C identity via the stubbed formatter.
-    expect(screen.getByText('25.0°C')).toBeInTheDocument();
-    expect(screen.getByText('22.0°C')).toBeInTheDocument();
-    expect(screen.getByText('30.0°C')).toBeInTheDocument();
-    expect(screen.getAllByText('8.0°C').length).toBeGreaterThanOrEqual(1); // temp spread
+    expect(screen.getByText('25.00°C')).toBeInTheDocument();
+    expect(screen.getByText('22.00°C')).toBeInTheDocument();
+    expect(screen.getByText('30.00°C')).toBeInTheDocument();
+    expect(screen.getAllByText('8.00°C').length).toBeGreaterThanOrEqual(1); // temp spread
 
     // Health-recommendation insights (imbalance 12.5 → warning, temp
     // spread 8 → critical, 2 significant-deviation cells → critical).
-    expect(screen.getByText('Voltage Spread Increasing')).toBeInTheDocument();
-    expect(screen.getByText('High Temperature Spread')).toBeInTheDocument();
-    expect(screen.getByText('Critical Cells Detected')).toBeInTheDocument();
+    expect(screen.getByText('Voltage spread increasing')).toBeInTheDocument();
+    expect(screen.getByText('High temperature spread')).toBeInTheDocument();
+    expect(screen.getByText('Critical cells detected')).toBeInTheDocument();
     expect(screen.getByText(/2 cell\(s\) show significant deviation/)).toBeInTheDocument();
 
     // Cell-details table — 4-decimal voltage + signed delta + status label.
     expect(screen.getByText('3.8500')).toBeInTheDocument();
-    expect(screen.getByText('+5.0')).toBeInTheDocument();
-    expect(screen.getByText('-45.0')).toBeInTheDocument();
-    expect(screen.getByText('Normal')).toBeInTheDocument();
+    expect(screen.getByText('+5.00')).toBeInTheDocument();
+    expect(screen.getByText('-45.00')).toBeInTheDocument();
+    expect(screen.getAllByText('Normal').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('4 cells')).toBeInTheDocument(); // count badge
 
     // Every section panel/title is present (no hidden sections).
     for (const title of [
-      'Cell Voltage Heatmap',
-      'Voltage Distribution',
-      'Cell Voltage Bar Chart',
-      'Cell Voltage Over Time',
-      'Imbalance Trend',
-      'Voltage Spread Trend',
-      'Cell Details',
-      'Temperature Summary',
-      'Health Recommendations',
+      'Cell voltage heatmap',
+      'Voltage distribution',
+      'Cell voltage bar chart',
+      'Cell voltage over time',
+      'Imbalance trend',
+      'Voltage spread trend',
+      'Cell details',
+      'Temperature summary',
+      'Health recommendations',
     ]) {
-      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: title, exact: true })).toBeInTheDocument();
     }
   });
 
@@ -326,12 +327,12 @@ describe('BatteryCellsPage', () => {
     renderPage();
 
     // 25°C → 77°F, 22°C → 71.6°F, 30°C → 86°F; spread 8°C·1.8 → 14.4°F.
-    expect(screen.getByText('77.0°F')).toBeInTheDocument();
-    expect(screen.getByText('86.0°F')).toBeInTheDocument();
-    expect(screen.getAllByText('14.4°F').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('77.00°F')).toBeInTheDocument();
+    expect(screen.getByText('86.00°F')).toBeInTheDocument();
+    expect(screen.getAllByText('14.40°F').length).toBeGreaterThanOrEqual(1);
     // The °C identity strings must NOT survive once the preference is °F.
-    expect(screen.queryByText('25.0°C')).not.toBeInTheDocument();
-    expect(screen.queryByText('8.0°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('25.00°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('8.00°C')).not.toBeInTheDocument();
   });
 
   it('shows a skeleton in every panel while loading and leaks no ready values', () => {
@@ -341,7 +342,7 @@ describe('BatteryCellsPage', () => {
 
     expect(screen.getByRole('heading', { name: /Battery Cells/i, level: 1 })).toBeInTheDocument();
     expect(screen.queryByText('3.9025 V')).not.toBeInTheDocument();
-    expect(screen.queryByText('25.0°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('25.00°C')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 
@@ -365,7 +366,7 @@ describe('BatteryCellsPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('No cell readings available.')).toBeInTheDocument();
+    expect(screen.getAllByText('No cell readings available.')).toHaveLength(2);
     expect(screen.getByText('No distribution data available.')).toBeInTheDocument();
     expect(screen.getByText('No cell voltages available.')).toBeInTheDocument();
     expect(screen.getByText('No cell details available.')).toBeInTheDocument();
@@ -383,7 +384,7 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByText(/No vehicle selected/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Set up TeslaSync/i })).toBeInTheDocument();
     // The data scaffolding must NOT render behind the guard.
-    expect(screen.queryByText('Cell Voltage Heatmap')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cell voltage heatmap')).not.toBeInTheDocument();
     expect(screen.queryByText('3.9025 V')).not.toBeInTheDocument();
   });
 

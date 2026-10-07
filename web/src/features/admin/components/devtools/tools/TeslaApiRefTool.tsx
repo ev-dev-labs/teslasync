@@ -15,7 +15,7 @@ export function TeslaApiRefTool() {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
 
-  const searchLabel = t('devtools.utils.teslaApiRefSearch', 'Search Endpoints')
+  const searchLabel = t('devtools.utils.teslaApiRefSearch', 'Search endpoints')
 
   const filtered = useMemo(() => {
     // Trim before matching so stray leading/trailing whitespace in the query
@@ -34,6 +34,7 @@ export function TeslaApiRefTool() {
     () => [
       {
         key: 'method',
+        filterValue: (r) => r.method ?? null,
         header: t('devtools.utils.teslaApiRefMethod', 'Method'),
         render: (r) => (
           <Badge variant={r.method === 'GET' ? 'info' : 'warning'} size="sm">
@@ -43,6 +44,7 @@ export function TeslaApiRefTool() {
       },
       {
         key: 'path',
+        filterValue: (r) => r.path ?? null,
         header: t('devtools.utils.teslaApiRefPath', 'Path'),
         render: (r) => (
           <div className="flex items-center gap-1">
@@ -51,13 +53,13 @@ export function TeslaApiRefTool() {
           </div>
         ),
       },
-      { key: 'desc', header: t('devtools.utils.teslaApiRefEndpointDesc', 'Endpoint Desc'), render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.desc}</span> },
+      { key: 'desc', filterValue: (r) => r.desc ?? null, header: t('devtools.utils.teslaApiRefEndpointDesc', 'Endpoint desc'), render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.desc}</span> },
     ],
     [t],
   )
 
   return (
-    <ToolCard icon={BookOpen} color="cyan" title={t('devtools.utils.teslaApiRef', 'Tesla Api Ref')} description={t('devtools.utils.teslaApiRefDesc', 'Tesla Api Ref Desc')}>
+    <ToolCard icon={BookOpen} color="cyan" title={t('devtools.utils.teslaApiRef', 'Tesla API ref')} description={t('devtools.utils.teslaApiRefDesc', 'Tesla API ref desc')}>
       <div className="space-y-3">
         <Input
           type="search"
@@ -72,6 +74,8 @@ export function TeslaApiRefTool() {
           columns={columns}
           mobileColumns={['method', 'path']}
           data={filtered}
+          enableValueFilters
+          filterData={TESLA_ENDPOINTS}
           keyExtractor={(r) => r.path}
           emptyMessage={t('devtools.teslaApiRef.noResults', 'No endpoints match your search')}
           compact

@@ -48,6 +48,8 @@ export function DestinationDirectory({
     () => [
       {
         key: 'label',
+        filterValue: (destination) => destination.label ?? null,
+        filterValueLabel: (_, destination) => destination.label ?? t('explorer.destination.unnamed', 'Unnamed destination {{number}}', { number: destination.ordinal }),
         header: t('explorer.place', 'Place'),
         visibleOnMobile: true,
         render: (destination) => {
@@ -71,6 +73,7 @@ export function DestinationDirectory({
       },
       {
         key: 'visits',
+        filterValue: (destination) => destination.visits ?? null,
         header: t('explorer.visits', 'Visits'),
         align: 'right',
         sortable: true,
@@ -83,6 +86,7 @@ export function DestinationDirectory({
       },
       {
         key: 'repeatVisits',
+        filterValue: (destination) => destination.repeatVisits ?? null,
         header: t(
           'explorer.destination.repeatVisits',
           'Repeat arrivals',
@@ -97,6 +101,8 @@ export function DestinationDirectory({
       },
       {
         key: 'distanceFromBaseM',
+        filterValue: (destination) => summary.evidence.baseSufficient ? destination.distanceFromBaseM ?? null : null,
+        filterValueLabel: (_, destination) => summary.evidence.baseSufficient ? formatDistance(destination.distanceFromBaseM) : '—',
         header: t(
           'explorer.destination.fromBase',
           'From inferred base',
@@ -106,16 +112,16 @@ export function DestinationDirectory({
         render: (destination) => (
           <Text variant="body" mono>
             {summary.evidence.baseSufficient
-              ? formatDistance(destination.distanceFromBaseM, {
-                  precision: 0,
-                })
+              ? formatDistance(destination.distanceFromBaseM)
               : '—'}
           </Text>
         ),
       },
       {
         key: 'firstVisitedAt',
-        header: t('explorer.firstVisit', 'First Visit'),
+        filterValue: (destination) => destination.firstVisitedAt ?? null,
+        filterValueLabel: (_, destination) => formatDate(destination.firstVisitedAt),
+        header: t('explorer.firstVisit', 'First visit'),
         align: 'right',
         sortable: true,
         render: (destination) => (
@@ -137,7 +143,7 @@ export function DestinationDirectory({
       )}
       data-testid="explorer-destinations"
     >
-      <GlassPanel className={cn('h-full p-4 sm:p-5')}>
+      <GlassPanel className={cn('min-w-0 h-full p-4 sm:p-5')}>
         <PanelTitle className="mb-3 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('explorer.destinations', 'Destinations')}
@@ -176,6 +182,7 @@ export function DestinationDirectory({
                 </InlineCallout>
               ) : null}
               <DataTable
+                enableValueFilters
                 tableId="driving:explorer-destinations"
                 columns={columns}
                 data={summary.destinations}

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, UserPlus, UserMinus, XCircle, Users, Mail } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel,
   Button,
@@ -16,10 +16,12 @@ import {
   type BadgeProps,
   type Column,
 } from '@/components/ui';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
+import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 
 import {
   useVehicleDrivers,
@@ -34,7 +36,6 @@ import { useVehicle } from '@/api/hooks/useVehicles';
 import type { VehicleDriver, VehicleInvitation } from '@/api/types';
 
 import {
-  AccessKpiBand,
   AccessOverviewPanel,
   type AccessStatusSlice,
   type AccessRoleSlice,
@@ -65,25 +66,23 @@ const SEVEN_DAYS_MS = 7 * 86_400_000;
 export default function VehicleAccessPage() {
   const { t } = useTranslation();
   const { id: vehicleId } = useParams<{ id: string }>();
-  usePageTitle(t('vehicleAccess.title', 'Vehicle Access'));
+  usePageTitle(t('vehicleAccess.title', 'Vehicle access'));
 
   const { data: vehicle } = useVehicle(vehicleId ?? '');
 
   const driversQuery = useVehicleDrivers(vehicleId);
   const invitationsQuery = useVehicleInvitations(vehicleId);
+  const driversState = useDataState(driversQuery);
+  const invitationsState = useDataState(invitationsQuery);
 
   const {
     data: drivers,
     isLoading: driversLoading,
-    isError: driversIsError,
-    error: driversError,
     refetch: refetchDrivers,
   } = driversQuery;
   const {
     data: invitations,
     isLoading: invitationsLoading,
-    isError: invitationsIsError,
-    error: invitationsError,
     refetch: refetchInvitations,
   } = invitationsQuery;
   const dataSources = useMemo(
@@ -181,6 +180,7 @@ export default function VehicleAccessPage() {
     {
       key: 'name',
       header: t('vehicleAccess.drivers.name', 'Name'),
+      filterValue: (row) => row.driver_name ?? null,
       render: (row) => (
         <Text weight="medium" color="primary">
           {row.driver_name ?? '—'}
@@ -190,6 +190,7 @@ export default function VehicleAccessPage() {
     {
       key: 'email',
       header: t('vehicleAccess.drivers.email', 'Email'),
+      filterValue: (row) => row.driver_email ?? null,
       render: (row) => (
         <Text color="secondary">{row.driver_email ?? '—'}</Text>
       ),
@@ -197,6 +198,7 @@ export default function VehicleAccessPage() {
     {
       key: 'role',
       header: t('vehicleAccess.drivers.role', 'Role'),
+      filterValue: (row) => row.role ?? null,
       render: (row) => row.role ? (
         <Badge variant="info">{row.role}</Badge>
       ) : (
@@ -227,6 +229,8 @@ export default function VehicleAccessPage() {
     {
       key: 'status',
       header: t('vehicleAccess.invitations.status', 'Status'),
+      filterValue: (row) => row.status ?? null,
+      filterValueLabel: (_value, row) => t(`vehicleAccess.status.${row.status}`, row.status),
       render: (row) => (
         <Badge variant={INVITATION_STATUS_VARIANT[row.status] ?? 'neutral'}>
           {t(`vehicleAccess.status.${row.status}`, row.status)}
@@ -235,7 +239,8 @@ export default function VehicleAccessPage() {
     },
     {
       key: 'createdBy',
-      header: t('vehicleAccess.invitations.createdBy', 'Created By'),
+      header: t('vehicleAccess.invitations.createdBy', 'Created by'),
+      filterValue: (row) => row.created_by ?? null,
       render: (row) => (
         <Text color="secondary">{row.created_by ?? '—'}</Text>
       ),
@@ -282,8 +287,8 @@ export default function VehicleAccessPage() {
   ], [t]);
 
   return (
-    <PageContainer
-      title={t('vehicleAccess.title', 'Vehicle Access')}
+    <PageLayout
+      title={t('vehicleAccess.title', 'Vehicle access')}
       subtitle={t('vehicleAccess.subtitle', 'Manage drivers and share invitations')}
       query={[driversQuery, invitationsQuery]}
       dataSources={dataSources}
@@ -291,14 +296,24 @@ export default function VehicleAccessPage() {
         '/vehicles/:id': vehicle?.display_name ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id: vehicleId }),
       }}
     >
+      <StaleRefreshWarning state={driversState} label={t('vehicleAccess.drivers.title', 'Drivers')} />
+      <StaleRefreshWarning state={invitationsState} label={t('vehicleAccess.invitations.title', 'Share invitations')} />
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <AccessKpiBand
-          drivers={driversList.length}
-          invitations={invitationsList.length}
-          pending={pendingCount}
-          expiringSoon={expiringSoonCount}
-        />
+        <VehicleEvidenceBrief id="vehicle-access-summary"
+          title={t('vehicleAccess.kpis', 'Access summary')}
+          description={t('vehicleAccess.briefDescription', 'Driver and invitation records are independent snapshots. Expiring soon means pending invitations expiring within the next seven days.')}
+          status={driversState.status === 'stale' || invitationsState.status === 'stale' ? 'stale'
+            : driversState.data == null || invitationsState.data == null ? 'partial' : 'ok'}
+          loading={driversLoading || invitationsLoading}
+          scope={t('vehicleAccess.snapshot', 'Latest access records')}
+          provenance={`${t('dataSources.labels.vehicleDrivers', 'Vehicle drivers')} / ${t('dataSources.labels.shareInvitations', 'Share invitations')}`}
+          metrics={[
+            { metricId: 'count', occurrenceId: 'drivers', label: t('vehicleAccess.kpi.drivers', 'Drivers'), rawValue: drivers == null ? null : driversList.length },
+            { metricId: 'count', occurrenceId: 'invitations', label: t('vehicleAccess.kpi.invitations', 'Invitations'), rawValue: invitations == null ? null : invitationsList.length },
+            { metricId: 'count', occurrenceId: 'pending', label: t('vehicleAccess.kpi.pending', 'Pending'), rawValue: invitations == null ? null : pendingCount },
+            { metricId: 'count', occurrenceId: 'expiring', label: t('vehicleAccess.kpi.expiringSoon', 'Expiring soon'), rawValue: invitations == null ? null : expiringSoonCount },
+          ]} />
       </FadeIn>
 
       {/* 2 — Drivers (hero) + Access Overview (context) bento */}
@@ -326,9 +341,9 @@ export default function VehicleAccessPage() {
 
             {driversLoading ? (
               <Skeleton height={220} />
-            ) : driversIsError ? (
+            ) : driversState.fatalError ? (
               <QueryError
-                error={driversError}
+                error={driversState.fatalError}
                 onRetry={() => { refetchDrivers(); }}
                 resourceName={t('vehicleAccess.drivers.resource', 'Drivers')}
               />
@@ -340,6 +355,7 @@ export default function VehicleAccessPage() {
             ) : (
               <DataTable
                 tableId="vehicles:access-drivers"
+                enableValueFilters
                 columns={driverColumns}
                 mobileColumns={['name', 'role', 'actions']}
                 data={driversList}
@@ -357,8 +373,8 @@ export default function VehicleAccessPage() {
             totalInvitations={invitationsList.length}
             totalDrivers={driversList.length}
             isLoading={driversLoading || invitationsLoading}
-            isError={driversIsError || invitationsIsError}
-            error={driversError ?? invitationsError}
+            isError={driversState.fatalError != null || invitationsState.fatalError != null}
+            error={driversState.fatalError ?? invitationsState.fatalError}
             onRetry={() => { refetchDrivers(); refetchInvitations(); }}
           />
         </section>
@@ -370,7 +386,7 @@ export default function VehicleAccessPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-cyan-300" aria-hidden="true" />
-              <PanelTitle>{t('vehicleAccess.invitations.title', 'Share Invitations')}</PanelTitle>
+              <PanelTitle>{t('vehicleAccess.invitations.title', 'Share invitations')}</PanelTitle>
               {invitationsList.length > 0 && (
                 <Badge variant="neutral">{invitationsList.length}</Badge>
               )}
@@ -391,16 +407,16 @@ export default function VehicleAccessPage() {
                 aria-label={t('vehicleAccess.invitations.create', 'Create invitation')}
               >
                 <UserPlus className="h-4 w-4" aria-hidden="true" />
-                {t('vehicleAccess.invitations.createBtn', 'Invite Driver')}
+                {t('vehicleAccess.invitations.createBtn', 'Invite driver')}
               </Button>
             </div>
           </div>
 
           {invitationsLoading ? (
             <Skeleton height={220} />
-          ) : invitationsIsError ? (
+          ) : invitationsState.fatalError ? (
             <QueryError
-              error={invitationsError}
+              error={invitationsState.fatalError}
               onRetry={() => { refetchInvitations(); }}
               resourceName={t('vehicleAccess.invitations.resource', 'Invitations')}
             />
@@ -412,6 +428,7 @@ export default function VehicleAccessPage() {
           ) : (
             <DataTable
               tableId="vehicles:access-invitations"
+              enableValueFilters
               columns={invitationColumns}
               mobileColumns={['status', 'expires', 'actions']}
               data={invitationsList}
@@ -427,7 +444,7 @@ export default function VehicleAccessPage() {
       {/* ── Confirm Dialogs ───────────────────────────────────── */}
       <ConfirmDialog
         open={removeTarget !== null}
-        title={t('vehicleAccess.drivers.removeTitle', 'Remove Driver')}
+        title={t('vehicleAccess.drivers.removeTitle', 'Remove driver')}
         message={t('vehicleAccess.drivers.removeMessage', 'Are you sure you want to remove this driver\'s access? This action cannot be undone.')}
         confirmLabel={t('vehicleAccess.drivers.removeConfirm', 'Remove')}
         variant="danger"
@@ -436,13 +453,13 @@ export default function VehicleAccessPage() {
       />
       <ConfirmDialog
         open={revokeTarget !== null}
-        title={t('vehicleAccess.invitations.revokeTitle', 'Revoke Invitation')}
+        title={t('vehicleAccess.invitations.revokeTitle', 'Revoke invitation')}
         message={t('vehicleAccess.invitations.revokeMessage', 'Are you sure you want to revoke this invitation? The invite link will no longer work.')}
         confirmLabel={t('vehicleAccess.invitations.revokeConfirm', 'Revoke')}
         variant="danger"
         onConfirm={handleRevokeInvitation}
         onCancel={() => setRevokeTarget(null)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

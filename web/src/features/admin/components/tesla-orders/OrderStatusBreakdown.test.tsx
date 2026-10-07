@@ -102,7 +102,7 @@ describe('OrderStatusBreakdown — state-invariant chrome', () => {
         error: status === 'error' ? new Error('boom') : null,
       });
 
-      const heading = screen.getByRole('heading', { name: /order status/i });
+      const heading = screen.getByRole('heading', { name: /Order status/i });
       expect(heading).toBeInTheDocument();
 
       // The PieChart glyph is presentational — it must stay out of the
@@ -185,8 +185,8 @@ describe('OrderStatusBreakdown — ready (populated)', () => {
 
     // All five canonical badges — including the zero-count "Other".
     for (const label of [
-      'In Progress',
-      'Ready · In Transit',
+      'In progress',
+      'Ready · in transit',
       'Delivered',
       'Cancelled',
       'Other',

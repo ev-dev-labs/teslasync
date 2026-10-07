@@ -214,8 +214,8 @@ function kpiRegion() {
 // Read a MetricCard's value by its label so numeric assertions never collide.
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
-  return card.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = labelEl.closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -279,9 +279,18 @@ describe('rankChipClass', () => {
 /* ─────────────────────────── Component tests ─────────────────────────── */
 
 describe('LocationsPage — shell & request contract', () => {
+  it('retains loaded-page scope and opens the original-duration evidence in the real summary drawer', async () => {
+    renderPage();
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('46'));
+    expect(within(kpiRegion()).getAllByText(/not server-wide totals/).length).toBeGreaterThan(0);
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Location summary details' });
+    expect(within(drawer).getByText('Home, Seattle')).toBeInTheDocument();
+    expect(within(drawer).getByText('Loaded-page total duration divided by loaded-page visits; zero when the successful page contains no visits.')).toBeInTheDocument();
+  });
   it('renders the title/subtitle and requests SI locations with snake_case params (no /api/v1)', async () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Visited Locations' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Visited locations' })).toBeInTheDocument();
     expect(screen.getByText("Places you've been — ranked by frequency")).toBeInTheDocument();
     await waitFor(() => expect(mockRequest).toHaveBeenCalled());
     const requestPath = String(mockRequest.mock.calls[0]?.[0]);
@@ -292,20 +301,20 @@ describe('LocationsPage — shell & request contract', () => {
     expect(params.get('offset')).toBe('0');
     expect(params.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(params.get('to')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(document.title).toContain('Visited Locations');
+    expect(document.title).toContain('Visited locations');
   });
 });
 
 describe('LocationsPage — KPI band', () => {
   it('derives every KPI from the loaded rows', async () => {
     renderPage();
-    await waitFor(() => expect(kpiValue('Total Visits')).toBe('46'));
-    expect(kpiValue('Unique Places')).toBe('4');
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('46'));
+    expect(kpiValue('Unique places')).toBe('4');
     // Regression: the coordinate row (#4) is NOT counted as a city.
-    expect(kpiValue('Unique Cities')).toBe('3');
-    expect(kpiValue('Most Visited')).toBe('Home, Seattle');
+    expect(kpiValue('Unique cities')).toBe('3');
+    expect(kpiValue('Most visited')).toBe('Home, Seattle');
     // formatDuration renders SI seconds in the user's (hour) preference.
-    expect(kpiValue('Total Time')).toMatch(/\bh\b/);
+    expect(kpiValue('Total time')).toMatch(/\bh\b/);
   });
 
   it('renders only the server-side range-filtered aggregates', async () => {
@@ -313,15 +322,15 @@ describe('LocationsPage — KPI band', () => {
       { id: 1, address_name: 'Home, Seattle', visit_count: 10, total_duration_s: 500, last_visited: '2025-03-10T08:00:00Z' },
     ] as any);
     renderPage();
-    await waitFor(() => expect(kpiValue('Unique Places')).toBe('1'));
-    expect(kpiValue('Total Visits')).toBe('10');
+    await waitFor(() => expect(kpiValue('Unique places')).toBe('1'));
+    expect(kpiValue('Total visits')).toBe('10');
   });
 
   it('shows a "—" placeholder for Most Visited when there is no data', async () => {
     mockRequest.mockResolvedValue([] as any);
     renderPage();
-    await waitFor(() => expect(kpiValue('Total Visits')).toBe('0'));
-    expect(kpiValue('Most Visited')).toBe('—');
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('0'));
+    expect(kpiValue('Most visited')).toBe('—');
   });
 });
 
@@ -350,7 +359,7 @@ describe('LocationsPage — leaderboards', () => {
     expect(captured.panels['Hours'].data[0]).toEqual({ name: 'Office, Bellevue', value: 20 });
 
     // Panel wiring (titles, colours, empty copy) is passed through intact.
-    expect(captured.panels['Visits'].title).toBe('Top Locations by Visits');
+    expect(captured.panels['Visits'].title).toBe('Top locations by visits');
     expect(captured.panels['Visits'].color).toBe('#10b981');
     expect(captured.panels['Hours'].emptyMessage).toBe('No time-spent data available');
   });
@@ -465,8 +474,9 @@ describe('LocationsPage — loading & error states', () => {
 
     expect(screen.getByTestId('lb-loading-Visits')).toBeInTheDocument();
     expect(screen.getByTestId('lb-loading-Hours')).toBeInTheDocument();
-    // KPI cards are replaced by skeletons — no metric labels yet.
-    expect(within(kpiRegion()).queryByText('Unique Places')).not.toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Unique places')).toBeInTheDocument();
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 

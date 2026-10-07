@@ -17,7 +17,7 @@ import {
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import {
   MIN_BASE_ARRIVALS,
@@ -28,6 +28,7 @@ import {
 } from '../../lib/explorer';
 import { ExplorerSectionBody } from './ExplorerSectionBody';
 import type { ExplorerSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ExplorerMethodologyProps {
   summary: ExplorerSummary;
@@ -40,6 +41,7 @@ export function ExplorerMethodology({
   state,
   className,
 }: ExplorerMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const methods = [
     {

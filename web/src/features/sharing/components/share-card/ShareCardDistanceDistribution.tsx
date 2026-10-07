@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
-  ChartContainer,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
@@ -14,6 +13,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -70,7 +70,9 @@ export function ShareCardDistanceDistribution({
       data-testid="share-card-distance-distribution"
       aria-label={t('shareCard.distanceDistribution.sectionAria', 'Measured distance distribution')}
     >
-      <ChartContainer
+      <ChartCard
+        size="standard"
+        toolbar
         title={t('shareCard.distanceDistribution.title', 'Distance distribution')}
         subtitle={t(
           'shareCard.distanceDistribution.subtitle',
@@ -121,7 +123,7 @@ export function ShareCardDistanceDistribution({
                   content={(
                     <ChartTooltip
                       valueFormatter={(value) =>
-                        display.formatNumber(Number(value), 0)}
+                        display.formatNumber(Number(value))}
                     />
                   )}
                 />
@@ -142,7 +144,7 @@ export function ShareCardDistanceDistribution({
             />
           )}
         </ShareCardSectionBody>
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

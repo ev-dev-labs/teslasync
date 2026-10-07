@@ -8,7 +8,7 @@
  * none/0), the state query result, and the user's distance preference:
  *
  *   - a resolved `state` snapshot → the two labelled range rows.
- *   - no snapshot                → the accessible "No range data" empty state.
+ *   - no snapshot                → labelled unknowns plus the accessible empty state.
  *   - isLoading                  → skeleton chrome only.
  *   - a hard query error         → QueryError (never the misleading empty state).
  *
@@ -129,6 +129,7 @@ function fleet(...ids: number[]): Vehicle[] {
 }
 
 interface RenderOpts {
+  size?: WidgetSize;
   query?: StateResult;
   vehicles?: Vehicle[];
   vehicleId?: number;
@@ -143,7 +144,7 @@ function renderWidget(opts: RenderOpts = {}) {
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <RangeEstimateWidget vehicleId={opts.vehicleId} size={FULL} />
+        <RangeEstimateWidget vehicleId={opts.vehicleId} size={opts.size ?? FULL} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -156,6 +157,13 @@ beforeEach(() => {
   mockUseVehicleState.mockClear();
 });
 
+it.each([1, 2, 3])('keeps an accessible heading and both readings at %s columns', cols => {
+  renderWidget({ size: { cols, rows: 2 } });
+  expect(screen.getByRole('heading', { name: 'Range', level: 3 })).toBeVisible();
+  expect(screen.getByText('500.00 km')).toBeInTheDocument();
+  expect(screen.getByText('480.00 km')).toBeInTheDocument();
+});
+
 afterEach(() => {
   cleanup();
 });
@@ -164,16 +172,16 @@ afterEach(() => {
 
 describe('formatRange', () => {
   it('converts SI metres to the display unit, rounds to whole units, and appends it', () => {
-    expect(formatRange(500_000, 'km')).toBe('500 km');
+    expect(formatRange(500_000, 'km')).toBe('500.00 km');
     // 123_456 m → 123.456 km, rounded to the nearest whole unit.
-    expect(formatRange(123_456, 'km')).toBe('123 km');
+    expect(formatRange(123_456, 'km')).toBe('123.46 km');
     // 1 mile = 1609.344 m → 482803.2 m is exactly 300 mi.
-    expect(formatRange(482_803.2, 'mi')).toBe('300 mi');
+    expect(formatRange(482_803.2, 'mi')).toBe('300.00 mi');
   });
 
   it('keeps a real zero but renders an em-dash for absent / non-finite input', () => {
     // A finite zero is a legitimate reading (empty battery), not "no data".
-    expect(formatRange(0, 'km')).toBe('0 km');
+    expect(formatRange(0, 'km')).toBe('0.00 km');
     // Null / undefined / NaN / Infinity are "no data" → placeholder, never "0 km".
     expect(formatRange(null, 'km')).toBe('—');
     expect(formatRange(undefined, 'km')).toBe('—');
@@ -193,10 +201,10 @@ describe('RangeEstimateWidget — populated', () => {
       }),
     });
 
-    expect(screen.getByText('Rated Range')).toBeInTheDocument();
-    expect(screen.getByText('Ideal Range')).toBeInTheDocument();
-    expect(screen.getByText('500 km')).toBeInTheDocument();
-    expect(screen.getByText('480 km')).toBeInTheDocument();
+    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Ideal range')).toBeInTheDocument();
+    expect(screen.getByText('500.00 km')).toBeInTheDocument();
+    expect(screen.getByText('480.00 km')).toBeInTheDocument();
     // A present snapshot never shows the empty state.
     expect(screen.queryByText('No range data')).toBeNull();
   });
@@ -214,8 +222,8 @@ describe('RangeEstimateWidget — populated', () => {
     });
 
     // 482803.2 m → 300 mi, 321868.8 m → 200 mi; the km unit never appears.
-    expect(screen.getByText('300 mi')).toBeInTheDocument();
-    expect(screen.getByText('200 mi')).toBeInTheDocument();
+    expect(screen.getByText('300.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('200.00 mi')).toBeInTheDocument();
     expect(screen.queryByText(/km/)).toBeNull();
   });
 
@@ -229,10 +237,10 @@ describe('RangeEstimateWidget — populated', () => {
 
     // Rated is absent → placeholder; ideal is a real 0 → "0 km" (not a dash).
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
     // The section chrome still renders (never a blank panel).
-    expect(screen.getByText('Rated Range')).toBeInTheDocument();
-    expect(screen.getByText('Ideal Range')).toBeInTheDocument();
+    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Ideal range')).toBeInTheDocument();
   });
 });
 
@@ -254,22 +262,30 @@ describe('RangeEstimateWidget — vehicle resolution', () => {
 });
 
 describe('RangeEstimateWidget — lifecycle + empty states', () => {
+  it('keeps both range readings on cached refresh failure with a retry warning', () => {
+    renderWidget({ query: makeQuery({ error: new Error('transient'), isError: true }) });
+    expect(screen.getByText('500.00 km')).toBeInTheDocument();
+    expect(screen.getByText('480.00 km')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('shows an accessible empty state when no snapshot has landed', () => {
     renderWidget({ vehicleId: 7, query: makeQuery({ data: undefined }) });
 
     expect(screen.getByText('No range data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('Rated Range')).toBeNull();
+    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Ideal range')).toBeInTheDocument();
   });
 
   it('renders only a skeleton while the state query is loading', () => {
     const { container } = renderWidget({
       vehicleId: 7,
-      query: makeQuery({ isLoading: true }),
+      query: makeQuery({ isLoading: true, data: undefined }),
     });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Rated Range')).toBeNull();
+    expect(screen.queryByText('Rated range')).toBeNull();
     expect(screen.queryByText('No range data')).toBeNull();
   });
 
@@ -282,14 +298,14 @@ describe('RangeEstimateWidget — lifecycle + empty states', () => {
     // jsdom reports navigator.onLine === true → QueryError's non-offline branch.
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No range data')).toBeNull();
-    expect(screen.queryByText('Rated Range')).toBeNull();
+    expect(screen.queryByText('Rated range')).toBeNull();
   });
 
   it('refetches when the accessible "Refresh" freshness control is activated', () => {
     const refetch = vi.fn();
     renderWidget({ vehicleId: 7, query: makeQuery({ refetch, isFetching: false }) });
 
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

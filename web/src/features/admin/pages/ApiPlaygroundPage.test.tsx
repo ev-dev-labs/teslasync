@@ -27,6 +27,11 @@
  *  8. Refresh — the reload-spec button refetches.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>()
+  const { summaryTestPreferences } = await import('../components/operationalbrief-a-g/summaryTestPreferences')
+  return { ...actual, useSettings: summaryTestPreferences }
+})
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -239,7 +244,23 @@ describe('findReplayEndpoint', () => {
 /* ─── page ─────────────────────────────────────────────────────────────── */
 
 describe('ApiPlaygroundPage', () => {
-  it('renders skeletons while the spec query is loading (no KPI labels yet)', async () => {
+  it('keeps specification and saved local history as separate real operational briefs', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    renderPage()
+    const spec = screen.getByTestId('api-playground-spec-summary')
+    await waitFor(() => expect(spec.querySelectorAll('[data-value-state="value"]')).toHaveLength(4))
+    const history = screen.getByTestId('api-playground-history-summary')
+    expect(spec).toHaveAttribute('data-operational-brief')
+    expect(history).toHaveAttribute('data-operational-brief')
+    expect(history.querySelector('[data-operational-metric="recent"]')).toHaveAttribute('data-value-state', 'value')
+    expect(history.querySelector('[data-operational-metric="latency"]')).toHaveAttribute('data-value-state', 'missing')
+    expect(history).toHaveTextContent('not server-wide traffic')
+    fireEvent.click(within(spec).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('loaded API specification')
+    expect(screen.getByRole('region', { name: 'Endpoint explorer' })).toBeInTheDocument()
+  })
+
+  it('renders skeletons with retained KPI labels while the spec query is loading', async () => {
     let resolve!: (value: string) => void
     mockedRequest.mockReturnValueOnce(
       new Promise<string>((r) => {
@@ -250,14 +271,17 @@ describe('ApiPlaygroundPage', () => {
     renderPage()
 
     const region = kpiRegion()
-    // During load the KPI band shows skeletons, not the metric labels.
-    expect(within(region).queryByText('Total Endpoints')).toBeNull()
-    expect(region.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    expect(within(region).getByText('Total endpoints')).toBeInTheDocument()
+    const specSummary = screen.getByTestId('api-playground-spec-summary')
+    expect(specSummary).toHaveAttribute('aria-busy', 'true')
+    expect(specSummary.querySelector('[data-operational-value]')).toBeNull()
+    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    expect(screen.getByTestId('api-playground-history-summary')).toHaveTextContent('0')
 
     // Resolve so the query settles and teardown is clean.
     resolve(EMPTY_SPEC_YAML)
     await waitFor(() =>
-      expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument(),
+      expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
     )
   })
 
@@ -267,7 +291,7 @@ describe('ApiPlaygroundPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument(),
+      expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
     )
 
     // Spec fetched as text (not JSON) from the canonical route.
@@ -278,12 +302,12 @@ describe('ApiPlaygroundPage', () => {
 
     // KPI band: 3 endpoints, 2 GET, 1 write, 2 tag groups.
     const region = kpiRegion()
-    expect(within(region).getByText('Total Endpoints')).toBeInTheDocument()
+    expect(within(region).getByText('Total endpoints')).toBeInTheDocument()
     expect(within(region).getByText('3')).toBeInTheDocument() // total (unique)
     expect(within(region).getByText('1')).toBeInTheDocument() // write ops (unique)
     expect(within(region).getByText('Read (GET)')).toBeInTheDocument()
-    expect(within(region).getByText('API Groups')).toBeInTheDocument()
-    expect(within(region).getByText('Avg Latency')).toBeInTheDocument()
+    expect(within(region).getByText('API groups')).toBeInTheDocument()
+    expect(within(region).getByText('Avg latency')).toBeInTheDocument()
 
     // Tag groups + endpoint rows from the parser.
     expect(screen.getByText('Vehicles')).toBeInTheDocument()
@@ -304,10 +328,10 @@ describe('ApiPlaygroundPage', () => {
       ).toBeInTheDocument(),
     )
     // KPI band still present, all zero.
-    expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument()
   })
 
-  it('surfaces a QueryError and still renders zeroed KPIs when the spec fails', async () => {
+  it('surfaces a QueryError, unknown spec KPIs and independently known local history when the spec fails', async () => {
     mockedRequest.mockRejectedValue(new ApiError('kaboom', 500))
 
     renderPage()
@@ -316,12 +340,14 @@ describe('ApiPlaygroundPage', () => {
     await waitFor(() =>
       expect(screen.getByText('Server error')).toBeInTheDocument(),
     )
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    const explorer = screen.getByRole('complementary', { name: 'Endpoint explorer' })
+    expect(within(explorer).getByRole('button', { name: 'Retry' })).toBeInTheDocument()
 
-    // The KPI band must not disappear — it shows zeros rather than lying by omission.
+    // The spec is unknown, while the separate, empty local request history is a known zero.
     const region = kpiRegion()
-    expect(within(region).getByText('Total Endpoints')).toBeInTheDocument()
-    expect(within(region).getAllByText('0').length).toBeGreaterThan(0)
+    expect(within(region).getByText('Total endpoints')).toBeInTheDocument()
+    expect(within(region).getAllByText('—')).toHaveLength(5)
+    expect(within(region).getByText('0')).toBeInTheDocument()
   })
 
   it('sends a selected GET request and renders the response + history', async () => {
@@ -392,7 +418,7 @@ describe('ApiPlaygroundPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument(),
+      expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
     )
 
     const before = mockedRequest.mock.calls.length
@@ -401,5 +427,23 @@ describe('ApiPlaygroundPage', () => {
     await waitFor(() =>
       expect(mockedRequest.mock.calls.length).toBeGreaterThan(before),
     )
+  })
+
+  it('keeps the endpoint explorer and selected request usable after a failed spec refresh, with no automatic request execution', async () => {
+    mockedRequest.mockResolvedValue(SPEC_YAML)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    await screen.findByText('/api/v1/vehicles')
+    mockedRequest.mockRejectedValue(new ApiError('spec refresh failed', 500))
+    fireEvent.click(screen.getByRole('button', { name: 'Reload API spec' }))
+    await screen.findByText('Data may be stale')
+    expect(screen.getByText('/vehicles/{vehicleID}/state')).toBeInTheDocument()
+    expect(screen.getByText('/api/v1/vehicles')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Send/i })).toBeEnabled()
+    expect(screen.queryByText('Server error')).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

@@ -27,11 +27,12 @@ import { useTranslation } from 'react-i18next';
 import { BellRing, BellOff, Smartphone, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 
 import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';
-import { QueryError } from '@/components/feedback';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useWebPush } from '@/hooks/useWebPush';
 import { usePushSubscriptions, useUnsubscribePush, usePushPublicKey } from '@/api/hooks/usePush';
 import { formatRelative } from '@/lib/dateFormat';
 import type { PushSubscriptionRow } from '@/api/types';
+import { useDataState } from '@/hooks/useDataState';
 
 interface BrowserPushChannelCardProps {
   className?: string;
@@ -50,13 +51,16 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
     subscribe,
     unsubscribe,
   } = webPush ?? localPush;
+  const keyQuery = usePushPublicKey();
+  const keyState = useDataState(keyQuery);
   const {
     data: publicKey,
-    isLoading: keyLoading,
-    isError: keyError,
     refetch: refetchPublicKey,
-  } = usePushPublicKey();
+  } = keyQuery;
+  const keyLoading = keyQuery.isLoading && !keyState.hasData;
+  const keyError = Boolean(keyState.fatalError);
   const subsQuery = usePushSubscriptions();
+  const subsState = useDataState(subsQuery);
   const { data: subs } = subsQuery;
   const {
     mutateAsync: removeDevice,
@@ -138,12 +142,12 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
   return (
     <GlassPanel className={className}>
       <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl p-2.5 ring-1 ring-cyan-300/30 bg-cyan-300/10">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0 rounded-xl p-2.5 ring-1 ring-cyan-300/30 bg-cyan-300/10">
               <BellRing className="h-5 w-5 text-cyan-300" aria-hidden="true" />
             </div>
-            <div>
+            <div className="min-w-0">
               <Heading level="panel" as="h3">
                 {t('webpush.title', 'Browser push')}
               </Heading>
@@ -155,6 +159,7 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
               </Text>
             </div>
           </div>
+          <StaleRefreshWarning state={keyState} label={t('webpush.title', 'Browser push')} />
           {isUnsupported ? (
             <Badge variant="warning">{t('webpush.status.unsupported', 'Unavailable')}</Badge>
           ) : showKeyError || showLoading ? null : isSubscribed ? (
@@ -167,7 +172,7 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
         {isUnsupported ? (
           <div className="flex items-start gap-2 rounded-lg bg-amber-300/5 p-3 ring-1 ring-amber-300/20">
             <AlertCircle className="h-4 w-4 text-amber-300 mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <Text as="p" size="xs" className="text-amber-300">{disabledReason}</Text>
+            <Text as="p" variant="bodySm" className="break-words text-amber-300">{disabledReason}</Text>
           </div>
         ) : showKeyError ? (
           <div
@@ -175,10 +180,10 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
             className="flex flex-wrap items-center gap-2 rounded-lg bg-rose-300/5 p-3 ring-1 ring-rose-300/20"
           >
             <AlertCircle className="h-4 w-4 text-rose-300 mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <Text as="p" size="xs" className="text-rose-300">
+            <Text as="p" variant="bodySm" className="break-words text-rose-300">
               {t('webpush.error.load', "Couldn't check browser push availability.")}
             </Text>
-            <Button variant="secondary" size="sm" onClick={handleRetryKey}>
+            <Button wrapLabel variant="secondary" size="sm" onClick={handleRetryKey}>
               {t('webpush.retry', 'Retry')}
             </Button>
           </div>
@@ -193,6 +198,7 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
           <div className="flex flex-wrap items-center gap-2">
             {isSubscribed ? (
               <Button
+                wrapLabel
                 variant="secondary"
                 size="sm"
                 loading={busy}
@@ -204,6 +210,7 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
               </Button>
             ) : (
               <Button
+                wrapLabel
                 variant="primary"
                 size="sm"
                 loading={busy}
@@ -230,10 +237,12 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
           </div>
         )}
 
-        {subsQuery.isError && (
-          <QueryError error={subsQuery.error} onRetry={() => void subsQuery.refetch()} />
+        <StaleRefreshWarning state={subsState} label={t('webpush.devices.title', 'Registered devices')} />
+        {subsQuery.isLoading && !subsState.hasData && <Skeleton className="h-20 w-full" />}
+        {subsState.fatalError && (
+          <QueryError error={subsState.fatalError} onRetry={() => void subsQuery.refetch()} />
         )}
-        {!subsQuery.isError && rows.length > 0 && (
+        {rows.length > 0 && (
           <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
             <Text as="h4" variant="label">
               {t('webpush.devices.title', 'Registered devices')}
@@ -251,20 +260,20 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
                 return (
                   <li
                     key={row.id}
-                    className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-2.5 ring-1 ring-white/5"
+                    className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-2)] p-2.5 ring-1 ring-[var(--border-subtle)]"
                   >
                     <div className="flex items-start gap-2 min-w-0">
                       <Smartphone className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
-                        <Text as="p" size="xs" color="primary" className="truncate" title={ua}>
+                        <Text as="p" variant="bodySm" color="primary" className="break-words" title={ua}>
                           {ua}
                           {isThisDevice && (
-                            <Text as="span" size="xs" className="ml-2 text-cyan-300">
+                            <Text as="span" variant="bodySm" className="ms-2 text-cyan-300">
                               {t('webpush.devices.thisDevice', '(this device)')}
                             </Text>
                           )}
                         </Text>
-                        <Text as="p" size="xs" color="secondary" className="mt-0.5">{last}</Text>
+                        <Text as="p" variant="caption" color="secondary" className="mt-0.5 break-words">{last}</Text>
                       </div>
                     </div>
                     <Button

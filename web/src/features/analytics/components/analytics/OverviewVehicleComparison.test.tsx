@@ -255,10 +255,10 @@ describe('OverviewVehicleComparison — loading', () => {
     const { container } = renderCmp(makeQuery({ isLoading: true }));
 
     // Panel titles frame all four sections even while loading…
-    expect(screen.getByText('Fleet Usage')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Leaderboard')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle Comparison')).toBeInTheDocument();
-    expect(screen.getByText('Energy & Activity')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet usage' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency leaderboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vehicle comparison' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy & activity' })).toBeInTheDocument();
 
     // …pulsing skeletons are on screen…
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
@@ -399,8 +399,8 @@ describe('OverviewVehicleComparison — efficiency leaderboard', () => {
   it('labels each row with its efficiency in the active unit', () => {
     renderCmp(makeQuery({ data: analytics(TWO) }));
 
-    expect(screen.getByText('150.0 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('300.0 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('300.00 Wh/km')).toBeInTheDocument();
   });
 });
 
@@ -418,7 +418,7 @@ describe('OverviewVehicleComparison — miles preference', () => {
     expect(rows[1].value).toBeCloseTo(186.41, 1);
 
     // Efficiency Wh/km → Wh/mi (× 1.609344): 150 → 241.4.
-    expect(screen.getByText('241.4 Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument();
 
     // The donut's accessible label follows the active unit.
     expect(

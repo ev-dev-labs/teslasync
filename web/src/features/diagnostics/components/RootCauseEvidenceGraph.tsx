@@ -5,6 +5,8 @@ import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
 import type { EvidenceGraph, EvidenceRelation } from '../lib/rootCauseIntelligence';
+import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
+import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
 
 const GRAPH_SIZE = 320;
 const CENTER = GRAPH_SIZE / 2;
@@ -34,6 +36,7 @@ interface CandidateLayout {
 
 export interface RootCauseEvidenceGraphProps {
   graph: EvidenceGraph;
+  sources?: readonly SignalEvidenceBundleSource[];
   hasChosenSignal: boolean;
   isLoading: boolean;
   isError: boolean;
@@ -47,8 +50,9 @@ export interface RootCauseEvidenceGraphProps {
  * bounded set of related candidates arranged around it. Candidates that
  * cleared the evidence bar for a ranked hypothesis get a solid node plus an
  * edge (styled by `relation`); candidates that were considered but did not
- * corroborate render as a hollow, unconnected node so "we looked and found
- * nothing" stays visually distinct from "we didn't look".
+ * corroborate render as a hollow, unconnected node. With source metadata,
+ * unresolved or unavailable histories are labeled unknown rather than
+ * claiming that the source was measured and no shift was found.
  *
  * The SVG itself is `aria-hidden` (a graphic can't be usefully read node by
  * node by a screen reader) — the adjacent `<ul>` legend carries the exact
@@ -57,6 +61,7 @@ export interface RootCauseEvidenceGraphProps {
  */
 export function RootCauseEvidenceGraph({
   graph,
+  sources,
   hasChosenSignal,
   isLoading,
   isError,
@@ -93,7 +98,7 @@ export function RootCauseEvidenceGraph({
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Network className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('rootCauseIntelligence.graph.title', 'Evidence Graph')}
+        {t('rootCauseIntelligence.graph.title', 'Evidence graph')}
       </PanelTitle>
       {isError ? (
         <QueryError error={error} onRetry={onRetry} />
@@ -176,7 +181,9 @@ export function RootCauseEvidenceGraph({
                       {c.id}
                     </Text>
                     <Caption>
-                      {c.relation != null
+                      {!hasSignalHistory(sources, c.id)
+                        ? t('common.unknown', 'Unknown')
+                        : c.relation != null
                         ? t('rootCauseIntelligence.graph.relationSamples', '{{relation}} · {{n}} samples', { relation: relationText, n: c.sampleCount })
                         : t('rootCauseIntelligence.graph.consideredOnly', 'considered, no corroborating shift · {{n}} samples', { n: c.sampleCount })}
                     </Caption>

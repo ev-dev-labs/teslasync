@@ -5,9 +5,10 @@ import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { StateBadge } from '@/features/system/components/StateBadge';
 import { cn } from '@/lib/cn';
 import { formatRelative } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Right-rail inspector for the FSM debugger.
@@ -72,6 +73,7 @@ export function SnapshotInspector({
   onJumpToLast,
   className,
 }: SnapshotInspectorProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const [diffMode, setDiffMode] = useState(false);
 

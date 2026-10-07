@@ -49,7 +49,7 @@ function renderTile(overrides: Partial<Props> = {}) {
   };
   const utils = render(<CommandTile {...props} />);
   const tile = () => screen.getByRole('button', { name: props.def.labelFallback });
-  const favorite = () => screen.getByRole('button', { name: /toggle favorite/i });
+  const favorite = () => screen.getByRole('button', { name: /Toggle favorite/i });
   return { ...utils, props, tile, favorite };
 }
 

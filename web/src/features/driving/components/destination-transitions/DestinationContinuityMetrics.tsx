@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import {
   DestinationTransitionsMetricGroup,
   type DestinationTransitionsEvidenceMetric,
 } from './DestinationTransitionsMetricGroup';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationContinuityMetricsProps {
   model: DestinationTransitionResult;
@@ -16,6 +17,7 @@ export function DestinationContinuityMetrics({
   model,
   locale,
 }: DestinationContinuityMetricsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const continuity = model.continuity;
   const metrics: DestinationTransitionsEvidenceMetric[] = [
@@ -103,7 +105,7 @@ export function DestinationContinuityMetrics({
               {
                 hours: fmtNumber(
                   model.config.maxContinuityGapMs / 3_600_000,
-                  1,
+                  undefined,
                   locale,
                 ),
               },

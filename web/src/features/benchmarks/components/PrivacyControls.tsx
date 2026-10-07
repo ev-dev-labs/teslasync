@@ -2,13 +2,18 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { InlineCallout } from '@/components/feedback';
-import { Button, ConfirmDialog, GlassPanel } from '@/components/ui';
+import { Button, ConfirmDialog, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import type { DataState } from '@/api/dataState';
+import type { BenchmarkPrivacyStatus } from '@/api/hooks/useBenchmarks';
+import { BenchmarkStatusContent } from './BenchmarkStatusContent';
 
 interface PrivacyControlsProps {
   optedIn: boolean;
   pending: boolean;
   error: Error | null;
   onRevoke: () => void;
+  source?: DataState<BenchmarkPrivacyStatus>;
 }
 
 export function PrivacyControls({
@@ -16,27 +21,27 @@ export function PrivacyControls({
   pending,
   error,
   onRevoke,
+  source,
 }: PrivacyControlsProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const revokeWord = t('benchmarks.controls.revokeWord', 'REVOKE');
   return (
-    <GlassPanel className="p-5 md:p-6">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-        {t('benchmarks.controls.title', 'Privacy controls')}
-      </h2>
-      <p className="mt-1 text-sm text-[var(--text-muted)]">
+    <LayoutCard title={t('benchmarks.controls.title', 'Privacy controls')}>
+      <BenchmarkStatusContent source={source} label={t('benchmarks.controls.title', 'Privacy controls')}>
+      <Text as="p" variant="bodySm">
         {t(
           'benchmarks.controls.description',
           'Revocation stops future participation and deletes clipped contribution rows. Already released DP aggregates and minimal accounting metadata remain.',
         )}
-      </p>
+      </Text>
       <Button
         type="button"
         variant="danger"
         className="mt-4"
         disabled={!optedIn || pending}
         onClick={() => setOpen(true)}
+        wrapLabel
       >
         <Trash2 className="h-4 w-4" aria-hidden />
         {t('benchmarks.controls.revoke', 'Revoke & delete contribution data')}
@@ -70,6 +75,7 @@ export function PrivacyControls({
           setOpen(false);
         }}
       />
-    </GlassPanel>
+      </BenchmarkStatusContent>
+    </LayoutCard>
   );
 }

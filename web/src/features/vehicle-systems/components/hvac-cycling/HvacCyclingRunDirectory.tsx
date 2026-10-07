@@ -1,22 +1,17 @@
-import { ListTree } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
+import { Badge, MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type {
   HvacCyclingSummary,
   HvacRunBoundary,
 } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingRunDirectoryProps {
   summary: HvacCyclingSummary;
@@ -42,6 +37,7 @@ export function HvacCyclingRunDirectory({
   locale,
   formatDuration,
 }: HvacCyclingRunDirectoryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.runDirectory;
   const boundaryLabel = (boundary: HvacRunBoundary) => {
@@ -59,11 +55,7 @@ export function HvacCyclingRunDirectory({
 
   return (
     <section data-testid="hvac-cycling-run-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.directory.title', 'Run evidence directory')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.directory.title', 'Run evidence directory')}>
         <Text as="p" variant="caption">
           {t(
             'hvacCycling.directory.subtitle',
@@ -141,7 +133,7 @@ export function HvacCyclingRunDirectory({
                     />
                     <Detail
                       label={t('hvacCycling.directory.duration', 'Observed duration')}
-                      value={formatDuration(run.durationS, { precision: 1 })}
+                      value={formatDuration(run.durationS)}
                     />
                     <Detail
                       label={t('hvacCycling.directory.intervals', 'Intervals')}
@@ -161,7 +153,7 @@ export function HvacCyclingRunDirectory({
             })}
           </ol>
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

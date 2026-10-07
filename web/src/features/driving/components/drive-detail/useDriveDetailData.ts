@@ -9,12 +9,14 @@ import {
   convertTempFromSI,
   convertPressureFromSI,
 } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { LatLngExpression } from '@/components/maps';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function useDriveDetailData(id: string) {
+  const { fmtNumber } = useNumberFormatting();
   const driveQuery = useDrive(id);
   const { data: drive, isLoading, error } = driveQuery;
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
@@ -48,7 +50,7 @@ export function useDriveDetailData(id: string) {
     const tele = drive.telemetry ?? [];
     const pos = drive.positions ?? [];
     if (tele.length > 0) {
-      return tele
+      const points = tele
         .filter((tp) => tp.latitude != null && tp.longitude != null && (tp.latitude !== 0 || tp.longitude !== 0))
         .map((tp) => ({
           lat: tp.latitude!,
@@ -56,6 +58,7 @@ export function useDriveDetailData(id: string) {
           speed: tp.speed ?? 0,
           timestamp: tp.createdAt ?? tp.created_at ?? tp.timestamp ?? null,
         }));
+      if (points.length > 0) return points;
     }
     return pos
       .filter((p) => p.latitude !== 0 || p.longitude !== 0)
@@ -76,7 +79,7 @@ export function useDriveDetailData(id: string) {
     const start = trail[0] as [number, number] | undefined;
     const end = trail.length > 1 ? (trail[trail.length - 1] as [number, number]) : undefined;
     const center: [number, number] = start
-      ?? (drive?.startLat && drive?.startLon ? [drive.startLat, drive.startLon] : [47.6, -122.3]);
+      ?? (drive?.startLat != null && drive?.startLon != null ? [drive.startLat, drive.startLon] : [47.6, -122.3]);
     return { startPos: start, endPos: end, centerPos: center };
   }, [trail, drive]);
 
@@ -104,10 +107,10 @@ export function useDriveDetailData(id: string) {
     if (tele.length > 0) {
       return tele.map((tp) => ({
         time: formatTime(tp.createdAt ?? tp.created_at ?? tp.timestamp),
-        speed: convertSpeedFromSI(tp.speed ?? 0, unitPrefs.speed),
-        battery: tp.batteryLevel ?? 0,
-        elevation: tp.elevation ?? 0,
-        power: tp.power ?? 0,
+        speed: tp.speed != null ? convertSpeedFromSI(tp.speed, unitPrefs.speed) : null,
+        battery: tp.batteryLevel ?? null,
+        elevation: tp.elevation ?? null,
+        power: tp.power ?? null,
         outsideTemp: tp.outsideTemp != null ? convertTempFromSI(tp.outsideTemp, unitPrefs.temperature) : null,
         insideTemp: tp.insideTemp != null ? convertTempFromSI(tp.insideTemp, unitPrefs.temperature) : null,
         driverTemp: tp.driverTemp != null ? convertTempFromSI(tp.driverTemp, unitPrefs.temperature) : null,
@@ -126,22 +129,32 @@ export function useDriveDetailData(id: string) {
         fanStatus: tp.fanStatus ?? null,
       }));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- positions may have snake_case fallback fields
-    return (drive.positions ?? []).map((p: any) => ({
+    // Legacy aliases can appear in historical position records. Keep the
+    // compatibility at this boundary typed, never leak untyped rows to UI.
+    type PositionAliases = {
+      battery_level?: number | null;
+      outside_temp?: number | null;
+      inside_temp?: number | null;
+      ideal_range?: number | null;
+      rated_range?: number | null;
+    };
+    return (drive.positions ?? []).map((row) => {
+      const p = row as typeof row & PositionAliases;
+      return ({
       time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp),
       // Position.speed comes from drivePositionFieldMappings VehicleSpeed -> speed_mph
       // -> aliasPositionFields renames to 'speed'. The value is still m/s SI; the
       // legacy '_mph' suffix from the mapping is misleading per ADR-004 #6.
-      speed: convertSpeedFromSI(p.speed ?? 0, unitPrefs.speed),
-      battery: p.batteryLevel ?? p.battery_level ?? 0,
-      elevation: p.elevation ?? 0,
-      power: p.power ?? 0,
-      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI(p.outsideTemp ?? p.outside_temp, unitPrefs.temperature) : null,
-      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI(p.insideTemp ?? p.inside_temp, unitPrefs.temperature) : null,
+      speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : null,
+      battery: p.batteryLevel ?? p.battery_level ?? null,
+      elevation: p.elevation ?? null,
+      power: p.power ?? null,
+      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI((p.outsideTemp ?? p.outside_temp)!, unitPrefs.temperature) : null,
+      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI((p.insideTemp ?? p.inside_temp)!, unitPrefs.temperature) : null,
       driverTemp: null as number | null,
       passengerTemp: null as number | null,
-      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistanceFromSI(p.idealRange ?? p.ideal_range, unitPrefs.distance) : null,
-      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistanceFromSI(p.ratedRange ?? p.rated_range, unitPrefs.distance) : null,
+      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistanceFromSI((p.idealRange ?? p.ideal_range)!, unitPrefs.distance) : null,
+      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistanceFromSI((p.ratedRange ?? p.rated_range)!, unitPrefs.distance) : null,
       estRange: null as number | null,
       odometer: p.odometer != null ? convertDistanceFromSI(p.odometer, unitPrefs.distance) : null,
       soc: null as number | null,
@@ -152,7 +165,8 @@ export function useDriveDetailData(id: string) {
       tireRr: null as number | null,
       climateOn: p.isClimateOn ?? null,
       fanStatus: p.fanStatus ?? null,
-    }));
+      });
+    });
   }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure, formatTime]);
 
   /* ---- Computed stats ---- */
@@ -164,18 +178,18 @@ export function useDriveDetailData(id: string) {
     // We want the minimum *non-zero* speed during the actual moving portion of
     // the drive — pure zeroes mean parked/stopped at a light and don't tell
     // the user anything useful. Falls back to 0 only if every sample is zero.
-    const movingSpeeds = chartData.map((d) => d.speed).filter((s) => s > 0);
-    const minSpd = movingSpeeds.length > 0 ? Math.min(...movingSpeeds) : 0;
+    const movingSpeeds = chartData.map((d) => d.speed).filter((s): s is number => s != null && Number.isFinite(s) && s > 0);
+    const minSpd = movingSpeeds.length > 0 ? movingSpeeds.reduce((min, value) => Math.min(min, value), Infinity) : 0;
     // Compute power max (drive) and min (regen) from per-row chart data.
     // Backend derives power = pack_voltage * pack_current / 1000 per row;
     // sign is preserved (positive = drive, negative = regen).
-    const powerValues = chartData.map((d) => d.power).filter((p) => p !== 0);
-    const powerMax = powerValues.length > 0 ? Math.max(...powerValues) : ((drive.avgPowerW ?? 0) / 1000);
-    const powerMin = powerValues.length > 0 ? Math.min(...powerValues) : 0;
+    const powerValues = chartData.map((d) => d.power).filter((p): p is number => p != null && Number.isFinite(p));
+    const powerMax = powerValues.length > 0 ? powerValues.reduce((max, value) => Math.max(max, value), -Infinity) : 0;
+    const powerMin = powerValues.length > 0 ? powerValues.reduce((min, value) => Math.min(min, value), Infinity) : 0;
     const avgPower = drive.avgPowerW != null
       ? drive.avgPowerW / 1000
-      : (chartData.length > 0
-        ? chartData.reduce((s, d) => s + d.power, 0) / chartData.length
+      : (powerValues.length > 0
+        ? powerValues.reduce((sum, value) => sum + value, 0) / powerValues.length
         : 0);
     const durationH = (drive.durationS ?? 0) / 3600;
     const energyWh = drive.energyUsedWh != null
@@ -184,17 +198,21 @@ export function useDriveDetailData(id: string) {
     const regenWh = drive.regenEnergyWh != null
       ? drive.regenEnergyWh
       : (chartData.length > 0
-        ? chartData.filter((d) => d.power < 0).reduce((s, d) => s + Math.abs(d.power), 0) * (durationH / chartData.length) * 1000
+        ? powerValues.filter((power) => power < 0).reduce((sum, power) => sum + Math.abs(power), 0) * (durationH / chartData.length) * 1000
         : 0);
     const consumptionWhKm = drive.distanceM > 0 ? energyWh / (drive.distanceM / 1000) : 0;
     const elevGain = chartData.reduce((sum, d, i) => {
       if (i === 0) return 0;
-      const diff = d.elevation - chartData[i - 1].elevation;
+      const previous = chartData[i - 1].elevation;
+      if (d.elevation == null || previous == null) return sum;
+      const diff = d.elevation - previous;
       return diff > 0 ? sum + diff : sum;
     }, 0);
     const elevLoss = chartData.reduce((sum, d, i) => {
       if (i === 0) return 0;
-      const diff = d.elevation - chartData[i - 1].elevation;
+      const previous = chartData[i - 1].elevation;
+      if (d.elevation == null || previous == null) return sum;
+      const diff = d.elevation - previous;
       return diff < 0 ? sum + Math.abs(diff) : sum;
     }, 0);
 
@@ -230,7 +248,7 @@ export function useDriveDetailData(id: string) {
     const hasTirePressure = chartData.some((d) => d.tireFl !== null || d.tireFr !== null || d.tireRl !== null || d.tireRr !== null);
 
     const efficiencyPctPer100 = drive.distanceM > 0 && drive.startBatteryPct != null && drive.endBatteryPct != null
-      ? (drive.startBatteryPct - drive.endBatteryPct) / toDistanceDisplay(drive.distanceM) * 10
+      ? (drive.startBatteryPct - drive.endBatteryPct) / toDistanceDisplay(drive.distanceM) * 100
       : null;
 
     return {
@@ -263,14 +281,17 @@ export function useDriveDetailData(id: string) {
       range: d.max >= 9999 ? `${fmtNumber(d.min)}+` : `${fmtNumber(d.min)}–${fmtNumber(d.max)}`,
       count: 0,
     }));
-    chartData.forEach((d) => {
-      const idx = defs.findIndex((def) => d.speed >= def.min && d.speed < def.max);
+    const observedSpeeds = chartData.filter((d) => d.speed != null && Number.isFinite(d.speed));
+    observedSpeeds.forEach((d) => {
+      if (d.speed == null) return;
+      const speed = d.speed;
+      const idx = defs.findIndex((def) => speed >= def.min && speed < def.max);
       if (idx >= 0) buckets[idx].count++;
     });
     return buckets
       .filter((b) => b.count > 0)
-      .map((b) => ({ range: b.range, pct: chartData.length > 0 ? Math.round((b.count / chartData.length) * 100) : 0 }));
-  }, [chartData]);
+      .map((b) => ({ range: b.range, pct: observedSpeeds.length > 0 ? Math.round((b.count / observedSpeeds.length) * 100) : 0 }));
+  }, [chartData, fmtNumber]);
 
   return {
     drive: drive ?? null,

@@ -71,6 +71,11 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 });
 
 import LocationFavoritesWidget, { locationBadge } from './LocationFavoritesWidget';
+
+it.each([1, 2, 3])('identifies favorite locations at %i columns', (cols) => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Favorite locations' })).toBeInTheDocument();
+});
 import { useLocations } from '@/api/hooks/useLocations';
 import { useVehicles, useLocationSnapshotLatest } from '@/api/hooks/useVehicles';
 import type { WidgetSize } from './types';
@@ -115,13 +120,15 @@ function qr(over: Record<string, unknown> = {}): any {
 
 function renderWidget(size: WidgetSize, props: { vehicleId?: number } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <LocationFavoritesWidget size={size} {...props} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Favorite locations');
+  return view;
 }
 
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
@@ -173,11 +180,25 @@ describe('locationBadge', () => {
 // ── Component: states ───────────────────────────────────────────────────────
 
 describe('LocationFavoritesWidget states', () => {
-  it('renders a loading skeleton (no title, no empty copy) while either query loads', () => {
+  it('retains ranked locations on a failed refresh instead of replacing cached data', () => {
+    mockUseLocations.mockReturnValue(qr({
+      data: [{ id: 'cached', addressName: 'Cached home', visitCount: 0 }],
+      error: new Error('refresh failed'), isError: true,
+    }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('Cached home')).toBeInTheDocument();
+    expect(screen.getByText(/0×/)).toBeInTheDocument();
+  });
+  it('does not call an absent presence snapshot Other', () => {
+    renderWidget(COMPACT);
+    expect(screen.queryByText('Other')).not.toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+  it('retains its heading above a loading skeleton without empty copy', () => {
     mockUseLocations.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Favorite Locations')).toBeNull();
+    expect(screen.queryByText('Favorite locations')).toBeInTheDocument();
     expect(screen.queryByText('No favorite locations')).toBeNull();
   });
 
@@ -186,7 +207,7 @@ describe('LocationFavoritesWidget states', () => {
     renderWidget(STANDARD);
     // QueryError's generic (statusless) branch renders the network copy.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Favorite Locations')).toBeNull();
+    expect(screen.queryByText('Favorite locations')).toBeInTheDocument();
   });
 
   it('shows an empty state (never a blank panel) when there are no locations', () => {
@@ -215,7 +236,7 @@ describe('LocationFavoritesWidget standard layout', () => {
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Favorite Locations')).toBeInTheDocument();
+    expect(screen.getByText('Favorite locations')).toBeInTheDocument();
     // Presence badge is driven by the snapshot (home → "Home").
     expect(screen.getByText('Home')).toBeInTheDocument();
     // Active-navigation destination chip.
@@ -243,11 +264,11 @@ describe('LocationFavoritesWidget standard layout', () => {
 // ── Component: compact layout ───────────────────────────────────────────────
 
 describe('LocationFavoritesWidget compact layout', () => {
-  it('renders only the presence badge (no title) with an accessible emoji', () => {
+  it('identifies the presence badge and its accessible emoji', () => {
     mockUseSnapshot.mockReturnValue(qr({ data: { located_at_work: true } }));
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('Favorite Locations')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Favorite locations' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Work' })).toHaveTextContent('🏢');
     expect(screen.getByText('Work')).toBeInTheDocument();
   });
@@ -273,6 +294,24 @@ describe('LocationFavoritesWidget compact layout', () => {
 // ── Component: vehicle-id resolution ────────────────────────────────────────
 
 describe('LocationFavoritesWidget vehicle selection', () => {
+  it('keeps visit ranking, stable ties and unknown counts distinct from measured zero', () => {
+    mockUseLocations.mockReturnValue(qr({ data: [
+      { id: 1, addressName: 'Unknown count', visitCount: null },
+      { id: 2, addressName: 'Measured zero', visitCount: 0 },
+      { id: 3, addressName: 'First tied favorite', visitCount: 4 },
+      { id: 4, addressName: 'Second tied favorite', visitCount: 4 },
+    ] }));
+    renderWidget(STANDARD);
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('First tied favorite');
+    expect(rows[1]).toHaveTextContent('Second tied favorite');
+    expect(rows[2]).toHaveTextContent('Measured zero');
+    expect(rows[2]).toHaveTextContent('0×');
+    expect(rows[3]).toHaveTextContent('Unknown count');
+    expect(rows[3].querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByText('Unknown count')).toHaveClass('whitespace-normal');
+  });
+
   it('uses the explicit vehicleId prop for both queries when provided', () => {
     renderWidget(STANDARD, { vehicleId: 7 });
     expect(mockUseSnapshot).toHaveBeenCalledWith(7);

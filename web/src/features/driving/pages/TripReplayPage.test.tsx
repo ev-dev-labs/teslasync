@@ -34,7 +34,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { DriveDetail, DrivePosition } from '@/types/driving';
@@ -166,6 +166,7 @@ interface MapStubProps {
   onSeekToIndex: (i: number) => void;
   reduceMotion?: boolean;
   height?: number | string;
+  embedded?: boolean;
 }
 interface ChartPoint {
   index: number;
@@ -183,8 +184,8 @@ interface ChartsStubProps {
 interface ElevationPoint {
   index: number;
   distance: number;
-  elevation: number;
-  speed: number;
+  elevation: number | null;
+  speed: number | null;
 }
 interface ElevationStubProps {
   data: ElevationPoint[];
@@ -217,8 +218,8 @@ vi.mock('@/features/trips/components/TripReplayCharts', () => ({
     return <div data-testid="trip-replay-charts" />;
   },
 }));
-vi.mock('@/components/charts/ElevationProfile', () => ({
-  ElevationProfile: (props: ElevationStubProps) => {
+vi.mock('@/features/trips/components/TripReplayElevation', () => ({
+  TripReplayElevation: (props: ElevationStubProps) => {
     elevationProps.last = props;
     return <div data-testid="elevation-profile" />;
   },
@@ -411,9 +412,31 @@ describe('TripReplayPage — drive summary KPIs', () => {
     expect(screen.getByText('72.00')).toBeInTheDocument(); // 20 m/s → 72 km/h
     expect(screen.getByText('108.00')).toBeInTheDocument(); // 30 m/s → 108 km/h
     expect(screen.getByText('82% → 68%')).toBeInTheDocument();
-    // Efficiency = (82-68)/32 * 1000 = 437.5, unit reflects the distance unit.
-    expect(screen.getByText('437.50')).toBeInTheDocument();
+    // Recorded energy, not SOC percentage, is the Wh numerator: 7200 / 32.
+    expect(screen.getByText('225.00')).toBeInTheDocument();
     expect(screen.getByText('Wh/km')).toBeInTheDocument();
+  });
+
+  it.each([
+    [null, '—'],
+    [0, '0.00'],
+  ] as const)('keeps recorded energy %s distinct without hiding replay sections', (energyUsedWh, expected) => {
+    driveState.current = loadedQuery({ energyUsedWh });
+    const bytes = JSON.stringify(driveState.current.data);
+    renderPage();
+
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    const value = within(summary).getByText('Efficiency').parentElement?.nextElementSibling;
+    expect(value).toHaveTextContent(expected);
+    if (energyUsedWh === null) {
+      expect(within(summary).queryByText('Wh/km')).not.toBeInTheDocument();
+    } else {
+      expect(within(summary).getByText('Wh/km')).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+    expect(screen.getByTestId('elevation-profile')).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
+    expect(JSON.stringify(driveState.current.data)).toBe(bytes);
   });
 
   it('derives elevation gain/loss from the SI position trail', () => {
@@ -449,7 +472,11 @@ describe('TripReplayPage — live-position stats + seek', () => {
 
     expect(mapProps.last?.currentIndex).toBe(0);
     expect(mapProps.last?.positions).toHaveLength(4);
-    expect(mapProps.last?.height).toBe(440);
+    expect(mapProps.last?.height).toBe('100%');
+    expect(mapProps.last?.embedded).toBe(true);
+    expect(screen.getByTestId('trip-replay-map').parentElement).toHaveClass(
+      'h-[320px]', 'sm:h-[380px]', 'lg:h-[440px]',
+    );
     expect(chartsProps.last?.currentIndex).toBe(0);
     expect(chartsProps.last?.speedUnit).toBe('km/h');
     expect(elevationProps.last?.distanceUnit).toBe('km');
@@ -553,6 +580,7 @@ describe('TripReplayPage — miles preference', () => {
 
     // 32000 m → 19.88 mi; efficiency label reflects the distance unit.
     expect(screen.getByText('19.88')).toBeInTheDocument();
+    expect(screen.getByText('362.10')).toBeInTheDocument(); // 7200 Wh / (32000 m in mi)
     expect(screen.getByText('Wh/mi')).toBeInTheDocument();
     expect(screen.queryByText('Wh/km')).toBeNull();
     // Speed leaves the page in mph.

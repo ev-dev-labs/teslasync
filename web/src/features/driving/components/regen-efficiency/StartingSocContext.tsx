@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { CHART_COLORS } from '@/components/charts';
 import { MetricBar } from '@/components/data-display';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 
 import type {
   RegenEfficiencyModel,
@@ -13,6 +13,7 @@ import type {
 import { DetailScopeNotice } from './DetailScopeNotice';
 import { RegenSectionBody } from './RegenSectionBody';
 import type { RegenSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface StartingSocContextProps {
   model: RegenEfficiencyModel;
@@ -23,6 +24,7 @@ export function StartingSocContext({
   model,
   state,
 }: StartingSocContextProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const bucketLabel = (key: RegenSocBucketKey): string => {
     switch (key) {
@@ -85,7 +87,7 @@ export function StartingSocContext({
                   color={CHART_COLORS[(index + 1) % CHART_COLORS.length]}
                   sublabel={
                     bucket.energyWeightedRatioPct != null
-                      ? fmtPercent(bucket.energyWeightedRatioPct, 1)
+                      ? fmtPercent(bucket.energyWeightedRatioPct)
                       : '—'
                   }
                 />

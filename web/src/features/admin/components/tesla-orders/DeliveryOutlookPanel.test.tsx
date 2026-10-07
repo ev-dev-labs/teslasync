@@ -102,7 +102,7 @@ describe('DeliveryOutlookPanel — state-invariant chrome', () => {
         error: status === 'error' ? new Error('boom') : null,
       });
 
-      const heading = screen.getByRole('heading', { name: /delivery outlook/i });
+      const heading = screen.getByRole('heading', { name: /Delivery outlook/i });
       expect(heading).toBeInTheDocument();
 
       // The CalendarClock glyph is presentational — it must not pollute the

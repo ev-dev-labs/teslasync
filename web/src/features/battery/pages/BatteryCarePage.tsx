@@ -4,29 +4,31 @@ import { useTranslation } from 'react-i18next';
 import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { CardGrid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
 
 import {
-  ArrivalSocEvidence,
-  BatteryCareKpiBand,
   BatteryCareMethodology,
-  CareScoreBreakdown,
-  ChargingEnergyMix,
-  EndSocDistribution,
-  MonthlyCareTrend,
   RankedCareHabits,
-  type BatteryCareSectionState,
 } from '../components/battery-care';
+import {
+  CareEnergy,
+  CareMonthlyTrend,
+  CareRisk,
+  CareSummary,
+  SocEvidence,
+  SpecialistSlot,
+  careSectionState,
+  specialistState,
+} from '../components/battery-care-modernization';
 import {
   BATTERY_CARE_HISTORY_LIMIT,
   computeBatteryCare,
 } from '../lib/batteryCare';
-
-const ANALYSIS_COLUMNS = { default: 1, xl: 5 } as const;
 
 export default function BatteryCarePage() {
   const { t } = useTranslation();
@@ -44,6 +46,8 @@ export default function BatteryCarePage() {
     vehicleIdStr,
     BATTERY_CARE_HISTORY_LIMIT,
   );
+  const sessionsTrust = useDataState(sessionsQuery, { provenance: 'historical' });
+  const drivesTrust = useDataState(drivesQuery, { provenance: 'historical' });
   const sessions = useMemo(
     () => sessionsQuery.data ?? [],
     [sessionsQuery.data],
@@ -70,35 +74,21 @@ export default function BatteryCarePage() {
     );
   }
 
-  const chargingState: BatteryCareSectionState = {
-    isLoading: sessionsQuery.isLoading,
-    error: sessionsQuery.isError ? sessionsQuery.error : null,
-    onRetry: () => {
-      void sessionsQuery.refetch();
-    },
+  const chargingSource = {
+    label: t('batteryCare.method.returnedSessions', 'Sessions returned'),
+    state: sessionsTrust,
   };
-  const driveState: BatteryCareSectionState = {
-    isLoading: drivesQuery.isLoading,
-    error: drivesQuery.isError ? drivesQuery.error : null,
-    onRetry: () => {
-      void drivesQuery.refetch();
-    },
+  const driveSource = {
+    label: t('batteryCare.method.returnedDrives', 'Drives returned'),
+    state: drivesTrust,
   };
-  const combinedState: BatteryCareSectionState = {
-    isLoading: sessionsQuery.isLoading || drivesQuery.isLoading,
-    error: sessionsQuery.isError
-      ? sessionsQuery.error
-      : drivesQuery.isError
-        ? drivesQuery.error
-        : null,
-    onRetry: () => {
-      if (sessionsQuery.isError) void sessionsQuery.refetch();
-      if (drivesQuery.isError) void drivesQuery.refetch();
-    },
-  };
+  const chargingState = careSectionState([chargingSource]);
+  const driveState = careSectionState([driveSource]);
+  const combinedState = careSectionState([chargingSource, driveSource]);
+  const readonlySpecialistState = specialistState(combinedState);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('batteryCare.title', 'Battery Care')}
       subtitle={t(
         'batteryCare.subtitle',
@@ -107,59 +97,63 @@ export default function BatteryCarePage() {
       query={[sessionsQuery, drivesQuery]}
     >
       <FadeIn>
-        <BatteryCareKpiBand care={care} state={combinedState} />
+        <CareSummary care={care} state={combinedState} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <Grid cols={ANALYSIS_COLUMNS} gap={4}>
-          <CareScoreBreakdown
-            care={care}
-            state={combinedState}
-            className="xl:col-span-3"
-          />
-          <EndSocDistribution
-            care={care}
-            state={chargingState}
-            className="xl:col-span-2"
-          />
-        </Grid>
+        <CardGrid
+          label={t('batteryCare.risk.title', 'Score & risk decomposition')}
+          items={[
+            { id: 'care-score', size: 'half', content: <CareRisk care={care} state={combinedState} /> },
+            { id: 'care-targets', size: 'half', content: <SocEvidence kind="finish" care={care} state={chargingState} /> },
+          ]}
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <Grid cols={ANALYSIS_COLUMNS} gap={4}>
-          <ChargingEnergyMix
-            care={care}
-            state={chargingState}
-            className="xl:col-span-3"
-          />
-          <ArrivalSocEvidence
-            care={care}
-            state={driveState}
-            className="xl:col-span-2"
-          />
-        </Grid>
+        <CardGrid
+          label={t('batteryCare.energy.title', 'AC/DC energy evidence')}
+          items={[
+            { id: 'care-energy', size: 'half', content: <CareEnergy care={care} state={chargingState} /> },
+            { id: 'care-arrivals', size: 'half', content: <SocEvidence kind="arrival" care={care} state={driveState} /> },
+          ]}
+        />
       </FadeIn>
 
       <FadeIn delay={0.15}>
-        <MonthlyCareTrend care={care} state={combinedState} />
+        <CareMonthlyTrend care={care} state={combinedState} />
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <Grid cols={ANALYSIS_COLUMNS} gap={4}>
-          <RankedCareHabits
-            care={care}
-            state={combinedState}
-            className="xl:col-span-3"
-          />
-          <BatteryCareMethodology
-            care={care}
-            state={combinedState}
-            sessionLimit={BATTERY_CARE_HISTORY_LIMIT}
-            driveLimit={BATTERY_CARE_HISTORY_LIMIT}
-            className="xl:col-span-2"
-          />
-        </Grid>
+        <CardGrid
+          label={t('batteryCare.actions.title', 'Ranked habit opportunities')}
+          items={[
+            {
+              id: 'care-habits',
+              size: 'half',
+              content: (
+                <SpecialistSlot state={combinedState}>
+                  <RankedCareHabits care={care} state={readonlySpecialistState} />
+                </SpecialistSlot>
+              ),
+            },
+            {
+              id: 'care-methodology',
+              size: 'half',
+              content: (
+                <SpecialistSlot state={combinedState}>
+                  <BatteryCareMethodology
+                    care={care}
+                    state={readonlySpecialistState}
+                    sessionLimit={BATTERY_CARE_HISTORY_LIMIT}
+                    driveLimit={BATTERY_CARE_HISTORY_LIMIT}
+                  />
+                </SpecialistSlot>
+              ),
+            },
+          ]}
+        />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

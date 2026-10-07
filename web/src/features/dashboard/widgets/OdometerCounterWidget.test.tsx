@@ -109,6 +109,7 @@ interface StateShape {
 }
 
 interface StateQueryOverrides {
+  error?: unknown;
   isLoading?: boolean;
   isFetching?: boolean;
   isStale?: boolean;
@@ -134,7 +135,7 @@ interface Stats {
   totalDistanceKm: number;
 }
 
-function makeStatsQuery(stats: Stats | undefined, over: { isLoading?: boolean } = {}) {
+function makeStatsQuery(stats: Stats | undefined, over: { isLoading?: boolean; isError?: boolean; error?: unknown; refetch?: () => void } = {}) {
   return { data: stats, isLoading: false, ...over };
 }
 
@@ -203,11 +204,45 @@ describe('toTotalDrivenDisplay', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('OdometerCounterWidget', () => {
+  it('renders a fatal initial state error rather than calling it empty', () => {
+    vehicleStateMock.mockReturnValue(makeStateQuery(undefined, { isError: true, error: new Error('offline') }));
+    renderWidget(<OdometerCounterWidget size={SIZE_TALL} />);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No odometer data')).not.toBeInTheDocument();
+  });
+
+  it('does not let missing secondary stats loading hide a measured odometer', () => {
+    drivingStatsMock.mockReturnValue(makeStatsQuery(undefined, { isLoading: true }));
+    const { container } = renderWidget(<OdometerCounterWidget size={SIZE_WIDE} />);
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+  });
+
+  it('shows the secondary failure beside the odometer and retries both sources', () => {
+    const refetchState = vi.fn();
+    const refetchStats = vi.fn();
+    vehicleStateMock.mockReturnValue(makeStateQuery({ odometer: ODOMETER_M }, { refetch: refetchState }));
+    drivingStatsMock.mockReturnValue(makeStatsQuery(undefined, { isError: true, error: new Error('offline'), refetch: refetchStats }));
+    renderWidget(<OdometerCounterWidget size={SIZE_WIDE} />);
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetchState).toHaveBeenCalledTimes(1);
+    expect(refetchStats).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a non-finite odometer unknown', () => {
+    vehicleStateMock.mockReturnValue(makeStateQuery({ odometer: Number.NaN }));
+    renderWidget(<OdometerCounterWidget size={SIZE_TALL} />);
+    expect(screen.getByText('No odometer data')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
   it('renders the compact 1×1 counter (value + unit, title suppressed)', () => {
     renderWidget(<OdometerCounterWidget size={SIZE_COMPACT} />);
 
     // 50,000,000 m ⇒ 50,000 km, animated straight to its final value.
-    expect(screen.getByText('50,000')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
     // Compact drops the title chrome and never shows the empty state.
     expect(screen.queryByText('Odometer')).not.toBeInTheDocument();
@@ -218,10 +253,10 @@ describe('OdometerCounterWidget', () => {
     renderWidget(<OdometerCounterWidget size={SIZE_TALL} />);
 
     expect(screen.getByText('Odometer')).toBeInTheDocument();
-    expect(screen.getByText('Total Odometer')).toBeInTheDocument();
-    expect(screen.getByText('50,000 km')).toBeInTheDocument();
+    expect(screen.getByText('Total odometer')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
     // The breakdown tiles are wide-only.
-    expect(screen.queryByText('Total Driven')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total driven')).not.toBeInTheDocument();
     expect(screen.queryByText('Unit')).not.toBeInTheDocument();
   });
 
@@ -229,13 +264,13 @@ describe('OdometerCounterWidget', () => {
     renderWidget(<OdometerCounterWidget size={SIZE_WIDE} />);
 
     // Odometer hero.
-    expect(screen.getByText('50,000 km')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
     // Breakdown tiles.
-    expect(screen.getByText('Total Driven')).toBeInTheDocument();
+    expect(screen.getByText('Total driven')).toBeInTheDocument();
     expect(screen.getByText('Unit')).toBeInTheDocument();
     // 12,345 km must render as "12,345 km" — the fix. The pre-fix bug divided
     // the kilometre value by 1000 and showed "12 km".
-    expect(screen.getByText('12,345 km')).toBeInTheDocument();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
     expect(screen.queryByText('12 km')).not.toBeInTheDocument();
   });
 
@@ -261,7 +296,7 @@ describe('OdometerCounterWidget', () => {
 
     expect(screen.getByText('No odometer data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('50,000 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('50,000.00 km')).not.toBeInTheDocument();
   });
 
   it('shows the em-dash for total-driven when driving stats are absent (odometer still renders)', () => {
@@ -270,8 +305,8 @@ describe('OdometerCounterWidget', () => {
     renderWidget(<OdometerCounterWidget size={SIZE_WIDE} />);
 
     // The odometer hero and the Total Driven label still render…
-    expect(screen.getByText('50,000 km')).toBeInTheDocument();
-    expect(screen.getByText('Total Driven')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
+    expect(screen.getByText('Total driven')).toBeInTheDocument();
     // …but the missing stats source collapses to the em-dash, not a crash.
     expect(screen.getByText('—')).toBeInTheDocument();
   });
@@ -281,7 +316,7 @@ describe('OdometerCounterWidget', () => {
 
     renderWidget(<OdometerCounterWidget size={SIZE_COMPACT} />);
 
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
     expect(screen.queryByText('No odometer data')).not.toBeInTheDocument();
   });
 
@@ -291,7 +326,7 @@ describe('OdometerCounterWidget', () => {
     const { container } = renderWidget(<OdometerCounterWidget size={SIZE_TALL} />);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('50,000 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('50,000.00 km')).not.toBeInTheDocument();
     expect(screen.queryByText('No odometer data')).not.toBeInTheDocument();
   });
 
@@ -303,7 +338,7 @@ describe('OdometerCounterWidget', () => {
     renderWidget(<OdometerCounterWidget size={SIZE_TALL} />);
 
     // Last-known odometer is retained despite the error flag.
-    expect(screen.getByText('50,000 km')).toBeInTheDocument();
+    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
     expect(screen.queryByText('No odometer data')).not.toBeInTheDocument();
   });
 

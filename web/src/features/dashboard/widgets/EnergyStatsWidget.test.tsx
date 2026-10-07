@@ -32,7 +32,7 @@
  *     disabled (null id) query when no vehicle exists.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { DailyEnergy } from '@/types/energy';
@@ -69,7 +69,7 @@ const mockEnergy = useEnergyStats as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -138,13 +138,15 @@ const WIDE = { cols: 3, rows: 4 };
 function setup(
   opts: {
      
-    stats?: any;
+    stats?: ReturnType<typeof makeQuery>;
      
-    vehicles?: any;
+    vehicles?: ReturnType<typeof makeQuery>;
     distance?: 'km' | 'mi';
+    energy?: 'Wh' | 'kWh';
   } = {},
 ) {
   const p = prefs(opts.distance ?? 'km');
+  p.energy = opts.energy ?? 'kWh';
   mockVehicles.mockReturnValue(opts.vehicles ?? makeQuery({ data: [{ id: 42 }] }));
   mockEnergy.mockReturnValue(opts.stats ?? makeQuery({ data: makeStats() }));
   mockUnits.mockReturnValue({
@@ -203,21 +205,21 @@ describe('buildEnergyChartData', () => {
     expect(buildEnergyChartData(null)).toEqual([]);
     expect(
       buildEnergyChartData([makeDay({ date: 'd', energy_wh: null as unknown as number })]),
-    ).toEqual([{ date: 'd', energy: 0 }]);
+    ).toEqual([{ date: 'd', energy: null }]);
   });
 });
 
 describe('EnergyStatsWidget — compact (1×N)', () => {
-  it('renders the total-kWh big number and the energy unit, with no title/chart/stats', () => {
+  it('retains its title beside the compact total-kWh metric without adding a chart or stat grid', () => {
     setup({ stats: makeQuery({ data: makeStats({ total_wh: 45_000 }) }) });
     renderWidget({ size: COMPACT });
 
     // 45,000 Wh → 45 kWh.
-    expect(screen.getByText('45')).toBeInTheDocument();
+    expect(screen.getByText('45.00')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
     // Compact is title-less and stat-less.
-    expect(screen.queryByText('Energy Stats')).not.toBeInTheDocument();
-    expect(screen.queryByText('Total Used')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy stats' })).toBeInTheDocument();
+    expect(screen.queryByText('Total used')).not.toBeInTheDocument();
   });
 
   it('shows the no-data empty state (role="status") when the endpoint returns nothing', () => {
@@ -235,34 +237,32 @@ describe('EnergyStatsWidget — standard (2×N)', () => {
     setup({ stats: makeQuery({ data: makeStats() }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('Energy Stats')).toBeInTheDocument();
+    expect(screen.getByText('Energy stats')).toBeInTheDocument();
 
     // Total Used: 12,000 Wh → "12.0 kWh"; Total Charged: 15,000 Wh → "15.0 kWh".
-    expect(screen.getByText('Total Used')).toBeInTheDocument();
-    expect(screen.getByText('12.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('Total Charged')).toBeInTheDocument();
-    expect(screen.getByText('15.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Total used')).toBeInTheDocument();
+    expect(screen.getByText('12.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Total charged')).toBeInTheDocument();
+    expect(screen.getByText('15.00 kWh')).toBeInTheDocument();
 
     // Avg Efficiency: 0.15 Wh/m × 1000 = 150 Wh/km.
-    expect(screen.getByText('Avg Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('150.0')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
 
     // CO₂ Saved: 3.2 kg.
-    expect(screen.getByText('CO₂ Saved')).toBeInTheDocument();
-    expect(screen.getByText('3.2')).toBeInTheDocument();
-    expect(screen.getByText('kg')).toBeInTheDocument();
+    expect(screen.getByText('CO₂ saved')).toBeInTheDocument();
+    expect(screen.getByText('3.20 kg')).toBeInTheDocument();
   });
 
   it('withholds the wide-only Total Cost / Net Energy cards at 2 columns', () => {
     setup({ stats: makeQuery({ data: makeStats() }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.queryByText('Total Cost')).not.toBeInTheDocument();
-    expect(screen.queryByText('Net Energy')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total cost')).not.toBeInTheDocument();
+    expect(screen.queryByText('Net energy')).not.toBeInTheDocument();
   });
 
-  it('renders 0-valued placeholders for missing fields without crashing (null-safety)', () => {
+  it('keeps unknown fields distinct from measured zero without crashing', () => {
     setup({
       stats: makeQuery({
         data: makeStats({
@@ -276,10 +276,10 @@ describe('EnergyStatsWidget — standard (2×N)', () => {
     renderWidget({ size: STANDARD });
 
     // Used + Charged both collapse to "0.0 kWh"; efficiency + co2 to "0.0".
-    expect(screen.getAllByText('0.0 kWh')).toHaveLength(2);
-    expect(screen.getAllByText('0.0')).toHaveLength(2);
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
     // Still rendered, not crashed.
-    expect(screen.getByText('Energy Stats')).toBeInTheDocument();
+    expect(screen.getByText('Energy stats')).toBeInTheDocument();
   });
 });
 
@@ -289,13 +289,12 @@ describe('EnergyStatsWidget — wide (≥3 cols)', () => {
     renderWidget({ size: WIDE });
 
     // Total Cost: 4.5 → "4.50" with a "$" unit.
-    expect(screen.getByText('Total Cost')).toBeInTheDocument();
-    expect(screen.getByText('4.50')).toBeInTheDocument();
-    expect(screen.getByText('$')).toBeInTheDocument();
+    expect(screen.getByText('Total cost')).toBeInTheDocument();
+    expect(screen.getByText('4.50 $')).toBeInTheDocument();
 
     // Net Energy: (15,000 − 12,000) Wh = 3,000 Wh → "3.0 kWh".
-    expect(screen.getByText('Net Energy')).toBeInTheDocument();
-    expect(screen.getByText('3.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Net energy')).toBeInTheDocument();
+    expect(screen.getByText('3.00 kWh')).toBeInTheDocument();
   });
 });
 
@@ -305,14 +304,47 @@ describe('EnergyStatsWidget — unit conversion', () => {
     renderWidget({ size: STANDARD });
 
     // 0.15 Wh/m × 1609.344 = 241.4016 → "241.4"; label follows the preference.
-    expect(screen.getByText('241.4')).toBeInTheDocument();
-    expect(screen.getByText('Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument();
     expect(screen.queryByText('Wh/km')).not.toBeInTheDocument();
-    expect(screen.queryByText('150.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('150.00')).not.toBeInTheDocument();
   });
 });
 
 describe('EnergyStatsWidget — states & interaction', () => {
+  it.each([COMPACT, STANDARD, WIDE])('retains each renderer on a cached refresh failure at %j', (size) => {
+    const refetch = vi.fn();
+    setup({ stats: makeQuery({ data: makeStats(), error: new Error('refresh failed'), isError: true, refetch }) });
+    renderWidget({ size });
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText(size.cols === 1 ? '45.00' : '12.00 kWh')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the daily chart section present when only summary metrics exist', () => {
+    setup({ stats: makeQuery({ data: makeStats({ daily_breakdown: [] }) }) });
+    renderWidget({ size: STANDARD });
+    expect(screen.getByText('Total used')).toBeInTheDocument();
+    expect(screen.getByText('No energy data available')).toBeInTheDocument();
+  });
+
+  it('does not fabricate net energy when either contributing total is unknown', () => {
+    setup({ stats: makeQuery({ data: makeStats({ total_energy_used_wh: null }) }) });
+    renderWidget({ size: WIDE });
+    expect(screen.getByText('Net energy')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText('15.00 kWh')?.textContent).toBe('15.00 kWh');
+  });
+
+  it('honors a Wh preference in the compact hero and chart-data conversion', () => {
+    setup({ energy: 'Wh' });
+    renderWidget({ size: COMPACT });
+    expect(screen.getByText('45,000.00')).toBeInTheDocument();
+    expect(screen.getByText('Wh')).toBeInTheDocument();
+    expect(buildEnergyChartData([makeDay()], 'Wh')[0].energy).toBe(5000);
+  });
+
   it('shows the empty state (role="status") but keeps the title at standard size', () => {
     setup({ stats: makeQuery({ data: null }) });
     renderWidget({ size: STANDARD });
@@ -320,9 +352,9 @@ describe('EnergyStatsWidget — states & interaction', () => {
     expect(screen.getByText('No energy data available')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Standard widgets keep their header even when empty…
-    expect(screen.getByText('Energy Stats')).toBeInTheDocument();
+    expect(screen.getByText('Energy stats')).toBeInTheDocument();
     // …but the stat cards are gated behind having data.
-    expect(screen.queryByText('Total Used')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total used')).not.toBeInTheDocument();
   });
 
   it('shows a loading skeleton and withholds header + content while loading', () => {
@@ -330,7 +362,7 @@ describe('EnergyStatsWidget — states & interaction', () => {
     const { container } = renderWidget({ size: STANDARD });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Energy Stats')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy stats')).toBeInTheDocument();
     expect(screen.queryByText('No energy data available')).not.toBeInTheDocument();
   });
 
@@ -341,7 +373,7 @@ describe('EnergyStatsWidget — states & interaction', () => {
     // A non-ApiError falls through QueryError to the network/unknown branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Energy Stats')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy stats')).toBeInTheDocument();
   });
 
   it('refetches the energy query when the accessible Refresh control is clicked', () => {
@@ -351,6 +383,21 @@ describe('EnergyStatsWidget — states & interaction', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reviews retained SI totals, the original source denomination and net-energy operands', () => {
+    setup({ stats: makeQuery({ data: makeStats(), error: new Error('refresh failed'), isError: true }) });
+    renderWidget({ size: WIDE });
+    const brief = screen.getByTestId('energy-stats-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('12.00 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText('4.50 $')).toBeInTheDocument();
+    expect(within(drawer).getByText('3.00 kWh')).toBeInTheDocument();
+    expect(within(drawer).getByText(/both operands must be measured/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/CO₂ savings remain estimates/).length).toBeGreaterThan(0);
   });
 });
 

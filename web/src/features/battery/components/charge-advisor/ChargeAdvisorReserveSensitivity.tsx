@@ -2,12 +2,14 @@ import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-import { fmtPercent } from '@/lib/numberFormat';
+
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorReserveSensitivity({ analysis, state }: ChargeAdvisorComponentProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -29,7 +31,7 @@ export function ChargeAdvisorReserveSensitivity({ analysis, state }: ChargeAdvis
             className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
           >
             <div className="flex items-center justify-between gap-2">
-              <Text className="font-semibold">{fmtPercent(item.floorPct, 0)}</Text>
+              <Text className="font-semibold">{fmtPercent(item.floorPct)}</Text>
               {item.floorPct === analysis.reserveFloorPct && (
                 <Badge variant="info">{t('chargeAdvisor.sensitivity.selected', 'Selected')}</Badge>
               )}

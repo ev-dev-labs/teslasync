@@ -14,10 +14,11 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import { DestinationTransitionsSectionBody } from './DestinationTransitionsSectionBody';
 import type { DestinationTransitionsQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationVisitShareChartProps {
   model: DestinationTransitionResult;
@@ -30,6 +31,7 @@ export function DestinationVisitShareChart({
   state,
   locale,
 }: DestinationVisitShareChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -137,7 +139,7 @@ export function DestinationVisitShareChart({
                 content={
                   <ChartTooltip
                     valueFormatter={(value) =>
-                      `${fmtNumber(value, 1, locale)}%`
+                      `${fmtNumber(value, undefined, locale)}%`
                     }
                   />
                 }

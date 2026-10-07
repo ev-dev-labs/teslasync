@@ -90,7 +90,7 @@ describe('LiveThroughputPanel', () => {
     renderPanel({ rate: 12, peak: 40, connected: true });
 
     expect(
-      screen.getByRole('heading', { name: /Signal Throughput/ }),
+      screen.getByRole('heading', { name: /Signal throughput/ }),
     ).toBeInTheDocument();
     // Caption reflects the live + peak rate through the shared int formatter.
     expect(captionText()).toBe('Now: 12/s · Peak: 40/s');

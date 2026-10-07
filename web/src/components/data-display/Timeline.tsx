@@ -28,9 +28,29 @@ export interface TimelineProps {
    * list's accessible name.
    */
   label?: string;
+  /**
+   * Chronology used only to infer accessible summary bounds from the endpoint
+   * rows. Never reorders items or parses their caller-formatted timestamps.
+   * Defaults to newest-first for existing feeds.
+   */
+  chronology?: 'newest-first' | 'oldest-first';
+  /**
+   * Authoritative, caller-formatted oldest/newest bounds for the accessible
+   * summary, independent of row order (including causal, nonchronological
+   * lists). When supplied, missing/null/empty bounds stay unknown; neither
+   * bound is inferred from rows. The range is spoken only when both are known.
+   */
+  summaryBounds?: { start?: string | null; end?: string | null };
 }
 
-export function Timeline({ items, className, emptyMessage, label }: TimelineProps) {
+export function Timeline({
+  items,
+  className,
+  emptyMessage,
+  label,
+  chronology = 'newest-first',
+  summaryBounds,
+}: TimelineProps) {
   const { t } = useTranslation();
   const { describeTimeline } = useA11ySummary();
   const list = items ?? [];
@@ -54,12 +74,17 @@ export function Timeline({ items, className, emptyMessage, label }: TimelineProp
   // summary a screen-reader user gets an undifferentiated run of
   // fragments with no sense of how many entries there are or what span
   // they cover. Entries are pre-formatted by the caller, so the summary
-  // always agrees with the visible timestamps.
+  // uses their labels verbatim. Explicit bounds take precedence because causal
+  // order need not be chronological; unknown bounds must not be fabricated.
+  const bounds = summaryBounds ?? {
+    start: chronology === 'oldest-first' ? list[0]?.time : list[list.length - 1]?.time,
+    end: chronology === 'oldest-first' ? list[list.length - 1]?.time : list[0]?.time,
+  };
   const summary = describeTimeline({
     label: resolvedLabel,
     count: list.length,
-    start: list.length > 0 ? list[list.length - 1]?.time : null,
-    end: list.length > 0 ? list[0]?.time : null,
+    start: bounds.start,
+    end: bounds.end,
   });
 
   return (
@@ -67,12 +92,12 @@ export function Timeline({ items, className, emptyMessage, label }: TimelineProp
       <VisuallyHidden>{summary}</VisuallyHidden>
       <ol className="relative space-y-4" aria-label={resolvedLabel}>
         {list.map((item, i) => (
-          <li key={i} className="relative flex gap-3 pl-6">
+          <li key={i} className="relative flex gap-3 ps-6">
           {/* connector line — decorative */}
           {i < list.length - 1 && (
             <span
               aria-hidden="true"
-              className="absolute left-[11px] top-6 h-full w-px bg-[var(--panel-border)]"
+              className="absolute start-[11px] top-6 h-full w-px bg-[var(--panel-border)]"
             />
           )}
 
@@ -82,7 +107,7 @@ export function Timeline({ items, className, emptyMessage, label }: TimelineProp
             className={cn(
               // The dot sits on top of the connector line, so it must be filled
               // with the surrounding panel surface to punch a clean hole in it.
-              'absolute left-0 top-1 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 bg-[var(--panel-bg)]',
+              'absolute start-0 top-1 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 bg-[var(--panel-bg)]',
               item.color ? undefined : 'border-[var(--control-border)] text-[var(--text-muted)]',
             )}
             style={item.color ? { borderColor: item.color, color: item.color } : undefined}
@@ -97,11 +122,11 @@ export function Timeline({ items, className, emptyMessage, label }: TimelineProp
 
           {/* content */}
           <div className="min-w-0 flex-1 pt-0.5">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-medium text-[var(--text-primary)]">
+            <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+              <span className="min-w-0 flex-[1_1_12rem] break-words text-sm font-medium text-[var(--text-primary)]">
                 {item.title}
               </span>
-              <span className="shrink-0 text-xs text-[var(--text-muted)]">
+              <span className="max-w-full break-words text-xs text-[var(--text-muted)]">
                 {item.time}
               </span>
             </div>

@@ -27,7 +27,7 @@
  *     disabled (undefined id) query when no vehicle exists.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { ChargePlan, RatePlanInfo } from '@/types/charging';
 
@@ -90,11 +90,41 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 
 import { useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { MemoryRouter } from 'react-router-dom';
+import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
+import { act } from '@testing-library/react';
 import ChargePlansWidget, {
   badgeVariant,
   detailBadgeVariant,
   joinDateTime,
 } from './ChargePlansWidget';
+
+it.each([1, 2, 3])('identifies charge plans at %i columns', (cols) => {
+  setup();
+  render(<MemoryRouter><ChargePlansWidget size={{ cols, rows: 4 }} /></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Charge plans' })).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('identifies loading charge plans at %i columns', (cols) => {
+  setup({ plans: makeQuery({ isLoading: true }) });
+  render(<MemoryRouter><ChargePlansWidget size={{ cols, rows: 4 }} /></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Charge plans' })).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('identifies failed charge plan loads at %i columns', (cols) => {
+  setup({ plans: makeQuery({ isError: true, error: new Error('plans unavailable') }) });
+  render(<MemoryRouter><ChargePlansWidget size={{ cols, rows: 4 }} /></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Charge plans' })).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('retains charge plans and their heading after a failed refresh at %i columns', (cols) => {
+  setup({ plans: makeQuery({ data: [makePlan()], isError: true, error: new Error('refresh failed') }) });
+  render(<MemoryRouter><ChargePlansWidget size={{ cols, rows: 4 }} /></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Charge plans' })).toBeInTheDocument();
+  expect(screen.getByText('85.00%')).toBeInTheDocument();
+  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+});
 
 const mockPlans = useChargePlans as unknown as ReturnType<typeof vi.fn>;
 const mockRates = useRatePlans as unknown as ReturnType<typeof vi.fn>;
@@ -154,6 +184,90 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe('ChargePlansWidget shared data trust', () => {
+  it('keeps complete plan details when rate discovery fails and retries that source alone', () => {
+    const plansRetry = vi.fn();
+    const ratesRetry = vi.fn();
+    setup({
+      plans: makeQuery({ data: [makePlan()], refetch: plansRetry }),
+      rates: makeQuery({ isError: true, error: new Error('rates failed'), refetch: ratesRetry }),
+    });
+    render(<MemoryRouter><ChargePlansWidget vehicleId={42} size={{ cols: 4, rows: 4 }} /></MemoryRouter>);
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    expect(screen.getByText('42.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('2026-06-01 06:30')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Rate plans' })).toBeInTheDocument();
+    const failure = screen.getByText('Unable to load rate plans').closest('[role="alert"]');
+    expect(failure).not.toBeNull();
+    fireEvent.click(within(failure as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(ratesRetry).toHaveBeenCalledOnce();
+    expect(plansRetry).not.toHaveBeenCalled();
+  });
+
+  it('keeps full independent rate values while the selected plan is loading', () => {
+    const name = 'Extended off-peak charging tariff with a complete unabridged plan name';
+    setup({
+      plans: makeQuery({ isLoading: true }),
+      rates: makeQuery({ data: [{ ...RATE, name }] }),
+    });
+    const { container } = render(<MemoryRouter><ChargePlansWidget size={STANDARD} /></MemoryRouter>);
+    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(screen.getByText('PG&E')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(screen.queryByText('No charge plans')).not.toBeInTheDocument();
+  });
+
+  it('reacts to format preference changes in SOC and estimated energy', () => {
+    const plan = makePlan();
+    setup({ plans: makeQuery({ data: [plan] }) });
+    render(<MemoryRouter><ChargePlansWidget vehicleId={42} size={STANDARD} /></MemoryRouter>);
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    try {
+      act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
+      expect(screen.getByText('85,000%')).toBeInTheDocument();
+      expect(screen.getByText('42,500 kWh')).toBeInTheDocument();
+      expect(plan.estimated_kwh).toBe(42.5);
+    } finally {
+      act(() => { setGlobalPrecision(2); setGlobalLocale('en-US'); });
+    }
+  });
+
+  it.each([COMPACT, STANDARD, { cols: 4, rows: 4 }])('keeps the plan and recovers failed rates at %j', (size) => {
+    const refetchPlans = vi.fn();
+    const refetchRates = vi.fn();
+    setup({
+      plans: makeQuery({ data: [makePlan()], refetch: refetchPlans }),
+      rates: makeQuery({ isError: true, error: new Error('rates'), refetch: refetchRates }),
+    });
+    const view = render(<MemoryRouter><ChargePlansWidget vehicleId={42} size={size} /></MemoryRouter>);
+    expect(view.container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchPlans).toHaveBeenCalledOnce();
+    expect(refetchRates).toHaveBeenCalledOnce();
+  });
+
+  it('recovers discovery even when fleet-independent rates are retained', () => {
+    const refetch = vi.fn();
+    setup({
+      vehicles: makeQuery({ isError: true, error: new Error('vehicles'), refetch }),
+      rates: makeQuery({ data: [RATE] }),
+    });
+    render(<MemoryRouter><ChargePlansWidget size={STANDARD} /></MemoryRouter>);
+    expect(screen.getByText('EV2-A')).toBeInTheDocument();
+    expect(screen.getByText('No charge plans')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockPlans).toHaveBeenCalledWith(undefined);
+  });
+
+  it.each([0, -2, 0.1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('disables invalid identity %s', (vehicleId) => {
+    setup();
+    render(<MemoryRouter><ChargePlansWidget vehicleId={vehicleId} size={STANDARD} /></MemoryRouter>);
+    expect(mockPlans).toHaveBeenCalledWith(undefined);
+  });
+});
+
 describe('badgeVariant', () => {
   it('maps each known status to its Badge tone', () => {
     expect(badgeVariant('completed')).toBe('success');
@@ -205,7 +319,7 @@ describe('joinDateTime', () => {
 });
 
 describe('ChargePlansWidget', () => {
-  it('compact layout shows the SOC hero + departure and no panel title', () => {
+  it('compact layout identifies the SOC hero and departure', () => {
     setup({
       plans: makeQuery({
         data: [makePlan({ target_soc: 90, depart_by: '2026-06-01T08:15:00Z' })],
@@ -213,11 +327,11 @@ describe('ChargePlansWidget', () => {
     });
     render(<ChargePlansWidget vehicleId={42} size={COMPACT} />);
 
-    expect(screen.getByText('90%')).toBeInTheDocument();
+    expect(screen.getByText('90.00%')).toBeInTheDocument();
     expect(screen.getByText('Target SOC')).toBeInTheDocument();
     expect(screen.getByText('08:15')).toBeInTheDocument();
     // Compact widgets are title-less — the "Charge Plans" header is standard-only.
-    expect(screen.queryByText('Charge Plans')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charge plans' })).toBeInTheDocument();
   });
 
   it('compact layout renders the no-plan empty state (ignoring rate data)', () => {
@@ -236,7 +350,7 @@ describe('ChargePlansWidget', () => {
 
     expect(screen.getByText('No charge plans or rate data')).toBeInTheDocument();
     // Standard widgets keep their header even when empty.
-    expect(screen.getByText('Charge Plans')).toBeInTheDocument();
+    expect(screen.getByText('Charge plans')).toBeInTheDocument();
   });
 
   it('standard layout renders the rate-plan section + no-plan notice when only rates exist', () => {
@@ -247,7 +361,7 @@ describe('ChargePlansWidget', () => {
     // empty state…
     expect(screen.getByText('No charge plans')).toBeInTheDocument();
     // …and the rate-plans section renders utility, plan name, and id badge.
-    expect(screen.getByText('Rate Plans')).toBeInTheDocument();
+    expect(screen.getByText('Rate plans')).toBeInTheDocument();
     expect(screen.getByText('PG&E')).toBeInTheDocument();
     expect(screen.getByText('EV2-A')).toBeInTheDocument();
     expect(screen.getByText('ev2a')).toBeInTheDocument();
@@ -270,17 +384,19 @@ describe('ChargePlansWidget', () => {
 
     // Status badge + summary StatCards.
     expect(screen.getByText('scheduled')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('08:00')).toBeInTheDocument();
     // Detail rows (slice(2)): schedule start/end combined, energy, cost, savings.
     expect(screen.getByText('2026-06-01 02:00')).toBeInTheDocument();
     expect(screen.getByText('2026-06-01 06:30')).toBeInTheDocument();
-    expect(screen.getByText('42.5 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Est. energy')).toBeInTheDocument();
+    expect(screen.getByText('Est. cost')).toBeInTheDocument();
+    expect(screen.getByText('42.50 kWh')).toBeInTheDocument();
     expect(screen.getByText('$5.10')).toBeInTheDocument();
     expect(screen.getByText('$4.10')).toBeInTheDocument();
     expect(screen.getByText('saved')).toBeInTheDocument();
     // Rate plan appears in both the header and the detail row.
-    expect(screen.getByText('Rate Plan')).toBeInTheDocument();
+    expect(screen.getByText('Rate plan')).toBeInTheDocument();
     expect(screen.getAllByText('Off-Peak Saver').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -303,7 +419,7 @@ describe('ChargePlansWidget', () => {
     setup({ plans: makeQuery({ data: [plan] }) });
     render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
-    expect(screen.getByText('0%')).toBeInTheDocument(); // target_soc ?? 0
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument(); // target_soc ?? 0
     // Energy + cost + departure all collapse to the placeholder.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
     expect(screen.queryByText('saved')).not.toBeInTheDocument();
@@ -323,7 +439,7 @@ describe('ChargePlansWidget', () => {
     const { container } = render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Charge Plans')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge plans')).toBeInTheDocument();
     expect(screen.queryByText('No charge plans or rate data')).not.toBeInTheDocument();
   });
 
@@ -365,7 +481,7 @@ describe('ChargePlansWidget', () => {
     render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
     expect(screen.getByText('scheduled')).toBeInTheDocument();
-    expect(screen.getByText('70%')).toBeInTheDocument();
+    expect(screen.getByText('70.00%')).toBeInTheDocument();
     expect(screen.queryByText('100%')).not.toBeInTheDocument();
     expect(screen.queryByText('completed')).not.toBeInTheDocument();
   });

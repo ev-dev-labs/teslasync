@@ -10,8 +10,10 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge, Button } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { Badge, Button, HelperText } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { Timeline } from '@/components/data-display';
+import { useDataState } from '@/hooks/useDataState';
 import { EmptyState } from '@/components/feedback';
 import { History, RefreshCw } from 'lucide-react';
 import { listAuditEvents } from '../lib/auditTrail';
@@ -46,12 +48,18 @@ export function AuditTrailPanel({ refreshToken }: AuditTrailPanelProps) {
   const { t } = useTranslation();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [error, setError] = useState<unknown>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const rows = await listAuditEvents();
       setEntries(rows);
+      setHasLoaded(true);
+    } catch (cause) {
+      setError(cause);
     } finally {
       setIsLoading(false);
     }
@@ -60,18 +68,30 @@ export function AuditTrailPanel({ refreshToken }: AuditTrailPanelProps) {
   useEffect(() => {
     void load();
   }, [load, refreshToken]);
+  const source = useDataState({
+    data: hasLoaded ? entries : undefined,
+    error,
+    isLoading,
+    isFetching: isLoading,
+    refetch: load,
+  });
+  const emptyContent = (
+    <EmptyState /* no-action: the header Refresh button reloads local activity; signing/key actions live in their own tabs. */
+      title={t('resaleVault.audit.emptyTitle', 'No activity yet')}
+      message={t('resaleVault.audit.emptyDescription', 'Generate a key or sign a report to start the local audit trail.')}
+    />
+  );
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.audit.title', 'Audit Trail')}</PanelTitle>
+    <LayoutCard title={t('resaleVault.audit.title', 'Audit trail')}
+      actions={
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={() => void load()} icon={<RefreshCw className="h-3.5 w-3.5" />}>
             {t('resaleVault.audit.refresh', 'Refresh')}
           </Button>
           <History className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
-        </div>
-      </div>
+        </div>}
+    >
 
       <HelperText>
         {t(
@@ -80,30 +100,31 @@ export function AuditTrailPanel({ refreshToken }: AuditTrailPanelProps) {
         )}
       </HelperText>
 
-      {isLoading ? (
-        <HelperText>{t('resaleVault.audit.loading', 'Loading audit log…')}</HelperText>
-      ) : entries.length === 0 ? (
-        // no-action: the Refresh button in this panel's own header re-runs load(); real resolution is generating a key or signing a report in another tab.
-        <EmptyState
-          title={t('resaleVault.audit.emptyTitle', 'No activity yet')}
-          message={t('resaleVault.audit.emptyDescription', 'Generate a key or sign a report to start the local audit trail.')}
-        />
-      ) : (
-        <ul className="max-h-96 space-y-2 overflow-y-auto pr-1">
-          {entries.map((entry) => {
-            const [key, fallback] = ACTION_LABELS[entry.action] ?? [entry.action, entry.action];
-            return (
-              <li key={entry.id} className="rounded-lg border border-white/[0.06] p-2.5 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <Badge variant={ACTION_BADGE_VARIANT[entry.action] ?? 'info'}>{t(key, fallback)}</Badge>
-                  <span className="font-mono text-[var(--text-muted)]">{entry.ts}</span>
-                </div>
-                <p className="mt-1 text-[var(--text-secondary)]">{entry.detail}</p>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </GlassPanel>
+      <SourceContent
+        state={source.fatalError ? 'error' : !source.hasData && isLoading ? 'loading' : source.status === 'stale' ? 'retained' : entries.length === 0 ? 'empty' : 'ready'}
+        label={t('resaleVault.audit.title', 'Audit trail')}
+        error={source.fatalError}
+        errorMessage={t('resaleVault.audit.loadError', 'The local audit trail could not be loaded.')}
+        errorRecovery={{ onRetry: () => void load() }}
+        emptyMessage={t('resaleVault.audit.emptyDescription', 'Generate a key or sign a report to start the local audit trail.')}
+        loadingContent={<HelperText>{t('resaleVault.audit.loading', 'Loading audit log…')}</HelperText>}
+        emptyContent={emptyContent}
+      >
+        {entries.length === 0 ? emptyContent : <div className="max-h-96 overflow-y-auto pe-1">
+          <Timeline
+            label={t('resaleVault.audit.title', 'Audit trail')}
+            chronology="newest-first"
+            items={entries.map((entry) => {
+              const [key, fallback] = ACTION_LABELS[entry.action] ?? [entry.action, entry.action];
+              return {
+                title: <Badge variant={ACTION_BADGE_VARIANT[entry.action] ?? 'info'}>{t(key, fallback)}</Badge>,
+                time: entry.ts,
+                subtitle: entry.detail,
+              };
+            })}
+          />
+        </div>}
+      </SourceContent>
+    </LayoutCard>
   );
 }

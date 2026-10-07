@@ -264,7 +264,7 @@ describe('SignalGapDetectorPage — vehicle selected', () => {
   it('renders the header, hides the prompt, and enables refresh', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Signal Gaps' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Signal gaps' })).toBeInTheDocument();
     expect(
       screen.getByText('Identify signals that have stopped arriving or have gaps'),
     ).toBeInTheDocument();
@@ -309,7 +309,7 @@ describe('SignalGapDetectorPage — vehicle selected', () => {
     // The catalog is scoped to the selected vehicle, summary suppressed.
     expect(captured.catalog.vehicleId).toBe(42);
     expect(captured.catalog.showSummary).toBe(false);
-    expect(captured.catalog.title).toBe('Signal Catalog');
+    expect(captured.catalog.title).toBe('Signal catalog');
   });
 
   it('wires the refresh button straight to query.refetch', () => {
@@ -322,8 +322,8 @@ describe('SignalGapDetectorPage — vehicle selected', () => {
   it('drives the tab title + H1 from the same "Signal Gaps" resource fallback', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Signal Gaps' })).toBeInTheDocument();
-    expect(document.title).toContain('Signal Gaps');
+    expect(screen.getByRole('heading', { level: 1, name: 'Signal gaps' })).toBeInTheDocument();
+    expect(document.title).toContain('Signal gaps');
   });
 });
 

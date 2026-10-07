@@ -1,30 +1,23 @@
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PrefetchLink } from '@/components/layout';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { KVList } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
+import { SafetyPanelGrid } from '../components/safety-settings-modernization/SafetyPanelGrid';
+import { Icons } from '@/lib/icons';
 import {
-  UserCheck,
-  Armchair,
-  Lock,
-  Navigation,
-  Cpu,
-  ShieldCheck,
-  ShieldAlert,
-  Car,
-  RefreshCw,
-} from 'lucide-react';
-import { PageContainer, PrefetchLink } from '@/components/layout';
-import {
-  GlassPanel,
   Badge,
   Button,
   DataTable,
   PanelTitle,
   Caption,
-  Label,
   Text,
+  Icon,
   type Column,
 } from '@/components/ui';
 
-import { MetricCard, TimeStamp, DataFreshnessAuto } from '@/components/data-display';
+import { TimeStamp, DataFreshnessAuto } from '@/components/data-display';
 import {
   LinearGauge,
   LineChart,
@@ -47,11 +40,10 @@ import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useSafety, useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import {
@@ -60,6 +52,9 @@ import {
   type SafetyEnumField,
 } from '@/lib/safetyEnum';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState } from '@/api/dataState';
+import { VehicleSourceContent } from '../components/VehicleSourceContent';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -69,7 +64,7 @@ interface FeatureCardDef {
   key: string;
   label: string;
   description: string;
-  enabled: boolean;
+  enabled: boolean | null;
   valueText: string;
 }
 
@@ -87,22 +82,37 @@ function cleanEnum(value: unknown, field: SafetyEnumField): string {
   return cleanSafetyEnum(value, field);
 }
 
-export function boolFeatures(snap: SafetySnapshot): boolean[] {
+function enumState(value: unknown, field: SafetyEnumField): boolean | null {
+  if (value == null || (typeof value === 'number' && !Number.isFinite(value))) return null;
+  const cleaned = cleanEnum(value, field).trim().toLowerCase();
+  if (['', '—', 'unknown', 'unavailable', 'invalid'].includes(cleaned)) return null;
+  return isSafetyEnumActive(value, field);
+}
+
+export function boolFeatures(snap: SafetySnapshot): (boolean | null)[] {
   return [
-    isAebEnabled(snap.automatic_emergency_braking_off ?? false),
-    snap.automatic_blind_spot_camera ?? false,
-    snap.blind_spot_collision_warning ?? false,
-    snap.emergency_lane_departure_avoidance ?? false,
-    snap.pin_to_drive_enabled ?? false,
-    isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning'),
-    isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance'),
-    isSafetyEnumActive(snap.speed_limit_warning, 'speed_limit_warning'),
-    isSafetyEnumActive(snap.cruise_follow_distance, 'cruise_follow_distance'),
+    snap.automatic_emergency_braking_off == null ? null : isAebEnabled(snap.automatic_emergency_braking_off),
+    snap.automatic_blind_spot_camera ?? null,
+    snap.blind_spot_collision_warning ?? null,
+    snap.emergency_lane_departure_avoidance ?? null,
+    snap.pin_to_drive_enabled ?? null,
+    enumState(snap.forward_collision_warning, 'forward_collision_warning'),
+    enumState(snap.lane_departure_avoidance, 'lane_departure_avoidance'),
+    enumState(snap.speed_limit_warning, 'speed_limit_warning'),
+    enumState(snap.cruise_follow_distance, 'cruise_follow_distance'),
   ];
 }
 
 export function enabledCount(snap: SafetySnapshot): number {
   return boolFeatures(snap).filter(Boolean).length;
+}
+
+export function summarizeFeatures(snap: SafetySnapshot) {
+  const states = boolFeatures(snap);
+  const enabled = states.filter(value => value === true).length;
+  const disabled = states.filter(value => value === false).length;
+  const unknown = states.filter(value => value === null).length;
+  return { enabled, disabled, unknown, percent: unknown === 0 ? enabled / TOTAL_FEATURES * 100 : null };
 }
 
 export const TOTAL_FEATURES = 9;
@@ -127,34 +137,26 @@ export function scoreBadgeVariant(pct: number): 'success' | 'warning' | 'danger'
 /* ------------------------------------------------------------------ */
 
 function SignalCard({
+  id,
   icon,
   value,
   label,
   positive,
 }: {
+  id: string;
   icon: ReactNode;
   value: string;
   label: string;
   positive?: boolean | null;
 }) {
-  // Toned 300-level accents for body text (never neon). Status is also
-  // conveyed by the value text itself, so meaning is not color-dependent.
-  const color =
-    positive === true
-      ? 'text-emerald-300'
-      : positive === false
-        ? 'text-rose-300'
-        : 'text-[var(--text-secondary)]';
   return (
-    <GlassPanel className="flex flex-col items-center gap-2 p-4 text-center">
-      <span className={color} aria-hidden="true">
-        {icon}
-      </span>
-      <Text as="span" size="sm" weight="bold" className={cn('block', color)}>
+    <KVList layout="stacked" wrap items={[{
+      id, label,
+      leading: <span className="text-[var(--text-secondary)]" aria-hidden="true">{icon}</span>,
+      value: <Badge variant={positive === true ? 'success' : positive === false ? 'warning' : 'neutral'}>
         {value}
-      </Text>
-      <Label className="block">{label}</Label>
-    </GlassPanel>
+      </Badge>,
+    }]} />
   );
 }
 
@@ -170,49 +172,15 @@ function SafetyCard({
 }: {
   label: string;
   description: string;
-  enabled: boolean;
+  enabled: boolean | null;
   valueText: string;
 }) {
   return (
-    <GlassPanel className="space-y-2 p-4" hover glow={enabled ? 'green' : 'none'}>
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'rounded-lg p-2',
-            enabled ? 'bg-neon-green/10' : 'bg-[var(--surface-2)]',
-          )}
-        >
-          <span
-            className={cn(
-              'block h-5 w-5 rounded-md',
-              enabled ? 'bg-neon-green/40' : 'bg-[var(--surface-2)]',
-            )}
-            aria-hidden="true"
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">
-            {label}
-          </Text>
-          <Caption className="block">{description}</Caption>
-        </div>
-        <span
-          className={cn(
-            'h-2 w-2 shrink-0 rounded-full',
-            enabled ? 'bg-neon-green' : 'bg-[var(--surface-2)]',
-          )}
-          aria-hidden="true"
-        />
-      </div>
-      <Text
-        as="span"
-        size="sm"
-        weight="semibold"
-        className={cn('block', enabled ? 'text-emerald-300' : 'text-[var(--text-muted)]')}
-      >
+    <LayoutCard title={label} description={description}>
+      <Badge variant={enabled === true ? 'success' : 'neutral'}>
         {valueText}
-      </Text>
-    </GlassPanel>
+      </Badge>
+    </LayoutCard>
   );
 }
 
@@ -222,9 +190,9 @@ function SafetyCard({
 
 interface ChartPoint {
   time: string;
-  aeb: number;
-  bscw: number;
-  elda: number;
+  aeb: number | null;
+  bscw: number | null;
+  elda: number | null;
 }
 
 export function toChartData(history: SafetySnapshot[]): ChartPoint[] {
@@ -232,9 +200,9 @@ export function toChartData(history: SafetySnapshot[]): ChartPoint[] {
     .sort((a, b) => new Date(a.created_at ?? '').getTime() - new Date(b.created_at ?? '').getTime())
     .map((s) => ({
       time: formatDateTime(s.created_at),
-      aeb: isAebEnabled(s.automatic_emergency_braking_off ?? false) ? 1 : 0,
-      bscw: (s.blind_spot_collision_warning ?? false) ? 1 : 0,
-      elda: (s.emergency_lane_departure_avoidance ?? false) ? 1 : 0,
+      aeb: s.automatic_emergency_braking_off == null ? null : isAebEnabled(s.automatic_emergency_braking_off) ? 1 : 0,
+      bscw: s.blind_spot_collision_warning == null ? null : s.blind_spot_collision_warning ? 1 : 0,
+      elda: s.emergency_lane_departure_avoidance == null ? null : s.emergency_lane_departure_avoidance ? 1 : 0,
     }));
 }
 
@@ -246,78 +214,88 @@ export function buildFeatureCards(
   snap: SafetySnapshot,
   t: (key: string, fallback: string) => string,
 ): FeatureCardDef[] {
-  const aebOn = isAebEnabled(snap.automatic_emergency_braking_off ?? false);
-  const fcwVal = cleanEnum(snap.forward_collision_warning, 'forward_collision_warning');
-  const ldaVal = cleanEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance');
-  const slwVal = cleanEnum(snap.speed_limit_warning, 'speed_limit_warning');
-  const cfdVal = cleanEnum(snap.cruise_follow_distance, 'cruise_follow_distance');
-  const fcwOn = isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning');
-  const ldaOn = isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance');
-  const slwOn = isSafetyEnumActive(snap.speed_limit_warning, 'speed_limit_warning');
+  const aebOn = snap.automatic_emergency_braking_off == null ? null : isAebEnabled(snap.automatic_emergency_braking_off);
+  const boolText = (value: boolean | null | undefined) => value == null
+    ? t('safety.settings.unknown', 'Unknown')
+    : value ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled');
+  const enumText = (value: unknown, field: SafetyEnumField) => {
+    if (enumState(value, field) == null) return t('safety.settings.unknown', 'Unknown');
+    const cleaned = cleanEnum(value, field);
+    if (cleaned === 'On') return t('common.on', 'On');
+    if (cleaned === 'Off') return t('common.off', 'Off');
+    return cleaned;
+  };
+  const fcwVal = enumText(snap.forward_collision_warning, 'forward_collision_warning');
+  const ldaVal = enumText(snap.lane_departure_avoidance, 'lane_departure_avoidance');
+  const slwVal = enumText(snap.speed_limit_warning, 'speed_limit_warning');
+  const cfdVal = enumText(snap.cruise_follow_distance, 'cruise_follow_distance');
+  const fcwOn = enumState(snap.forward_collision_warning, 'forward_collision_warning');
+  const ldaOn = enumState(snap.lane_departure_avoidance, 'lane_departure_avoidance');
+  const slwOn = enumState(snap.speed_limit_warning, 'speed_limit_warning');
 
   return [
     {
       key: 'aeb',
-      label: t('safety.aeb', 'Auto Emergency Braking'),
+      label: t('safety.aeb', 'Auto emergency braking'),
       description: t('safety.aebDesc', 'Automatic collision mitigation'),
       enabled: aebOn,
-      valueText: aebOn ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+      valueText: boolText(aebOn),
     },
     {
       key: 'bsc',
-      label: t('safety.blindSpotCamera', 'Blind Spot Camera'),
+      label: t('safety.blindSpotCamera', 'Blind spot camera'),
       description: t('safety.blindSpotCameraDesc', 'Camera view when signaling'),
-      enabled: snap.automatic_blind_spot_camera ?? false,
-      valueText: (snap.automatic_blind_spot_camera ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+      enabled: snap.automatic_blind_spot_camera ?? null,
+      valueText: boolText(snap.automatic_blind_spot_camera),
     },
     {
       key: 'fcw',
-      label: t('safety.fcw', 'Forward Collision Warning'),
+      label: t('safety.fcw', 'Forward collision warning'),
       description: t('safety.fcwDesc', 'Warns of potential frontal collisions'),
       enabled: fcwOn,
       valueText: fcwVal,
     },
     {
       key: 'lda',
-      label: t('safety.lda', 'Lane Departure Avoidance'),
+      label: t('safety.lda', 'Lane departure avoidance'),
       description: t('safety.ldaDesc', 'Prevents unintentional lane changes'),
       enabled: ldaOn,
       valueText: ldaVal,
     },
     {
       key: 'cfd',
-      label: t('safety.cfd', 'Cruise Follow Distance'),
+      label: t('safety.cfd', 'Cruise follow distance'),
       description: t('safety.cfdDesc', 'Adaptive cruise headway setting'),
-      enabled: isSafetyEnumActive(snap.cruise_follow_distance, 'cruise_follow_distance'),
+      enabled: enumState(snap.cruise_follow_distance, 'cruise_follow_distance'),
       valueText: cfdVal,
     },
     {
       key: 'slw',
-      label: t('safety.slw', 'Speed Limit Warning'),
+      label: t('safety.slw', 'Speed limit warning'),
       description: t('safety.slwDesc', 'Alerts when exceeding speed limit'),
       enabled: slwOn,
       valueText: slwVal,
     },
     {
       key: 'ptd',
-      label: t('safety.pinToDrive', 'Pin to Drive'),
+      label: t('safety.pinToDrive', 'Pin to drive'),
       description: t('safety.pinToDriveDesc', 'Requires PIN before driving'),
-      enabled: snap.pin_to_drive_enabled ?? false,
-      valueText: (snap.pin_to_drive_enabled ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+      enabled: snap.pin_to_drive_enabled ?? null,
+      valueText: boolText(snap.pin_to_drive_enabled),
     },
     {
       key: 'bscw',
-      label: t('safety.bscw', 'Blind Spot Collision Warning'),
+      label: t('safety.bscw', 'Blind spot collision warning'),
       description: t('safety.bscwDesc', 'Alerts for blind-spot hazards'),
-      enabled: snap.blind_spot_collision_warning ?? false,
-      valueText: (snap.blind_spot_collision_warning ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+      enabled: snap.blind_spot_collision_warning ?? null,
+      valueText: boolText(snap.blind_spot_collision_warning),
     },
     {
       key: 'elda',
-      label: t('safety.elda', 'Emergency Lane Departure Avoidance'),
+      label: t('safety.elda', 'Emergency lane departure avoidance'),
       description: t('safety.eldaDesc', 'Steers back on unintentional departure'),
-      enabled: snap.emergency_lane_departure_avoidance ?? false,
-      valueText: (snap.emergency_lane_departure_avoidance ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+      enabled: snap.emergency_lane_departure_avoidance ?? null,
+      valueText: boolText(snap.emergency_lane_departure_avoidance),
     },
   ];
 }
@@ -327,17 +305,19 @@ export function buildFeatureCards(
 /* ------------------------------------------------------------------ */
 
 function buildHistoryColumns(t: (k: string, fallback: string) => string): Column<SafetySnapshot>[] {
-  const boolCell = (val: boolean): ReactNode => (
-    <Badge variant={val ? 'success' : 'danger'} size="sm">
-      {val ? t('common.on', 'On') : t('common.off', 'Off')}
+  const boolLabel = (val: boolean | null | undefined) => val == null ? '—' : val ? t('common.on', 'On') : t('common.off', 'Off');
+  const boolCell = (val: boolean | null | undefined): ReactNode => (
+    <Badge variant={val == null ? 'neutral' : val ? 'success' : 'danger'} size="sm">
+      {boolLabel(val)}
     </Badge>
   );
 
-  const enumCell = (value: unknown, field: SafetyEnumField): ReactNode => (
-    <Text as="span" variant="bodySm">
-      {cleanEnum(value, field)}
-    </Text>
-  );
+  const enumCell = (value: unknown, field: SafetyEnumField): ReactNode => {
+    const cleaned = cleanEnum(value, field);
+    return <Text as="span" variant="bodySm">
+      {cleaned === 'On' ? t('common.on', 'On') : cleaned === 'Off' ? t('common.off', 'Off') : cleaned}
+    </Text>;
+  };
 
   return [
     {
@@ -351,47 +331,66 @@ function buildHistoryColumns(t: (k: string, fallback: string) => string): Column
     {
       key: 'aeb',
       header: t('safety.hdrAeb', 'AEB'),
-      render: (row) => boolCell(isAebEnabled(row.automatic_emergency_braking_off ?? false)),
+      filterValue: (row) => row.automatic_emergency_braking_off == null ? null : isAebEnabled(row.automatic_emergency_braking_off),
+      filterValueLabel: (_value, row) => boolLabel(row.automatic_emergency_braking_off == null ? null : isAebEnabled(row.automatic_emergency_braking_off)),
+      render: (row) => boolCell(row.automatic_emergency_braking_off == null ? null : isAebEnabled(row.automatic_emergency_braking_off)),
     },
     {
       key: 'bsc',
       header: t('safety.hdrBsc', 'BSC'),
-      render: (row) => boolCell(row.automatic_blind_spot_camera ?? false),
+      filterValue: (row) => row.automatic_blind_spot_camera ?? null,
+      filterValueLabel: (_value, row) => boolLabel(row.automatic_blind_spot_camera),
+      render: (row) => boolCell(row.automatic_blind_spot_camera),
     },
     {
       key: 'bscw',
       header: t('safety.hdrBscw', 'BSCW'),
-      render: (row) => boolCell(row.blind_spot_collision_warning ?? false),
+      filterValue: (row) => row.blind_spot_collision_warning ?? null,
+      filterValueLabel: (_value, row) => boolLabel(row.blind_spot_collision_warning),
+      render: (row) => boolCell(row.blind_spot_collision_warning),
     },
     {
       key: 'fcw',
       header: t('safety.hdrFcw', 'FCW'),
+      filterValue: (row) => row.forward_collision_warning ?? null,
+      filterValueLabel: (_value, row) => cleanEnum(row.forward_collision_warning, 'forward_collision_warning'),
       render: (row) => enumCell(row.forward_collision_warning, 'forward_collision_warning'),
     },
     {
       key: 'lda',
       header: t('safety.hdrLda', 'LDA'),
+      filterValue: (row) => row.lane_departure_avoidance ?? null,
+      filterValueLabel: (_value, row) => cleanEnum(row.lane_departure_avoidance, 'lane_departure_avoidance'),
       render: (row) => enumCell(row.lane_departure_avoidance, 'lane_departure_avoidance'),
     },
     {
       key: 'elda',
       header: t('safety.hdrElda', 'ELDA'),
-      render: (row) => boolCell(row.emergency_lane_departure_avoidance ?? false),
+      filterValue: (row) => row.emergency_lane_departure_avoidance ?? null,
+      filterValueLabel: (_value, row) => boolLabel(row.emergency_lane_departure_avoidance),
+      render: (row) => boolCell(row.emergency_lane_departure_avoidance),
     },
     {
       key: 'cfd',
       header: t('safety.hdrCfd', 'CFD'),
+      align: 'right',
+      filterValue: (row) => row.cruise_follow_distance ?? null,
+      filterValueLabel: (_value, row) => cleanEnum(row.cruise_follow_distance, 'cruise_follow_distance'),
       render: (row) => enumCell(row.cruise_follow_distance, 'cruise_follow_distance'),
     },
     {
       key: 'slw',
       header: t('safety.hdrSlw', 'SLW'),
+      filterValue: (row) => row.speed_limit_warning ?? null,
+      filterValueLabel: (_value, row) => cleanEnum(row.speed_limit_warning, 'speed_limit_warning'),
       render: (row) => enumCell(row.speed_limit_warning, 'speed_limit_warning'),
     },
     {
       key: 'pin',
       header: t('safety.hdrPin', 'PIN'),
-      render: (row) => boolCell(row.pin_to_drive_enabled ?? false),
+      filterValue: (row) => row.pin_to_drive_enabled ?? null,
+      filterValueLabel: (_value, row) => boolLabel(row.pin_to_drive_enabled),
+      render: (row) => boolCell(row.pin_to_drive_enabled),
     },
   ];
 }
@@ -409,10 +408,10 @@ function KpiSkeleton() {
 /* ------------------------------------------------------------------ */
 
 export default function SafetySettingsPage() {
+  const { fmtInt, precision } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('safety.title', 'Safety Settings'));
-  const { unitPrefs } = useUnits();
-  const distanceUnit = unitPrefs.distance;
+  usePageTitle(t('safety.title', 'Safety settings'));
+  const { formatDistance, unitPrefs } = useUnits();
 
   /* --- vehicle selector (global) --- */
   const { vehicleId: selectedId } = useSelectedVehicle();
@@ -427,14 +426,15 @@ export default function SafetySettingsPage() {
   const latest = latestQuery.data ?? null;
   const history = historyQuery.data ?? [];
   const securityData = securityQuery.data ?? null;
+  const latestSource = deriveDataState({ ...latestQuery, data: latestQuery.data ?? undefined });
+  const historySource = deriveDataState(historyQuery, { provenance: 'historical' });
+  const securitySource = deriveDataState({ ...securityQuery, data: securityQuery.data ?? undefined });
 
   /* --- derived data (null-safe) --- */
-  const enabled = useMemo(() => (latest ? enabledCount(latest) : 0), [latest]);
-  const disabled = TOTAL_FEATURES - enabled;
-  const scorePct = useMemo(
-    () => (latest ? (enabled / TOTAL_FEATURES) * 100 : 0),
-    [latest, enabled],
-  );
+  const summary = useMemo(() => latest ? summarizeFeatures(latest) : null, [latest]);
+  const enabled = summary?.enabled ?? null;
+  const disabled = summary?.disabled ?? null;
+  const scorePct = summary?.percent ?? null;
 
   const featureCards = useMemo(
     () => (latest ? buildFeatureCards(latest, t) : []),
@@ -465,140 +465,184 @@ export default function SafetySettingsPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <DataFreshnessAuto query={latestQuery} />
       <Button
         variant="ghost"
         onClick={refreshAll}
         aria-label={t('common.refresh', 'Refresh')}
+        aria-busy={latestQuery.isFetching || historyQuery.isFetching || securityQuery.isFetching}
+        className="min-h-11 min-w-11"
       >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        <Icon icon={Icons.refresh} />
       </Button>
     </div>
   );
 
   /* --- render --- */
   return (
-    <PageContainer
-      title={t('safety.title', 'Safety Settings')}
+    <PageLayout
+      title={t('safety.title', 'Safety settings')}
       subtitle={t('safety.subtitle', 'ADAS features, safety score, and driving stats')}
-      actions={actions}
+      metadataActions={<DataFreshnessAuto query={latestQuery} />}
+      busy={latestQuery.isFetching || historyQuery.isFetching || securityQuery.isFetching}
+      dataSources={[
+        { id: 'safety', label: t('safety.adasFeatures', 'ADAS features'), query: latestQuery, enabled: !noVehicle },
+        { id: 'security', label: t('safety.liveSignals', 'Live safety signals'), query: securityQuery, enabled: !noVehicle },
+        { id: 'history', label: t('safety.historyTitle', 'Safety settings history'), query: historyQuery, enabled: !noVehicle },
+      ]}
+      secondaryActions={actions}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section
           aria-label={t('safety.kpis', 'Safety summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          className="min-w-0"
         >
+          <LayoutCard title={t('safety.kpis', 'Safety summary')}>
+          <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+            label={t('safety.kpis', 'Safety summary')}>
           {noVehicle ? (
             <div className="col-span-full">
-              <GlassPanel className="p-4 sm:p-5">
+              <div>
                 <EmptyState
-                  icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                  icon={<Icon icon={Icons.vehicle} size="xl" />}
                   message={selectVehicleMsg}
                   actionTo={selectVehicleAction}
                 />
-              </GlassPanel>
+              </div>
             </div>
           ) : latestQuery.isLoading && !latest ? (
-            Array.from({ length: 4 }).map((_, i) => <KpiSkeleton key={i} />)
-          ) : latestQuery.isError ? (
+            <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @4xl:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => <KpiSkeleton key={i} />)}
+            </div>
+          ) : latestQuery.isError && !latest ? (
             <div className="col-span-full">
-              <GlassPanel className="p-4 sm:p-5">
+              <div>
                 <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
-              </GlassPanel>
+              </div>
             </div>
           ) : !latest ? (
             <div className="col-span-full">
-              <GlassPanel className="p-4 sm:p-5">
+              <div>
                 <EmptyState
-                  icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                  icon={<Icon icon={Icons.securityAlert} size="xl" />}
                   /* no-action: transient — this KPI band fills once useSafety() returns its first payload for the selected vehicle; the header Refresh action (refreshAll) already covers a manual retry. */
                   message={t('safety.noData', 'No safety data available for this vehicle.')}
                 />
-              </GlassPanel>
+              </div>
             </div>
           ) : (
             <>
-              <MetricCard
-                label={t('safety.scoreTitle', 'Safety Score')}
-                value={`${fmtInt(scorePct)}%`}
-                icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-                color={scorePct >= 80 ? 'green' : scorePct >= 50 ? 'amber' : 'red'}
-              />
-              <MetricCard label={t('safety.totalFeatures', 'Total Features')} value={TOTAL_FEATURES} color="cyan" />
-              <MetricCard label={t('common.enabled', 'Enabled')} value={enabled} color="green" />
-              <MetricCard
-                label={t('common.disabled', 'Disabled')}
-                value={disabled}
-                color={disabled > 0 ? 'red' : 'green'}
+              <VehicleOperationalBrief embedded
+                id="safety-configuration-summary"
+                title={t('safety.kpis', 'Safety summary')}
+                available={latestSource.hasData}
+                retained={latestSource.refreshError != null || (latestSource.hasData && latestSource.isRefreshBlocked)}
+                period={{
+                  kind: 'snapshot',
+                  label: t('safety.settings.reportedSnapshot', 'Reported configuration snapshot'),
+                  observedAt: latest.created_at ?? null,
+                  provenance: t('safety.settings.coverageExplanation', 'Enabled feature share is a configuration count, not a driving safety rating or verification that assistance is active.'),
+                }}
+                metrics={[
+                  {
+                    metricId: 'percent',
+                    occurrenceId: 'enabled-feature-share',
+                    label: t('safety.settings.enabledShare', 'Enabled feature share'),
+                    description: t('safety.settings.shareDescription', 'Enabled settings divided by nine tracked settings. Unavailable when any setting is unknown.'),
+                    rawValue: scorePct,
+                    display: { precision: 0 },
+                  },
+                  { metricId: 'count', occurrenceId: 'total', label: t('safety.totalFeatures', 'Total features'), rawValue: TOTAL_FEATURES },
+                  { metricId: 'count', occurrenceId: 'enabled', label: t('common.enabled', 'Enabled'), rawValue: enabled },
+                  { metricId: 'count', occurrenceId: 'disabled', label: t('common.disabled', 'Disabled'), rawValue: disabled },
+                  { metricId: 'count', occurrenceId: 'unknown', label: t('safety.settings.unknown', 'Unknown'), rawValue: summary?.unknown },
+                ]}
+                footer={<TimeStamp value={latest.created_at} />}
               />
             </>
           )}
+          </VehicleSourceContent>
+          </LayoutCard>
         </section>
       </FadeIn>
 
       {/* 2 — Hero bento: safety score gauge + live signals */}
       <FadeIn delay={0.05}>
-        <section
-          aria-label={t('safety.overview', 'Safety overview')}
-          className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3"
-        >
-          {/* Safety score gauge */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-            <PanelTitle className="mb-3">{t('safety.scoreTitle', 'Safety Score')}</PanelTitle>
+        <SafetyPanelGrid
+          label={t('safety.overview', 'Safety overview')}
+          primary={
+          <LayoutCard title={t('safety.settings.configurationCoverage', 'Configuration coverage')}>
+            <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+              label={t('safety.settings.configurationCoverage', 'Configuration coverage')}>
+            <PanelTitle className="mb-3">{t('safety.scoreTitle', 'Safety score')}</PanelTitle>
+            <Text variant="bodySm">
+              {t('safety.settings.coverageExplanation', 'Enabled feature share is a configuration count, not a driving safety rating or verification that assistance is active.')}
+            </Text>
             {noVehicle ? (
               <EmptyState
-                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={Icons.vehicle} size="xl" />}
                 message={selectVehicleMsg}
                 actionTo={selectVehicleAction}
               />
             ) : latestQuery.isLoading && !latest ? (
               <Skeleton height={220} />
-            ) : latestQuery.isError ? (
+            ) : latestQuery.isError && !latest ? (
               <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
             ) : !latest ? (
               <EmptyState
-                icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={Icons.securityAlert} size="xl" />}
                 /* no-action: transient — the gauge renders once the safety payload arrives; recovery is the page header's Refresh action (refreshAll), not a control local to this panel. */
                 message={t('safety.noData', 'No safety data available for this vehicle.')}
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-4">
-                <LinearGauge
+                {scorePct != null && enabled != null ? <LinearGauge
                   value={enabled}
                   max={TOTAL_FEATURES}
-                  label={t('safety.scoreTitle', 'Safety Score')}
+                  label={t('safety.settings.enabledShare', 'Enabled feature share')}
                   color={scoreColor(scorePct)}
                   size={140}
-                />
-                <Badge variant={scoreBadgeVariant(scorePct)}>
-                  {enabled}/{TOTAL_FEATURES} {t('enabled')} · {fmtInt(scorePct)}%
+                /> : <Text role="status">{t('safety.settings.incomplete', 'Feature share unavailable: some settings are unknown.')}</Text>}
+                <Badge variant={scorePct != null ? scoreBadgeVariant(scorePct) : 'neutral'}>
+                  {enabled}/{TOTAL_FEATURES} {t('common.enabled', 'Enabled')} · {scorePct != null ? `${fmtInt(scorePct)}%` : '—'}
                 </Badge>
+                <Caption>
+                  {t('safety.settings.unknownCount', '{{count}} unknown settings', { count: summary?.unknown })}
+                </Caption>
               </div>
             )}
-          </GlassPanel>
+            </VehicleSourceContent>
+          </LayoutCard>
+          }
+          secondary={
 
-          {/* Live safety signals */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3">{t('safety.liveSignals', 'Live Safety Signals')}</PanelTitle>
+          <LayoutCard title={t('safety.liveSignals', 'Live safety signals')}>
+            <VehicleSourceContent source={securitySource} enabled={!noVehicle}
+              label={t('safety.liveSignals', 'Live safety signals')}>
+            <Text variant="bodySm">
+              {t('safety.settings.signalExplanation', 'Last reported security and occupant state; separate from configuration settings. No live verification command is sent.')}
+            </Text>
+            <DataFreshnessAuto query={securityQuery} />
+            <TimeStamp value={securityData?.ts} />
             {noVehicle ? (
               <EmptyState
-                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={Icons.vehicle} size="xl" />}
                 message={selectVehicleMsg}
                 actionTo={selectVehicleAction}
               />
             ) : securityQuery.isLoading && !securityData ? (
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @4xl:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <Skeleton key={i} height={112} />
                 ))}
               </div>
-            ) : securityQuery.isError ? (
+            ) : securityQuery.isError && !securityData ? (
               <QueryError error={securityQuery.error} onRetry={securityQuery.refetch} />
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @4xl:grid-cols-4">
                 <SignalCard
-                  icon={<UserCheck className="h-6 w-6" />}
+                  id="driver-seat-belt"
+                  icon={<Icon icon={Icons.userCheck} size="xl" />}
                   value={
                     securityData?.driver_seat_belt == null
                       ? '—'
@@ -606,11 +650,12 @@ export default function SafetySettingsPage() {
                         ? t('safety.buckled', 'Buckled')
                         : t('safety.unbuckled', 'Unbuckled')
                   }
-                  label={t('safety.driverBelt', 'Driver Belt')}
+                  label={t('safety.driverBelt', 'Driver belt')}
                   positive={securityData?.driver_seat_belt ?? null}
                 />
                 <SignalCard
-                  icon={<UserCheck className="h-6 w-6" />}
+                  id="passenger-seat-belt"
+                  icon={<Icon icon={Icons.userCheck} size="xl" />}
                   value={
                     securityData?.passenger_seat_belt == null
                       ? '—'
@@ -618,11 +663,12 @@ export default function SafetySettingsPage() {
                         ? t('safety.buckled', 'Buckled')
                         : t('safety.unbuckled', 'Unbuckled')
                   }
-                  label={t('safety.passengerBelt', 'Passenger Belt')}
+                  label={t('safety.passengerBelt', 'Passenger belt')}
                   positive={securityData?.passenger_seat_belt ?? null}
                 />
                 <SignalCard
-                  icon={<Armchair className="h-6 w-6" />}
+                  id="driver-seat-occupied"
+                  icon={<Icon icon={Icons.cabin} size="xl" />}
                   value={
                     securityData?.driver_seat_occupied == null
                       ? '—'
@@ -630,11 +676,12 @@ export default function SafetySettingsPage() {
                         ? t('safety.occupied', 'Occupied')
                         : t('safety.empty', 'Empty')
                   }
-                  label={t('safety.driverSeat', 'Driver Seat')}
+                  label={t('safety.driverSeat', 'Driver seat')}
                   positive={securityData?.driver_seat_occupied ?? null}
                 />
                 <SignalCard
-                  icon={<Lock className="h-6 w-6" />}
+                  id="locked"
+                  icon={<Icon icon={Icons.locked} size="xl" />}
                   value={
                     securityData?.locked == null
                       ? '—'
@@ -642,46 +689,51 @@ export default function SafetySettingsPage() {
                         ? t('safety.locked', 'Locked')
                         : t('safety.unlocked', 'Unlocked')
                   }
-                  label={t('safety.vehicleLock', 'Vehicle Lock')}
+                  label={t('safety.vehicleLock', 'Vehicle lock')}
                   positive={securityData?.locked ?? null}
                 />
               </div>
             )}
-          </GlassPanel>
-        </section>
+            </VehicleSourceContent>
+          </LayoutCard>
+          }
+        />
       </FadeIn>
 
       {/* 3 — Secondary bento: ADAS features (hero span) + driving stats */}
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('safety.features', 'ADAS features and driving statistics')}
-          className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3"
-        >
-          {/* ADAS feature grid — spans the wide column */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3">{t('safety.adasFeatures', 'ADAS Features')}</PanelTitle>
+        <SafetyPanelGrid
+          label={t('safety.features', 'ADAS features and driving statistics')}
+          widePrimary
+          primary={
+          <LayoutCard title={t('safety.adasFeatures', 'ADAS features')}>
+            <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+              label={t('safety.adasFeatures', 'ADAS features')}>
+            <Text variant="bodySm">
+              {t('safety.settings.readOnly', 'Reported vehicle settings only. This page does not edit or save settings, and configured assistance does not establish current intervention or availability.')}
+            </Text>
             {noVehicle ? (
               <EmptyState
-                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={Icons.vehicle} size="xl" />}
                 message={selectVehicleMsg}
                 actionTo={selectVehicleAction}
               />
             ) : latestQuery.isLoading && !latest ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Skeleton key={i} height={96} />
                 ))}
               </div>
-            ) : latestQuery.isError ? (
+            ) : latestQuery.isError && !latest ? (
               <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
             ) : featureCards.length === 0 ? (
               <EmptyState
-                icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={Icons.securityAlert} size="xl" />}
                 /* no-action: transient — this grid populates once buildFeatureCards() has data from the same useSafety() payload as the KPI band above; the header Refresh button already provides manual retry. */
                 message={t('safety.noFeatures', 'No ADAS feature data available for this vehicle.')}
               />
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
                 {featureCards.map((card) => (
                   <SafetyCard
                     key={card.key}
@@ -693,64 +745,73 @@ export default function SafetySettingsPage() {
                 ))}
               </div>
             )}
-          </GlassPanel>
+            </VehicleSourceContent>
+          </LayoutCard>
+          }
+          secondary={
 
-          {/* Driving statistics */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-            <PanelTitle className="mb-3">{t('safety.drivingStats', 'Driving Statistics')}</PanelTitle>
+          <LayoutCard title={t('safety.drivingStats', 'Driving statistics')}>
+            <VehicleSourceContent source={latestSource} enabled={!noVehicle}
+              label={t('safety.drivingStats', 'Driving statistics')}>
             {noVehicle ? (
               <EmptyState
-                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={Icons.vehicle} size="xl" />}
                 message={selectVehicleMsg}
                 actionTo={selectVehicleAction}
               />
             ) : latestQuery.isLoading && !latest ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <div className="grid grid-cols-1 gap-3">
                 {Array.from({ length: 2 }).map((_, i) => (
                   <Skeleton key={i} height={84} />
                 ))}
               </div>
-            ) : latestQuery.isError ? (
+            ) : latestQuery.isError && !latest ? (
               <QueryError error={latestQuery.error} onRetry={latestQuery.refetch} />
             ) : !latest ? (
               <EmptyState
-                icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={Icons.securityAlert} size="xl" />}
                 /* no-action: transient — driving-stat metrics come from the same useSafety() payload as the KPI band above; nothing distinct to trigger from this card, the header Refresh button covers retry. */
                 message={t('safety.noStats', 'No driving statistics available for this vehicle.')}
               />
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <MetricCard
-                  icon={<Navigation className="h-5 w-5" aria-hidden="true" />}
-                  label={t('safety.distanceSinceReset', 'Distance Since Reset')}
-                  value={
-                    latest.miles_since_reset != null
-                      ? fmtNumber(convertDistanceFromSI(latest.miles_since_reset, distanceUnit))
-                      : '—'
-                  }
-                  subtitle={distanceUnit}
-                />
-                <MetricCard
-                  icon={<Cpu className="h-5 w-5" aria-hidden="true" />}
-                  label={t('safety.selfDrivingDistance', 'Self-Driving Distance')}
-                  value={
-                    latest.self_driving_miles_since_reset != null
-                      ? fmtNumber(
-                          convertDistanceFromSI(latest.self_driving_miles_since_reset, distanceUnit),
-                        )
-                      : '—'
-                  }
-                  subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', { unit: distanceUnit })}
+              <div className="grid grid-cols-1 gap-3">
+                <VehicleOperationalBrief embedded id="safety-driving-summary"
+                  title={t('safety.drivingStats', 'Driving statistics')}
+                  retained={latestSource.refreshError != null || latestSource.isRefreshBlocked}
+                  period={{
+                    kind: 'snapshot',
+                    label: t('safety.settings.reportedSnapshot', 'Reported configuration snapshot'),
+                    observedAt: latest.created_at ?? null,
+                    provenance: t('safety.brief.counterSource', 'Counters from the reported safety snapshot; source field names and the existing distance display are retained without inferring units from identifiers.'),
+                  }}
+                  metrics={[
+                    {
+                      metricId: 'number', occurrenceId: 'distance-since-reset',
+                      label: t('safety.distanceSinceReset', 'Distance since reset'),
+                      rawValue: latest.miles_since_reset,
+                      display: { formatter: raw => ({ value: formatDistance(raw, { precision }), unit: '' }) },
+                      context: <><Icon icon={Icons.navigation} size="lg" />{latest.miles_since_reset == null ? unitPrefs.distance : undefined}</>,
+                    },
+                    {
+                      metricId: 'number', occurrenceId: 'self-driving-distance',
+                      label: t('safety.selfDrivingDistance', 'Self-driving distance'),
+                      rawValue: latest.self_driving_miles_since_reset,
+                      display: { formatter: raw => ({ value: formatDistance(raw, { precision }), unit: '' }) },
+                      context: <><Icon icon={Icons.cpu} size="lg" />{t('safety.distanceAutopilot', '{{unit}} (autopilot)', {
+                        unit: latest.self_driving_miles_since_reset == null ? unitPrefs.distance : '',
+                      })}</>,
+                    },
+                  ]}
                 />
                 {/* Contextual drill-through: this card shows the CURRENT
                     counter reading; FSD Insights turns the same signal into a
                     per-day trend with explicit data-confidence metadata. */}
                 <PrefetchLink
                   to="/fsd"
-                  className="flex min-h-11 items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:bg-[var(--control-bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  className="flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:bg-[var(--control-bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                 >
                   <Text as="span" size="sm" weight="medium">
-                    {t('safety.openFsdInsights', 'Open FSD Insights')}
+                    {t('safety.openFsdInsights', 'Open FSD insights')}
                   </Text>
                   <Caption className="shrink-0">
                     {t('safety.openFsdInsightsHint', 'Daily trend & data confidence')}
@@ -758,37 +819,45 @@ export default function SafetySettingsPage() {
                 </PrefetchLink>
               </div>
             )}
-          </GlassPanel>
-        </section>
+            </VehicleSourceContent>
+          </LayoutCard>
+          }
+        />
       </FadeIn>
 
       {/* 4 — Detail band: safety states over time */}
       <FadeIn delay={0.15}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('safety.statesOverTime', 'Safety States Over Time')}</PanelTitle>
+        <LayoutCard title={t('safety.statesOverTime', 'Safety states over time')}>
+          <VehicleSourceContent source={historySource} enabled={!noVehicle}
+            label={t('safety.statesOverTime', 'Safety states over time')}>
+          <DataFreshnessAuto query={historyQuery} />
+          <Caption className="mb-3 block">
+            {t('safety.settings.historyExplanation', 'Recorded configuration snapshots, not intervention events. Gaps represent unknown states; the full history table follows below.')}
+          </Caption>
           {noVehicle ? (
             <EmptyState
-              icon={<Car className="h-8 w-8" aria-hidden="true" />}
+              icon={<Icon icon={Icons.vehicle} size="xl" />}
               message={selectVehicleMsg}
               actionTo={selectVehicleAction}
             />
           ) : historyQuery.isLoading && history.length === 0 ? (
             <Skeleton height={300} />
-          ) : historyQuery.isError ? (
+          ) : historyQuery.isError && history.length === 0 ? (
             <QueryError error={historyQuery.error} onRetry={historyQuery.refetch} />
           ) : chartData.length === 0 ? (
             <EmptyState
-              icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+              icon={<Icon icon={Icons.securityAlert} size="xl" />}
               /* no-action: transient — this trend chart fills once useSafetyHistory() has accumulated snapshots for the vehicle; the header Refresh button already re-triggers the query. */
               message={t('safety.noChart', 'No safety state history to chart yet.')}
             />
           ) : (
             <div className="h-64 sm:h-72 xl:h-80">
-              {/* chart-a11y:no-table safety state time-series (sentry/lock/gear) — binary states over time, not tabular */}
+              {/* chart-a11y:no-table The full snapshot table immediately below already exposes every plotted state; avoid duplicating it. */}
               <EmbeddedChart
                 chartKey="safety-states-history"
-                title={t('safety.chartTitle', 'Safety States')}
+                title={t('safety.chartTitle', 'Safety states')}
                 ariaLabel={t('safety.chartAria', 'Safety feature states over time')}
+                ariaDescription={t('safety.settings.historyExplanation', 'Recorded configuration snapshots, not intervention events. Gaps represent unknown states; the full history table follows below.')}
                 fluid
               >
                 {({ hiddenSeries }) => (
@@ -806,6 +875,7 @@ export default function SafetySettingsPage() {
                       <ChartLegend />
                       <Line
                         {...AREA_DEFAULTS}
+                        connectNulls={false}
                         type="stepAfter"
                         dataKey="aeb"
                         name={t('safety.hdrAeb', 'AEB')}
@@ -815,6 +885,7 @@ export default function SafetySettingsPage() {
                       />
                       <Line
                         {...AREA_DEFAULTS}
+                        connectNulls={false}
                         type="stepAfter"
                         dataKey="bscw"
                         name={t('safety.hdrBscw', 'BSCW')}
@@ -824,6 +895,7 @@ export default function SafetySettingsPage() {
                       />
                       <Line
                         {...AREA_DEFAULTS}
+                        connectNulls={false}
                         type="stepAfter"
                         dataKey="elda"
                         name={t('safety.hdrElda', 'ELDA')}
@@ -837,26 +909,29 @@ export default function SafetySettingsPage() {
               </EmbeddedChart>
             </div>
           )}
-        </GlassPanel>
+          </VehicleSourceContent>
+        </LayoutCard>
       </FadeIn>
 
       {/* 5 — Detail band: full history table */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('safety.historyTitle', 'Safety Settings History')}</PanelTitle>
+        <LayoutCard title={t('safety.historyTitle', 'Safety settings history')}>
+          <VehicleSourceContent source={historySource} enabled={!noVehicle}
+            label={t('safety.historyTitle', 'Safety settings history')}>
+          <DataFreshnessAuto query={historyQuery} />
           {noVehicle ? (
             <EmptyState
-              icon={<Car className="h-8 w-8" aria-hidden="true" />}
+              icon={<Icon icon={Icons.vehicle} size="xl" />}
               message={selectVehicleMsg}
               actionTo={selectVehicleAction}
             />
           ) : historyQuery.isLoading && history.length === 0 ? (
             <Skeleton height={280} />
-          ) : historyQuery.isError ? (
+          ) : historyQuery.isError && history.length === 0 ? (
             <QueryError error={historyQuery.error} onRetry={historyQuery.refetch} />
           ) : sortedHistory.length === 0 ? (
             <EmptyState
-              icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+              icon={<Icon icon={Icons.securityAlert} size="xl" />}
               /* no-action: transient — this table lists the same safety-history snapshots as the chart above; the header Refresh button covers a manual retry while telemetry is still producing rows. */
               message={t('safety.noHistory', 'No safety settings history has been recorded.')}
               description={t(
@@ -867,6 +942,7 @@ export default function SafetySettingsPage() {
           ) : (
             <DataTable<SafetySnapshot>
               tableId="vehicle-systems:safety-history"
+              enableValueFilters
               columns={historyColumns}
               mobileColumns={['time', 'aeb', 'fcw']}
               data={sortedHistory}
@@ -875,8 +951,9 @@ export default function SafetySettingsPage() {
               pagination
             />
           )}
-        </GlassPanel>
+          </VehicleSourceContent>
+        </LayoutCard>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

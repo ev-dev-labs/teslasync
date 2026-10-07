@@ -104,7 +104,7 @@ function renderCards(overrides: Partial<Props> = {}) {
   return { ...utils, props };
 }
 
-const TILE_LABELS = ['Lock Status', 'Sentry Mode', 'Doors', 'Windows', 'HomeLink', 'Guest Mode'];
+const TILE_LABELS = ['Lock status', 'Sentry mode', 'Doors', 'Windows', 'HomeLink', 'Guest mode'];
 
 describe('SecurityStatusCards', () => {
   it('renders the "Security Status" panel title heading in every state', () => {
@@ -117,7 +117,7 @@ describe('SecurityStatusCards', () => {
     for (const s of states) {
       const { unmount } = renderCards(s);
       expect(
-        screen.getByRole('heading', { name: /security status/i }),
+        screen.getByRole('heading', { name: /Security status/i }),
       ).toBeInTheDocument();
       unmount();
     }
@@ -135,16 +135,16 @@ describe('SecurityStatusCards', () => {
     expect(
       screen.queryByText(/no security state available/i),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Lock Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lock status')).not.toBeInTheDocument();
   });
 
   it('renders the empty state (no tiles) when there is no data, no loading and no error', () => {
     renderCards({ latest: undefined, isLoading: false, error: null });
 
     expect(
-      screen.getByText(/no security state available for this vehicle yet/i),
+      screen.getByText(/No security state available for this vehicle yet/i),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Lock Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lock status')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('status', { name: /loading/i }),
     ).not.toBeInTheDocument();
@@ -155,7 +155,7 @@ describe('SecurityStatusCards', () => {
     renderCards({ error: new Error('boom'), onRetry, latest: undefined });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Lock Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lock status')).not.toBeInTheDocument();
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
@@ -171,7 +171,7 @@ describe('SecurityStatusCards', () => {
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.getByText('Inactive')).toBeInTheDocument();
     expect(screen.getByText('Closed')).toBeInTheDocument(); // doors
-    expect(screen.getByText('All Closed')).toBeInTheDocument(); // windows
+    expect(screen.getByText('All closed')).toBeInTheDocument(); // windows
     expect(screen.getByText('Away')).toBeInTheDocument();
     expect(screen.getByText('Disabled')).toBeInTheDocument();
   });
@@ -218,8 +218,8 @@ describe('SecurityStatusCards', () => {
   it('summarises open/venting windows as a count', () => {
     renderCards({ latest: makeEvent({ fdWindow: 'Open', rpWindow: 'Vented' }) });
 
-    expect(screen.getByText('2 Open/Venting')).toBeInTheDocument();
-    expect(screen.queryByText('All Closed')).not.toBeInTheDocument();
+    expect(screen.getByText('2 open/venting')).toBeInTheDocument();
+    expect(screen.queryByText('All closed')).not.toBeInTheDocument();
   });
 
   it('reflects homelink-nearby and guest-mode-enabled states', () => {
@@ -238,13 +238,13 @@ describe('SecurityStatusCards', () => {
     expect(
       screen.queryByRole('status', { name: /loading/i }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Lock Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lock status')).not.toBeInTheDocument();
   });
 
   it('keeps showing the tiles during a background refetch (isLoading && latest → tiles, not skeletons)', () => {
     renderCards({ isLoading: true, latest: makeEvent(), error: null });
 
-    expect(screen.getByText('Lock Status')).toBeInTheDocument();
+    expect(screen.getByText('Lock status')).toBeInTheDocument();
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(
       screen.queryByRole('status', { name: /loading/i }),

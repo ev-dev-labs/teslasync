@@ -1,14 +1,14 @@
 {
   "export": {
     "urlTooLong": "Layout too large for URL sharing ({{size}} chars). Use clipboard or file export instead.",
-    "title": "Export Dashboard",
+    "title": "Export dashboard",
     "widgetCount": "{{count}} widgets",
     "updated": "Updated {{date}}",
-    "downloadFile": "Download JSON File",
+    "downloadFile": "Download JSON file",
     "copied": "Copied!",
     "copyClipboard": "Copy to Clipboard",
     "urlCopied": "URL Copied!",
-    "copyShareUrl": "Copy Shareable URL",
+    "copyShareUrl": "Copy shareable URL",
     "subtitle": "Export drives, charging, analytics, or full backup as CSV/JSON",
     "jobDrawer": {
       "label": "Export job progress",
@@ -27,7 +27,8 @@
       "recentEmpty": "No recent exports",
       "statusLine": "{{status}} · started {{relative}}",
       "completedLine": "{{size}} · {{relative}}",
-      "download": "Download"
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export"
     },
     "types": {
       "account": "Account export",

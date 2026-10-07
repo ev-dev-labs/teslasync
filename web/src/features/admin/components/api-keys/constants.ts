@@ -40,7 +40,7 @@ export const PERMISSION_META: Record<ApiKeyPermission, PermissionMeta> = {
     color: 'amber',
     barColor: '#f59e0b',
     labelKey: 'apiKeys.perm.readWrite',
-    labelFallback: 'Read-Write',
+    labelFallback: 'Read-write',
     descKey: 'apiKeys.perm.readWriteDesc',
     descFallback: 'Read data and send vehicle commands.',
   },

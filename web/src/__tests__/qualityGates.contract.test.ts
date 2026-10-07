@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -43,6 +44,58 @@ import {
 import { auditArchivedEntries } from '../../scripts/check-audit-registry.mjs'
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+
+describe('bundle-size output selection', () => {
+  let fixtureRoot: string
+
+  beforeEach(() => {
+    const base = join(webRoot, 'node_modules', '.tmp-quality-gates')
+    mkdirSync(base, { recursive: true })
+    fixtureRoot = mkdtempSync(join(base, 'bundle-'))
+  })
+
+  afterEach(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true })
+  })
+
+  function runBundleCheck(args: string[]) {
+    return spawnSync(process.execPath, [join(webRoot, 'scripts', 'check-bundle-size.mjs'), ...args], {
+      cwd: webRoot,
+      encoding: 'utf8',
+    })
+  }
+
+  it('measures a separate private output without replacing the public dist', () => {
+    const assets = join(fixtureRoot, 'assets')
+    mkdirSync(assets)
+    writeFileSync(join(fixtureRoot, 'index.html'), '<script type="module" src="/assets/custom-entry.js"></script>')
+    writeFileSync(join(assets, 'custom-entry.js'), 'export const fixture = true')
+    writeFileSync(join(assets, 'custom-entry.js.map'), JSON.stringify({
+      version: 3,
+      file: 'custom-entry.js',
+      sources: ['../../src/main.tsx'],
+      names: [],
+      mappings: 'AAAA',
+    }))
+
+    const result = runBundleCheck(['--dist', fixtureRoot, '--strict'])
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.stdout).toContain('custom-entry.js')
+    expect(result.stdout).toContain('startup JS')
+  })
+
+  it.each([['--dist'], ['--dist', '--strict']])('rejects missing output arguments: %j', (...args) => {
+    const result = runBundleCheck(args)
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('--dist requires a directory argument')
+  })
+
+  it('rejects absent build output in strict mode instead of skipping the measurement', () => {
+    const result = runBundleCheck(['--dist', fixtureRoot, '--strict'])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('strict measurement requires a build')
+  })
+})
 
 /**
  * Mutation coverage for the quality gates themselves.

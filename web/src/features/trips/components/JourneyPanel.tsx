@@ -11,7 +11,9 @@ import {
   type JourneyTransition,
 } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
-import { Badge, Button, DataTable, GlassPanel, Input, PanelTitle, Select, Text } from '@/components/ui';
+import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { FormSection } from '@/components/forms';
 import type { Column } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -153,7 +155,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
       header: t('journey.col.journey', 'Journey'),
       render: (row) => (
         <div>
-          <Text as="p" variant="label">
+          <Text as="p" variant="label" className="break-words [overflow-wrap:anywhere]">
             {row.name}
           </Text>
           <Text as="p" variant="caption">
@@ -202,17 +204,10 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <GlassPanel className="p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <PanelTitle>{t('journey.list.title', 'Planned journeys')}</PanelTitle>
-            <Text as="p" size="sm" color="secondary">
-              {t(
-                'journey.list.subtitle',
-                'One session per trip, from planning through the live drive to the debrief.',
-              )}
-            </Text>
-          </div>
+      <LayoutCard
+        title={t('journey.list.title', 'Planned journeys')}
+        description={t('journey.list.subtitle', 'One session per trip, from planning through the live drive to the debrief.')}
+        actions={
           <div className="flex flex-wrap items-center gap-2">
             <Select
               aria-label={t('journey.filter.status', 'Filter by status')}
@@ -225,6 +220,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
             />
             {sessions.length > 0 || formOpen ? (
               <Button
+                wrapLabel
                 variant="secondary"
                 size="sm"
                 icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
@@ -236,10 +232,12 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
               </Button>
             ) : null}
           </div>
-        </div>
+        }
+      >
 
         {formOpen ? (
           <form className="mb-4 grid gap-3" onSubmit={submitCreate}>
+            <FormSection title={t('journey.action.plan', 'Plan journey')}>
             <Input
               label={t('journey.form.name', 'Journey name')}
               value={draft.name}
@@ -269,10 +267,17 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 {t('journey.form.submit', 'Create journey')}
               </Button>
             </div>
+            </FormSection>
           </form>
         ) : null}
 
-        {listQuery.isLoading ? (
+        <SourceContent
+          state={listState.refreshError ? 'retained' : 'ready'}
+          label={t('journey.list.title', 'Planned journeys')}
+          emptyMessage={t('journey.list.empty', 'No journeys yet. Plan one above and it will live here from planning to debrief.')}
+          errorMessage={t('journey.list.loadFailed', 'The journey list could not be loaded.')}
+        >
+        {listQuery.isLoading && !listState.hasData ? (
           <ListSkeleton label={t('journey.list.loading', 'Loading journeys…')} />
         ) : listState.fatalError ? (
           <QueryError error={listState.fatalError} onRetry={() => listState.retry?.()} />
@@ -297,14 +302,19 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
             tableId="journey-sessions"
           />
         )}
-      </GlassPanel>
+        </SourceContent>
+      </LayoutCard>
 
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Icons.flag className="h-4 w-4" aria-hidden="true" />
-          {detail ? detail.session.name : t('journey.detail.title', 'Journey detail')}
-        </PanelTitle>
-        {detailQuery.isLoading || (selectedId != null && detail == null && !detailState.fatalError) ? (
+      <LayoutCard title={detail ? detail.session.name : t('journey.detail.title', 'Journey detail')}>
+        <SourceContent
+          state={detailState.refreshError ? 'retained' : 'ready'}
+          label={t('journey.detail.title', 'Journey detail')}
+          emptyMessage={t('journey.detail.empty', 'Select a journey to manage its lifecycle and plans.')}
+          errorMessage={t('journey.detail.loadFailed', 'Journey details could not be loaded.')}
+        >
+        {detailState.fatalError ? (
+          <QueryError error={detailState.fatalError} onRetry={() => detailState.retry?.()} />
+        ) : (detailQuery.isLoading && !detailState.hasData) || (selectedId != null && detail == null) ? (
           <ListSkeleton label={t('journey.detail.loading', 'Loading journey…')} />
         ) : selectedId == null || detail == null ? (
           <EmptyState
@@ -315,8 +325,6 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
               onClick: () => setFormOpen(true),
             }}
           />
-        ) : detailState.fatalError ? (
-          <QueryError error={detailState.fatalError} onRetry={() => detailState.retry?.()} />
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -328,6 +336,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 return (
                   <Button
                     key={next}
+                    wrapLabel
                     variant={action === 'abort' ? 'danger' : 'secondary'}
                     size="sm"
                     icon={transitionIcon(action)}
@@ -353,9 +362,9 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                   {safeArray(detail.plans).map((plan) => (
                     <li
                       key={plan.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"
+                      className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
                     >
-                      <Text as="span" size="sm">
+                      <Text as="span" variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">
                         {t('journey.planVersion', 'v{{version}}', { version: plan.version })}
                         {plan.note ? ` · ${plan.note}` : ''}
                       </Text>
@@ -383,15 +392,16 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
             ) : null}
           </div>
         )}
-      </GlassPanel>
+        </SourceContent>
+      </LayoutCard>
 
       {detail != null ? (
-        <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           <div className="grid gap-6 lg:grid-cols-2">
             <DeparturePanel session={detail.session} />
             <ChecklistPanel session={detail.session} />
           </div>
-        </GlassPanel>
+        </div>
       ) : null}
     </div>
   );

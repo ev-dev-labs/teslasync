@@ -8,12 +8,13 @@ import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { ProgressRing } from '@/components/data-display/ProgressRing';
 import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarViz';
 import { useUnits } from '@/hooks/useUnits';
-import { useVehicleState, getVehicleStatus } from '@/api/hooks/useVehicles';
+import { useVehicleState, deriveTrustedVehicleStatus } from '@/api/hooks/useVehicles';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { batteryColor } from '@/lib/colors';
 import type { Vehicle } from '@/api/types';
-import type { VehicleState } from '@/api/types';
+import type { VehicleStateReadings } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -21,15 +22,17 @@ interface VehicleCardProps {
 }
 
 export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('vehicles');
   const { unitPrefs, formatDistance, formatTemperature } = useUnits();
 
   const { data: stateData, isLoading, isError } = useVehicleState(vehicle.id);
 
-  const state: VehicleState | undefined = stateData?.state;
-  const status = getVehicleStatus(state);
-  const batteryLevel = state?.battery_level ?? 0;
-  const batColor = batteryColor(batteryLevel);
+  const state: VehicleStateReadings | undefined = stateData?.state;
+  const status = deriveTrustedVehicleStatus(state, stateData);
+  const batteryLevel = state?.battery_level != null && Number.isFinite(state.battery_level)
+    ? state.battery_level : null;
+  const batColor = batteryLevel == null ? 'var(--text-muted)' : batteryColor(batteryLevel);
   // Computed once so the heading link and the icon-only control labels share
   // the same accessible name (display name, or VIN when the name is blank).
   const vehicleLabel = vehicle.display_name || vehicle.vin;
@@ -48,12 +51,12 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
             <TeslaCarViz
               model={parseModelKey(vehicle.model)}
               size="sm"
-              batteryLevel={state?.battery_level ?? 50}
-              isCharging={state?.is_charging ?? false}
-              isLocked={state?.is_locked ?? true}
-              isClimateOn={false}
-              speed={0}
-              sentryMode={state?.sentry_mode ?? false}
+              batteryLevel={batteryLevel}
+              isCharging={state?.is_charging ?? null}
+              isLocked={state?.is_locked ?? null}
+              isClimateOn={state?.is_climate_on ?? null}
+              speed={state?.speed ?? null}
+              sentryMode={state?.sentry_mode ?? null}
             />
           </div>
 
@@ -78,7 +81,8 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <div className="flex items-center gap-2">
                   <ProgressRing
-                    value={batteryLevel}
+                    value={batteryLevel ?? 0}
+                    ariaLabel={`${t('fleet.batteryLevel', 'Battery level')}: ${batteryLevel == null ? '—' : `${batteryLevel}%`}`}
                     size={36}
                     strokeWidth={3}
                     color={batColor}
@@ -86,7 +90,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                   />
                   <div>
                     <p className="text-sm font-bold text-[var(--text-primary)]">
-                      {batteryLevel}%
+                      {batteryLevel == null ? '—' : `${batteryLevel}%`}
                     </p>
                     <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {formatDistance(state.rated_range)}
@@ -105,7 +109,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
 
                 <div className="text-center">
                   <p className="text-sm font-medium text-[var(--text-primary)]">
-                    {fmtInt(convertDistanceFromSI(state.odometer ?? 0, unitPrefs.distance))}
+                    {state.odometer == null ? '—' : fmtInt(convertDistanceFromSI(state.odometer, unitPrefs.distance))}
                   </p>
                   <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                     {unitPrefs.distance}
@@ -115,7 +119,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                 {state.is_charging && (
                   <div className="text-center">
                     <p className="text-sm font-medium text-green-500">
-                      {state.charger_power ?? 0} kW
+                      {state.charger_power == null ? '—' : `${state.charger_power} kW`}
                     </p>
                     <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {t('card.charging', 'Charging')}

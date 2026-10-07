@@ -21,6 +21,7 @@ import type { CycleStressResult } from '../../lib/cycleStress';
 import { cycleStressNumber } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressAccountingProps {
   result: CycleStressResult;
@@ -41,6 +42,7 @@ export function CycleStressAccounting({
   state,
   locale,
 }: CycleStressAccountingProps) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const drive = result.driveAccounting;
   const charging = result.chargingAccounting;
@@ -149,7 +151,7 @@ export function CycleStressAccounting({
           <Text variant="bodySm" className="font-mono tabular-nums">
             {driveUnavailable
               ? '—'
-              : cycleStressNumber(row.drive, locale, 0)}
+              : cycleStressNumber(row.drive, locale)}
           </Text>
         ),
       },
@@ -162,7 +164,7 @@ export function CycleStressAccounting({
           <Text variant="bodySm" className="font-mono tabular-nums">
             {chargingUnavailable
               ? '—'
-              : cycleStressNumber(row.charging, locale, 0)}
+              : cycleStressNumber(row.charging, locale)}
           </Text>
         ),
       },
@@ -172,12 +174,12 @@ export function CycleStressAccounting({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {cycleStressNumber(row.total, locale, 0)}
+            {cycleStressNumber(row.total, locale)}
           </Text>
         ),
       },
     ],
-    [chargingUnavailable, driveUnavailable, locale, t],
+    [chargingUnavailable, driveUnavailable, locale, t, displayPrecision, displayLocale],
   );
 
   return (
@@ -210,7 +212,7 @@ export function CycleStressAccounting({
                 'cycleStress.accounting.returned',
                 'Known rows returned',
               )}
-              value={cycleStressNumber(returned, locale, 0)}
+              value={cycleStressNumber(returned, locale)}
               subtitle={t(
                 'cycleStress.accounting.sourceSplit',
                 'available data: {{drives}} drives + {{charging}} charging',
@@ -227,7 +229,7 @@ export function CycleStressAccounting({
                 'cycleStress.accounting.accepted',
                 'Accepted intervals',
               )}
-              value={cycleStressNumber(included, locale, 0)}
+              value={cycleStressNumber(included, locale)}
               subtitle={t(
                 'cycleStress.accounting.afterValidation',
                 'after validation and overlap rejection',
@@ -240,7 +242,7 @@ export function CycleStressAccounting({
                 'cycleStress.accounting.excluded',
                 'Excluded rows',
               )}
-              value={cycleStressNumber(excluded, locale, 0)}
+              value={cycleStressNumber(excluded, locale)}
               subtitle={t(
                 'cycleStress.accounting.primaryReasons',
                 'classified by one primary reason',
@@ -257,7 +259,6 @@ export function CycleStressAccounting({
                 (drive.includedRows > 0 ? 1 : 0)
                   + (charging.includedRows > 0 ? 1 : 0),
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.accounting.driveCharge',

@@ -181,8 +181,8 @@ describe('RecentChargesSection — empty states', () => {
 describe('RecentChargesSection — chrome + a11y', () => {
   it('renders the panel title as a level-3 heading resolved through i18n', () => {
     renderSection([makeSession()])
-    expect(screen.getByRole('heading', { level: 3, name: 'Recent Charges' })).toBeInTheDocument()
-    expect(tSpy).toHaveBeenCalledWith('common.recentCharges', 'Recent Charges')
+    expect(screen.getByRole('heading', { level: 3, name: 'Recent charges' })).toBeInTheDocument()
+    expect(tSpy).toHaveBeenCalledWith('common.recentCharges', 'Recent charges')
   })
 
   it('marks the decorative heading icon as hidden from assistive tech', () => {

@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ArrowLeft, Zap, Battery, BatteryCharging, Clock, Gauge, DollarSign,
+  ArrowLeft, Zap, BatteryCharging, Clock, Gauge, DollarSign,
   MapPin, Activity, Thermometer, Waves, TrendingUp, Share2,
 } from 'lucide-react';
 
@@ -15,25 +15,25 @@ import { convertTempFromSI, convertDistanceFromSI, convertEnergyFromSI, convertP
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDate, formatTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout';
 import {
   GlassPanel, Badge, HelpTooltip, PrintButton, Button,
-  SectionTitle, PanelTitle, Text,
+  SectionTitle, Text,
 } from '@/components/ui';
 import {
-  MetricBar, InlineMetric, AnimatedNumber, MetricCard, KVList,
+  MetricBar, InlineMetric, AnimatedNumber, KVList,
   DateTime, DataProvenanceBadge,
 } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import {
   Skeleton, EmptyState, QueryError, LiveStaleDataBanner, StaleRefreshWarning,
-  PageHeaderSkeleton, StatGridSkeleton, ChartBlockSkeleton,
+  PageHeaderSkeleton, ChartBlockSkeleton,
 } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { AIChargingDiagnosis } from '@/components/ai/AIChargingDiagnosis';
+import { AIChargingDiagnosis } from '@/components/ai';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ComposedChart, Line, ReferenceLine, ChartTooltip,
@@ -48,6 +48,8 @@ import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
 import { ChargeLedgerCompactPanel } from '../components/ChargeLedgerCompactPanel';
 import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
 import { ShareSessionDialog } from '../components/ShareSessionDialog';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { DetailPlacement, DetailSessionStats, DetailSourceOutline } from '../components/detail-modernization';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -111,25 +113,15 @@ function chargingStateVariant(
 /* ─── loading skeleton ──────────────────────────────────────────── */
 
 /**
- * Mirrors the ChargingDetailPage bento while the primary session query loads:
- * page header → KPI band → gauges + battery progress → hero curve → synced
- * telemetry charts. Built from the shared *Skeleton building blocks so the
- * loading rhythm matches the rest of the app.
+ * Named source outlines use the same canonical placement owner while the
+ * primary query loads. Shared skeleton primitives retain the header and
+ * eight-reading band without guessing values or mounting specialist queries.
  */
 function LoadingSkeleton() {
   return (
     <div className="space-y-6" data-testid="charging-detail-skeleton">
       <PageHeaderSkeleton />
-      <StatGridSkeleton cards={8} className="sm:grid-cols-4 2xl:grid-cols-8" />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <ChartBlockSkeleton height={220} className="xl:col-span-2" />
-        <Skeleton className="h-56 rounded-xl" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <ChartBlockSkeleton height={288} className="xl:col-span-2" />
-        <Skeleton className="h-72 rounded-xl" />
-      </div>
-      <ChartBlockSkeleton height={288} />
+      <DetailSourceOutline loading />
     </div>
   );
 }
@@ -159,6 +151,7 @@ function ChargingChartSync({
 /* ─── main page ────────────────────────────────────────────────── */
 
 export default function ChargingDetailPage() {
+  const { fmtInt, fmtNumber, fmtPercent, fmtWithUnit } = useNumberFormatting();
   const { t } = useTranslation();
   const closedTelemetryDescription = t(
     'charging.detail.closedTelemetryDescription',
@@ -168,9 +161,8 @@ export default function ChargingDetailPage() {
   const sessionId = Number(id);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  // ChargingSession distance delta comes through the repo adapter as miles.
-  // Live charging telemetry is canonical SI and is converted only at the
-  // display boundary.
+  // Session odometer deltas and live charging distances are canonical meters.
+  // Convert once, only at the display boundary.
   const { unitPrefs, formatEnergy, formatPower } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
@@ -187,23 +179,26 @@ export default function ChargingDetailPage() {
   const {
     data: session,
     isLoading,
-    error: sessionError,
     refetch: refetchSession,
   } = sessionQuery;
   /* Historical record: a failed refresh leaves the session on screen and only
    * downgrades the trust label. `!session` (below) is the sole gate that may
    * replace the page. */
   const sessionDataState = useDataState(sessionQuery, { provenance: 'historical' });
+  const telemetryQuery = useChargeTelemetry(session?.id ?? null);
+  const telemetryDataState = useDataState(telemetryQuery, { provenance: 'historical' });
   const {
     data: telemetry,
     isLoading: telemetryLoading,
-    error: telemetryError,
     refetch: refetchTelemetry,
-  } = useChargeTelemetry(session?.id ?? null);
+  } = telemetryQuery;
+  const telemetryError = telemetryDataState.fatalError;
   const { data: vehicle } = useVehicle(String(session?.vehicle_id ?? ''));
-  const { data: liveCharging, isLoading: liveLoading } = useChargingTelemetryLatest(
+  const liveQuery = useChargingTelemetryLatest(
     session?.vehicle_id ?? 0,
   );
+  const { data: liveCharging, isLoading: liveLoading, refetch: refetchLive } = liveQuery;
+  const liveDataState = useDataState(liveQuery, { provenance: 'cached', unavailable: liveCharging === null });
 
   usePageTitle(
     session
@@ -278,30 +273,31 @@ export default function ChargingDetailPage() {
 
   if (isLoading && !session) {
     return (
-      <PageContainer
+      <PageLayout
         title={t('charging.detail.title', 'Charge Session')}
         breadcrumbLabels={breadcrumbLabels}
       >
         <LoadingSkeleton />
-      </PageContainer>
+      </PageLayout>
     );
   }
 
   if (!session) {
     return (
-      <PageContainer
+      <PageLayout
         title={t('charging.detail.title', 'Charge Session')}
         breadcrumbLabels={breadcrumbLabels}
       >
         <GlassPanel className="p-4 sm:p-5">
           <QueryError
-            error={sessionError}
+            error={sessionDataState.fatalError}
             resourceName={t('charging.detail.resource', 'Charge session')}
             listHref="/charging"
             onRetry={() => refetchSession()}
           />
         </GlassPanel>
-      </PageContainer>
+        <DetailSourceOutline />
+      </PageLayout>
     );
   }
 
@@ -319,10 +315,11 @@ export default function ChargingDetailPage() {
     displayCost != null && displayEnergyWh > 0
       ? displayCost / (displayEnergyWh / 1000)
       : session.billed_rate_per_kwh ?? null;
+  const displayPerKwhRate = perKwhRate ?? settingsCostPerKwh;
 
   const costValue =
     displayCost != null
-      ? formatCurrency(displayCost, 2)
+      ? formatCurrency(displayCost)
       : displayEnergyWh > 0
         ? formatEnergyCost(displayEnergyWh / 1000)
         : '—';
@@ -336,7 +333,7 @@ export default function ChargingDetailPage() {
         'charging.detail.fullResolutionTableOmitted',
         'Full-resolution data: {{samples}} samples from {{start}} to {{end}}. The screen-reader data table is omitted for very long sessions; every sample is drawn in the chart.',
         {
-          samples: fmtNumber(telemetryCount, 0),
+          samples: fmtInt(telemetryCount),
           start: formatDate(session.started_at),
           end: session.ended_at ? formatDate(session.ended_at) : t('charging.detail.ongoing', 'now'),
         },
@@ -399,12 +396,12 @@ export default function ChargingDetailPage() {
   ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={`${t('charging.detail.title', 'Charge Session')} #${session.id}`}
-      subtitle={subtitle}
+      metadataActions={<Text variant="bodySm" className="max-w-full [overflow-wrap:anywhere]">{subtitle}</Text>}
       breadcrumbLabels={breadcrumbLabels}
       query={sessionQuery}
-      actions={
+      overflowActions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
           {id && (
             <Button
@@ -425,7 +422,16 @@ export default function ChargingDetailPage() {
         state={sessionDataState}
         label={t('charging.detail.resource', 'Charge session')}
       />
-
+      <StaleRefreshWarning
+        state={telemetryDataState}
+        label={t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
+      />
+      <ChartTimeRangeProvider syncId="charging.session" syncMethod="value">
+      <CardGrid
+        label={t('charging.detail.summary', 'Session summary')}
+        items={[
+          { id: 'summary', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17189">
       {/* ── Status chip row + back link ─────────────────────────── */}
       <FadeIn>
         <section
@@ -435,7 +441,7 @@ export default function ChargingDetailPage() {
           <Link
             to="/charging"
             aria-label={t('charging.detail.back', 'Back to charging')}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--text-primary)]"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Link>
@@ -463,7 +469,10 @@ export default function ChargingDetailPage() {
           )}
         </section>
       </FadeIn>
-
+      </DetailPlacement>
+          ) },
+          { id: 'diagnosis', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17198">
       {/*
         The withAiFeature HOC inside AIChargingDiagnosis renders this section
         ONLY when ai_mode='local'|'cloud' AND the charging-diagnosis toggle is
@@ -474,123 +483,70 @@ export default function ChargingDetailPage() {
         narrative alongside the same metrics the LLM reads from.
       */}
       <AIChargingDiagnosis sessionId={id} />
+      </DetailPlacement>
+          ) },
 
-      {/* ── 1. KPI band ─────────────────────────────────────────── */}
+          { id: 'metrics', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17200">
       <FadeIn delay={0.05}>
-        <section
-          aria-label={t('charging.detail.kpis', 'Key metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 2xl:grid-cols-8"
-        >
-          <MetricCard
-            label={t('charging.detail.energy', 'Energy')}
-            value={`${fmtNumber(convertEnergyFromSI(displayEnergyWh, unitPrefs.energy))} ${unitPrefs.energy}`}
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-            subtitle={
-              billedEnergyWh != null && billedEnergyWh > 0 && vehicleEnergyWh > 0
-                ? t('charging.detail.vehicleMeasured', {
-                    energy: fmtNumber(convertEnergyFromSI(vehicleEnergyWh, unitPrefs.energy)),
-                    unit: unitPrefs.energy,
-                    defaultValue: 'Vehicle measured {{energy}} {{unit}}',
-                  })
-                : undefined
-            }
-            help={
-              billedEnergyWh != null && billedEnergyWh > 0
-                ? {
-                    i18nKey: 'charging.detail.billedEnergyHelp',
-                    defaultValue: 'Tesla Supercharger invoices meter energy at the cabinet. Vehicle telemetry is energy into the pack and is often a few percent lower.',
-                  }
-                : undefined
-            }
+          <DetailSessionStats
+            session={session}
+            energy={displayEnergyWh}
+            duration={durationMin}
+            vehicleEnergy={vehicleEnergyWh}
+            billedEnergy={billedEnergyWh}
+            cost={displayCost}
+            billedCost={billedCost}
+            costText={costValue}
+            configuredRate={settingsCostPerKwh}
+            calculatedRate={perKwhRate}
+            rateText={displayPerKwhRate != null ? `${formatCurrency(displayPerKwhRate)}/kWh` : '—'}
+            currencySymbol={currencySymbol}
+            distanceM={addedDistanceM}
+            distanceText={addedDistanceM != null
+              ? `${fmtNumber(toDistanceDisplay(addedDistanceM))} ${distanceUnit}` : '—'}
+            averageRate={avgRate}
+            retained={sessionDataState.refreshError != null || sessionDataState.isRefreshBlocked}
           />
-          <MetricCard
-            label={t('charging.detail.duration', 'Duration')}
-            value={`${fmtNumber(durationMin, 0)} min`}
-            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('charging.detail.peakPower', 'Peak Power')}
-            value={`${fmtNumber(convertPowerFromSI(session.peak_power_w ?? 0, 'kW'))} kW`}
-            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('charging.detail.socRange', 'SoC Range')}
-            value={`${fmtNumber(session.start_soc_pct ?? 0, 0)}–${fmtNumber(session.end_soc_pct ?? 0, 0)}%`}
-            icon={<Battery className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={displayCost != null
-              ? t('charging.detail.totalCost', 'Total Cost')
-              : t('charging.detail.estCost', 'Est. Cost')}
-            value={costValue}
-            icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-            subtitle={
-              billedCost != null
-                ? t('charging.detail.teslaInvoice', 'Tesla invoice')
-                : session.cost_decimal == null && displayEnergyWh > 0
-                  ? t('charging.detail.atRate', {
-                      currencySymbol,
-                      costPerKwh: settingsCostPerKwh,
-                      defaultValue: 'at {{currencySymbol}}{{costPerKwh}}/kWh',
-                    })
-                  : undefined
-            }
-          />
-          <MetricCard
-            label={t('charging.detail.perKwh', 'Per kWh')}
-            value={`${formatCurrency(perKwhRate ?? settingsCostPerKwh, 2)}/kWh`}
-            icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-            subtitle={perKwhRate == null ? t('charging.detail.fromSettings', 'from settings') : undefined}
-          />
-          <MetricCard
-            label={t('charging.detail.milesAdded', 'Miles Added')}
-            value={addedDistanceM != null
-              ? `${fmtNumber(toDistanceDisplay((addedDistanceM ?? 0) / 1000), 0)} ${distanceUnit}`
-              : '—'}
-            icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('charging.detail.avgRate', 'kWh/h Avg')}
-            value={avgRate != null ? `${fmtNumber(avgRate)} kWh/h` : '—'}
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-        </section>
       </FadeIn>
-
+      </DetailPlacement>
+          ) },
+          { id: 'bill-truth', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17218">
       <FadeIn delay={0.06}>
         <ChargeBillTruthPanel session={session} />
       </FadeIn>
-
+      </DetailPlacement>
+          ) },
+          { id: 'physics', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17220">
       <FadeIn delay={0.07}>
         <ChargePhysicsPanel sessionId={id} />
+      </FadeIn>
+      </DetailPlacement>
+          ) },
+          { id: 'ledger', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17221">
+      <FadeIn delay={0.07}>
         <ChargeLedgerCompactPanel sessionId={id} />
       </FadeIn>
-
-      {/* ── 2. Battery & Power ──────────────────────────────────── */}
-      <FadeIn delay={0.1}>
-        <section aria-labelledby="charging-battery-power" className="space-y-4">
+      </DetailPlacement>
+          ) },
+          { id: 'battery-heading', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17223">
           <SectionTitle id="charging-battery-power">
             {t('charging.detail.batteryPower', 'Battery & Power')}
           </SectionTitle>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            {/* Hero: live gauges */}
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="mb-4 flex items-center gap-2">
+      </DetailPlacement>
+          ) },
+          { id: 'gauges', size: 'half', content: (
+            <LayoutCard title={t('charging.detail.liveGauges', 'Live Gauges')} actions={
                 <BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('charging.detail.liveGauges', 'Live Gauges')}
-              </PanelTitle>
-              <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+            }>
+              <StaggerContainer className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @4xl:grid-cols-5">
                 {gauges.map((g) => (
                   <StaggerItem key={g.key}>
-                    <div className="flex flex-col items-center rounded-xl border border-white/[0.05] bg-white/[0.02] py-4">
+                    <div className="flex flex-col items-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] py-4">
                       <LinearGauge
                         value={g.value}
                         max={g.max}
@@ -602,19 +558,17 @@ export default function ChargingDetailPage() {
                   </StaggerItem>
                 ))}
               </StaggerContainer>
-            </GlassPanel>
-
-            {/* Side: battery progress */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-4 flex items-center gap-1.5">
-                {t('charging.detail.batteryProgress', 'Battery Progress')}
+            </LayoutCard>
+          ) },
+          { id: 'battery-progress', size: 'half', content: (
+            <LayoutCard title={t('charging.detail.batteryProgress', 'Battery Progress')} actions={
                 <HelpTooltip
                   size="sm"
                   i18nKey="help.charging.socRange"
                   defaultValue="The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper."
                   ariaLabel={t('help.charging.socRange.aria', { defaultValue: 'More info about state-of-charge range' })}
                 />
-              </PanelTitle>
+            }>
               <div className="space-y-4">
                 <MetricBar
                   value={session.start_soc_pct ?? 0}
@@ -631,7 +585,7 @@ export default function ChargingDetailPage() {
                   sublabel={fmtPercent(session.end_soc_pct)}
                 />
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-center @sm:grid-cols-3">
                 <div>
                   <Text as="p" variant="caption">{t('charging.detail.socGained', 'SoC Gained')}</Text>
                   <Text as="p" size="lg" weight="bold" color="primary" className="tabular-nums">
@@ -642,7 +596,7 @@ export default function ChargingDetailPage() {
                   <Text as="p" variant="caption">{t('charging.detail.rangeGained', 'Range Gained')}</Text>
                   <Text as="p" size="lg" weight="bold" color="primary" className="tabular-nums">
                     {addedDistanceM != null
-                      ? fmtWithUnit(toDistanceDisplay((addedDistanceM ?? 0) / 1000), distanceUnit, 0)
+                      ? fmtWithUnit(toDistanceDisplay(addedDistanceM), distanceUnit)
                       : '—'}
                   </Text>
                 </div>
@@ -653,24 +607,21 @@ export default function ChargingDetailPage() {
                   </Text>
                 </div>
               </div>
-            </GlassPanel>
-          </div>
-        </section>
-      </FadeIn>
-
-      {/* ── 3. Charge Analysis ──────────────────────────────────── */}
-      <FadeIn delay={0.15}>
-        <section aria-labelledby="charging-analysis" className="space-y-4">
+            </LayoutCard>
+          ) },
+          { id: 'analysis-heading', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17251">
           <SectionTitle id="charging-analysis">
             {t('charging.detail.chargeAnalysis', 'Charge Analysis')}
           </SectionTitle>
-
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            {/* Hero: charge curve */}
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="mb-4 flex flex-wrap items-center gap-1.5">
+      </DetailPlacement>
+          ) },
+          { id: 'charge-curve', size: 'full', content: (
+            <DetailPlacement sourceId="jsx-17259">
+            <section aria-label={t('charging.detail.chargeCurve', 'Charge Curve')} className="min-w-0 space-y-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Text as="p" variant="body" weight="medium">{t('charging.detail.chargeCurve', 'Charge Curve')}</Text>
                 <TrendingUp className="h-4 w-4 text-purple-300" aria-hidden="true" />
-                {t('charging.detail.chargeCurve', 'Charge Curve')}
                 {!hasTelemetry && (
                   <Text as="span" variant="caption">
                     ({t('charging.detail.estimated', 'estimated')})
@@ -682,7 +633,7 @@ export default function ChargingDetailPage() {
                   defaultValue="Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits."
                   ariaLabel={t('help.charging.chargeCurve.aria', { defaultValue: 'More info about taper and derating' })}
                 />
-              </PanelTitle>
+              </div>
               {chargeCurve.length > 0 ? (
                 <EmbeddedChart
                   title={t('charging.detail.chargeCurve', 'Charge Curve')}
@@ -694,6 +645,9 @@ export default function ChargingDetailPage() {
                   // Dense series above the cap omit the SR table (no-table
                   // pattern) — the chart itself still draws every sample.
                   data={isLargeDataset ? undefined : chargeCurve}
+                  exportData={chargeCurve}
+                  exportable
+                  fullscreen
                   dataColumns={[
                     { key: 'soc', label: t('charging.detail.soc', 'SoC') },
                     { key: 'power', label: t('charging.detail.power', 'Power') },
@@ -740,14 +694,12 @@ export default function ChargingDetailPage() {
                   className="py-8"
                 />
               )}
-            </GlassPanel>
-
-            {/* Side: charge summary metrics */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-4">
-                {t('charging.detail.chargeSummary', 'Charge Summary')}
-              </PanelTitle>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+            </section>
+            </DetailPlacement>
+          ) },
+          { id: 'charge-summary', size: 'full', content: (
+            <LayoutCard title={t('charging.detail.chargeSummary', 'Charge Summary')}>
+              <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @3xl:grid-cols-4">
                 <InlineMetric
                   icon={<Gauge className="h-4 w-4 text-purple-300" aria-hidden="true" />}
                   label={t('charging.detail.avgPower', 'Avg Power')}
@@ -758,7 +710,7 @@ export default function ChargingDetailPage() {
                   label={t('charging.detail.milesAdded', 'Miles Added')}
                   value={
                     addedDistanceM != null
-                      ? fmtWithUnit(toDistanceDisplay((addedDistanceM ?? 0) / 1000), distanceUnit, 0)
+                      ? fmtWithUnit(toDistanceDisplay(addedDistanceM), distanceUnit)
                       : '—'
                   }
                 />
@@ -773,26 +725,13 @@ export default function ChargingDetailPage() {
                   value={session.cost_currency ?? '—'}
                 />
               </div>
-            </GlassPanel>
-          </div>
-
-          {/*
-            The SoC/energy/range, temperature, and voltage/current panels all
-            live on the same charge-session time axis but use different filtered
-            telemetry rows. Wrapping them in a `<ChartTimeRangeProvider>` with
-            `syncMethod="value"` makes recharts mirror the active hover cursor
-            across all three, and each chart renders a persistent
-            `<ReferenceLine>` at the last hovered timestamp via
-            {@link useSyncedReferenceLineX}.
-          */}
-          <ChartTimeRangeProvider syncId="charging.session" syncMethod="value">
-            <div className="space-y-4">
-              {/* SoC / Energy / Range over time — full-width hero band */}
-              <GlassPanel className="p-4 sm:p-5">
-                <PanelTitle className="mb-4">
-                  {t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
-                </PanelTitle>
-                {telemetryLoading ? (
+            </LayoutCard>
+          ) },
+          { id: 'session-timeline', size: 'full', content: (
+              <DetailPlacement sourceId="jsx-17287">
+              <section aria-label={t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')} className="min-w-0 space-y-3">
+                <Text as="p" variant="body" weight="medium">{t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}</Text>
+                {telemetryLoading && !telemetryDataState.hasData ? (
                   <ChartBlockSkeleton height={288} />
                 ) : telemetryError ? (
                   <QueryError error={telemetryError} onRetry={() => refetchTelemetry()} />
@@ -809,6 +748,9 @@ export default function ChargingDetailPage() {
                         // Dense series above the cap omit the SR table (no-table
                         // pattern) — the chart itself still draws every sample.
                         data={isLargeDataset ? undefined : timeSeriesData}
+                        exportData={timeSeriesData}
+                        exportable
+                        fullscreen
                         dataColumns={[
                           { key: 'time', label: t('charging.detail.time', 'Time') },
                           { key: 'soc', label: t('charging.detail.soc', 'SoC') },
@@ -900,16 +842,17 @@ export default function ChargingDetailPage() {
                     className="py-8"
                   />
                 )}
-              </GlassPanel>
-
-              {/* Temperature + Voltage/Current — side-by-side on wide screens */}
-              <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelTitle className="mb-4 flex items-center gap-2">
+              </section>
+              </DetailPlacement>
+          ) },
+          { id: 'temperature', size: 'half', content: (
+                <DetailPlacement sourceId="jsx-17310">
+                <section aria-label={t('charging.detail.temperature', 'Temperature')} className="min-w-0 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Text as="p" variant="body" weight="medium">{t('charging.detail.temperature', 'Temperature')}</Text>
                     <Thermometer className="h-4 w-4 text-rose-300" aria-hidden="true" />
-                    {t('charging.detail.temperature', 'Temperature')}
-                  </PanelTitle>
-                  {telemetryLoading ? (
+                  </div>
+                  {telemetryLoading && !telemetryDataState.hasData ? (
                     <ChartBlockSkeleton height={240} />
                   ) : telemetryError ? (
                     <QueryError error={telemetryError} onRetry={() => refetchTelemetry()} />
@@ -926,6 +869,9 @@ export default function ChargingDetailPage() {
                           // Dense series above the cap omit the SR table (no-table
                           // pattern) — the chart itself still draws every sample.
                           data={isLargeDataset ? undefined : tempData}
+                          exportData={tempData}
+                          exportable
+                          fullscreen
                           dataColumns={[
                             { key: 'time', label: t('charging.detail.time', 'Time') },
                             { key: 'battery', label: t('charging.detail.batteryTemp', 'Battery') },
@@ -1006,14 +952,17 @@ export default function ChargingDetailPage() {
                       className="py-8"
                     />
                   )}
-                </GlassPanel>
-
-                <GlassPanel className="p-4 sm:p-5">
-                  <PanelTitle className="mb-4 flex items-center gap-2">
+                </section>
+                </DetailPlacement>
+          ) },
+          { id: 'voltage-current', size: 'half', content: (
+                <DetailPlacement sourceId="jsx-17330">
+                <section aria-label={t('charging.detail.voltageCurrent', 'Voltage & Current')} className="min-w-0 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Text as="p" variant="body" weight="medium">{t('charging.detail.voltageCurrent', 'Voltage & Current')}</Text>
                     <Waves className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                    {t('charging.detail.voltageCurrent', 'Voltage & Current')}
-                  </PanelTitle>
-                  {telemetryLoading ? (
+                  </div>
+                  {telemetryLoading && !telemetryDataState.hasData ? (
                     <ChartBlockSkeleton height={240} />
                   ) : telemetryError ? (
                     <QueryError error={telemetryError} onRetry={() => refetchTelemetry()} />
@@ -1030,6 +979,9 @@ export default function ChargingDetailPage() {
                           // Dense series above the cap omit the SR table (no-table
                           // pattern) — the chart itself still draws every sample.
                           data={isLargeDataset ? undefined : voltCurrentData}
+                          exportData={voltCurrentData}
+                          exportable
+                          fullscreen
                           dataColumns={[
                             { key: 'time', label: t('charging.detail.time', 'Time') },
                             { key: 'voltage', label: t('charging.detail.voltage', 'Voltage') },
@@ -1104,35 +1056,32 @@ export default function ChargingDetailPage() {
                       className="py-8"
                     />
                   )}
-                </GlassPanel>
-              </div>
-            </div>
-          </ChartTimeRangeProvider>
-        </section>
-      </FadeIn>
-
-      {/* ── 4. Session Details ──────────────────────────────────── */}
-      <FadeIn delay={0.2}>
-        <section aria-labelledby="charging-session-details" className="space-y-4">
+                </section>
+                </DetailPlacement>
+          ) },
+          { id: 'details-heading', size: 'full', content: (
+      <DetailPlacement sourceId="jsx-17345">
           <SectionTitle id="charging-session-details">
             {t('charging.detail.sessionDetails', 'Session Details')}
           </SectionTitle>
-
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            {/* Advanced live charging parameters */}
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="mb-1">
-                {t('charging.detail.advanced', 'Advanced Charging Parameters')}
-              </PanelTitle>
+      </DetailPlacement>
+          ) },
+          { id: 'advanced', size: 'half', content: (
+            <LayoutCard title={t('charging.detail.advanced', 'Advanced Charging Parameters')}>
               <Text as="p" variant="caption" className="mb-4 block">
                 {t('charging.detail.advancedHint', 'Latest reported values from the vehicle.')}
               </Text>
-              {liveLoading ? (
+              {liveCharging != null && (
+                <StaleRefreshWarning state={liveDataState} label={t('charging.detail.advanced', 'Advanced Charging Parameters')} />
+              )}
+              {liveLoading && !liveCharging ? (
                 <div className="space-y-2">
                   <Skeleton className="h-6 rounded" />
                   <Skeleton className="h-6 rounded" />
                   <Skeleton className="h-6 rounded" />
                 </div>
+              ) : liveDataState.fatalError ? (
+                <QueryError error={liveDataState.fatalError} onRetry={() => refetchLive()} />
               ) : liveCharging ? (
                 <KVList
                   columns={2}
@@ -1148,28 +1097,28 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.chargerVoltage', 'Charger Voltage'),
                       value:
                         liveCharging.charger_voltage != null
-                          ? fmtWithUnit(liveCharging.charger_voltage, 'V', 0)
+                          ? fmtWithUnit(liveCharging.charger_voltage, 'V')
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargerActualCurrent', 'Active Charge Current'),
                       value:
                         liveCharging.charger_actual_current != null
-                          ? fmtWithUnit(liveCharging.charger_actual_current, 'A', 1)
+                          ? fmtWithUnit(liveCharging.charger_actual_current, 'A')
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargerPilotCurrent', 'Pilot Current'),
                       value:
                         liveCharging.charger_pilot_current != null
-                          ? fmtWithUnit(liveCharging.charger_pilot_current, 'A', 1)
+                          ? fmtWithUnit(liveCharging.charger_pilot_current, 'A')
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargerPowerKw', 'Charger Power'),
                       value:
                         liveCharging.charger_power_w != null
-                          ? formatPower(liveCharging.charger_power_w, { precision: 1 })
+                          ? formatPower(liveCharging.charger_power_w)
                           : '—',
                     },
                     {
@@ -1183,21 +1132,21 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.batteryRange', 'Battery Range'),
                       value:
                         liveCharging.battery_range_mi != null
-                          ? fmtWithUnit(toDistanceDisplay(liveCharging.battery_range_mi), distanceUnit, 0)
+                          ? fmtWithUnit(toDistanceDisplay(liveCharging.battery_range_mi), distanceUnit)
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargeRate', 'Charge Rate'),
                       value:
                         liveCharging.range_added_meters_per_hour != null
-                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters_per_hour), `${distanceUnit}/h`, 1)
+                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters_per_hour), `${distanceUnit}/h`)
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargeEnergyAdded', 'Energy Added'),
                       value:
                         liveCharging.charge_energy_added_wh != null
-                          ? formatEnergy(liveCharging.charge_energy_added_wh, { precision: 2 })
+                          ? formatEnergy(liveCharging.charge_energy_added_wh)
                           : '—',
                     },
                     {
@@ -1207,7 +1156,7 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.chargeMilesAdded', 'Range Added'),
                       value:
                         liveCharging.range_added_meters != null
-                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters), distanceUnit, 1)
+                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters), distanceUnit)
                           : '—',
                     },
                   ]}
@@ -1224,13 +1173,10 @@ export default function ChargingDetailPage() {
                   className="py-8"
                 />
               )}
-            </GlassPanel>
-
-            {/* Session info */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-4">
-                {t('charging.detail.sessionInfo', 'Session Info')}
-              </PanelTitle>
+            </LayoutCard>
+          ) },
+          { id: 'session-info', size: 'half', content: (
+            <LayoutCard title={t('charging.detail.sessionInfo', 'Session Info')}>
               <KVList
                 columns={1}
                 items={[
@@ -1248,18 +1194,14 @@ export default function ChargingDetailPage() {
                   },
                 ]}
               />
-            </GlassPanel>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Location */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-4 flex items-center gap-2">
+            </LayoutCard>
+          ) },
+          { id: 'location', size: 'half', content: (
+            <LayoutCard title={t('charging.detail.location', 'Location')} actions={
                 <MapPin className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-                {t('charging.detail.location', 'Location')}
-              </PanelTitle>
+            }>
               {session.start_place ? (
-                <Text as="p" variant="body">{session.start_place}</Text>
+                <Text as="p" variant="body" className="max-w-prose break-words">{session.start_place}</Text>
               ) : (
                 // no-action: start_place is geocoded once at session close; this historical session simply never resolved one.
                 <EmptyState
@@ -1268,15 +1210,13 @@ export default function ChargingDetailPage() {
                   className="py-8"
                 />
               )}
-            </GlassPanel>
-
-            {/* Timestamps */}
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-4 flex items-center gap-2">
+            </LayoutCard>
+          ) },
+          { id: 'timestamps', size: 'half', content: (
+            <LayoutCard title={t('charging.detail.timestamps', 'Timestamps')} actions={
                 <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('charging.detail.timestamps', 'Timestamps')}
-              </PanelTitle>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            }>
+              <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2">
                 <div>
                   <Text as="p" variant="caption" className="mb-1 block">{t('charging.detail.started', 'Started')}</Text>
                   <Text as="p" variant="body" weight="medium">
@@ -1290,10 +1230,11 @@ export default function ChargingDetailPage() {
                   </Text>
                 </div>
               </div>
-            </GlassPanel>
-          </div>
-        </section>
-      </FadeIn>
+            </LayoutCard>
+          ) },
+        ] satisfies readonly CardGridItem[]}
+      />
+      </ChartTimeRangeProvider>
       {id && (
         <ShareSessionDialog
           sessionId={id}
@@ -1301,6 +1242,6 @@ export default function ChargingDetailPage() {
           onClose={() => setShareDialogOpen(false)}
         />
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

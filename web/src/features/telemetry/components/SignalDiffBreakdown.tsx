@@ -29,10 +29,10 @@ import { CATEGORY_PREFIXES } from './SignalCompareControls';
 
 /** Current-window source layers, in reporting order, with a display color. */
 const SOURCE_META: Array<{ id: string; labelKey: string; defaultLabel: string; color: string }> = [
-  { id: 'l1', labelKey: 'signalDiff.source.l1', defaultLabel: 'L1 · In-process', color: '#10b981' },
+  { id: 'l1', labelKey: 'signalDiff.source.l1', defaultLabel: 'L1 · in-process', color: '#10b981' },
   { id: 'l2', labelKey: 'signalDiff.source.l2', defaultLabel: 'L2 · Redis', color: '#3b82f6' },
-  { id: 'log', labelKey: 'signalDiff.source.log', defaultLabel: 'LOG · History', color: '#8b5cf6' },
-  { id: 'stale', labelKey: 'signalDiff.source.stale', defaultLabel: 'STALE', color: '#f59e0b' },
+  { id: 'log', labelKey: 'signalDiff.source.log', defaultLabel: 'LOG · history', color: '#8b5cf6' },
+  { id: 'stale', labelKey: 'signalDiff.source.stale', defaultLabel: 'Stale', color: '#f59e0b' },
   { id: 'unknown', labelKey: 'signalDiff.source.unknown', defaultLabel: 'Unknown', color: '#64748b' },
 ];
 
