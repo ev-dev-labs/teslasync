@@ -1,0 +1,368 @@
+{
+  "item": "audit-page-072",
+  "page": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+  "routes": ["/power-flow"],
+  "purpose": "Show current Tesla Energy power flow, battery charge, system status, solar charging advice and selected-window history.",
+  "primaryGoal": "Understand solar production, home consumption, battery/grid direction and charge, with trustworthy current and historical evidence.",
+  "dataSources": [
+    {
+      "id": "live-energy-status",
+      "hook": "useTeslaEnergyLiveStatus",
+      "owner": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 396,
+      "endpoint": "GET /tesla/energy-sites/{siteId}/live-status",
+      "consumer": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:112",
+      "behavior": "Key ['tesla-live-status', siteId]; truthy-site enablement; INTERVALS.STANDARD polling; AbortSignal forwarded. Page derives live DataState and accepts a snapshot only when the response has id.",
+      "sourceTrust": "Independent stale warning; retained data remains visible on refresh failure; no-record envelope is unavailable.",
+      "units": "Consumer treats power as W, energy as Wh, SOC as percent; backend SI correctness is UNVERIFIED."
+    },
+    {
+      "id": "energy-status-history",
+      "hook": "useTeslaEnergyLiveStatusHistory",
+      "owner": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 417,
+      "endpoint": "GET /tesla/energy-sites/{siteId}/live-status/history?since={since}&until={until}&limit=1000",
+      "consumer": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:113",
+      "behavior": "Key includes site, both bounds and limit; STALE_TIMES.STANDARD; safeArray selection; AbortSignal forwarded. Page maps timestamps to epoch milliseconds and preserves null solar/battery/grid/load/SOC samples.",
+      "sourceTrust": "Historical DataState and separate stale warning; fatal and retained refresh errors remain distinct.",
+      "unknowns": "Server date parsing, bound inclusivity, ordering, limit truncation and full-window completeness were not inspected."
+    },
+    {
+      "id": "solar-charge-advice",
+      "hook": "useSolarChargeAdvice",
+      "owner": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 407,
+      "endpoint": "GET /tesla/energy-sites/{siteId}/charge-advice",
+      "consumer": "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx:34",
+      "behavior": "Independent site-keyed STANDARD polling query with cancellation. Strip renders server verdict, W-to-kW surplus and recommended amps, but consumes only data and disappears for absent/no_data responses.",
+      "sourceTrust": "Not registered in page dataSources; loading, failure, stale/offline and retry are not represented by this strip. Type includes snapshot_age_s and explanation; no freshness policy is inferred."
+    },
+    {
+      "id": "refresh-live-energy",
+      "hook": "useRefreshTeslaEnergyLiveStatus",
+      "owner": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 440,
+      "endpoint": "POST /tesla/energy-sites/{siteId}/live-status/refresh",
+      "consumer": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:212",
+      "behavior": "Header and three empty-card actions invoke the mutation; pending indicator on header. Success invalidates live/history keys; existing mutation toast handles success/failure. Advice key is not invalidated."
+    },
+    {
+      "id": "workspace-range",
+      "hook": "useRangeState",
+      "owner": "web\\src\\hooks\\useRangeState.ts",
+      "line": 678,
+      "endpoint": null,
+      "consumer": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:107",
+      "behavior": "Requested power-flow.range persistence key and 7d default; consumes calendar start/end instead of precise instant bounds. /power-flow is range-enabled and vehicle-disabled in workspaceScope.ts:55,124. No local range or vehicle picker."
+    },
+    {
+      "id": "formatting-preferences",
+      "hook": "useNumberFormatting",
+      "owner": "web\\src\\hooks\\useNumberFormatting.ts",
+      "line": 19,
+      "endpoint": null,
+      "behavior": "Existing preference subscription supplies SOC precision. fmtWatts delegates to numberFormat.ts:91 locale/precision formatting after a finite-number guard; W/kW scaling is display-only."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard",
+      "owner": "existing @/components/layout category exports; implementation internals not inspected",
+      "evidence": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:8,221,293,327,351",
+      "role": "Page title/subtitle, refresh action, source-query composition and three live overview cards."
+    },
+    {
+      "name": "BatteryEvidenceBrief",
+      "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "line": 20,
+      "props": ["id?", "title", "description?", "metrics", "period", "loading?", "retained?", "secondary?"],
+      "dependencies": ["OperationalBrief", "useOperationalMetrics", "Caption", "formatDateTime"],
+      "role": "Four current-power metrics, snapshot scope, freshness, provenance, retained/loading status and existing review composition."
+    },
+    {
+      "name": "PowerHistoryChart",
+      "owner": "web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx",
+      "line": 40,
+      "props": ["data", "loading", "error", "onRetry", "className?"],
+      "dependencies": ["ChartCard", "LayoutCard", "QueryError", "ChartGradient", "ChartLegend", "ChartTooltip", "FLOW_COLORS", "fmtWatts", "useNumberFormatting"],
+      "role": "Four power area series, axes, persisted power-flow-history identity, hiddenSeries, toolbar, evidence columns and raw exports."
+    },
+    {
+      "name": "BatterySocChart",
+      "owner": "web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx",
+      "line": 44,
+      "props": ["data", "loading", "error", "onRetry", "className?"],
+      "dependencies": ["ChartCard", "LayoutCard", "QueryError", "ChartTooltip", "CHART_COLORS", "formatDateShort"],
+      "role": "SOC history line, 0–100 axis, timestamp/percent evidence columns, toolbar and raw exports. No explicit chartKey is supplied here."
+    },
+    {
+      "name": "SolarChargeAdviceStrip",
+      "owner": "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx",
+      "line": 31,
+      "props": ["siteId?"],
+      "dependencies": ["useSolarChargeAdvice", "Badge", "Text", "useNumberFormatting"],
+      "role": "Solar verdict and charging guidance."
+    },
+    {
+      "name": "FlowArrow",
+      "owner": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+      "line": 52,
+      "props": ["from", "to", "power", "active"],
+      "role": "Existing local reusable domain renderer for three mandatory and one conditional power-flow row; not four duplicate components."
+    },
+    {
+      "name": "Shared primitives and display/feedback/motion",
+      "owner": "existing @/components/ui, data-display, charts, feedback and motion category exports",
+      "evidence": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:9,11,13-15",
+      "members": ["Badge", "Button", "Caption", "KVList", "Energy", "LinearGauge", "Skeleton", "EmptyState", "QueryError", "StaleRefreshWarning", "FadeIn"],
+      "role": "Retain existing owners rather than inventing new visual, source-state or animation infrastructure; shared internals mostly uninspected."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+      "line": 293,
+      "rule": "MDC-002 / mission 0.16",
+      "detail": "Three cards repeat live loading/fatal/empty/content branches at 294,328,352, but have distinct titles, skeleton heights and meaningful empty messages.",
+      "fix": "Consider existing source-state composition during implementation only if all per-card geometry, context and recovery survive; no speculative universal wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Status and advice wrap at page:235 and SolarChargeAdviceStrip.tsx:39; refresh uses wrapLabel at page:210.",
+      "Live overview stacks then uses md:grid-cols-2 and xl:grid-cols-3 at page:290.",
+      "History stacks until 2xl:grid-cols-3 at page:405; power gets two columns at page:408.",
+      "Both charts use min-w-0 wrappers and 100%-width ResponsiveContainer, with heights 320 and 260."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+        "line": 57,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Non-wrapping flow row contains two translated labels, icon and formatted magnitude; overflow with long translations or large readings is a source risk, not observed clipping.",
+        "fix": "Exercise narrow allocated widths, RTL, long labels and 200% text; permit reflow without losing direction or value.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "testedWidths": [],
+    "status": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560, RTL and 200% text."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Localized system-status/live-overview/history aria-labels; decorative action/status/KPI/flow icons hidden from assistive technology.",
+      "Chart ariaLabel and explicit evidence dataColumns at each ChartCard call site.",
+      "Solar advice supplies role=status and a localized name when rendered."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+        "line": 66,
+        "rule": "MDC-040 / MDC-025",
+        "detail": "Flow direction is conveyed by aria-hidden ArrowDown/ArrowUp; line 75 strips sign from readable magnitude. Negative battery/grid flow still exposes the fixed source/destination labels with a positive magnitude, losing charging/export direction in accessible text.",
+        "fix": "Provide localized accessible direction text or sign-aware readable endpoints; preserve visual magnitude-only convention, known-zero behavior and null placeholder.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx",
+        "line": 106,
+        "rule": "MDC-034 / MDC-044",
+        "detail": "Bare ChartTooltip receives numeric epoch time and no explicit units. ChartTooltip.tsx:67-80 stringifies non-ISO numeric labels and :83-104 adds only supplied units. SOC repeats this wiring at BatterySocChart.tsx:85.",
+        "fix": "Use existing labelFormatter/valueFormatter for localized date-time plus signed W/kW or SOC percent, preserving unknowns and raw exports; no shared tooltip replacement.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "status": "Runtime keyboard, focus, screen-reader output, contrast, forced colors, targets and reduced motion UNVERIFIED."
+  },
+  "states": {
+    "live": "No-retained-data loading drives strip/card skeletons. Fatal errors drive each card's QueryError/refetchLive. No-id responses produce three titled empty states with Tesla refresh. KPIs retain refresh-error data but suppress fatal values. Independent stale warning is present.",
+    "history": "Initial loading goes to both ChartCards; fatal error gives titled QueryError/refetchHistory; empty array gives empty=true. Historical DataState warning preserves retained payload on refresh failure.",
+    "unknown": "Power, SOC and energy remain nullable; missing grid status is neutral Unknown. Storm/backup site details distinguish null from false. Zero power has no directional KPI label. Grid-services row remains conditional on nonzero value.",
+    "mutation": "Header binds isPending; hook supplies success/error toast and live/history invalidation. Actual disabled, auth/demo and failure behavior was not exercised.",
+    "offline": "Existing DataState/PageLayout composition is present; exact offline rendering and source-age behavior UNVERIFIED.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx",
+        "line": 34,
+        "rule": "MDC-026 / mission 0.9",
+        "detail": "Only data is consumed; absent/no_data returns null at line 36. Independent pending, unavailable, failure, retry and retained/stale states disappear, and page:131-142 registers only live/history. A different live endpoint cannot establish advice-source trust.",
+        "fix": "Retain an advice slot and compose existing DataState/source-review/recovery mechanisms for this query; preserve verdict, surplus and amp guidance while keeping successful neighbors visible.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+      "line": 62,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Inactive chip uses fixed-white border/background; active line 61 chooses a local cyan surface. This is source-confirmed theme-specific decoration, not proof of literal pure-white text or measured contrast failure.",
+      "fix": "Use canonical neutral surface/border and restrained semantic accent tokens, reducing saturation/noise while retaining active/inactive and unknown/zero distinctions.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\power-flow\\constants.ts",
+      "line": 11,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "Five fixed saturated hex assignments bypass existing chart palette ownership. No neon/glow class was found on the page; actual composed chart intensity is UNVERIFIED.",
+      "fix": "Map domain series to restrained existing palette/semantic tokens without dropping solar/battery/grid/home/SOC identities or resetting explicit user chart preferences.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+      "line": 107,
+      "rule": "MDC-032 / MDC-045",
+      "detail": "History consumes calendar start/end at line 113, not shared startInstant/endInstantExclusive documented at useRangeState.ts:117-122 and returned at :678-683. Precise rolling/timezone/exclusive-upper-bound information is lost at this call boundary; server behavior is unknown.",
+      "fix": "Pass precise workspace bounds through the typed hook after confirming server support for both bounds; do not substitute filtering of only the loaded 1000 records.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx",
+      "line": 39,
+      "rule": "MDC-033 / MDC-044",
+      "detail": "SOC ticks/table interpolate raw value plus percent instead of shared locale/precision formatting, unlike live gauge and power formatting.",
+      "fix": "Reuse current number-formatting preference subscription at display boundary; preserve finite/null guards, 0-100 domain and raw percentage exports.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["precise range bounds", "accessible flow direction", "independent advice trust", "tooltip and SOC formatting", "restrained canonical tokens"],
+    "rationale": "Source trust and preserved range/direction semantics precede cosmetic adoption. No implementation or runtime acceptance is claimed."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\battery\\components\\power-flow\\constants.ts",
+      "line": 11,
+      "rule": "MDC-002 / MDC-034",
+      "detail": "Local FLOW_COLORS coexists with canonical CHART_COLORS already consumed by SOC and exported by chartUtils.tsx:5 and charts/index.ts:42-43.",
+      "fix": "Reuse canonical palette exports for domain assignments; do not add another palette engine. This is the same finding as the palette visual issue, not a second required component.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "A02E352C4237FB6D68A97836D20B1AC04167E5026B3B4E48057E560D420152C9",
+    "hashAlgorithm": "SHA-256",
+    "lineCount": 425,
+    "componentLineCounts": {
+      "web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx": 146,
+      "web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx": 97,
+      "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx": 60,
+      "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx": 57
+    },
+    "pageAndInspectedPresentationTotalLines": 785,
+    "sectionCount": 8,
+    "sectionCountingMethod": "Eight user-facing units; four literal section openings, three page LayoutCard openings, two dependency ChartCard openings. Direct GlassPanel/ChartContainer openings both zero; extracted ChartCard framing remains.",
+    "sections": [
+      {"name": "Live system status", "line": 233, "preserve": "Grid badge, storm/backup badges, timestamp, loading/unavailable."},
+      {"name": "Solar charging advice", "line": 273, "preserve": "Server verdict, surplus W-to-kW, recommended amps, localized status role; add trust states rather than deleting source."},
+      {"name": "Current power evidence", "line": 278, "preserve": "Solar/battery/home/grid metrics, occurrence IDs, signed values, direction context, snapshot scope/provenance and review composition."},
+      {"name": "Battery State", "line": 293, "preserve": "SOC gauge and precision, energy remaining Wh, capacity Wh."},
+      {"name": "Power Flow", "line": 327, "preserve": "Three mandatory source rows, conditional nonzero grid-services row, direction/magnitude and unknown placeholder."},
+      {"name": "Site Details", "line": 351, "preserve": "Grid status, storm on/off/unknown, backup yes/no/unknown, timestamp."},
+      {"name": "Power Over Time", "line": 407, "preserve": "Four series and null gaps, time/power axes, gradients, legend visibility, power-flow-history persistence, toolbar, evidence table, raw exports."},
+      {"name": "SOC history", "line": 414, "preserve": "SOC line and null gaps, 0-100 domain, time axis, toolbar, evidence table, raw exports."}
+    ],
+    "actions": [
+      "One header Refresh from Tesla mutation with pending indicator.",
+      "Three empty-card Refresh from Tesla mutation actions.",
+      "Three fatal-live refetchLive controls and two fatal-history refetchHistory controls.",
+      "Existing page source-review and BatteryEvidenceBrief OperationalBrief review composition; mounted interactions unverified.",
+      "Power chart hiddenSeries controls and persistent chart identity; both chart toolbar/evidence/export capabilities.",
+      "Shell-owned View settings range control; no duplicate page range/vehicle selector."
+    ],
+    "dataBehavior": [
+      "DEFAULT_SITE_ID=1 and no implemented site picker; preserve until separately authorized real site integration.",
+      "Preserve power-flow.range preference and requested 7d default, route range enablement and disabled vehicle scope.",
+      "Preserve site-keyed queries, AbortSignal forwarding, polling/stale policy, both history bounds and limit=1000; server completeness remains unknown.",
+      "No-id snapshot envelope unavailable; null/undefined/non-finite inputs are unknown, never fabricated zero.",
+      "Battery positive means discharging, negative charging; grid positive importing, negative exporting. Grid unknown neutral; known non-Active maps danger. Backend status vocabulary unverified.",
+      "History timestamps, solar/battery/grid/load W and SOC percent remain raw until render; retain null gaps.",
+      "Retained refresh-error data and independent live/history warnings survive; fatal error cannot erase successful neighbors.",
+      "Refresh uses existing toast and invalidates live/history; independent advice polling remains.",
+      "SI wire/cache values remain unchanged; fmtWatts display-only W/kW and Energy Wh rendering are preserved. No new legacy converter.",
+      "Preserve localization, precision/locale, motion preferences, all source/actions/sections and export evidence; shared internals and export completeness not accepted by source inspection."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only retry, attempt2 reservation; only assigned attempt-2 report and heartbeat are writable.",
+    "priorReconciliation": {
+      "immutableEvidence": "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\audit-page-072-attempt1-preserved.json",
+      "formerActor": "1010cc58-0ec3-4ccd-a029-7160cebf442e",
+      "result": "Prior evidence parsed; item and page SHA256 match current bytes exactly. Confirmed cited hooks, charts, advice, range, formatter and palette wiring through bounded immediate dependency reads. Corrected prior SOC consumer section citation from 415 to actual opening at 414. No broad graph exploration.",
+      "originalFiles": "docs\\frontend-audits\\audit-page-072.json and .agent-status\\audit-page-072.txt were not read or modified by this retry.",
+      "formerContexts": "Orchestrator's 15 unresolved former contexts remain outside this retry's ownership."
+    },
+    "routeEvidence": "Exact assigned ['/power-flow']; direct workspace registration inspected. Router graph, mounted/auth reachability and backend route matching not inspected or exercised.",
+    "backendEvidence": "Endpoint strings come directly from cited hook implementations, not assumptions. Backend router/handlers, units, bound parsing, verdict calculations and endpoint success UNVERIFIED.",
+    "unverified": ["runtime", "visual appearance", "all requested viewports", "keyboard", "focus", "screen readers", "contrast", "forced colors", "reduced motion", "offline behavior", "real query responses", "toolbar/drawer interaction", "export completeness"],
+    "checks": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx; (Get-Content page).Count",
+        "exitCode": 0,
+        "output": "SHA256 A02E352C4237FB6D68A97836D20B1AC04167E5026B3B4E48057E560D420152C9; LINES 425"
+      },
+      {
+        "command": "Scoped PowerShell regex counts on assigned page text: staticInlineVar/rawControl/directLibraryImport/fixedWhite/neonOrGlow/LayoutCardOpen/SectionOpen/GlassPanelOpen/ChartContainerOpen",
+        "exitCode": 0,
+        "output": "staticInlineVar=0; rawControl=0; directLibraryImport=0; fixedWhite=2; neonOrGlow=0; LayoutCardOpen=3; SectionOpen=4; GlassPanelOpen=0; ChartContainerOpen=0",
+        "limit": "Source pattern counts only; not full guideline compliance or runtime acceptance."
+      },
+      {
+        "command": "Parse immutable prior JSON; compare current SHA256; count four directly cited presentation components and ChartCard openings",
+        "exitCode": 0,
+        "output": "PRIOR ITEM=audit-page-072; PRIOR SHA256=CURRENT SHA256=A02E352C4237FB6D68A97836D20B1AC04167E5026B3B4E48057E560D420152C9; PowerHistoryChart LINES=146 ChartCardOpen=1; BatterySocChart LINES=97 ChartCardOpen=1; SolarChargeAdviceStrip LINES=60 ChartCardOpen=0; BatteryEvidenceBrief LINES=57 ChartCardOpen=0"
+      },
+      {
+        "command": "PowerShell ConvertFrom-Json on owned attempt-2 report; assert mandatory fields, item/page/exact route, current page SHA256, issue schemas and citation line bounds",
+        "exitCode": 0,
+        "output": "VALID JSON; mandatory fields=19; identity/route/hash confirmed; issue schemas/citation bounds checked; SOURCE SHA256=A02E352C4237FB6D68A97836D20B1AC04167E5026B3B4E48057E560D420152C9",
+        "limit": "Report/source validation only, not TypeScript, runtime, route acceptance or visual QA."
+      },
+      {
+        "command": "bash .github\\skills\\audit-violations\\audit.sh web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+        "exitCode": null,
+        "output": "NOT RUN: inspected script unconditionally runs project TypeScript, prohibited by this assignment. Scoped read-only counts substituted. Full lint/build/typecheck, installs, Git and production mutations NOT RUN."
+      }
+    ],
+    "sharedChangeAssessment": "None demonstrated. Existing ChartTooltip formatter props, canonical palette exports, precise range return values, DataState/source-review composition and formatting preference hooks can support cited page/dependency corrections. No new shared API, variants or component proposed; requiredSharedChanges therefore empty.",
+    "filesOwned": ["docs\\frontend-audits\\audit-page-072-attempt-2.json", ".agent-status\\audit-page-072-attempt-2.txt"]
+  },
+  "filesRead": [
+    "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\audit-page-072-attempt1-preserved.json",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+    "web\\src\\features\\battery\\components\\power-flow\\index.ts",
+    "web\\src\\features\\battery\\components\\power-flow\\constants.ts",
+    "web\\src\\features\\battery\\components\\power-flow\\helpers.ts",
+    "web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx",
+    "web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx",
+    "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\ChartTooltip.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx"
+  ]
+}
