@@ -1,0 +1,585 @@
+{
+  "item": "audit-page-113",
+  "page": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+  "routes": ["/driving-dynamics"],
+  "purpose": "Ride-first review of recorded trip outcome and sampled motor evidence, followed by independently sourced current vehicle signals and wider coaching/date-range context.",
+  "primaryGoal": "Select a recorded or open drive, understand its totals and sampled powertrain measurements without mistaking current parked readings, heuristic coaching, or a loaded subset for selected-trip evidence.",
+  "dataSources": [
+    {
+      "hook": "useDrives (two independent queries)",
+      "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+      "line": 144,
+      "endpoint": "/drives?vehicle_id=...&start=...&end=...&limit=1000; /drives?vehicle_id=...&limit=5",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:110-138",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "behavior": "Both poll every 30 seconds; range query forwards inclusive startInstant/exclusive endInstantExclusive. Latest query contributes only open drives. AbortSignal is forwarded, arrays normalized, vehicle selection enables fetching. Query keys include vehicle/bounds/limit. This is a loaded subset, not a full-range aggregate."
+    },
+    {
+      "hook": "useMotorHistory through useMotorEvidence and useMotorStats",
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\useMotorEvidence.ts",
+      "line": 14,
+      "endpoint": "/motor?vehicle_id=...&limit=200&start=...&end=...",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts:377-411",
+      "routeEvidence": "internal\\api\\router.go:4104-4105",
+      "behavior": "Shared key includes vehicle/limit/start/end. Requires selected vehicle and valid selected-drive window. Completed rides stop polling; open rides poll every 30 seconds via page override. Window end is actual completion or now plus one second. Raw snapshot fields are consumed unchanged; power_kw/regen_kw are present in current frontend source, so no SI-wire compliance is inferred from naming.",
+      "consumers": ["PowertrainSummary", "MotorSamplesBrief", "MotorEfficiencyInsights", "MotorHistoryCharts", "DrivingTips"]
+    },
+    {
+      "hook": "useMotorLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 368,
+      "endpoint": "/motor/latest?vehicle_id=...",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "routeEvidence": "internal\\api\\router.go:4104-4106",
+      "behavior": "Vehicle-gated 5-second polling, ['motor-latest', vehicleId], AbortSignal forwarded. Shared by live status, speed/gear, interpretation and warnings. Motor SSE fields invalidate this key; current readings never backfill ride history."
+    },
+    {
+      "hook": "useDriveDynamicsLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 425,
+      "endpoint": "/drive-dynamics/latest?vehicle_id=...",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "routeEvidence": "internal\\api\\router.go:4110-4112",
+      "behavior": "Vehicle-gated 5-second polling, ['drive-dynamics-latest', vehicleId], AbortSignal forwarded. Acceleration and pedal SSE fields invalidate key. G-force source has no observation timestamp; UI correctly does not invent one."
+    },
+    {
+      "hook": "useVehicleState",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 260,
+      "endpoint": "/vehicles/{vehicleID}/state (with shared as-of composition)",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "routeEvidence": "internal\\api\\router.go:3327-3333",
+      "behavior": "AutopilotSection requests 5-second polling and accepts current speed only when isVehicleStateFieldCurrent verifies it and it is finite. Verified zero is preserved. Underlying live-state backend behavior and as-of runtime integration were not exercised."
+    },
+    {
+      "hook": "useSignalObservations",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 481,
+      "endpoint": "/signals/observations?vehicle_id=...&field=CruiseSetSpeed&limit=1; same for CruiseFollowDistance",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts:481-507",
+      "routeEvidence": "internal\\api\\router.go:4883",
+      "behavior": "10-second polling; translates caller signal_name to wire field, unwraps and adapts envelope; AbortSignal forwarded. Page SSE invalidates vehicle prefix. Set speed uses SI display conversion; follow distance is enum suffix/bar setting, not physical distance. Continuous freshness of independent latest historical observations is explicitly not established."
+    },
+    {
+      "hook": "useDrivingCoach",
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx",
+      "line": 52,
+      "endpoint": "/analytics/driving-coach?vehicle_id=...&days=30",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:330-337",
+      "routeEvidence": "internal\\api\\router.go:3894",
+      "behavior": "Vehicle-gated 30-day model, 5-minute polling/stale time, AbortSignal forwarded. Independent of selected ride and workspace date range. Frontend fields efficiency_wh_km and patterns are existing source contracts; backend algorithm, units and completeness were not independently inspected."
+    },
+    {
+      "hook": "Workspace/preferences/URL and SSE dependencies",
+      "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+      "line": 94,
+      "endpoint": "No additional endpoint inferred from hook names",
+      "owner": "Existing useSelectedVehicle, useRangeState, useUrlString, useUnits, useTimezone and useSignalQueryInvalidation owners",
+      "behavior": "Header owns vehicle and date scope. Range persistence key driving-dynamics.range; selected business drive uses URL drive. Route is range-enabled at web\\src\\lib\\workspaceScope.ts:42. Display converters are memoized by distance/speed/temperature preferences. Signal arrays and bindings are retained at page lines 58-113."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 5,
+      "classification": "reuse",
+      "props": ["PageContainer props", "title", "subtitle", "query", "busy", "className", "children"],
+      "states": ["inherits PageContainer behavior; page passes range query only"],
+      "usedBy": ["DrivingDynamicsPage"],
+      "dependsOn": ["PageContainer", "existing shell-owned header scope"]
+    },
+    {
+      "name": "CardGrid / DynamicsPlacement",
+      "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "line": 8,
+      "classification": "reuse",
+      "props": ["items: readonly {id,size,content}[]", "label", "sizes full/half/third", "DynamicsPlacement children"],
+      "states": ["container-measured placement", "single-column baseline", "preserve stable item IDs"],
+      "usedBy": ["trip cards", "live cards", "MotorHistoryCharts"],
+      "dependsOn": ["Grid", "containerPolicy", "packCardRows", "CardPlacementContext", "useContainerWidth", "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\DynamicsPlacement.tsx:7"]
+    },
+    {
+      "name": "LayoutCard / GlassPanel / Typography / Badge / Select",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "line": 8,
+      "classification": "reuse",
+      "props": ["title", "description", "actions", "children", "footer", "size", "Badge semantic variants", "Select id/label/options/value/onChange/disabled/size", "Text as/variant/color/weight"],
+      "states": ["localized titles", "description help", "unknown/neutral vs danger/success", "disabled empty selector"],
+      "usedBy": ["DynamicsTripToolbar", "RideOverview", "PowertrainSummary", "live panels", "coaching"],
+      "dependsOn": ["existing UI category exports", "CardPlacementContext", "canonical theme/text tokens"]
+    },
+    {
+      "name": "ChartCard / ChartContainer / EmbeddedChart",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "line": 7,
+      "classification": "reuse; caller adoption needed",
+      "props": ["title/subtitle", "ariaLabel/ariaDescription", "data/dataColumns", "exportData/exportable/exportFilename", "chartKey", "toolbar", "height/mobileHeight/size/fluid", "loading/error/empty/onRetry", "fullscreen opt-in"],
+      "states": ["retained-series rendering", "loading", "fatal error/retry", "empty", "hidden-series persistence", "image export", "CSV only with exportData"],
+      "usedBy": ["three motor-history charts", "three date-range charts", "weekly coach trend"],
+      "dependsOn": ["web\\src\\components\\charts\\EmbeddedChart.tsx:6-38", "web\\src\\components\\charts\\ChartContainer.tsx:79-186", "ChartLegend", "ChartTooltip", "existing palette/hidden-series owners"]
+    },
+    {
+      "name": "OperationalBrief / NestedDrivingBrief / DrivingSummaryBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 43,
+      "classification": "reuse with existing domain adapters",
+      "props": ["metrics with rawValue/valueState", "title/eyebrow/description", "scope/provenance/freshness", "statusLabel/statusTone", "compact/loading", "actions/testId", "adapter period/preferences/retained/unavailable/onRetry"],
+      "states": ["missing/invalid distinct from numeric zero", "loading", "retained", "unavailable", "metric details drawer inherited"],
+      "usedBy": ["ride totals", "motor sample brief", "cruise", "speed", "G-force", "live interpretation", "coach consumption"],
+      "dependsOn": ["useOperationalMetrics", "StatMetric/StatPeriod", "existing metric formatter/preferences", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx"]
+    },
+    {
+      "name": "LinearGauge / BipolarBar / SignedMotorReading",
+      "owner": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\SignedMotorReading.tsx",
+      "line": 4,
+      "classification": "reuse; do not duplicate signed geometry",
+      "props": ["nullable value", "min/max", "label/unit", "positiveColor/negativeColor", "positiveLabel/negativeLabel", "gauge tone/size/decimals", "temperatureGaugeRange converter"],
+      "states": ["unknown", "signed regen/drive and reverse/forward", "thermal bands", "partial source"],
+      "usedBy": ["LiveMotorStatus", "PedalUsage", "coach score"],
+      "dependsOn": ["canonical charts barrel", "display-only converters", "source thresholds"]
+    },
+    {
+      "name": "QueryError / Skeleton / EmptyState / StaleRefreshWarning / FadeIn",
+      "owner": "Existing @/components/feedback and @/components/motion category owners",
+      "classification": "reuse",
+      "props": ["error/onRetry/resourceName", "className/rounded", "message/action", "state/label", "children/delay/className"],
+      "states": ["initial loading", "independent fatal error", "retained refresh failure", "empty/unavailable", "reduced-motion entry"],
+      "usedBy": ["page selection sources", "every independent history/live/coach presentation"],
+      "dependsOn": ["useDataState", "web\\src\\components\\motion\\FadeIn.tsx:23-34", "useMotionPreference"]
+    },
+    {
+      "name": "Domain presentation ownership",
+      "owner": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\index.ts",
+      "line": 1,
+      "classification": "local existing owners",
+      "props": ["vehicleId", "historyQuery", "selectedDriveId/onSelectDrive", "drive", "filteredDrives", "temperature converter/tempUnit", "distance/speed converter and units", "showPerDriveScores=false"],
+      "states": ["selected-trip facts and samples separate from current signals and independent coaching"],
+      "usedBy": ["DrivingDynamicsPage imports at lines 22-48"],
+      "dependsOn": ["legacy-named driving-dynamics barrel still owns AutopilotSection/MotorEfficiencyInsights/DrivingCoachSection/DriveAnalyticsSection/GrokDynamicsBriefing", "pickDynamicsDrive", "useMotorEvidence", "useMotorStats", "helpers", "grokDynamics"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\useMotorEvidence.ts",
+      "line": 14,
+      "rule": "MDC-002 / mission 33",
+      "detail": "useMotorEvidence and useMotorStats both set the same limit/poll policy and derive computeMotorStats; only the former exposes the shared trust contract. These are not proven duplicate network requests because their keys match.",
+      "fix": "Use one source/trust adapter for this page's motor-history consumers, preserving query key, bounds, cancellation, sample cap and polling.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+      "line": 208,
+      "rule": "MDC-026",
+      "detail": "Page-level selection errors coexist with independent live warnings and consumer-specific retries. This is legitimate source ownership, not a reason to replace all panels with a single page error.",
+      "fix": "Preserve per-source recovery; only deduplicate identical visible notices after actual mounted review.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "DrivingDynamicsPage.tsx:193 uses min-w-0 and stepped spacing; four top-level groups stay mounted.",
+      "CardGrid.tsx:26-36 measures allocated container, packs full/half/third items and delegates actual grid to Grid.",
+      "RideOverview.tsx:45 stacks trip metadata until @3xl; addresses break words and details link has min-h-11.",
+      "LiveMotorStatus.tsx:76 and PedalUsage.tsx:43 reflow by container width; DrivingTips.tsx:46 uses container queries.",
+      "DrivingCoachSection.tsx:123/206 and DriveAnalyticsSection.tsx:145 still use viewport breakpoints; motor charts explicitly retain 280px height."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx",
+        "line": 123,
+        "rule": "MDC-031 / MDC-043",
+        "detail": "Coach and analytics grids use viewport lg/xl while neighboring cards use allocated-container geometry. Narrow shell allocations on a wide viewport may diverge; no clipping is claimed without a viewport run.",
+        "fix": "Adopt existing Grid/CardGrid container policy where equivalent; preserve all six mounted coaching surfaces and three range charts, test narrow allocations and all ten widths.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560, RTL, long labels and 200% text; no browser used."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Page.tsx:194 trip section has localized aria-label; evidence/live/context sections use actual heading IDs at 237/266/327.",
+      "DynamicsTripToolbar.tsx:50-59 uses labeled shared Select with explicit dynamics-drive ID and disabled empty state.",
+      "MotorHistoryCharts.tsx:68/110/148 supplies chart aria labels and persistent series identities.",
+      "FadeIn.tsx:24-34 uses existing motion preference and initial=false when reduced.",
+      "Domain decorative icons generally use aria-hidden; live skeleton groups use role=status/aria-busy."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\MotorHistoryCharts.tsx",
+        "line": 64,
+        "rule": "MDC-034 / MDC-040 / MDC-041",
+        "detail": "All three history charts opt out of data tables with density comments, despite a 200-sample cap and existing shared data/dataColumns API. Named SVG/image exports are not equivalent nonvisual/forced-color access to all values. Weekly trend also opts out at DrivingCoachSection.tsx:214.",
+        "fix": "Pass complete numeric plotted rows and localized columns into the existing shared chart frame, preserving source units, nulls, all series and export scope; validate table, forced-colors and screen-reader behavior.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-dynamics\\GrokDynamicsBriefing.tsx",
+        "line": 195,
+        "rule": "MDC-020 / MDC-040",
+        "detail": "Physics cockpit link has fixed text color and no explicit 44px target or visible focus treatment in this caller. Inherited focus/touch behavior was not inspected or tested.",
+        "fix": "Retain native Link navigation and localized name; compose canonical link-button/focus tokens and adequate target spacing rather than inventing a control.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Keyboard, focus order/restoration, actual contrast, screen-reader output, forced colors and effective reduced-motion behavior NOTRUN."
+  },
+  "states": {
+    "loading": "Range query shows page busy and local skeleton only without data (page:191/202-205); latest-source error is independent. Motor/live consumers have local skeleton/brief loading states; coach has a small skeleton. No global data gate removes all sections.",
+    "empty": "Trip selector disabled with no options; RideOverview remains with EmptyState. Missing sample metrics remain unknown; histories/tips/live sources have per-panel empty states and vehicle-gated retry. No vehicle uses workspace selection, not a competing local picker.",
+    "error": "Range/latest refetch separately. useMotorEvidence exposes fatal vs refresh error; live motor/pedals/G-force offer local recovery; state/cruise/follow fatal errors are separately recoverable through LiveSourceWarnings. Coaching retains independent fatal/retry owner.",
+    "staleOffline": "Page and source warnings use shared DataState; retained history/live/coach payloads are intended to remain. No dedicated offline control is authored in page; actual offline DataState presentation is unverified.",
+    "partial": "Missing G-force axis keeps combined magnitude unknown; missing both torque axles is unknown, one reported axle contributes existing partial sum; AWD interpretation share requires both axles. Cruise and follow observations remain independently scoped and not continuously current by assumption.",
+    "successDisabled": "Open-drive badge, recorded-trip badge, semantic brake/gear states, valid source metric values and disabled empty drive Select are present.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-dynamics\\MotorEfficiencyInsights.tsx",
+        "line": 40,
+        "rule": "MDC-026",
+        "detail": "This selected-history consumer still uses useMotorStats's isLoading/isError/raw error instead of exposing fatal/refresh state and a stale warning. Existing measurements render when present, but refresh failure lacks local trust metadata.",
+        "fix": "Consume existing useMotorEvidence/useDataState semantics while retaining all three insight surfaces, calculations, text and per-source retry.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx",
+        "line": 136,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Drives analyzed falls back to numeric 0 when coachData is absent; this caption can imply a measured zero during loading/error/unavailable. The score itself correctly has a missing-state guard.",
+        "fix": "Distinguish unknown count from real returned zero in caption and period reason; preserve the source count when known.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+        "line": 54,
+        "rule": "MDC-026",
+        "detail": "Adapter defaults status to Returned evidence whenever no loading/retained/unavailable prop is supplied, even for missing metrics. RideOverview guards its source; other callers need an explicit source-state decision rather than a blanket successful label.",
+        "fix": "Keep existing adapter and OperationalBrief, but supply source-derived availability/partial status in each affected caller; do not classify missing measurements as error or zero.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx",
+      "line": 157,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Style strip and legend explicitly use bg-neon-green/bg-neon-amber/bg-red-500; fixed emerald/amber/red text at 171-173 and saturated green weekly stroke at 227 add parallel color noise.",
+      "fix": "Replace default neon strip/legend and fixed text with restrained semantic severity/text tokens and existing palette; retain categories, counts, proportions, threshold meanings and explicit saved chart choices.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\MotorHistoryCharts.tsx",
+      "line": 83,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Hardcoded cyan/green area gradients and blue/purple/cyan strokes at 83-92/129-130/167-168 bypass the current user palette; default saturated multihue traces are candidates for quieter presentation.",
+      "fix": "Use existing chart palette/tokens, reduced fill emphasis and consistent semantic series differentiation; preserve all six series, labels, null gaps, axes, legend keys and user palette choices.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics\\DriveAnalyticsSection.tsx",
+      "line": 192,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Purple scatter, yellow reference stroke/text, blue/red filled profile and arbitrary reference fontSize 11 introduce hardcoded saturated decoration (also lines 165,196-198,232-242).",
+      "fix": "Reuse palette/reference/text tokens and canonical chart typography; reduce fill/reference emphasis without losing mean reference, dual axes, numeric data or series identity.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\LiveMotorStatus.tsx",
+      "line": 30,
+      "rule": "MDC-010 / MDC-025",
+      "detail": "Thermal bands and signed bar colors hardcode rose/amber/green/blue/purple at 30-32 and 105-113. Threshold semantics are meaningful, but palette must not become an independent feature system.",
+      "fix": "Map existing thermal severity and signed-direction meanings onto shared semantic/chart tokens; preserve 80/120 C thresholds, negative/positive scales and text labels.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\SpeedGearPanel.tsx",
+      "line": 69,
+      "rule": "MDC-012 / MDC-013",
+      "detail": "Gear uses local text-5xl emphasis and fixed emerald/red/yellow colors (17-19) alongside an already semantic badge, risking oversized saturated repetition and theme contrast mismatch.",
+      "fix": "Use role typography and shared semantic tokens, retaining the actual gear symbol and semantic badge; verify hierarchy in both themes.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics\\GrokDynamicsBriefing.tsx",
+      "line": 197,
+      "rule": "MDC-012",
+      "detail": "Physics link is fixed text-cyan-300; informational finding icons also use fixed sky-300. These are not proven contrast failures, but bypass theme-aware foreground policy.",
+      "fix": "Use canonical theme-aware action/information foreground tokens, preserving link destination and findings.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\DynamicsTripToolbar.tsx",
+      "line": 3,
+      "rule": "MDC-002 component-first imports",
+      "detail": "Many dependencies directly import layout-reference/stat-reference paths while the page itself correctly uses category barrels. These point to existing owners, not necessarily competing implementations, but bypass production import contract.",
+      "fix": "Adopt @/components/layout and @/components/data-display category exports for presentation values/types wherever already available; do not build replacement wrappers.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "line": 3,
+      "rule": "MDC-002 concrete internal imports",
+      "detail": "Shared LayoutCard imports Button/Card/Heading/Text/Tooltip from the UI category barrel, contrary to the concrete-internal-import requirement. No actual chunk cycle was tested or asserted.",
+      "fix": "Dedicated shared owner should replace this barrel import with concrete existing UI module imports, retaining all props, IDs, help, focus behavior and presentation.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics\\DriveAnalyticsSection.tsx",
+      "line": 176,
+      "rule": "MDC-034 preservation / truthful export",
+      "detail": "Scatter comment claims CSV availability, but this chart passes neither exportData nor data/dataColumns. Current ChartContainer exposes CSV only with exportData; exportable alone offers image capabilities.",
+      "fix": "Supply existing shared exportData with all loaded scatter points and accurate column/unit labels and nonvisual data, or explicitly document the actual image-only contract without claiming CSV. Prefer retaining/adding genuine data access through current shared APIs.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+      "line": 147,
+      "rule": "MDC-032 / MDC-045 completeness",
+      "detail": "Range fetch is capped at 1000 and latest at 5. UI explains loaded trips and current drive, but selector cannot expose older rides beyond cap; server totals/pagination/completeness were not inspected.",
+      "fix": "Preserve explicit subset semantics and limits during presentation work. If complete range selection becomes a requirement, assign separate integration/server-pagination work rather than relabeling these results complete.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\MotorHistoryCharts.tsx",
+      "line": 32,
+      "rule": "MDC-045 evidence boundary",
+      "detail": "Current source accesses power_kw/regen_kw; related consumers multiply by 1000 for operational metrics. This audit does not establish whether backend bytes carry SI or those named display units, and must not silently reinterpret or rename during modernization.",
+      "fix": "Preserve current source/wire/cache values and calculations; any canonical-unit correction belongs to a separately verified end-to-end SI contract, not this page source audit.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Already substantially componentized and ride/live-scoped. Prioritize nonvisual chart data, truthful scatter export, absent-count trust, and remaining neon/hardcoded palettes; no rewrite or content deletion is justified.",
+    "order": ["source trust and export parity", "shared-import correction", "theme-aware palette/typography adoption", "allocated-width and accessibility runtime validation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "LayoutCard concrete internal UI imports",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "line": 3,
+      "rule": "MDC-002",
+      "detail": "Observed shared barrel-import policy mismatch; no new component or public API required.",
+      "fix": "Shared owner replaces UI barrel import with concrete modules and retains existing render contract.",
+      "owner": "shared",
+      "confidence": "high",
+      "props": ["title", "description", "actions", "children", "footer", "size"],
+      "variants": ["existing CardSize placement semantics; no new variant"],
+      "states": ["localized heading identity", "description tooltip/focus/Escape", "actions", "footer", "container placement"],
+      "usedBy": ["DrivingDynamicsPage ride/live panels and toolbar", "MotorHistoryCharts through ChartCard"],
+      "dependsOn": ["existing Button/Card/Typography/Tooltip concrete modules", "CardPlacementContext", "shared-owner exclusive assignment and focused validation"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+      "line": 22,
+      "rule": "MDC-002",
+      "detail": "Page intentionally combines driving-dynamics and driving-dynamics-modernization barrels. Both indexes export overlapping panel names (old index:1-15; modernization index:1-12), but mounted page resolves modern panels explicitly and uses only five unique old-domain panels. Legacy implementations themselves were not audited.",
+      "fix": "Keep exact mounted identities; consolidate exports/adoption only under separately assigned dependency ownership, never revert to old panels or delete unaudited callers.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\SignedMotorReading.tsx",
+      "line": 10,
+      "rule": "MDC-002",
+      "detail": "SignedMotorReading is a thin typed BipolarBar adapter, not a competing geometry engine. DynamicsPlacement likewise delegates placement to canonical context.",
+      "fix": "Reuse these adapters; do not introduce alternate gauge/grid engines.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "35596927220c153f3f7d8f6378b71edd1036e9ce02c7feaffde05f7c8b38bfe9",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 353,
+    "sectionCount": 4,
+    "sectionNames": ["Trip review", "Inside this ride", "Vehicle now", "Beyond this ride"],
+    "sections": [
+      {
+        "name": "Trip review",
+        "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+        "line": 194,
+        "content": ["Date-bound business drive selector", "independent range/latest loading/error/stale notices", "recorded ride totals", "powertrain summary"],
+        "preserve": ["origin/destination", "start/end timestamps", "open/recorded badge", "distance/duration/energy used/recovered", "average/peak speed", "battery start/end", "trip details navigation", "sampled peak power/regen/torque/hottest motor and explanatory limits"]
+      },
+      {
+        "name": "Inside this ride",
+        "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+        "line": 237,
+        "content": ["MotorSamplesBrief", "three MotorEfficiencyInsights panels", "three MotorHistoryCharts", "DrivingTips"],
+        "preserve": ["sample count", "average torque", "peak power", "peak regeneration", "average power", "average hotter-motor temperature", "max torque and sample share above 200 Nm", "max temperature", "power/regen time traces", "front/rear torque traces", "front/rear RPM traces", "four conditional guidance explanations", "200-sample/selected-window limitations"]
+      },
+      {
+        "name": "Vehicle now",
+        "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+        "line": 266,
+        "content": ["LiveSourceWarnings", "LiveMotorStatus", "PedalUsage", "GrokDynamicsBriefing", "SpeedGearPanel", "GForcePanel", "AutopilotSection"],
+        "preserve": ["latest-source disclaimer", "thermal gauge and band thresholds", "gear", "signed axle-sum torque and front/rear RPM", "pedal percent and brake boolean unknown/inactive/active", "live power/regen/torque/combined g", "conditional AWD share and thermal context", "all interpretation findings and honest non-safety/non-performance explanations", "range-average and maximum loaded-trip speed", "signed acceleration axes and both-axis magnitude guard", "trusted current speed", "independent cruise speed and follow enum setting"]
+      },
+      {
+        "name": "Beyond this ride",
+        "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+        "line": 327,
+        "content": ["DrivingCoachSection (six visible surfaces)", "DriveAnalyticsSection (three charts)"],
+        "preserve": ["30-day scope explanation", "efficiency-comparison score and analyzed count", "style breakdown categories/proportions/counts", "average and best consumption", "weekly score trend", "five pattern percentages", "recommendation impact badges and source text", "speed bucket distribution", "average-power-versus-distance scatter with mean reference", "latest-20-loaded-trip profile with separate power/energy axes"]
+      }
+    ],
+    "counts": {
+      "pageTopLevelSections": 4,
+      "pageCardGrids": 3,
+      "pageGridItems": 7,
+      "pageSectionTitles": 4,
+      "pageGlassPanels": 0,
+      "pageChartContainers": 0,
+      "motorInsightSurfaces": 3,
+      "motorHistoryCharts": 3,
+      "mountedCoachSurfaces": 6,
+      "rangeAnalyticsCharts": 3,
+      "coachTrendCharts": 1,
+      "chartFramesAcrossMountedDependencies": 7,
+      "countMethod": "Source JSX inventory only; trend conditional on >1 row. Hidden coach per-drive table is intentionally not mounted because page passes showPerDriveScores=false."
+    },
+    "actions": [
+      {"name": "Select drive", "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx", "line": 200, "behavior": "writes URL drive; falls back to open drive then newest available"},
+      {"name": "Retry range and latest selection sources", "file": "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx", "line": 208, "behavior": "refetch only relevant query"},
+      {"name": "Open selected trip details", "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\RideOverview.tsx", "line": 59, "behavior": "native Link /drives/{id}"},
+      {"name": "Retry motor history", "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\PowertrainSummary.tsx", "line": 51, "behavior": "same-key source retry through summary, sample brief, history, tips and insights; empty retries vehicle/window-gated"},
+      {"name": "Retry independent live sources", "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\LiveSourceWarnings.tsx", "line": 35, "behavior": "vehicle-state/cruise/follow retries independent; motor/pedals/G-force own panel retries; interpretation retries motor+dynamics; cruise empty failure retries all three"},
+      {"name": "Retry vehicle coaching", "file": "web\\src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx", "line": 119, "behavior": "refetch independent 30-day model"},
+      {"name": "Toggle history/profile series", "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\MotorHistoryCharts.tsx", "line": 29, "behavior": "motor-power-history/motor-torque-history/motor-rpm-history and driving-dynamics-power-profile stable keys; preserve all series"},
+      {"name": "Chart export", "file": "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\MotorHistoryCharts.tsx", "line": 76, "behavior": "existing shared PNG/SVG/copy-image export; motor-power/torque-history/motor-rpm/speed-distribution/acceleration-patterns/power-profile filenames; CSV not currently provided without exportData"},
+      {"name": "Open physics cockpit", "file": "web\\src\\features\\driving\\components\\driving-dynamics\\GrokDynamicsBriefing.tsx", "line": 195, "behavior": "native Link /physics-cockpit when interpretation has signals"},
+      {"name": "Inspect operational metric details and full chart descriptions", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 154, "behavior": "shared inherited details interaction; LayoutCard description help remains shared owner"}
+    ],
+    "dataBehavior": [
+      "Never fill selected-trip sample gaps with parked/current signals.",
+      "Merge only open latest drives into bounded range, deduplicate by id with range payload precedence, sort descending start.",
+      "Honor requested URL drive if available, else first open drive, else newest start; preserve no-selection null.",
+      "Compute motor-history window only when drive start and valid end exist; exclusive end is completion/now plus 1 second; missing window disables query.",
+      "Preserve vehicle/date/timezone preferences, URL drive, range persistence, precision/locale, display-only distance/speed/temperature conversion and raw caches.",
+      "Preserve all MOTOR/DRIVE_DYNAMICS/CRUISE SSE bindings and polling fallback; do not infer query receipt time proves source freshness.",
+      "Motor statistics filter nonfinite values; sample averages are arithmetic, not time-weighted; torque uses reported axle sum, temperature uses hottest reported motor per sample.",
+      "History limit 200 and range limit 1000 remain explicit subset boundaries; latest open-drive merge can include out-of-range current drive.",
+      "Speed buckets use display-unit 0/30/60/90/120 thresholds. Scatter uses average motor power vs distance; profile takes latest 20 loaded rides, not peak acceleration.",
+      "Live torque preserves signs and existing axle aggregation; AWD share needs both axles, combined G needs both axes, brake false/zero readings are known values rather than missing.",
+      "Coach model retains fixed last-30-day scope, heuristic caveats and server source text; per-drive-score table is already intentionally omitted for this page, not a new deletion.",
+      "No page mutation, annotation creation, fullscreen opt-in, additional route, fake data or backend capability was observed or introduced."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 source-only audit",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewports": "UNVERIFIED",
+    "backendBehavior": "Route existence only. Handler algorithms, server filtering correctness, actual payload units, status freshness, cache/SSE runtime, auth, native rendering and mounted reachability were not exercised.",
+    "noiseAssessment": "Scoped page regex found zero neon/glow/pure-white occurrences. Mounted dependency inspection found explicit neon coaching surfaces and fixed saturated colors cited above. No explicit glow or pure-white decoration was found in the inspected mounted feature presentations; this is not global CSS or rendered-theme proof.",
+    "validation": [
+      {
+        "command": "Get-FileHash web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx).Count",
+        "exitCode": 0,
+        "output": "SHA256: 35596927220C153F3F7D8F6378B71EDD1036E9CE02C7FEAFFDE05F7C8B38BFE9; LINES: 353"
+      },
+      {
+        "command": "PowerShell [regex]::Matches over current page text: staticInline / rawControls / directLibraries / oldApi / neonGlowWhite",
+        "exitCode": 0,
+        "output": "staticInline: 0\nrawControls: 0\ndirectLibraries: 0\noldApi: 0\nneonGlowWhite: 0",
+        "scope": "Assigned page only; counts are matched patterns, not a clean-quality certificate."
+      },
+      {
+        "command": "rg scoped to inspected mounted dependencies for neon colors, hex palettes, text-5xl, reference imports and chart table exclusions",
+        "exitCode": 0,
+        "output": "44 matching source lines across six mounted dependency files; exact cited lines recorded in issues.",
+        "scope": "Source search, not an executed visual/contrast test."
+      },
+      {
+        "command": "bash .github\\skills\\audit-violations\\audit.sh <assigned page>",
+        "exitCode": null,
+        "output": "NOTRUN: inspected script invokes project-wide npx tsc --noEmit; this atomic audit forbids heavy/full-repository validation. Scoped equivalent source patterns were inspected directly."
+      },
+      {
+        "command": "npx tsc --noEmit; full lint/build/tests; browser QA",
+        "exitCode": null,
+        "output": "NOTRUN by assignment. No source changes; no runtime/visual acceptance claimed."
+      }
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-113.json", ".agent-status\\audit-page-113.txt"],
+    "sourceEdits": false,
+    "gitUsed": false,
+    "assumptions": ["Assigned route array treated as authoritative route identity; route declaration itself not globally re-enumerated.", "No independent second production consumer was inspected to justify any new shared API; existing shared chart/stats/layout APIs suffice."]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DrivingDynamicsPage.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\index.ts",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\index.ts",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\pickDynamicsDrive.ts",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\DynamicsPlacement.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\DynamicsTripToolbar.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\RideOverview.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\PowertrainSummary.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\MotorHistoryCharts.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\DrivingTips.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\LiveMotorStatus.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\PedalUsage.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\GForcePanel.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\SpeedGearPanel.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\LiveSourceWarnings.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\SignedMotorReading.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics-modernization\\useMotorEvidence.ts",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\AutopilotSection.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\MotorEfficiencyInsights.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\DriveAnalyticsSection.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\GrokDynamicsBriefing.tsx",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\grokDynamics.ts",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\helpers.ts",
+    "web\\src\\features\\driving\\components\\driving-dynamics\\useMotorStats.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\MotorSamplesBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "internal\\api\\router.go",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ]
+}
