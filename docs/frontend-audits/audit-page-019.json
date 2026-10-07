@@ -1,0 +1,453 @@
+{
+  "item": "audit-page-019",
+  "page": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+  "routes": ["/redis-signals"],
+  "purpose": "Operator inspection of a selected vehicle's Redis L2 signal cache, L1/L2 diagnostics, signal category mix and explicitly confirmed cache purges.",
+  "primaryGoal": "Inspect actual raw cached signal values and diagnose missing telemetry without confusing Redis L2 purges with cluster-wide L1 invalidation.",
+  "dataSources": [
+    {
+      "name": "Selected vehicle and fleet labels",
+      "hook": "useSelectedVehicle -> useVehicles",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "endpoint": "GET /api/v1/vehicles",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:191-195,228-235,354-357", "web\\src\\hooks\\useSelectedVehicle.ts:48-75,131-135,171-179", "web\\src\\api\\hooks\\useVehicles.ts:73-80", "internal\\api\\router.go:3320"],
+      "behavior": "URL path/query selection precedes persisted store and first vehicle fallback. Selection updates store and vehicle_id URL without discarding unrelated parameters. Fleet data is normalized to an array; the selector hook does not expose loading/error state to this page. Read forwards AbortSignal and uses FAST stale time.",
+      "scope": "Local vehicle selection is required here: /redis-signals explicitly disables the shell vehicle picker in workspaceScope.ts:125. This is not a duplicate workspace selector."
+    },
+    {
+      "name": "Raw Redis signals and diagnostic metadata",
+      "hook": "useRedisSignals(selectedVehicleId, autoRefresh)",
+      "owner": "web\\src\\api\\hooks\\useRedisSignals.ts",
+      "endpoint": "GET /api/v1/dev-tools/redis-signals?vehicle_id={id}",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:215-226,304-338", "web\\src\\api\\hooks\\useRedisSignals.ts:43-77", "web\\src\\api\\devtools.ts:35-70", "internal\\api\\router.go:4745,4774", "internal\\api\\devtools\\handler.go:1016-1113"],
+      "behavior": "Query key ['redis-signals', vehicleId]; enabled only for a positive integer; optional 5000 ms polling, off by default; inherits unspecified QueryClient policies. No AbortSignal forwarding. Sorted name/value/type/category rows, name substring search and category filter are derived locally; payload values are not converted. Backend reads Redis L2, optional local L1 snapshot, VIN and newest L2 envelope timestamp. Metadata is supplementary and partially best-effort.",
+      "contractLimits": "Backend omits missing timestamps and VIN, although RedisSignalsMeta declares them required. Newest envelope timestamp is not per-signal freshness and does not prove all fields fresh. Redis decoding/storage units and deployment behavior were not inspected or exercised."
+    },
+    {
+      "name": "Other populated vehicle caches",
+      "hook": "useQuery inside RedisDiagnosticEmptyState",
+      "owner": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+      "endpoint": "GET /api/v1/dev-tools/redis-signals/keys?limit=50",
+      "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:64-68,163-167,297-322", "web\\src\\api\\devtools.ts:57-73", "internal\\api\\router.go:4775", "internal\\api\\devtools\\handler.go:1143-1187"],
+      "behavior": "Mounted only while the selected signal view is empty/fatal. Global key ['redis-signal-keys']; staleTime 30000 ms; no AbortSignal. Excludes the active vehicle and empty raw HSETs; shows up to six buttons from up to fifty returned keys. A key-query failure silently removes this subsection. Button selection uses the same selected vehicle owner."
+    },
+    {
+      "name": "Per-vehicle purge",
+      "hook": "usePurgeRedisSignals",
+      "owner": "web\\src\\api\\hooks\\useRedisSignals.ts",
+      "endpoint": "DELETE /api/v1/dev-tools/redis-signals?vehicle_id={pinnedId}",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:237-255,290-295,588-605,616-658", "web\\src\\api\\hooks\\useRedisSignals.ts:82-86", "web\\src\\api\\devtools.ts:87-91", "internal\\api\\router.go:4781-4782", "internal\\api\\devtools\\handler.go:1201-1235"],
+      "behavior": "requiresLiveMode=true; pins ID/label when dialog opens; explicit danger confirmation; loading disables destructive actions and cancellation. Success/no-op toasts differ; invalidates selected signal and key-list queries. Backend deletes L2 HSET only and does not purge any L1 store."
+    },
+    {
+      "name": "Bounded all-vehicle purge",
+      "hook": "usePurgeAllRedisSignals",
+      "owner": "web\\src\\api\\hooks\\useRedisSignals.ts",
+      "endpoint": "DELETE /api/v1/dev-tools/redis-signals/keys",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:256-278,298-302,606-613,616-658", "web\\src\\api\\hooks\\useRedisSignals.ts:90-94", "web\\src\\api\\devtools.ts:93-97", "internal\\api\\router.go:4781-4783", "internal\\api\\devtools\\handler.go:1247-1278"],
+      "behavior": "requiresLiveMode=true; exact PURGE ALL typed confirmation; backend bounded to 1000 scanned keys; has_more means more keys likely, not an exact remaining count. Partial/success/error toasts preserve purged/limit values. Invalidates all signal and key-list queries. Both purge routes share five requests per minute per IP. No mutation was executed."
+    },
+    {
+      "name": "Coordinate reveal audit",
+      "hook": "MaskedValue auditOnReveal",
+      "owner": "web\\src\\components\\ui\\MaskedValue.tsx",
+      "endpoint": "POST /api/v1/audit/reveal",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:101-104,125-133", "web\\src\\components\\ui\\MaskedValue.tsx:82-94,125-138", "internal\\api\\router.go:3237"],
+      "behavior": "Recognized location values initially masked; reveal audit sends kind and variant, not the raw coordinate. Copy returns underlying value even while masked; default auto-hide is 30 seconds; audit failure is intentionally nonblocking. No reveal/copy action was exercised."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "props": ["title", "subtitle", "contextActions", "dataSources", "children"],
+      "role": "Canonical full-width container and retained-source notice; shell owns navigation.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:393-404", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "web\\src\\components\\layout\\PageContainer.tsx:51-108,227,253"]
+    },
+    {
+      "name": "LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "props": ["title", "description", "actions", "children", "footer", "size"],
+      "role": "Existing Card/Heading-backed surface with associated heading; four panels, not a new bento surface owner.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:421,496,543,581", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-60"]
+    },
+    {
+      "name": "RedisOperationalBrief / redisMetrics / OperationalBrief",
+      "owner": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx",
+      "props": ["data", "loading", "retained", "enabled", "error"],
+      "role": "Existing domain adapter to useOperationalMetrics and shared OperationalBrief; six metrics and L1/L2 timestamp contexts with source/missing-state semantics.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:408-415", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx:11-39", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts:7-36", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts:5-16"],
+      "inspectionLimit": "Shared OperationalBrief and useOperationalMetrics internals were not read; source adapter use is not mounted acceptance."
+    },
+    {
+      "name": "DataTable / useSortToggle",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "props": ["tableId=admin:redis-signals", "data", "filterData", "columns", "enableValueFilters", "mobileColumns", "keyExtractor", "sortKey", "sortDir", "onSort", "pagination.defaultPageSize=50", "virtualized", "rowHeight=48"],
+      "role": "Existing sort, per-column value filters, column layout persistence, density/export toolbar, pagination and virtualized rows. Four columns; category hidden below md. Default CSV/JSON exports serialize matching loaded rows and visible columns, not a new backend export.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:109-178,485-487,469-484", "web\\src\\components\\ui\\DataTable.tsx:240-267,715-725,872-923"],
+      "inspectionLimit": "Shared table source inspected in selected ranges only; all toolbar interactions were not exercised."
+    },
+    {
+      "name": "RedisDiagnosticEmptyState / DiagnosticBanner / DiagnosticMetaList",
+      "owner": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+      "props": ["vehicleId", "meta", "onSelectVehicle", "serverError", "networkError"],
+      "role": "Existing domain owner of missing-cache explanations, docs CTAs, other-vehicle recovery and metadata; uses GlassPanel, Badge, Button, typography and EmptyState.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:348-352,457-462", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:29-68,70-243,246-373"]
+    },
+    {
+      "name": "MaskedValue",
+      "owner": "web\\src\\components\\ui\\MaskedValue.tsx",
+      "props": ["value", "variant=coords", "ariaLabel", "copyable", "auditOnReveal"],
+      "role": "Current privacy/reveal/copy/timer owner; never replace with bespoke reveal state.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:125-133", "web\\src\\components\\ui\\MaskedValue.tsx:57-73,97-138"]
+    },
+    {
+      "name": "ConfirmDialog",
+      "owner": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "props": ["open", "variant=danger", "loading", "title", "message", "confirmLabel", "cancelLabel", "requireTypedConfirmation", "typedConfirmationLabel", "onConfirm", "onCancel"],
+      "role": "Existing Modal-backed confirmation with exact typed gate, reset-on-open, unsilenceable danger actions and loading dismissal protection.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:616-658", "web\\src\\components\\ui\\ConfirmDialog.tsx:93-142,162-205"]
+    },
+    {
+      "name": "Other existing presentation owners",
+      "owner": "@/components/ui, @/components/data-display, @/components/feedback, @/components/motion",
+      "props": ["Badge.variant/size", "Button.variant/disabled/wrapLabel/aria-label", "Input.value/onChange/aria-label", "Select.options/value/onChange/aria-label", "Toggle.label/checked/onChange", "KVList.items", "MetricBar.label/value/max/color/sublabel/fill", "QueryError.error/onRetry/resourceName", "Skeleton.className", "DataFreshnessAuto.query", "FadeIn.delay"],
+      "role": "Reuse existing fields, statuses, definition list, count bars, feedback, freshness and motion; useDateFormat/useNumberFormatting own display locale.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:13-50,363-389,422-441,512-530,563-573", "web\\src\\components\\data-display\\MetricBar.tsx:8-28,43-100"],
+      "inspectionLimit": "MetricBar inspected directly; other primitives identified through actual page usage rather than claiming all internals reviewed."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+      "line": 329,
+      "rule": "MDC-002/MDC-013",
+      "detail": "DiagnosticMetaList/Row recreates the same seven cache fields shown by the page KVList, with unformatted raw counts in the diagnostic copy.",
+      "fix": "Extract a feature-owned typed metadata-to-KVList adapter accepting meta, t, fmtInt and formatDateTime. Preserve all seven fields and the diagnostic banner's placement; do not hide details merely to deduplicate.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "strategy": "Header actions wrap; filters stack below sm; one main column below xl, then two-of-three table span, then three-of-four at 3xl. Side panels stay reachable. Diagnostic metadata changes to two columns at sm. No viewport exercised.",
+    "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:363-389,418-440,492", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:333"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+        "line": 476,
+        "rule": "MDC-023/MDC-043",
+        "detail": "mobileColumns omits category; shared table applies hidden md:table-cell. No mobilePresentation or expandable row is supplied, so per-row category is not reachable in the narrow table even though all categories remain filterable.",
+        "fix": "Retain category in the mobile table or configure the existing DataTable mobilePresentation with name/value/type/category and full detail reachability. Preserve filter/export/persistence behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+        "line": 279,
+        "rule": "MDC-043",
+        "detail": "Diagnostic icon-plus-copy uses flex-1 without min-w-0 and displays raw Redis keys/VINs in Code. Long key/signal/value behavior at 320px or increased text size is not demonstrated.",
+        "fix": "Use min-w-0 and existing wrapping/scroll policy for machine identifiers; verify allocated container widths and long values without clipping or deleting metadata.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "unverified at 320/375/390/430/768/1024/1280/1440/1920/2560 and at 200% text size"
+  },
+  "accessibility": {
+    "existing": "Localized accessible field names; decorative page icons aria-hidden; semantic shared table/fields; associated LayoutCard headings; shared danger confirmation with typed input and loading lock; MetricBar progressbar names and numerical bounds.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+        "line": 294,
+        "rule": "MDC-020/MDC-040",
+        "detail": "Docs CTAs nest a Button inside an anchor, creating invalid nested interactive controls and competing navigation/focus semantics.",
+        "fix": "Keep one native external anchor with target/rel and compose the existing shared button classes; do not wrap a Button in it.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+        "line": 314,
+        "rule": "MDC-040",
+        "detail": "Other-vehicle recovery chips override the shared Button with h-auto and py-1; no 44px minimum target is supplied. Actual composed size/spacing is unmeasured.",
+        "fix": "Preserve chip actions but apply the canonical minimum target or document and test a WCAG spacing exception.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "keyboard": "unverified",
+    "focusAndDialogRestoration": "unverified",
+    "screenReader": "unverified",
+    "contrastAndForcedColors": "unverified",
+    "reducedMotion": "MetricBar source uses useMotionPreference and zero-duration/no-initial animation; page FadeIn and refresh-spin behavior not exercised."
+  },
+  "states": {
+    "initialLoading": "Six-metric brief loading plus five table skeletons and panel-specific diagnostic/category skeletons; actions remain visible.",
+    "noSelection": "Brief disabled state and three selection empty states; refresh/per-vehicle purge disabled, all-vehicle purge remains available.",
+    "successfulEmpty": "Diagnostic banner distinguishes local mode, L1-present/L2-empty, no recent/never-seen telemetry, and generic empty; missing meta falls back to an empty explanation.",
+    "filteredEmpty": "Search no-match empty state; current search/category controls remain reachable to clear manually.",
+    "fatalFailure": "Typed API/network-specific diagnostic banner plus QueryError retries in the two side panels; brief missing/error state.",
+    "refreshFailure": "deriveDataState retains data; brief shows retained measurements, table/metadata/counts continue rendering, PageLayout supplies DataSourceNotice.",
+    "staleOffline": "DataState understands paused queries; no maxAgeMs is passed. Page brief uses isError rather than complete stale/paused status. Source-envelope age is only displayed as L2 last seen, not a field freshness guarantee.",
+    "mutation": "One pinned target; pending disables purge controls and dialog cancel; distinct success/no-op/partial/error toasts. Failed purge keeps dialog context for retry.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+        "line": 163,
+        "rule": "MDC-026",
+        "detail": "Other-cache query errors silently collapse otherKeys to [] and hide the recovery subsection. The outer banner diagnoses the selected signal source, not necessarily this independent key-list failure.",
+        "fix": "Expose independent loading/empty/retained/error state and retry for the other-cache source without replacing the main diagnosis or losing prior keys.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+        "line": 412,
+        "rule": "MDC-026/MDC-046",
+        "detail": "Brief retained flag only tracks isError, while deriveDataState also marks paused retained queries stale. Its adapter can label retained/offline cached measurements Source loaded; freshness context is not passed as a timestamp/status.",
+        "fix": "Extend the existing RedisOperationalBrief adapter to accept the derived trust status/blocked refresh and observed source timestamp; preserve six measurements and PageLayout notice. Keep fetch-success age distinct from newest cached-field age.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "line": 50,
+        "rule": "MDC-026",
+        "detail": "Selector hook discards fleet query status; the page can only show no selection/empty options when the fleet lookup initially fails, with no fleet-specific retry.",
+        "fix": "Extend the existing selector owner to expose optional fleet query/trust state, then distinguish loading, successful no vehicles and failed lookup here; do not add a competing vehicle store or second workspace picker.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+      "line": 137,
+      "rule": "MDC-010/MDC-012",
+      "detail": "All ordinary values receive fixed cyan-300/purple-300/amber-300 text by JavaScript type, creating saturated body content without a theme-aware token. Actual light-theme contrast is unmeasured.",
+      "fix": "Use canonical primary/secondary typography for values; retain type labels/badges as the small semantic cue. If syntax colors remain, source them from the existing theme owner and verify real composed contrast.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+      "line": 69,
+      "rule": "MDC-010/MDC-025/MDC-034",
+      "detail": "Independent five-hex palette and default gradient MetricBars give every category a saturated hue; Climate uses danger although category membership is not failure severity.",
+      "fix": "Reuse current neutral/semantic tokens, choose MetricBar fill=solid and reserve warning/danger for actual unhealthy states. Preserve five named category counts, ordering and proportions.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+      "line": 598,
+      "rule": "MDC-010/MDC-020",
+      "detail": "Two full-width danger buttons permanently emphasize destructive secondary actions alongside ordinary diagnostic content.",
+      "fix": "Use restrained available secondary/outline entry chrome, with explicit destructive labels and shared danger confirmations unchanged. Keep both actions reachable; do not remove the all-vehicle operation.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useRedisSignals.ts",
+      "line": 63,
+      "rule": "MDC-002/MDC-046",
+      "detail": "Signal read query ignores TanStack AbortSignal; getRedisSignals cannot receive request options. Diagnostic key query likewise fetches without cancellation.",
+      "fix": "Forward {signal} through existing typed devtools helpers for both GET queries, preserving keys, enablement, polling and inherited retry/stale policies; no mutation cancellation change required.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+      "line": 64,
+      "rule": "MDC-002/mission-33",
+      "detail": "Presentation component owns useQuery and imports the request helper directly, unlike the page's hook-owned signal and purge data.",
+      "fix": "Move the existing key-list query into useRedisSignals.ts with its unchanged key/limit/stale policy and expose typed source state to the diagnostic component.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+      "line": 319,
+      "rule": "MDC-044",
+      "detail": "Other-cache fallback hardcodes Vehicle ${id}; raw field_count and diagnostic metadata counts bypass locale number formatting.",
+      "fix": "Reuse redis.vehicleFallback translation and useNumberFormatting counts; do not alter VIN/display-name/source identifiers.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\devtools.ts",
+      "line": 40,
+      "rule": "MDC-045/MDC-026",
+      "detail": "Required timestamp/VIN declarations do not reflect backend omitempty tags; backend also ignores RawFieldCount errors and supplies default zero L1 counts when the store is absent. Those diagnostics may represent unknown availability, not measured zero.",
+      "fix": "Align optional types with actual wire omission. Have the integration owner resolve explicit metadata availability/error indicators before presentation treats best-effort fallback zeros as trusted measurements; never infer a new backend capability in a page rewrite.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+      "line": 129,
+      "rule": "MDC-023/MDC-046",
+      "detail": "Coordinate masking protects visible cells, not exports: default DataTable export falls back to raw row.value for MaskedValue (no rendered children). CSV and JSON therefore contain raw coordinates. This is a confirmed source behavior, not a demonstrated runtime disclosure or a mandate to remove export.",
+      "fix": "Preserve existing raw export capability and clarify sensitive loaded-row export scope through existing table controls; validate intentional operator policy and explicit naming before any privacy-policy change. Do not silently redact or delete exports during modernization.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "rationale": "Preserve working destructive-action safeguards and full raw diagnostics; address invalid nested interaction, mobile category loss and independent-source trust gaps before declaring page acceptance. Noise reduction is presentation work, not permission to change queries or SI values.",
+    "order": ["Independent source/trust and cancellation integration", "Nested-link accessibility and full mobile detail reachability", "Token-based restrained category/value presentation", "Centralized runtime, keyboard, themes and viewport QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Redis query/key-list lifecycle integration",
+      "existingOwner": "web\\src\\api\\hooks\\useRedisSignals.ts",
+      "owner": "integration",
+      "props": ["useRedisSignalKeys(limit=50)", "GET helpers accept optional AbortSignal", "existing signal/key query keys and enablement", "retained data, loading, empty, fatal/refresh error, refetch"],
+      "states": ["initial", "loaded", "empty", "retained", "failed", "paused", "cancelled"],
+      "usedBy": ["RedisSignalViewerPage", "RedisDiagnosticEmptyState"],
+      "dependsOn": ["web\\src\\api\\devtools.ts typed GET options", "existing request cancellation", "TanStack Query source state"],
+      "evidence": ["web\\src\\api\\hooks\\useRedisSignals.ts:57-77", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:64-68,163-167"]
+    },
+    {
+      "name": "Feature-owned Redis diagnostic presentation",
+      "existingOwner": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+      "owner": "shared",
+      "props": ["existing diagnostic error union and meta", "other-cache source trust/retry", "onSelectVehicle", "typed metadata items", "single native docs anchor", "localized fallback labels/counts"],
+      "states": ["all existing diagnosis branches", "keys loading/empty/error/retained", "long identifier wrapping", "keyboard/touch reachability"],
+      "usedBy": ["RedisSignalViewerPage empty table and diagnostics side panel"],
+      "dependsOn": ["Redis query/key-list lifecycle integration", "existing KVList", "Button shared anchor chrome", "useNumberFormatting/useDateFormat"],
+      "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:246-373", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:512-530"]
+    },
+    {
+      "name": "Redis brief trust adapter",
+      "existingOwner": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx",
+      "owner": "shared",
+      "props": ["data", "enabled", "derived source status", "refresh blocked/error", "query updatedAt", "L1/L2 observed timestamps kept separate"],
+      "states": ["disabled", "initial", "loaded", "retained", "paused/offline", "failed", "unknown freshness"],
+      "usedBy": ["RedisSignalViewerPage"],
+      "dependsOn": ["deriveDataState", "briefSourceStatus", "existing OperationalBrief/useOperationalMetrics"],
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx:11-38", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:225-226,409-415"]
+    },
+    {
+      "name": "Fleet selector source trust",
+      "existingOwner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "owner": "integration",
+      "props": ["existing SelectedVehicleResult preserved", "optional fleet query/trust status and retry"],
+      "states": ["fleet loading", "fleet empty", "fleet failed", "retained fleet"],
+      "usedBy": ["RedisSignalViewerPage local required vehicle picker"],
+      "dependsOn": ["useVehicles", "existing selectedVehicle store and URL precedence"],
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:31-40,48-75,171-179"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+      "line": 69,
+      "rule": "MDC-002/MDC-010",
+      "detail": "Category color map is a local palette rather than reuse of existing token owners; metadata has both page KVList and feature DiagnosticMetaList renderers.",
+      "fix": "Consolidate only the repeated metadata derivation and token choices; keep all current panels and diagnostic contexts. No new ModernCard, generic status registry, table engine, theme or vehicle-selection owner.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "76d5265b96859036f6d5e8fa9b24a8f62bc4a4679330ca7fe769c5dabc24ff65",
+    "hashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 661,
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Cache metrics operational brief", "count": 1, "line": 408, "contents": ["Total signals", "Numbers", "Strings", "Booleans", "L1 signals with last-seen context", "L2 raw fields with last-seen context"]},
+      {"name": "Cached signals hero", "count": 1, "line": 421, "contents": ["name search", "five-category filter plus all", "signal name/value/type/category table", "diagnostic empty/failure recovery"]},
+      {"name": "Cache diagnostics", "count": 1, "line": 496, "contents": ["live-store mode", "VIN", "Redis key", "L1 signal count", "L2 raw field count", "L1 last seen", "L2 last seen"]},
+      {"name": "Signal categories", "count": 1, "line": 543, "contents": ["Battery", "Charging", "Driving", "Climate", "Other counts and proportions"]},
+      {"name": "Cache actions", "count": 1, "line": 581, "contents": ["L1/L2 impact explanation", "per-vehicle purge", "all-vehicle bounded purge"]}
+    ],
+    "auxiliarySurfaces": ["Header vehicle/auto-refresh/freshness/manual-refresh controls", "Single shared conditional danger dialog for two purge modes", "Other-cache recovery chips and docs links in diagnostic states"],
+    "componentCounts": {"LayoutCard": 4, "RedisOperationalBrief": 1, "DataTable": 1, "ConfirmDialog": 1, "FadeIn": 5, "MetricBarCallSites": 1, "MetricBarsWhenPopulated": 5, "ChartContainer": 0, "GlassPanelInPage": 0},
+    "actions": [
+      "Select vehicle through persisted and URL-backed scope",
+      "Toggle 5-second auto-refresh, default off",
+      "Manual refresh and side-panel error retries",
+      "Search signal names and clear search manually",
+      "Select all or one category and clear category filter",
+      "Sort name/type/category through shared table",
+      "Use shared column value filters, column-layout/density/page-size controls and pagination",
+      "Export matching loaded visible columns as CSV/JSON, including raw coordinates in current implementation",
+      "Reveal/hide/copy recognized coordinates with nonblocking reveal audit and automatic rehide",
+      "Choose another populated vehicle cache from diagnostic recovery chips",
+      "Open cache configuration/live-state documentation in a new tab",
+      "Open/cancel/confirm pinned per-vehicle purge",
+      "Open/cancel/exact-type PURGE ALL/confirm bounded all-vehicle purge",
+      "Retry failed purge and repeat all-purge when has_more"
+    ],
+    "dataBehavior": [
+      "Preserve every raw source signal identity and number/string/boolean value without display-unit conversion or source recasing.",
+      "Preserve categorization precedence and alphabetic initial ordering; category counts derive from all rows, not current search results.",
+      "Preserve six metrics, seven diagnostic fields, all five category bars and all specialized diagnostic branches.",
+      "Preserve local selection because the shared shell picker is intentionally disabled for this route; this is an undated live snapshot and must not acquire a competing date picker.",
+      "Preserve tableId admin:redis-signals, query keys, selected URL/store behavior, polling defaults, loaded-result exports and inherited request policies.",
+      "Preserve initial versus retained-data failure behavior; missing measurements stay missing rather than fabricated zero.",
+      "Preserve pinned destructive target, exact typed all-purge gate, loading dismissal lock, live-mode request guards, no-op/partial/error distinctions, invalidations and L1/L2 explanations.",
+      "Do not imply newest L2 timestamp establishes per-field freshness, or that all-purge guarantees cluster-wide L1 consistency."
+    ],
+    "routeEvidence": ["web\\src\\App.tsx:732", "web\\src\\lib\\workspaceScope.ts:125"],
+    "sourceOnly": true
+  },
+  "evidenceLimits": {
+    "runtime": "unverified; no browser or application route exercised",
+    "visual": "unverified; no screenshots or composed theme review",
+    "keyboard": "unverified",
+    "contrast": "unverified; source color findings are not measured contrast failures",
+    "viewport": "unverified at all mission widths",
+    "backend": "Handler and router source inspected; Redis, L1, HTTP payloads, permissions, deployment reachability and mutations not exercised. Cache implementation and request/QueryClient internals not traced.",
+    "validation": "No Git, TypeScript, full build, lint or test command run, per atomic read-only assignment. Skill audit.sh was read but not executed because it invokes whole-frontend TypeScript. Source-pattern counts are not lint or runtime acceptance.",
+    "reportValidation": {
+      "command": "PowerShell ConvertFrom-Json; required-field, issue-contract, shared-requirement, page/routes-shape, current SHA256 and line-count assertions",
+      "exitCode": 0,
+      "output": ["JSON parse: PASS", "Required top-level fields: 19/19", "Issues with complete citations/contracts: 17", "Page/routes shapes: PASS", "Source SHA256 unchanged: 76d5265b96859036f6d5e8fa9b24a8f62bc4a4679330ca7fe769c5dabc24ff65", "Source line count: 661"]
+    },
+    "sourceChecks": {
+      "command": "PowerShell Get-FileHash -Algorithm SHA256; Get-Content line count; [regex]::Matches on the sole page",
+      "exitCode": 0,
+      "output": ["SHA256 76D5265B96859036F6D5E8FA9B24A8F62BC4A4679330CA7FE769C5DABC24FF65", "661", "style= : 0", "<(button|input|textarea|select|table)\\b : 0", "direct recharts/react-leaflet/framer-motion imports : 0", "text-neon- : 0", "<LayoutCard\\b : 4", "<ChartContainer\\b : 0", "<GlassPanel\\b : 0", "<FadeIn\\b : 5"],
+      "scope": "Current page only; these zero counts do not erase contextual theme/state/accessibility findings."
+    },
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-019.json", ".agent-status\\audit-page-019.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-016.json",
+    "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+    "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts",
+    "web\\src\\api\\hooks\\useRedisSignals.ts",
+    "web\\src\\api\\devtools.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MaskedValue.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\devtools\\handler.go",
+    "internal\\api\\devtools\\handler_test.go",
+    "internal\\api\\webvitals\\routetemplates_gen.go"
+  ]
+}
