@@ -1,0 +1,367 @@
+{
+  "item": "audit-page-118",
+  "page": "web\\src\\features\\driving\\pages\\FSDInsightsPage.tsx",
+  "routes": ["/fsd"],
+  "purpose": "Historical supervised self-driving counter intelligence, with reset-safe attribution, route/firmware comparisons and explicit evidence limitations.",
+  "primaryGoal": "Understand reported FSD distance and aligned observed-driving share for the selected vehicle and workspace window without mistaking missing counter evidence for measured zero or safety performance.",
+  "dataSources": [
+    {
+      "hook": "useFsdInsightsRange",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 583,
+      "endpoint": "GET /api/v1/analytics/fsd",
+      "routeEvidence": "internal\\api\\router.go:3887",
+      "owner": "useAnalytics.ts query; internal/api/fsd handler",
+      "behavior": "Request uses /analytics/fsd through scopedPath; vehicle, both instant bounds and timezone enter QueryScope; request receives AbortSignal; enabled only with vehicle/start/end; historical policy and refetchOnMount retained. Page does not request include_evidence.",
+      "payload": ["period", "totals", "quality", "daily", "drive_analytics"],
+      "confidence": "source-confirmed; backend calculations not exercised"
+    },
+    {
+      "hook": "useSelectedVehicle, useRangeState, useProductPreferences",
+      "file": "web\\src\\features\\driving\\pages\\FSDInsightsPage.tsx",
+      "line": 59,
+      "endpoint": null,
+      "owner": "shared workspace and saved product preferences",
+      "behavior": "Header owns vehicle/window; defaultAnalysisRange is consumed. Legacy days links migrate to from/to without changing unrelated search parameters. 365 means an inclusive 365-civil-day window; unknown legacy days falls back to 30d. Existing from/to wins. Range registration is web/src/lib/workspaceScope.ts:47."
+    },
+    {
+      "hook": "useDataState",
+      "file": "web\\src\\features\\driving\\pages\\FSDInsightsPage.tsx",
+      "line": 99,
+      "endpoint": null,
+      "owner": "web\\src\\api\\dataState.ts:125-177",
+      "behavior": "Retained data feeds every panel; only fatalError reaches section errors. Initial alone loads skeletons; global stale warning and provenance retain failed-refresh/offline evidence."
+    },
+    {
+      "hook": "useUnits, useNumberFormatting and date-format helpers",
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDistanceTrend.tsx",
+      "line": 73,
+      "endpoint": null,
+      "owner": "shared display-boundary formatting",
+      "behavior": "Meters remain raw in response and contributing-drive exports; chart rows convert once to chosen distance units. Day-key weekday calculations remain timezone-stable. Route efficiency uses existing Wh/km fields with a page-local display multiplier; backend unit provenance was not validated."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "use": "Full-width container-query adapter; existing header, query freshness and copy-link action; no competing selector."},
+    {"name": "OperationalBrief", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 44, "use": "FsdEvidenceBrief through DrivingSummaryBrief; nested observatory and comparison briefs; compact metrics, scope, provenance, status and Review details drawer."},
+    {"name": "ChartContainer", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "line": null, "use": "Three chart callers preserve chart keys, CSV/display rows and accessible data columns. Implementation not read in this audit."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "line": 184, "use": "11 mounted table consumers including three GroupTable instances; persistent IDs, pagination and loaded-row value filters on contributing drives. Existing mobilePresentation API available."},
+    {"name": "FsdSectionBody", "owner": "web\\src\\features\\driving\\components\\fsd-insights\\FsdSectionBody.tsx", "line": 23, "use": "Domain-local shell-preserving no-vehicle/loading/fatal-error gate; shared feedback and retry."},
+    {"name": "StaleRefreshWarning / DataProvenanceBadge", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "line": 46, "use": "Source-wide retained-data warning, offline explanation and nonblocking retry; provenance badge mounted by page."},
+    {"name": "Grid / FadeIn / GlassPanel / PanelTitle / Text / Badge / Button / KVList / Pagination", "owner": "existing category barrels", "line": null, "use": "Existing layout, motion, neutral surfaces, semantic confidence, typography, table controls and evidence rows; no replacement primitives requested."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+      "line": 56,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Confidence variants and translated label selection repeat in FsdObservatoryJournalTable.tsx:11,47-58; GroupTable already correctly consolidates three comparisons.",
+      "fix": "Consolidate FSD confidence presentation locally with value plus optional approximate context; do not create a global confidence scoring registry.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+      "line": 109,
+      "rule": "MDC-015 / MDC-031",
+      "detail": "Repeated padded GlassPanel/title/caption/state/table compositions, plus a full OperationalBrief nested inside a framed observatory and comparison panel, create multiple layers of chrome.",
+      "fix": "Reuse existing layout composites or embed existing briefs/tables after capability comparison; preserve every explanation, metric and recovery state.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": "Charts share the page split grid only at xl; panels stack otherwise. Attribution reflows 1/2/5 columns, groups 1/3 at xl. Confidence uses a specialist two-column lg layout. Journal/chapter tables remain horizontally scrollable; other tables hide non-priority cells below md.",
+    "widthsUnverified": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdTopDays.tsx",
+        "line": 124,
+        "rule": "MDC-023 / MDC-043 / mission 15",
+        "detail": "mobileColumns excludes observed driving, share and reset flags. Equivalent hidden subsets occur in groups, firmware, commute, efficiency, experiment and contributing-drive tables. DataTable.tsx:725 hides excluded cells; no caller supplies mobilePresentation details. Complete small-screen evidence parity is not established.",
+        "fix": "Use existing mobilePresentation with full row details, or preserve horizontal access to all fields. Keep all table IDs, row keys, source order, local filters and export scope. Check 640-1023 behavior separately.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdObservatoryJournalTable.tsx",
+        "line": 83,
+        "rule": "MDC-023 / MDC-043",
+        "detail": "Six wide journal columns and nine chapter columns rely on overflow, with maxHeight 480; no explicit mobile row strategy. Source preserves fields but does not prove discoverability, touch scrolling or no page overflow.",
+        "fix": "Adopt existing table mobile presentation without omitting reset notes, confidence, firmware or route/chapter counts; verify allocated-container widths and nested scroll.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": ["Localized section aria-labels", "Decorative icons generally aria-hidden", "Loading section role=status", "Localized icon-only drive link accessible name", "Chart ariaLabel/dataColumns", "Reduced-motion-aware hash scrolling"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+        "line": 373,
+        "rule": "MDC-040",
+        "detail": "Icon-only drive navigation renders a bare link containing a 16px icon without caller-owned minimum hit size or visible-focus classes. No composed/browser target measurement performed.",
+        "fix": "Compose established navigation/button chrome with native Link semantics and visible focus plus a 44px target or documented spacing exception; retain localized drive ID name.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdTopDays.tsx",
+        "line": 120,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "Table name is internal FsdTopDays rather than a localized caption. The same pattern occurs across drive-analysis/experiment tables. DataTable.tsx:287-295 falls back to name/tableId for its accessible caption; journal and chapters already supply localized captions.",
+        "fix": "Supply explicit localized caption for each table while retaining name and tableId identities.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard order/focus restoration", "Actual drawer open states and screen-reader behavior", "Effective contrast in light/dark/custom/forced colors", "Touch target measurements", "200% text/RTL/long labels", "Chart/table keyboard alternatives"]
+  },
+  "states": {
+    "file": "web\\src\\features\\driving\\pages\\FSDInsightsPage.tsx",
+    "line": 113,
+    "loading": "Initial only; individual shells remain; chart skeletons and section body skeletons.",
+    "noVehicle": "Every panel remains reachable; body links to /vehicles; summary status asks for a vehicle.",
+    "empty": "Measured zero differs from unreported. Charts gate by measured FSD/share, top days requires positive distance; each analysis has its own missing-evidence copy.",
+    "fatalError": "QueryError with retry inside each body, plus summary error; chart errors independent of shell.",
+    "refreshError": "state.data retained, fatalError null, global StaleRefreshWarning retry; summary explicitly retained.",
+    "offline": "Global warning understands isRefreshBlocked; page has no dedicated initial offline distinction beyond loading.",
+    "disabled": "Contributing CSV/JSON disabled if no positive export rows; chart export disabled while loading/blocked/empty.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdObservatoryPanel.tsx",
+        "line": 83,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "NestedDrivingBrief accepts retained but observatory and period-comparison callers omit it; FsdSectionState has only loading/error/retry/noVehicle. During retained refresh failure or pause the global warning is correct, but nested brief labels still say Returned evidence.",
+        "fix": "Forward retained/stale status from existing DataState into domain props and both nested briefs, without replacing retained metrics or adding queries.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdConfidencePanel.tsx",
+        "line": 98,
+        "rule": "MDC-026",
+        "detail": "On a successful missing/partial quality payload useFsdConfidenceItems returns []; KVList is still mounted without caller-provided empty explanation. Shared KVList empty behavior was not inspected, so blank body is a risk, not a confirmed runtime failure.",
+        "fix": "Provide explicit unavailable-quality context if source quality/period is absent while retaining methodology and unconditional footnotes.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+      "line": 168,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Repeated cyan/purple/green/amber panel-title icons and fixed text-cyan-300 drive links communicate decoration more than distinct domain status. Palette is subdued versus neon but light-theme effective contrast remains unknown.",
+      "fix": "Use existing neutral text tokens for structural icons, theme-aware link tokens for navigation, and semantic hue only for actual confidence/reset/verdict meaning.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdShareTrend.tsx",
+      "line": 112,
+      "rule": "MDC-034 / mission 43",
+      "detail": "Share uses a third palette hue and 0.45 gradient fill; distance/weekday use other palette entries. Subduing decorative fill may improve hierarchy, but actual saturation depends on saved chart palette and must not reset preferences.",
+      "fix": "Use existing chart owner palette and conservative fill while retaining share axis 0-100, null gaps, all data columns and exports.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+      "line": 180,
+      "rule": "MDC-033",
+      "detail": "Attribution uses five ad-hoc metric tiles beside existing OperationalBrief metrics. Structural borders plus repeated badges compete with narrative hierarchy.",
+      "fix": "Reuse the stats-owner numeric pipeline where it demonstrably retains all five SI operands, labels and missing states; retain domain-local rendering if an exact mapping is not proved.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+      "line": 80,
+      "rule": "MDC-002 / mission 33",
+      "detail": "794-line dependency contains seven local panel implementations, grouping, SI export shaping and multiple specialist formatters. Page itself is appropriately thin; repeated table presentation is the bounded decomposition target.",
+      "fix": "Extract panel-specific files and pure export helper within driving only; keep one shared GroupTable, source contracts and all eight rendered child panels. This is not permission to shrink capabilities.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+      "line": 329,
+      "rule": "MDC-044",
+      "detail": "Route separator ' to ' is hardcoded; firmware/commute percentage-point suffixes 'pts'/'pt' and several raw counts bypass localized formatting despite neighboring translated labels.",
+      "fix": "Use canonical translation and existing number formatting for full source-backed phrases; catalog changes require a designated integration owner.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdConfidenceFootnotes.tsx",
+      "line": 96,
+      "rule": "MDC-032 / MDC-044",
+      "detail": "Footnote says browser-local calendar days, but the page sends workspace timezone to the backend and the trend already names returned period timezone.",
+      "fix": "Pass actual period/workspace timezone into this domain explanation; retain later-reading attribution and all limitations.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Evidence retention is source-correct at page level, but mobile detail loss risk and stale nested status undermine trust. Resolve those before aesthetic refinement; source is already substantially composed and has no justification for wholesale replacement."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing DataTable mobile details adoption",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "props": ["mobilePresentation", "variant=embedded", "caption", "tableId", "keyExtractor", "pagination", "enableValueFilters"],
+      "variants": ["full-detail mobile row presentation", "embedded framed table"],
+      "states": ["loading via preserved outer body", "empty", "retained", "filtered", "paged"],
+      "usedBy": ["FsdTopDays", "ContributingDrivesPanel", "GroupTable", "FsdCommuteExperimentPanel", "FirmwareSpotlightPanel", "CommuteIdentityPanel", "EfficiencyPanel", "FsdObservatoryJournalTable", "FsdCommuteStoriesTable"],
+      "dependsOn": ["Existing mobile presentation contract and full-field parity validation", "Stable table IDs and loaded-row filter/export pipeline"],
+      "changeNeeded": "No new shared API proven necessary; page-owned adapters should consume existing contract first. Escalate only concrete missing capability."
+    },
+    {
+      "name": "Existing OperationalBrief retained status and metric adoption",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "props": ["compact", "metrics", "scope", "provenance", "statusLabel", "statusTone", "loading"],
+      "variants": ["Existing compact brief"],
+      "states": ["initial", "source unavailable", "retained/offline", "returned", "missing metric"],
+      "usedBy": ["FsdEvidenceBrief", "ComparisonPanel", "FsdObservatoryPanel", "AttributionPanel candidate"],
+      "dependsOn": ["FsdSectionState retained propagation", "DrivingSummaryBrief/NestedDrivingBrief existing bridge", "Existing stats glossary and specialist formatter equivalence"],
+      "changeNeeded": "No shared component change required on current evidence; caller propagation and capability-preserving composition are needed."
+    },
+    {
+      "name": "Canonical localization integration",
+      "owner": "existing canonical split i18n catalogs; exact catalog file not inspected",
+      "props": ["Localized route separator", "Localized percentage-point/count phrases", "Actual timezone interpolation"],
+      "variants": ["Locale/RTL"],
+      "states": ["missing metadata", "measured positive/negative change"],
+      "usedBy": ["FsdDriveAnalyticsPanels", "FsdConfidenceFootnotes"],
+      "dependsOn": ["Designated catalog integration owner", "Preserved existing translation keys and response values"],
+      "changeNeeded": "Catalog integration may be needed; this audit does not own catalogs."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\driving\\pages\\FSDInsightsPage.tsx", "line": 8, "detail": "Uses canonical category layout/motion/feedback owners, not a new page engine. No duplicate selector is mounted."},
+    {"file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 180, "detail": "Local attribution tiles compete with existing stats presentation; preserve before adoption."},
+    {"file": "web\\src\\features\\driving\\pages\\FSDInsightsPage.tsx", "line": 28, "detail": "FsdKpiBand is type-referenced by FsdEvidenceBrief but not rendered by this page; FsdPeriodControl is not mounted. They were not counted as page sections and should not be deleted based on this audit."}
+  ],
+  "preservation": {
+    "sourceHash": "4fa86b41caf8667f3b871d40734505f5a9b00721a751c9607571ae3ba370085a",
+    "hashAlgorithm": "SHA-256 of current page file bytes",
+    "currentLineCount": 182,
+    "sectionCount": 15,
+    "topLevelComponentCount": 8,
+    "frameCounts": {
+      "pageDirectGlassPanel": 0,
+      "pageDirectChartContainer": 0,
+      "domainGlassPanelDeclarations": 11,
+      "domainChartContainerDeclarations": 3,
+      "mountedOperationalBriefInstances": 3,
+      "mountedTableInstances": 11,
+      "note": "Source JSX counts, not runtime visibility. Brief-owned GlassPanel frames are additional; not included in 11 domain declarations."
+    },
+    "sections": [
+      {"name": "FSD evidence summary", "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\FsdEvidenceBrief.tsx", "line": 19, "data": ["FSD distance", "aligned share and denominator reason", "active/measured days", "best day/date", "scope", "provenance", "retained status"]},
+      {"name": "FSD observatory", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdObservatoryPanel.tsx", "line": 43, "data": ["stitched/ambiguous/unknown distance", "unknown drives", "reset count", "stitched journal including reset notes and drive links", "truncation notice", "route/firmware chapters including all nine fields", "honesty explanation"]},
+      {"name": "Distance trend", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDistanceTrend.tsx", "line": 114, "data": ["daily FSD bars", "observed-driving line", "null gaps", "local-day labels", "display units", "legend hidden-series state", "CSV/accessibility rows"]},
+      {"name": "Usage share trend", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdShareTrend.tsx", "line": 67, "data": ["daily aligned share", "0-100 axis", "null gaps", "CSV/accessibility rows"]},
+      {"name": "Weekday pattern", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdWeekdayPattern.tsx", "line": 76, "data": ["seven weekday buckets", "distance", "aligned paired share", "measured/active/observation days", "descriptive disclaimer", "CSV/accessibility rows"]},
+      {"name": "Most active days", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdTopDays.tsx", "line": 101, "data": ["top ten positive days", "observed driving", "share", "reset flags", "local dates", "distance-descending/date-descending ties"]},
+      {"name": "Previous-period comparison", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 80, "data": ["current FSD distance/share", "signed distance/percentage-point deltas", "previous distance/window/timezone", "uncomparable baseline explanations"]},
+      {"name": "Attribution and resets", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 132, "data": ["high/estimated/ambiguous/unattributed/unknown-drive distance", "reset timestamps/fields/firmware", "previous/current meter values", "affected drive links", "timeline pagination"]},
+      {"name": "Contributing drives", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 291, "data": ["positive attributable drives", "time/route endpoints", "distance/share/approximation", "confidence", "firmware", "drive navigation", "loaded value filters", "SI CSV/JSON exports"]},
+      {"name": "Route/time/firmware groups", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 505, "data": ["three independent tables", "group labels", "drive counts", "distance/share", "high-confidence/minimum-drive caveat"]},
+      {"name": "Same-route experiment", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdCommuteExperimentPanel.tsx", "line": 26, "data": ["firmware and commute rows", "route/window", "before/after shares and sample counts", "changed/unchanged/thin/unknown verdict", "unknown/reset caveat", "two-drive/three-point thresholds"]},
+      {"name": "Firmware spotlight", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 543, "data": ["version pair", "route", "before/after share and sample counts", "signed percentage-point change", "correlation caveat", "fsd-firmware-spotlight anchor"]},
+      {"name": "Commute identity", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 700, "data": ["route/time window", "this/last month shares", "signed change", "unknown days", "honesty context"]},
+      {"name": "Same-route efficiency", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx", "line": 628, "data": ["route", "FSD-heavy/low-FSD counts and efficiency", "signed difference", "display Wh/km or Wh/mi", "correlation disclaimer"]},
+      {"name": "Confidence and methodology", "file": "web\\src\\features\\driving\\components\\fsd-insights\\FsdConfidencePanel.tsx", "line": 55, "data": ["quality badge", "16 evidence KV rows", "seven methodology notes", "up to four conditional warnings", "three unconditional scope/timezone/SI footnotes"]}
+    ],
+    "actions": [
+      "Shared header vehicle selection and View settings range/timezone",
+      "Legacy days URL normalization preserving unrelated params",
+      "Page copy-link including query parameters",
+      "Page query freshness/provenance context",
+      "Fatal/retained retry and no-vehicle /vehicles navigation",
+      "Three OperationalBrief Review details drawers",
+      "Chart CSV export and accessible table controls through existing ChartContainer; full toolbar behavior unverified",
+      "Distance-chart legend visibility keyed fsd-distance-trend",
+      "All 11 table pagination/page-size and existing persistent column controls",
+      "Contributing-drives loaded-row value filters",
+      "Explicit contributing-drives CSV/JSON export of all positive source rows, not only current page",
+      "Journal/reset/contributing drive links to /drives/:id",
+      "Reset timeline pagination 25/50/100",
+      "Hash scroll to existing IDs with reduced-motion preference"
+    ],
+    "tableIds": ["fsd:observatory-journal", "fsd:observatory-commute-chapters", "fsd-top-days", "fsd-contributing-drives", "fsd-groups-routes", "fsd-groups-time", "fsd-groups-firmware", "fsd-commute-experiment", "fsd-firmware-spotlight", "fsd-commute-identity", "fsd-route-efficiency"],
+    "dataBehavior": [
+      "Single range query and raw snake_case SI payload; preserve historical query identity, retry/stale policies, cancellation and refetch-on-mount.",
+      "Never synthesize missing FSD/share as zero or interpolate null daily gaps.",
+      "Preserve independent distance versus aligned-share availability, trust guard, reset breaks and approximation labels.",
+      "Keep server day grouping timezone and exclusive end; no client-only current-page date filtering.",
+      "Top ten days excludes null/zero and retains deterministic tie order.",
+      "Contributing exports preserve meter/Wh fields, nulls, confidence/reset/firmware; no display-unit mutation.",
+      "Preserve client experiment thresholds and correlation limitations; do not invent engagement, intervention or safety data.",
+      "Keep all shells, errors, empty reasons, partial quality explanation and unconditional methodology scope."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Router registration and frontend query contract inspected; handler/database rollup, auth reachability and real response shape not exercised.",
+    "validation": "No source changes, git, build, lint, TypeScript or tests run. Full audit.sh not run because it invokes repository TypeScript, disallowed for this bounded concurrent Phase0 audit. Targeted source pattern scans and JSON/hash readback only; no application acceptance claimed.",
+    "sourceScans": "Targeted PowerShell scan: inline=0, direct library imports=0, legacy API imports=0, noisy fixed-white/neon/glow=0; raw-pattern candidate count=2. Follow-up rg for raw input/button/select/textarea/table in FSD dependency JSX returned no matches; candidate count is not asserted as confirmed violations.",
+    "scope": "Only assigned page and page-specific presentation/data/shared-owner dependencies; no whole-app semantic inventory, unrelated page audit or historical runtime receipt.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-118.json", ".agent-status\\audit-page-118.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\FSDInsightsPage.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\FsdEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdObservatoryPanel.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdObservatoryJournalTable.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdCommuteStoriesTable.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdDistanceTrend.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdShareTrend.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdWeekdayPattern.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdTopDays.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdDriveAnalyticsPanels.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdCommuteExperimentPanel.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdConfidencePanel.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdConfidenceFootnotes.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\FsdMethodologyNotes.tsx",
+    "web\\src\\features\\driving\\components\\fsd-insights\\useFsdConfidenceItems.ts",
+    "web\\src\\features\\driving\\components\\fsd-insights\\helpers.ts",
+    "web\\src\\features\\driving\\components\\fsd-insights\\types.ts",
+    "web\\src\\features\\driving\\components\\fsd-insights\\useClientPagination.ts",
+    "web\\src\\features\\driving\\lib\\fsdCommuteExperiment.ts",
+    "web\\src\\types\\fsd.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\dataState.ts",
+    "internal\\api\\router.go",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx"
+  ]
+}
