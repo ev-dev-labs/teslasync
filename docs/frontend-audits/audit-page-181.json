@@ -1,0 +1,255 @@
+{
+  "item": "audit-page-181",
+  "page": "web\\src\\features\\system\\pages\\ChatbotPage.tsx",
+  "routes": ["/chatbot"],
+  "purpose": "Helix conversational workspace with deterministic baseline replies, optional AI streaming and browser voice mode, session management and inspectable evidence.",
+  "primaryGoal": "Ask a question, inspect the answer and its actual sources, stop or revise it, and return to previous conversations without losing privacy or confirmation boundaries.",
+  "dataSources": [
+    {
+      "name": "Conversation list and history",
+      "hooks": ["useChatSessions", "useChatHistory"],
+      "owner": "web\\src\\api\\hooks\\useChat.ts",
+      "endpoints": ["GET /api/v1/chatbot/sessions", "GET /api/v1/chatbot/history?session_id=<encoded ID>"],
+      "citations": ["web\\src\\api\\hooks\\useChat.ts:27-47", "web\\src\\api\\devtools.ts:256-263", "internal\\api\\router.go:4089-4094"],
+      "behavior": "Existing chat query keys, AbortSignal forwarding and nonempty-session enablement. Sessions fall back to []; history hydrates local UI state with optimistic/current-stream race guards. No request was executed."
+    },
+    {
+      "name": "Baseline send and session mutations",
+      "hooks": ["useSendChatMessage", "useRenameChatSession", "useDeleteChatSession"],
+      "owner": "web\\src\\api\\hooks\\useChat.ts",
+      "endpoints": ["POST /api/v1/chatbot", "PATCH /api/v1/chatbot/sessions/<encoded ID>", "DELETE /api/v1/chatbot/sessions/<encoded ID>"],
+      "citations": ["web\\src\\api\\hooks\\useChat.ts:50-119", "web\\src\\api\\devtools.ts:253-272", "internal\\api\\router.go:4089-4094"],
+      "behavior": "Baseline body uses message/session_id and returns response/session_id/optional links; rename/delete update session cache and invalidate it, delete removes history cache, errors use existing mutation toasts. Page owns optimistic turns and typewriter reveal."
+    },
+    {
+      "name": "Opt-in text AI stream",
+      "hooks": ["useAiEnabled('chatbot-llm')", "useAiStream"],
+      "owner": "web\\src\\hooks\\useAiStream.ts",
+      "endpoints": ["POST /api/v1/ai/chatbot"],
+      "citations": ["web\\src\\features\\system\\pages\\ChatbotPage.tsx:234-346", "web\\src\\hooks\\useAiStream.ts:325-469", "internal\\api\\router.go:5046-5054", "internal\\api\\ai_routes.go:150-154"],
+      "behavior": "Canonical fetch SSE transport uses existing API base, auth headers, credentials and AbortController. Local UUID session and negative UI message IDs; delta/tool/done/error handling. No automatic heuristic fallback hides AI failures. UI stores tool ID/name/status, token usage and validated retrieval excerpts, not arbitrary arguments/results."
+    },
+    {
+      "name": "Feature settings and browser preferences",
+      "owner": "web\\src\\hooks\\useAiEnabled.ts and ChatbotPage",
+      "endpoints": ["Settings source consumed by existing useSettings; underlying settings hook was not traced in this audit"],
+      "citations": ["web\\src\\hooks\\useAiEnabled.ts:32-41", "web\\src\\components\\ai\\withAiFeature.tsx:33-58", "web\\src\\features\\system\\pages\\ChatbotPage.tsx:52-138"],
+      "behavior": "AI gate fails closed for missing/off settings or absent per-feature opt-in. Desktop History preference uses teslasync-chatbot-history-visible; mobile starts closed and breakpoint transitions preserve stored desktop preference."
+    },
+    {
+      "name": "Independent optional voice conversation",
+      "hooks": ["useAiStream", "withAiFeature('voice-mode')"],
+      "owner": "web\\src\\components\\ai\\AIVoiceMode.tsx",
+      "endpoints": ["POST /api/v1/ai/voice/chat"],
+      "citations": ["web\\src\\components\\ai\\AIVoiceMode.tsx:80-104,183-327,415-591", "internal\\api\\ai_routes.go:640-663"],
+      "behavior": "Browser SpeechRecognition final/interim transcript handling, independent voice UUID session, optional sentence-buffered speechSynthesis, mic/stream/speech stop, unsupported/error guidance. ai.voiceMode.transcriptDraft persists only outside active/paused streams and clears after success/unmount. Application POST is text-only; browser recognition processing location is not proven."
+    },
+    {
+      "name": "Response evidence and suggestions",
+      "owner": "web\\src\\features\\system\\components\\chatbot\\knowledgeEvidence.ts and SuggestedPrompts.tsx",
+      "endpoints": [],
+      "citations": ["web\\src\\features\\system\\components\\chatbot\\knowledgeEvidence.ts:8-60", "web\\src\\features\\system\\components\\chatbot\\KnowledgeCitations.tsx:11-48", "web\\src\\features\\system\\components\\chatbot\\SuggestedPrompts.tsx:18-89"],
+      "behavior": "Only successful retrieve_app_knowledge result chunks with validated type/path/index/text/positive score become evidence; deduplicated 500-character excerpts near query terms. Cited means source ID appears in answer, not independently verified entailment. Four localized static prompt suggestions are editable composer seeds, not real fleet data and never auto-submit."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "existing shared layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "citation": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "use": "PageContainer adapter, full allocated width and shared header/actions."},
+    {"name": "Conversation workspace", "kind": "page orchestration", "owner": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:760-948", "use": "GlassPanel log/composer, Textarea, Button, VisuallyHidden, mobile Drawer and FadeIn."},
+    {"name": "SessionList", "kind": "domain", "owner": "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx", "citation": "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx:85-235", "use": "Session metadata/selection, New chat, inline rename and danger ConfirmDialog through current UI/feedback primitives."},
+    {"name": "ChatMessageItem", "kind": "domain", "owner": "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx", "citation": "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx:126-269", "use": "Grouped Avatars, timestamps, copy/edit/regenerate actions, MarkdownRenderer, links, KnowledgeCitations and shared HelixEvidenceTrail."},
+    {"name": "ChatWelcome and SuggestedPrompts", "kind": "domain", "owner": "web\\src\\features\\system\\components\\chatbot", "citation": "web\\src\\features\\system\\components\\chatbot\\ChatWelcome.tsx:21-50; SuggestedPrompts.tsx:56-89", "use": "Localized empty conversation explanation and four wrapping suggestion controls."},
+    {"name": "MarkdownRenderer and CodeBlock", "kind": "domain adapters", "owner": "web\\src\\features\\system\\components\\chatbot", "citation": "web\\src\\features\\system\\components\\chatbot\\MarkdownRenderer.tsx:24-165; CodeBlock.tsx:31-45", "use": "Lazy react-markdown/remark-gfm without raw HTML plugin, shared semantic Table and CodeBlock, clipboard raw text, external-link rel, readable Suspense fallback."},
+    {"name": "AIChatbotIndicator, AIVoiceMode, AIFeatureCard, AiOutputPanel, HelixEvidenceTrail", "kind": "existing shared AI presentation", "owner": "web\\src\\components\\ai", "use": "Independent feature gates, voice controls/output and privacy-safe tool status/usage; preserve existing owner rather than introducing a second AI renderer."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 351, "rule": "MDC-002/MDC-046", "detail": "Assistant finalization and pending-tool settlement repeat in feature-off, error, Escape and Stop paths, while regenerate/edit have related request assembly.", "fix": "If authorized later, consolidate feature-local transition helpers with explicit done/error/cancel semantics; retain every partial-text and race guard. Do not replace canonical useAiStream.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 866, "rule": "MDC-002/MDC-042", "detail": "Local TypingDots and waiting markup coexist with shared AIThinkingDots/AIThinkingIndicator used by voice. They have different baseline/AI and motion contracts.", "fix": "Assess shared waiting presentation only after preserving reduceMotion, initial-delta state and baseline reveal behavior; no new competing indicator.", "owner": "integration", "confidence": "medium"}
+  ],
+  "responsive": {
+    "runtime": "unverified",
+    "sourceStrategy": [
+      {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:98-138,790-828", "detail": "max-width:640px JS branch switches desktop sidebar to left Drawer; selection/New chat closes mobile drawer, desktop preference restored."},
+      {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:830-945", "detail": "min-w-0 flexible conversation, bounded internal vertical scroll, 3xl text/composer width, responsive padding/gaps, 44px Textarea and icon-only mobile Send/Stop names."},
+      {"citation": "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx:143-151,238", "detail": "90% bubbles below sm and 70/80% above, break-words, action rows visible on coarse pointers or focus."},
+      {"citation": "web\\src\\features\\system\\components\\chatbot\\MarkdownRenderer.tsx:114-124; SuggestedPrompts.tsx:61-84", "detail": "Wide Markdown tables scroll locally; suggestions wrap. No charts or fleet date/vehicle selector added."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 790, "rule": "MDC-031/MDC-043", "detail": "Conversation reserves calc(100dvh - 12rem) independently of the optional voice panel above it. Combined voice/header/keyboard/safe-area height and nested scrolling need measured proof.", "fix": "Validate with voice enabled, software keyboard and long subtitles at required widths; compose within existing shell/layout scroll ownership without hiding voice/history/composer.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx", "line": 196, "rule": "MDC-040/MDC-043", "detail": "Delete is opacity-zero until hover or its own focus, unlike ChatMessageItem's coarse-pointer visibility. Rename is only double-click. Touch discovery and targets are not established.", "fix": "Expose named reachable session actions on touch and keyboard using current Button/menu patterns; retain confirmation and rename raw seed text.", "owner": "page", "confidence": "high"}
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "sourceStrengths": [
+      "Named workspace and conversation role=log with polite additions; explicit Message label/id and localized icon-action names (ChatbotPage.tsx:784-788,831-836,902-935).",
+      "Enter submit, Shift+Enter newline, empty-input ArrowUp recall, Escape/Stop cancellation; reduced-motion typewriter completes immediately and scroll uses auto (ChatbotPage.tsx:518-569,432-451,1030-1106).",
+      "Edit focuses/caret-places Textarea, names input and supports Enter/Escape; message actions expose focus-within/coarse-pointer visibility (ChatMessageItem.tsx:86-124,154-179,238-256).",
+      "Session active aria-current, rename focus/select with Enter/Escape/blur, localized delete danger confirmation (SessionList.tsx:45-81,161,209-235).",
+      "Markdown column headers retain scope=col; decorative welcome/suggestion icons hidden; citations expose expanded state (MarkdownRenderer.tsx:125-134; ChatWelcome.tsx:26-32; SuggestedPrompts.tsx:80; KnowledgeCitations.tsx:20)."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx", "line": 155, "rule": "MDC-040", "detail": "Rename entry is onDoubleClick only; Enter selects a session, not rename. No equivalent explicit keyboard rename action is rendered.", "fix": "Add a named shared action reachable by keyboard and touch; preserve inline focus, Enter/Escape/blur behavior and full untruncated editable title.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 833, "rule": "MDC-040/MDC-026", "detail": "Log announces additions, while streamed deltas mutate existing rows; nested evidence status also announces changes. Useful streaming/completion/error announcements and announcement noise are unverified.", "fix": "Exercise screen-reader log, tool updates, completion and error states before choosing restrained status announcements; keep readable partial text and do not announce every token.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\components\\ai\\HelixEvidenceTrail.tsx", "line": 90, "rule": "MDC-042", "detail": "Running tool loader uses animate-spin without consulting the application's low-bandwidth/reduce motion preference. Browser CSS behavior was not exercised.", "fix": "Use existing motion preference or accepted shared motion treatment and retain textual Reading/Used/Unavailable states.", "owner": "shared", "confidence": "medium"}
+    ],
+    "unverified": ["Effective light/dark contrast", "Drawer and confirmation focus trapping/restoration", "Screen-reader streaming order", "44px targets/spacing exceptions", "200% text and RTL", "Forced colors", "Reduced-motion/low-bandwidth runtime"]
+  },
+  "states": {
+    "initialLoading": {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:142-145,806-826; SessionList.tsx:111-123", "detail": "Sessions show localized loading text when empty. Page does not pass history loading/error evidence to transcript."},
+    "empty": {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:838-847; SessionList.tsx:116-123", "detail": "Zero messages shows explanatory welcome plus editable suggestions; zero sessions shows EmptyState. Absence caused by failed list is not distinguished."},
+    "waitingStreaming": {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:725-732,866-892,916-936", "detail": "Baseline mutation/first AI delta waiting, planning/grounding copy, motion-aware dots, partial Markdown and Stop. Tool activity changes displayed waiting copy but does not prove answer grounding."},
+    "success": {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:201-224,300-317", "detail": "Baseline reveal completion returns focus; AI done retains text/usage and refreshes sessions. AI done does not explicitly return composer focus."},
+    "failure": {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:318-342,384-418; web\\src\\api\\hooks\\useChat.ts:105-119", "detail": "AI frame/transport error retains partial text plus localized marker, settles tools and clears pending send. Baseline send errors use toast and leave optimistic user message."},
+    "cancelFeatureOff": {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:350-378,540-577,735-757", "detail": "AI-off transition, Stop/Escape finalize received partial text and mark pending tools failed; baseline Stop completes full already-fetched text, not the same as aborting a request."},
+    "history": {"citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:168-183,580-591", "detail": "Hydration preserves current optimistic stream and same-session empty stale read; selecting another session does not clear previous transcript before new history resolves."},
+    "confirmation": {"citation": "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx:217-235; web\\src\\hooks\\useAiStream.ts:417-420", "detail": "Delete has explicit danger confirmation. Generic stream supports paused-confirm; ChatbotPage handles no confirm_request branch and renders no AI continuation dialog. Actual chatbot tool emission/capability is unverified; no confirmation was exercised."},
+    "staleOffline": {"citation": "web\\src\\api\\hooks\\useChat.ts:33-46; web\\src\\features\\system\\pages\\ChatbotPage.tsx:142-145", "detail": "Query cache may retain data, but page shows no distinct paused/offline/stale/history error notice or retry. No network mode acceptance claimed."},
+    "voice": {"citation": "web\\src\\components\\ai\\AIVoiceMode.tsx:274-327,415-591; web\\src\\components\\ai\\AiOutputPanel.tsx:71-132", "detail": "Independent listening/interim/final transcript, unsupported/STT error, stream output/error/empty completion, mute and stop. Preserve voice draft cleanup. Shared voice output replaces retained text with alert on stream error."},
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 580, "rule": "MDC-026/MDC-046", "detail": "loadSession changes active ID but leaves old messages until history hydrates; history loading/error are never rendered. Failed/delayed history can show the previous conversation under the newly selected session.", "fix": "Scope transcript to its session, explicitly distinguish retained previous-session content from selected loading/error, and provide independent history/list retry without losing optimistic race guards.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 515, "rule": "MDC-026/MDC-046", "detail": "handleSend always clears input even when submitMessage rejects an in-flight/pending AI request; keyboard Enter still invokes it. The button's disabled condition excludes pendingAiRequest and paused-confirm.", "fix": "Only clear on accepted submission and share busy/confirmation guards across button/keyboard; preserve draft on blocked sends and never auto-confirm.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 255, "rule": "MDC-024/MDC-026/MDC-046", "detail": "Generic confirm_request is not handled; hook can pause while pendingAiRequest remains set. Stop/Escape consider streaming only. If emitted by this route, pending confirmation can leave sends blocked without a decision UI. Whether this route emits it is unknown.", "fix": "First verify assigned route tool/continuation contract. Preserve safety by either rendering existing confirmation flow with explicit decisions or an honest unsupported paused state and cancellation; do not fabricate an endpoint or bypass consent.", "owner": "integration", "confidence": "medium"},
+      {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 704, "rule": "MDC-026", "detail": "Deleting active session clears local conversation before delete success; failure toast cannot restore the visible transcript. Rename/delete pending state is not passed to SessionList.", "fix": "Retain active content until successful deletion or support explicit restoration; expose mutation pending/error through existing controls without weakening danger confirmation.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\system\\components\\chatbot\\ChatWelcome.tsx", "line": 28, "rule": "MDC-010/MDC-015", "detail": "Decorative scaled purple blur halo plus purple-to-blue gradient competes with the conversation entry point; page waiting icon repeats gradient at line 870.", "fix": "Use current neutral surfaces/borders and restrained meaningful Helix icon accent; remove decorative halo/gradient, preserving welcome and waiting content.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx", "line": 132, "rule": "MDC-010/MDC-012", "detail": "Purple active border/text/focus overrides, cyan user bubbles/link chips and purple hover/cursor cues spread fixed saturation through metadata and actions. No literal neon-* or fixed-white was found in the bounded page/domain scan, but that is not visual-noise acceptance.", "fix": "Adopt existing semantic selection/focus/link/surface roles while preserving active state, sender identity, evidence links and focus visibility; do not reset saved themes.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AiOutputPanel.tsx", "line": 83, "rule": "MDC-010/MDC-012/MDC-015", "detail": "Voice output uses bg-white/[0.02], a fixed-white surface overlay. AI indicator uses fixed cyan chip styling; no measured contrast or rendered intensity evidence.", "fix": "Reuse canonical neutral surface and current subdued semantic AI badge contract; retain labels, gate and output/error behavior.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx", "line": 145, "rule": "MDC-013", "detail": "Bubble text-sm/leading-relaxed and link text-2xs/font-medium are caller typography rather than role contracts; Markdown inline code and voice hints also contain ad-hoc sizes.", "fix": "Use accepted Text/Code/role tokens without stripping Markdown semantics, source formatting or wrapping.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 294, "rule": "MDC-046/MDC-026", "detail": "Evidence/activity/usage are UI-only fields; history ChatMessage contract and toUIMessage only retain wire content. Fresh provenance is not restored by this frontend after history reload. Backend enrichment was not inspected.", "fix": "Preserve current fresh-turn evidence, clearly label historical provenance availability, and require a verified typed server contract before claiming durable evidence or adding persistence.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AIVoiceMode.tsx", "line": 556, "rule": "MDC-046", "detail": "Visible copy asserts voice input/playback stay on-device. Source uses browser SpeechRecognition without configuring or proving on-device processing. Text-only application POST does not prove the browser recognizer never uses a provider service.", "fix": "Verify supported-browser privacy behavior and qualify disclosure with existing product privacy policy; preserve opt-in mic, feature gate and cleanup. Do not report a privacy guarantee from this source audit.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\ChatbotPage.tsx", "line": 468, "rule": "MDC-032/MDC-046", "detail": "Chat request carries only message/session_id; no selected vehicle/date bounds are sent. This is a fleet conversational page, not demonstrated workspace-scoped analytics.", "fix": "Retain fleet/session semantics; do not add duplicate scope pickers or imply current-header grounding unless an authorized backend/request contract establishes it.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Scope history loading/error to selected session", "Preserve composer input on blocked sends", "Verify paused-confirm route applicability without submissions", "Expose keyboard/touch rename and delete"],
+    "next": ["Guard active-delete feedback", "Qualify voice privacy disclosure", "Remove glow/gradient and fixed-color noise", "Validate voice/composer nested scrolling and announcements"],
+    "reason": "This is a functioning multi-path conversation surface with substantial streaming/race/privacy behavior; surgical evidence-backed changes are safer than a replacement chat scaffold."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse canonical streaming lifecycle and explicit confirmation boundary",
+      "owner": "web\\src\\hooks\\useAiStream.ts",
+      "propsVariantsStates": ["state idle/streaming/paused-confirm/done/error", "onEvent confirm_request", "cancel", "body/url", "tool activity id/name/status", "structured limit"],
+      "usedBy": ["ChatbotPage", "AIVoiceMode"],
+      "dependsOn": ["Verify actual chatbot continuation/tool support before page integration", "Existing ConfirmDialog and authentication/consent owners"],
+      "changeNeeded": "No generic hook replacement; page integration conditional on actual route support."
+    },
+    {
+      "name": "Shared voice disclosure/output surface review",
+      "owner": "web\\src\\components\\ai\\AIVoiceMode.tsx and web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "propsVariantsStates": ["voice feature off/on", "unsupported recognizer", "mic permission/error", "transcript draft lifecycle", "mute/stop", "retained partial output on failure", "neutral surface"],
+      "usedBy": ["Optional voice panel mounted by ChatbotPage"],
+      "dependsOn": ["Browser/provider privacy verification", "Current privacy policy/localization owner", "Current AIFeatureCard and useAiStream contracts"],
+      "changeNeeded": true
+    },
+    {
+      "name": "Evidence-trail motion and honest source labels",
+      "owner": "web\\src\\components\\ai\\HelixEvidenceTrail.tsx",
+      "propsVariantsStates": ["activity", "state", "usage", "running/succeeded/failed labels", "reduce motion/low bandwidth", "no raw tool arguments/results"],
+      "usedBy": ["ChatMessageItem", "AiOutputPanel in voice mode"],
+      "dependsOn": ["Existing useMotionPreference", "Do not equate successful tool calls with verified answer claims"],
+      "changeNeeded": "Review shared spinner preference; preserve provenance contract."
+    },
+    {
+      "name": "Reuse existing session overlay and action primitives",
+      "owner": "web\\src\\components\\ui (Drawer, Button, ConfirmDialog)",
+      "propsVariantsStates": ["localized action names", "danger confirmation", "pending/disabled", "keyboard/touch reachability", "focus restoration"],
+      "usedBy": ["SessionList", "ChatbotPage mobile History"],
+      "dependsOn": ["Verify existing controls in browser; shared internals not deeply audited"],
+      "changeNeeded": false
+    }
+  ],
+  "competingImplementations": [
+    {"name": "Baseline typewriter versus real AI SSE", "citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:201-224,234-346,987-1076", "disposition": "Intentional feature-mode behavior, not duplicate transports to delete; preserve both and distinguish reveal stop from stream abort."},
+    {"name": "Typed and voice sessions", "citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:454-489; web\\src\\components\\ai\\AIVoiceMode.tsx:114-116,206,263-271", "disposition": "Independent sessions and streams; do not silently merge conversations or microphone output into typed chat."},
+    {"name": "Tool trail, retrieved chunks and deterministic deep links", "citation": "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx:197-227", "disposition": "Distinct provenance types; keep all with accurate unavailable/cited/retrieved meanings, not a synthetic universal evidence claim."}
+  ],
+  "preservation": {
+    "sourceHash": "bf599bcba1672c1f00d39c4cf2e00c9ce797da7f412e223769f6b33c7620253c",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 1106,
+    "sectionCount": 6,
+    "sectionNames": ["Header and History toggle", "Optional voice mode", "Session history", "Conversation and empty welcome", "Evidence and message actions", "Composer and Stop/Send"],
+    "counts": {"rootGlassPanel": 2, "rootChartContainer": 0, "domainGlassPanel": 1, "suggestions": 4, "inspectedDomainLines": 988, "rootPlusInspectedDomainLines": 2094, "note": "Counts are lexical source occurrences, not mounted/runtime counts. Root panels are conversation and conditional waiting; session renderer is reused by desktop/Drawer. Domain sum excludes tests, includes knowledgeEvidence.ts."},
+    "sections": [
+      {"name": "Header", "citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:760-783", "contents": ["Localized Helix title/subtitle", "Opt-in AI indicator", "Pressed-state History toggle"]},
+      {"name": "Voice", "citation": "web\\src\\components\\ai\\AIVoiceMode.tsx:183-591", "contents": ["Independent feature gate/session", "Final/interim transcript", "Mic support/errors", "TTS sentence buffering/mute", "Stop mic/stream/speech", "Draft cleanup", "Shared output/error/empty state"]},
+      {"name": "History", "citation": "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx:85-261", "contents": ["New chat", "Title fallback without corrupting rename seed", "Last activity/message count", "Active selection", "Rename Enter/Escape/blur", "Danger-confirmed delete", "Loading/empty", "Desktop preference/mobile Drawer"]},
+      {"name": "Conversation", "citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:830-899", "contents": ["Accessible log", "Welcome/four editable suggestions", "Grouped message bubbles", "Waiting planning/grounding text", "Motion-aware reveal/scroll", "Partial answer/error/cancel retention"]},
+      {"name": "Message details", "citation": "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx:126-269", "contents": ["Avatar/role/grouping", "Timestamp", "Safe lazy Markdown", "Shared code/raw clipboard", "Semantic tables", "External Markdown links", "Deterministic source links", "Tool activity/status/token usage", "Inspectable retrieved chunks/cited distinction", "Copy/edit/regenerate gating"]},
+      {"name": "Composer", "citation": "web\\src\\features\\system\\pages\\ChatbotPage.tsx:902-945", "contents": ["Explicit label/id", "Editable multiline text", "Enter/Shift+Enter", "ArrowUp recall", "Send/Stop/Escape", "Responsive icon names", "44px minimum input"]}
+    ],
+    "actions": [
+      "Toggle History and preserve existing storage key/breakpoint behavior; mobile select/New closes Drawer.",
+      "New conversation cancels reveal/SSE and clears typed UI/session; load session cancels old request.",
+      "Baseline submit uses existing mutation; AI submit uses canonical SSE and optimistic paired turns.",
+      "Stop/Escape retain appropriate text; AI-off transition cancels without automatic baseline replay.",
+      "Copy full message/code; edit last user/resend and regenerate last assistant preserve truncation semantics.",
+      "Rename full raw title and confirm destructive delete; retain success/error mutation feedback.",
+      "Inspect actual retrieved sources, deterministic deep links and tool trail; never fabricate evidence.",
+      "Voice opt-in microphone, independent send, mute/unmute and combined stop; no mic/tool/message action exercised."
+    ],
+    "dataBehavior": [
+      "Retain chat query keys, AbortSignals, cache updates/invalidation and history optimistic race guards.",
+      "Keep feature gates fail-closed; no new runtime/provider/auth system or browser token storage.",
+      "Retain existing privacy-safe tool identity/status and validated excerpts; raw arguments/results are not generic provenance display.",
+      "Wire ChatMessage has no UI evidence/usage fields; do not invent historical provenance.",
+      "No fabricated fleet measurement, unit conversion or workspace grounding; request body is message/session_id.",
+      "Keep baseline deterministic mode, optional AI stream and independent voice mode; no fake runtime AI proof.",
+      "Do not bypass delete or potential tool confirmation boundaries; verify route support before extending behavior.",
+      "Safe Markdown stays without raw HTML enablement; external rel, code copying and semantic table overflow survive."
+    ],
+    "previousMigration": "Existing PageLayout, shared UI/AI components, feature gates and domain renderers are inherited source. No source was edited or reverted."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "Router declarations/mount and frontend payloads inspected only; no handler/tool execution, persistence, redaction, retrieval accuracy, provider, continuation emission or browser STT processing acceptance.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\system\\pages\\ChatbotPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\system\\pages\\ChatbotPage.tsx).Count", "exitCode": 0, "output": "BF599BCBA1672C1F00D39C4CF2E00C9CE797DA7F412E223769F6B33C7620253C; 1106"},
+      {"command": "Bounded Get-Content/[regex] lexical counts for root and non-test chatbot domain files", "exitCode": 0, "output": "ChatbotPage 1106 lines/2 GlassPanel/0 ChartContainer/0 rawControls/0 neon/0 fixedWhite/1 inlineStyle; ChatMessageItem 269; ChatWelcome 51; CodeBlock 45; KnowledgeCitations 48; knowledgeEvidence 60; MarkdownRenderer 165; SessionList 261/1 GlassPanel; SuggestedPrompts 89. All domain files: 0 ChartContainer/rawControls/neon/fixedWhite/inlineStyle. Root inline style is dynamic TypingDots timing, not static var CSS."}
+    ],
+    "notRun": ["Git", "Full violations script (includes project TypeScript; read-only bounded Phase 0 instead)", "TypeScript/lint/build/test suites", "Browser/server/runtime AI", "Actual messages/tools/voice/mutations/confirmations"],
+    "scope": "One assigned mounted page and direct presentation/data dependencies. Report and heartbeat only. Source counts are not historical comparison or whole-app acceptance; tests present were not executed."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-175.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\ChatbotPage.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\ChatWelcome.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\SuggestedPrompts.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\MarkdownRenderer.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\CodeBlock.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\KnowledgeCitations.tsx",
+    "web\\src\\features\\system\\components\\chatbot\\knowledgeEvidence.ts",
+    "web\\src\\api\\hooks\\useChat.ts",
+    "web\\src\\api\\devtools.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useMediaQuery.ts",
+    "web\\src\\components\\ai\\AIVoiceMode.tsx",
+    "web\\src\\components\\ai\\AIChatbotIndicator.tsx",
+    "web\\src\\components\\ai\\HelixEvidenceTrail.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go"
+  ]
+}
