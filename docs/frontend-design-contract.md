@@ -1,394 +1,489 @@
 # TeslaSync frontend design contract
 
-**Status: production foundation implemented; centralized full validation PENDING.
-Runtime, visual and accessibility acceptance are NOT CLAIMED.**
-This is the authoritative whole-app modernization contract at
-`docs\frontend-design-contract.md`, governing all disjoint implementation
-writers alongside the repository instructions. It supersedes the preparation
-draft. Reviewed v1/v2/v3 source, patches and hashes remain archived in the
-foundation owner's session artifacts.
+**Phase-1a authority; design decisions, not implementation or runtime acceptance.**
+Every frontend worker reads this existing contract before modifying UI. It covers
+[mission](frontend-mission.md) §2 and the whole application, including standalone
+connection/public surfaces, native hosts and production-used reference components.
+Only explicit assigned ownership authorizes writes.
 
 ## Authority, scope and validation — MDC-001
 
-The 1,593-line whole-app specification (`paste-1790923179995.txt`) authorizes
-whole-app modernization. The latest October 4 instruction authorizes live
-implementation now, not another staged-only delay. Prior staged-only,
-approval and prerequisite-commit ENTRY blockers no longer apply to the
-authorized modernization. Stats decisions remain delegated subject to
-**NO DATA LOSS**; do not add repeated naming/reference/adoption permission
-stops. Full application validation follows the stable whole-app batch.
-Implementation does not establish runtime acceptance or authorize premature
-commits, deployment or data/feature loss.
+Phase 0 is accepted and committed at **2dd0943ead**; checkpoint **bfeaa733d9**.
+[Current inventory](frontend-inventory.md) records **237 production source audits,
+4 DEV exclusions, 480 proposals and 244 semantic review scopes**. A review scope
+is neither an approved component nor implemented behavior. Source audit is not
+fresh authentication, backend, visual, keyboard or runtime acceptance.
 
-The foundation owner integrates Input/Textarea identity, the coupled HelpIcon
-description fix, their five focused test files and this document: nine exact
-live targets. Other writers may implement disjoint assigned targets in parallel.
-Modal, Grid, Tooltip, UI barrel, shared tokens/global CSS, feature/API/i18n and
-dashboard code are outside this owner's write scope. The separate preservation
-guardrail owner owns `web\scripts\check-modernization-preservation.mjs` and its
-tests/baseline; this batch does not author, copy or edit that implementation.
-No route, feature migration, provider, palette, engine or package is introduced.
+Preserve the [historical inventory](frontend-component-inventory.md)'s **20
+contracts: 2 new, 2 promotions, 16 existing extensions**. Its scoped historical
+acceptance remains historical; reuse the actual APIs, not a competing library.
+Current inventory dispositions (`reuse`, `extend-review`, `styling-review`,
+`integration`, `local`, `unresolved-owner-review`) retain their evidence limits.
+The accepted current inventory governs proposal ownership; historical cohort
+counts, staging/index observations and prior permission stops do not govern dispatch.
 
-Preserve existing business behavior and defaults. Source references and applied
-code are not mounted coverage, runtime success or whole-app completion.
-Authorized presentation changes must retain all data, metadata, sections,
-actions, exports and specialist explanations. The mobile specification's
-generic "hide secondary content" does not authorize information loss. Unknown
-equivalence is a preservation risk to resolve, never permission to delete a
-capability or report completion. Centralized full validation and no premature
-commit remain mandatory.
+The orchestrator **only audits, plans, dispatches, monitors health, runs gates and
+commits**; implementation belongs to assigned workers. Workers never run Git.
+Dispatch one atomic item per worker, at most **32** concurrent workers, with
+exclusive files and actual lifecycle ownership through completion/failure and
+release. Preserve former-worker ownership and every unrelated inherited delta;
+an old report or silent heartbeat does not release another worker's files.
+The orchestrator performs a **scoped sequential commit after each verified DONE**,
+and phase checkpoints. Do not reintroduce October 4 cohort write scopes,
+staged-only/no-commit prerequisites, prior-approval entry gates or stats permission
+loops. A verified documentation DONE does not imply a passed implementation gate.
+
+Typecheck every **15 commits, including report-only commits**. Inherited health:
+at commit **240**, `cd web; npx tsc --noEmit` exited **2**, with **54 diagnostics
+in 37 files**. Current cadence is **243**, next due **255**. These are inherited
+receipts, not a fresh run or repaired baseline. All implementation phase gates
+must pass: supported runtime, build/typecheck, required lint/audits/tests and
+phase-specific preservation/QA. Red is never green; resolve failures through
+assigned bounded items, without weakening ratchets. Full runtime acceptance is future.
+
+Actual inherited Node is **24.18.0**, versus `web\package.json` engines **>=26.0.0**.
+The inspected NVM list contains 24.18.0, 20.19.0, 20.18.0 only. This does **not**
+prove Node 26 is absent elsewhere. Locate/provision and verify a supported runtime
+before gates; this documentation item installs/switches nothing.
 
 ## One existing architecture — MDC-002
 
-Reuse: CSS variables / Tailwind / `lib\tokens.ts` → existing primitives →
-shared composites → feature components → pages → existing shell composition.
-Pages orchestrate typed hooks; components render; lib utilities derive.
-Do not add ModernCard, another theme context, another token engine, router,
-query-state store, duplicated formatter or a second overlay/focus system.
-No feature may establish global visual patterns independently.
+Existing CSS variables/Tailwind/`web\src\lib\tokens.ts` → primitives → composites
+→ feature components → pages → existing shell. D0 foundations have no consumer
+dependencies; D1 primitives/query/trust depend on D0; D2 layouts/composites use
+D0/D1; D3 domain adapters/pages use those layers. Validation is not a component
+dependency. No new theme context, token engine, query store, formatter, router,
+overlay engine, ModernCard or speculative component family.
 
-Feature/page callers use category barrels. Inside shared components, import
-concrete modules rather than a barrel that transitively re-exports the caller.
-This prevents circular cross-chunk initialization; `npm run audit:chunk-cycles`
-and the production build enforce it without changing chunk budgets.
+Features/pages use category barrels (`@/components/ui`, `layout`, `forms`,
+`data-display`, `charts`, `feedback`, `maps`, `motion`, etc.). Shared components
+use concrete internal modules, never their own transitively recursive category
+barrel. Vendor charts/maps/motion stay behind existing shared boundaries.
+Typed hooks own reads; lib/domain adapters own calculations; components render.
+Retain cancellation (`{ signal }` → `request()`), query keys, enablement,
+retry/stale-time policies, raw payloads and source scope. No `any`, swallowed
+failures, ad-hoc fetch/useEffect data loading or speculative backend capabilities.
 
-Read hooks forward TanStack Query's `{ signal }` to `request()` so unmounts and
-scope changes cancel obsolete work. Keep existing query keys, enablement,
-raw payloads and inherited retry/stale-time policies unchanged.
+Reuse before extension; a shared public API expansion needs two independent
+production consumers unless intrinsically global. Children of one page are not
+independent consumers. Report unsupported mappings as KEEP/UNKNOWN and retain
+the source behavior. Domain-specific work stays local; only its assigned
+integration owner changes endpoints/types/catalogs/routing/lifecycle.
 
-`useSignalEvidenceBundle().sources` preserves every normalized signal identity,
-including pending and failed histories. Each entry exposes the existing
-historical `DataState` contract with retained payload, last-success timestamp,
-fatal versus refresh error and individual retry. A resolved empty history is
-unavailable, not a measured zero; the existing aggregate data and query behavior
-remain unchanged. Consumers must not infer missing identities from the
-successful-series array or discard retained series on refresh failure.
+## Restrained foundation decisions
 
-Typography convenience wrappers forward the underlying renderer's optional
-`as` element override while retaining their default element, role classes and
-HTML attributes. Use this to preserve semantic markup rather than substituting
-raw text elements or changing the typography role.
+Values below are **Phase-1 targets at existing owners**, not a claim that current
+tokens already implement them. Keep role names and public APIs; pages do not
+paste these hex values into local styles. Implementation gaps are listed in
+MDC-080. Read snapshots are citations, not locks on concurrent source changes.
 
-## Foundation APIs and design obligations
+### Color, theme and text — MDC-010 / MDC-011 / MDC-012
 
-### Component-first production imports
+Reduce noise actively: neutral surfaces, soft text, one dominant action, bounded
+semantic accents. No decorative neon, glow, saturated gradients, white metadata,
+rainbow progress bars or colored shadows. Hue conveys meaning, not card grouping.
+One primary metric/state/action can lead; supporting content and metadata recede
+through spacing/type/surfaces, never inaccessible low contrast.
 
-Component-first work starts with a whole-app needs inventory, not a fixed
-component count. Cover routed pages, standalone connection/public-report
-surfaces and their feature components. Distinguish file enumeration from
-semantic review; record uncovered paths explicitly. Development-only reference
-routes are not production coverage, but shared implementations used by
-production remain in scope even when their directory includes `reference`.
-
-Map each recurring need to **reuse**, **extend**, **new**, or **local**.
-The evidence-backed working list and its explicit coverage limitations are in
-[the whole-app component inventory](frontend-component-inventory.md).
-Check the existing implementation, not just its export name. Extensions and
-new composites need concrete missing-capability evidence from at least two
-independent production consumers, a typed presentation contract, preservation
-requirements and focused acceptance cases. Business calculations and queries
-remain outside presentation components. Consolidate overlapping proposals
-before assigning exclusive implementation scopes; do not build speculative
-components or resume page adoption while the needs inventory is incomplete.
-Source-confirmed contracts may be implemented on exclusive paths while the
-remaining inventory is closed. Finish the agreed shared-library source scope
-before consolidated TypeScript, lint, regression and build acceptance; do not
-repeat those full gates after every source handoff. Author focused tests with
-each contract, then rerun only affected checks when a real failure needs a fix.
-
-Finish and verify the existing shared components before expanding page adoption.
-Use one bounded owner per component and centralize category exports, catalog
-generation and integrated validation. Do not build another library or duplicate
-an existing renderer merely because its implementation directory includes
-`reference`.
-
-Pages import `PageLayout`, `Section`, `CardGrid`, `LayoutCard`, `ChartCard`,
-`LockedNotice`, `AboutPanel` and `SourceContent` from `@/components/layout`.
-Import `StatStrip` and `StatGroup` from `@/components/data-display`.
-`DataTable` remains the sole table pipeline in `@/components/ui`, including its
-opt-in mobile presentation; `FormSection` remains in `@/components/forms`.
-These exports reference the existing implementations, not replacement wrappers.
-Shared implementations use concrete imports internally, never their own category
-barrel. Component APIs and focused regression tests must be accepted before the
-next page cohort consumes a changed contract.
-
-Operational `StatStrip` metrics retain numeric source measurements:
-`bytes` takes bytes and reuses `formatBytes` binary size formatting;
-`byteRate` takes bytes per second, with `display.byteRatePeriod` selecting
-`s` or `d` only at the display boundary; `latency` takes non-negative seconds,
-with `display.latencyStyle` selecting fixed milliseconds or adaptive
-milliseconds/seconds. Explicit precision and locale remain supported without
-changing saved preferences. Signed net byte growth is valid; negative data
-sizes or latency are not. Keep zero distinct from missing input, and retain
-source-specific labels, captions, periods and units rather than converting
-measurements to text metrics.
-`mass` takes kilograms; `multiplier` keeps dimensionless factors distinct from
-percentages and displays the multiplication sign. A `count` can supply numeric
-`display.countTotal` to retain active/total counts without calculating a ratio.
-The total must be a non-negative safe integer; an unknown numerator remains
-unknown even when its total is known.
-For a source-backed specialist display, `display.formatter` receives the
-validated numeric source and effective display preferences before default
-physical conversion, and returns value/unit strings; raw input and accessible
-output remain in the shared pipeline. Invalid/missing input never reaches it,
-including negative durations when `durationStyle: 'roundedMinutes'` is selected.
-`notation: 'source'` retains an existing unrounded numeric representation.
-`rate` permits an explicit source rate unit; it does not change physical unit
-preferences. `identifier` preserves a safe non-negative integer without
-grouping or rounding, with an optional `identifierPrefix`.
-
-Contextual screenshot summaries use the existing `OperationalBrief`, not a
-replacement KPI grid. `useOperationalMetrics` adapts typed source measurements
-through the same formatter and saved preferences, retaining raw input, missing
-reasons, source context, comparisons and navigation. Brief captions may contain
-rich context and remain fully visible; loading does not fabricate values.
-The details drawer follows the summary's loading suppression rather than
-publishing a measurement hidden by the summary.
-Status, scope, freshness and review actions must come from the actual source,
-not copied "On track" or "Historical" labels from an example.
-
-Public reports use `usePublicOperationalMetrics(metrics, preferences)` with
-explicit existing viewer/source preferences. It shares the same pure formatter
-as the authenticated bridge without invoking settings or formatting query
-hooks. Preserve public identity, source currency and existing unit preferences;
-do not add authenticated workspace subscriptions to obtain presentation data.
-
-Paths below are relative to the repository; line citations describe the
-current read snapshot. Exact hashes and source-range excerpts are in the
-delivery's `source-evidence.json`; baseline proof is retained separately from
-live readback. Refresh affected citations as disjoint implementations evolve.
-
-| Stable ID | Contract / covered existing API | Source |
+| Existing role | Dark target | Light target |
 | --- | --- | --- |
-| MDC-010 color | Neutral application/background/surface/control/border variables are canonical. Semantic hue communicates meaning; subdued surfaces and hierarchy carry structure. No new hex palette, glow or saturation escalation. | `web\src\index.css:38–80,148–207`; `web\src\lib\tokens.ts:37–45,266–294` |
-| MDC-011 themes | Reuse ThemeProvider, custom colors, mode and saved theme IDs. `neon-cyan` is the persisted ID of Signal Blue, not permission to change persistence. Retain explicit Matrix Green/neon chart choices; do not force-reset preferences for aesthetic compliance. | `web\src\components\ui\ThemeProvider.tsx:138–166,315–391`; `web\src\lib\colors.ts:31–68` |
-| MDC-012 text | Primary/secondary/muted/disabled/inverse/on-accent resolve through current tokens. Avoid fixed-white/fixed-gray metadata across themes. Disabled, unknown and stale are different meanings. Contrast is measured on actual composed backgrounds, not inferred from a token name. | `web\src\lib\tokens.ts:190–214`; `ThemeProvider.tsx:99–114` |
-| MDC-013 typography | Use Heading/Text and role wrappers; font scale/family/weight/leading preferences survive. Tabular numbers remain. Display/metric emphasis does not make every label bold. No independent font package or arbitrary per-page scale. | `web\src\components\ui\Typography.tsx:19–126`; `web\src\lib\tokens.ts:169–234`; `web\tailwind.config.js:145–185` |
-| MDC-014 spacing/density | Use Tailwind scale and density utilities. Keep default/compact/comfortable choices and non-overlapping target reachability. Do not change global padding/row defaults to claim modernization. | `web\src\index.css:91–96,209–227`; `web\tailwind.config.js:187–208` |
-| MDC-015 surfaces | Card/GlassPanel share panel background/border/radius/elevation. Flat panel blur already defaults to zero. Retain public names, print markers and shapes; no competing surface wrapper merely for new vocabulary. | `web\src\index.css:131–171`; preparation inventory A14 |
-| MDC-016 icons | Reuse existing Icons/Icon registries and iconSize. Decorative cues hidden from assistive tech; meaningful action names localized. Direct feature library imports do not create a new icon policy. | `web\src\lib\tokens.ts:49–59`; `docs\ICON_GUIDELINES.md` |
-| MDC-020 buttons | Button already supplies primary/secondary/outline/danger/ghost, icon, loading/disabled/aria-busy, focus and density sizing. Destructive maps to danger; link chrome composes BUTTON_BASE with native navigation semantics. No new variants simply to mirror aspirational names. | `web\src\components\ui\Button.tsx:9–80` |
-| MDC-021 fields | Reuse Input/Textarea/Select/Checkbox/RadioCard/Toggle plus current form patterns. Labels, feedback, required, refs, native names/values and external descriptions remain. IDs are not generated from translated content. Callers needing a predictable DOM ID must pass explicit `id`; no caller IDs, name attributes or saved data keys are renamed. | `web\src\components\ui\Input.tsx:48–61,66–108`; `Textarea.tsx:44–57,63–107`; `docs\A11Y_GUIDELINES.md:87–96` |
-| MDC-022 field help | HelpIcon and Tooltip remain canonical. Help targets use field identity; default accessible help names use the visible localized label, not a generated React ID. Explicit `help.for` and `help.ariaLabel` keep priority. Contextual-help preference and tooltip keyboard/focus behavior are untouched. | `web\src\components\ui\HelpIcon.tsx:38–57,76–120` |
-| MDC-023 tables | DataTable is the interaction/persistence/export owner; Table is the semantic matrix primitive. Mobile strategies must preserve full details, selection/loaded/full-result export scope, stable tableId and source ordering. DataTable.variant stays standalone/embedded. Do not substitute a fixture controller for a production pipeline. | `docs\TABLE_GUIDELINES.md`; mobile handoff API/adapter gaps |
-| MDC-024 overlays | Existing Modal/Drawer/Popover/ConfirmDialog/useDialogFocus own trapping/restoration/Escape/labels. Modal now has distinct `size="fullscreen"`: full viewport at all widths, constrained internal scroll owner, persistent footer. `full` is not renamed or treated as identical. No Modal/Grid patch in this delivery; browser behavior remains parent validation. | `web\src\components\ui\Modal.tsx:16,57–79,116–138,164–178` |
-| MDC-025 states/status | Badge semantic variants and severityTokens already exist; vehicle StatusBadge uses current FSM definitions. Reuse them rather than adding a competing universal status registry. Preserve domain meanings; color is never the sole signal. Unknown cannot imply offline/error/zero. | `web\src\components\ui\Badge.tsx:14–20,44–64`; `web\src\components\data-display\StatusBadge.tsx:23–49`; `web\src\lib\tokens.ts:245–307` |
-| MDC-026 asynchronous trust | Distinguish initial loading, empty, unavailable, unknown, partial, stale, offline and failure. Only fatalError with no retained data may replace a source. Refresh errors keep usable data and independent neighbors. Skeleton geometry and actionable recovery are part of design. | `web\src\api\dataState.ts:130–146,158–177`; preparation A16/A19 |
-| MDC-030 shell/navigation | Existing Layout/WorkspaceHeader/CommandDeck/BottomTabBar own navigation/search/notifications, selectors and account access. Retain routes, aliases, destinations, collapse prefs, pins/recents, guard/native/auth/report/kiosk behaviors. No speculative desktop moves or replacement Sidebar. | preparation inventory A03–A10/A25 and integrated crosswalk |
-| MDC-031 page layout | Compose existing PageContainer/PageHeader/Grid/Stack/PageActions, then reviewed layout-reference adapters. Reports, charts and grids use the full allocated page width aligned with the header, retaining normal inherited shell gutters. Constrain individual text/form blocks when needed, not the entire analytical page; do not add a scope flag or competing width engine. Preserve content, queries, actions, `w-full`, `min-w-0` and container-query behavior. Do not compete with the layout owner or duplicate header chrome. Every section/action remains reachable; thinner orchestrators count extracted components, not fewer capabilities. Parent reports the shared PageLayout width correction source-applied; runtime validation remains pending, with no preview, deployment or native acceptance claimed. | layout implementation HANDOFF; preparation A16/A24; parent PageLayout width-correction handoff |
-| MDC-032 workspace/date | Header View settings and vehicle picker own workspace scope. Consume range/vehicle hooks and URL bounds. Retain rolling/custom/calendar/DST/timezone semantics and full-server filtering; no second page date/vehicle picker. Independent business dates are not workspace selectors. | `.github\instructions\react-frontend.instructions.md:51–83`; preparation A21 |
-| MDC-033 stats | One stats-owner glossary/formatMetric/StatStrip/StatGroup; raw SI to existing display helpers. Keep specialist formatters when generic support is unproved. Preserve all metrics, periods, freshness, missing reasons, comparison semantics, exports and source calculations. Delegation permits stat decisions, not data loss. | dedicated stats spec `paste-1791061822489.txt`; stats HANDOFF/adoption-policy |
-| MDC-034 charts/maps | ChartContainer/category barrels/current palettes own presentation. Preserve all series, axes, zoom, legend persistence, annotation, fullscreen, export and accessible tables. Subdue reference decoration, not data meaning; do not invent data/series or replace source aggregates. | `web\src\lib\tokens.ts:chartTokens`; `web\src\lib\colors.ts:31–68`; preparation A17 |
-| MDC-040 accessibility | Keyboard order/reachability, visible focus, names, semantics and text alternatives are mandatory. AA effective text contrast 4.5:1 / UI 3:1; stronger mobile target default 44px, documented WCAG spacing exceptions. Validate real open states and long labels. | `docs\A11Y_GUIDELINES.md:12–75,87–130` |
-| MDC-041 forced colors | Keep system-color token remaps above ordinary inline theme properties. ThemeProvider must never write important theme variables. Preserve focus outlines and chart/table alternatives; source presence is not OS-mode acceptance. | `web\src\index.css:1649–1785`; `ThemeProvider.tsx:315–340` |
-| MDC-042 motion | Existing CSS reduced-motion and useMotionPreference (OS **or** low bandwidth) remain. Reduced JS entrance uses initial=false and duration=0; no ambient loop. Do not consolidate differing animationDuration/motion timing APIs without consumer evidence; dashboard geometry belongs to parent. | `web\src\index.css:1404–1444`; `web\src\hooks\useMotionPreference.ts:44–48`; `web\src\lib\tokens.ts:108–163` |
-| MDC-043 responsive | Test 320/375/390/430/768/1024/1280/1440/1920/2560; allocated container width matters as well as viewport. Retain existing desktop/mobile capabilities and 640–1023 custom branch semantics during authorized layout modernization. No lossy "mobile simplification" or repeated prior-approval entry stop. | whole-app spec §15; mobile/layout authoritative handoffs |
-| MDC-044 i18n/locale | Localize labels/help/error states; use current canonical catalogs/split tools, locale/RTL/number/date policies. No secondary production catalog or source/user-data recasing. Implemented field help reuses existing `a11y.helpFor`; no catalog addition. | `.github\instructions\frontend-si-cutover.instructions.md:Required Patterns`; `docs\I18N_GUIDELINES.md` |
-| MDC-045 data/SI | Raw SI survives wire/cache/hooks; display-only useUnits/useFormatting/current converters. Historical mi/mph/source-unit examples are not new implementation guidance. No backend capabilities, fake measurements, calculation changes or source-unit conversion engine. | `.github\instructions\frontend-si-cutover.instructions.md`; preparation G02/A21 |
-| MDC-046 state/persistence/privacy | Reuse QueryClient/request/SSE/queryBroadcast and existing guards/preferences. Retain query keys/cache/retries/cancellation, live-only mutations, table/theme/chart/nav IDs, auth/session/demo/native boundaries and consent. No new browser token storage or telemetry logging. | preparation A01/A02/A18–A22; `web\src\api\dataState.ts` |
-| MDC-047 performance | Existing lazy routes, bundle/test infrastructure and measured budgets apply. Profile before memoization, virtualization or sampling. No new dependencies solely for redesign vocabulary; no weakened ratchets. | preparation A22/A23 |
+| `--bg`, `--bg-app` | `#0b0d12` | `#f8fafc` |
+| `--surface-1`, `--panel-bg` | `#11151c` | `#fafbfc` |
+| `--surface-2`, elevated/control | `#171c25` | `#f1f5f9` |
+| `--surface-3`, control hover | `#202733` | `#e2e8f0` |
+| `--text-primary` | `#f4f7fb` | `#0f172a` |
+| `--text-secondary` | `#aab4c3` | `#475569` |
+| `--text-muted` starting value | `#8490a2` | `#64748b` |
+| `--border-subtle/default/strong` | white at 5.5% / 9% / 16% | black at 6% / 12% / 20% |
+| `--surface-overlay` | black at 60% | `#0f172a` at 50% |
+| `--focus-ring` | `#91b4d2` | `#385e7e` |
 
-**Chart-frame source enforcement — MDC-034:** `audit-chart-frame.mjs` resolves
-imported component identities through category barrels and accepts an adapter
-only when its incoming children are forwarded into a canonical shared frame.
-Renaming a raw wrapper, rendering an unrelated framed sibling, dropping children,
-duplicating them outside the frame, or defining an unused framed helper does not
-satisfy the gate. `npm run audit:chart-frame` runs the focused Node tests,
-including a failing-command fixture, before auditing production source.
-`npm run audit:datatable-tableid` likewise runs its parser regression tests;
-both commands are wired into full frontend lint. This source proof does not
-replace mounted accessibility, complete-data, toolbar, export or browser checks.
+Borders above organize surfaces, not sufficient control/focus contrast by
+themselves. Required interactive outlines must reach **3:1** against adjacent
+backgrounds; strengthen the existing control/border role where necessary.
+Text, including captions/muted data, must reach **4.5:1** on the actual composed
+background. Existing `accessibleMutedForeground()` must continue adjusting across
+all preset surfaces; starting values are not universally certified pairs.
+Disabled is an interaction state, not a substitute for unknown/stale values.
 
-**Mobile-shell behavior — MDC-024/MDC-030:** The parent live correction preserves
-the existing navigation aside and scrim, reusing `activateShellOverlayGuard`
-for Tab/Shift+Tab containment and ancestor-background `inert`/`aria-hidden`
-isolation; `data-sidebar-backdrop` is explicitly exempt so click-to-close
-remains available. The guard releases on desktop media at min-width 1280px
-and in report/kiosk modes, and Close retains a 44px target. Focus and restoration
-defer to nested portaled `aria-modal` dialogs. `shellFocusTrap` excludes
-hidden/inert ancestor branches while honoring an explicitly visible child's
-CSS visibility override; no second overlay engine is introduced. These are
-the canonical implemented behaviors, not runtime acceptance: the final
-stable-source focused retest remains pending after coupled fixes, and native
-visual, full TypeScript and whole-app acceptance are not established. The
-unmocked frozen5241 native attempt redirected to authentication and did not
-pass. No source-entry approval gate is added.
+| Semantic role at existing token maps | Dark foreground | Light foreground | Treatment |
+| --- | --- | --- | --- |
+| Brand/info/focus | `#91b4d2` | `#385e7e` | Restrained blue, no cyan bloom |
+| Success/online/complete | `#91b9a5` | `#38614f` | Only source-confirmed success |
+| Warning/stale | `#cfb481` | `#745829` | Explicit reason/age, not failure |
+| Danger/error/failed | `#d6a0a5` | `#83464e` | Error/destructive meaning only |
+| Secondary series hue | `#b5a8c9` | `#625077` | Data identity, not universal status |
+| Neutral/unknown/offline | `--text-secondary` | `--text-secondary` | Distinct icon/label explains state |
 
-## Implemented production delta — MDC-050
+Semantic chip/callout tint: foreground hue mixed into the neutral surface at
+**8% dark / 6% light**; semantic border **24% dark / 20% light**. Keep body
+content neutral. These low-opacity borders do not replace the stronger accessible
+focus/interaction outline. No glow role. Focus is **2px with 2px offset**, not
+a diffuse shadow; validate its contrast on filled controls and custom themes.
 
-**Proved source gap:** Input chooses `id || label-slug || useId`; Textarea
-chooses `id ?? label-slug-or-useId`. Therefore two same-label implicit fields
-produce the same control/feedback IDs, and changing the localized label changes
-the implicit ID of the mounted field. Existing tests cover unlabeled uniqueness
-but pin label-derived slugs; they do not prevent labeled collisions.
+Preserve all saved `ThemeId`/`ModeId`, custom colors, `auto`, density and chart
+preferences without resets/renames. `neon-cyan` remains Signal Blue's persisted
+ID. Matrix Green, OLED and `chart_palette="neon"` retain identity and user choice,
+not permission for fluorescent chrome everywhere. Keep saved raw choices intact;
+existing theme/palette owners must derive restrained, contrast-safe presentation
+roles from them. No decorative pure white, including OLED typography: soften its
+presentation foreground without rewriting saved mode identity. The current direct
+raw-accent rendering needs a bounded foundation followup, not a page-side clamp.
 
-**Production implementation:** use each primitive's already-existing React useId for
-implicit identity. Explicit caller ID fallback behavior is unchanged (Input
-uses `||`, Textarea uses `??`). Labels still point at their controls; feedback
-keeps existing suffixes and external-description composition. The existing
-HelpIcon keeps the new implicit field target, with readable label-based
-localized help names. Explicit caller ID defaults, explicit help target/name
-overrides and empty-string help overrides retain baseline semantics.
+**Necessary exceptions:** computed on-fill foregrounds may use white/black when
+needed for 4.5:1; system colors in forced-colors and black-on-white print remain;
+control thumbs and genuine logos/media are not blindly recolored. Light surfaces
+are off-white targets, not a prohibition on system/print white. Preserve
+`--theme-on-primary`, `--theme-on-accent`, `--text-on-accent` and inverse roles;
+recompute contrast for derived fills rather than assuming white always works.
 
-No className, style, size, surface, color, default font, density, motion,
-forced-color rule, preference write, form name/value, API, query, route,
-calculation or section is changed. No runtime acceptance is asserted.
-Automatic IDs intentionally change; they are opaque implementation identity,
-not a persistence key. Consumers or automation that selected a slug must use
-explicit IDs or semantic labels. Parent must validate known integration
-selectors during centralized validation rather than claiming whole-app ID compatibility.
+Owners: `web\src\index.css:38–80,131–204,606–634`,
+`web\src\lib\tokens.ts` (`neonColorMap`, `semanticToNeon`, `severityTokens`,
+`gaugeTone`, typography colors), `web\src\components\ui\ThemeProvider.tsx:79–114,
+138–217,315–340`, `web\src\components\ui\themePresets.ts`.
 
-Existing Input/Textarea tests are fully retained with slug-specific
-expectations changed to real association assertions. New FieldIdentity tests
-cover both primitives: repeated labels/error+hint, translations, label
-addition/removal, explicit IDs/native attributes, error→hint transitions,
-human help names/overrides, cross-primitive collisions, refs and controlled
-change events. Expanded regressions include independently mounted parents,
-explicit feedback/external associations and empty help overrides. A separate
-cold real-i18n test un-mocks the setup translator and loads the existing
-canonical `a11y` resources; mocked fallbacks alone cannot prove localization.
-All authored regression execution is **NOTRUN**.
+### Typography — MDC-013
 
-### Compatibility closeout — MDC-051
+Use `web\src\components\ui\Typography.tsx` Heading/Text and role wrappers; their
+optional `as` preserves semantic HTML, attributes and default roles. Defaults:
+Inter/system sans, JetBrains Mono/Fira Code mono; scale 1, body leading 1.5,
+tracking 0; weights 400/500/600/700. Saved font/scale/leading/weight choices survive.
 
-Concrete source trace, not a second route/metric inventory:
+| Role | Existing default scale and emphasis |
+| --- | --- |
+| Display/metric | 24px → 30px at `sm`, 700, tabular numbers for metrics |
+| Page title | 24px → 30px at `sm`, 700, leading 1.3 → 1.2 |
+| Section / widget-panel title | 20px / 18px, 600 |
+| Body / secondary | 14px, 400, primary / secondary foreground |
+| Caption/helper / label | 12px, 400 / 500, contrast-safe muted foreground |
+| Code | 12px mono; contain long identifiers without losing copyable value |
 
-- Old slug expectations in the existing Input/Textarea test files are confirmed
-  dependencies and remain updated in the production implementation. Scoped source AST
-  ID-reference matching found no additional confirmed production/external
-  slug-dependent selector. This is not a blanket compatibility certificate:
-  dynamic props/spreads/localized labels and external user CSS/automation
-  remain UNKNOWN.
-- Explicit RequestBuilder IDs and AlertMessageEditor's `textareaId` wiring
-  remain unchanged. FormField injects a caller-owned ID into its cloned child;
-  CurrencyInput/UnitInput/UnitListInput forward supplied IDs/descriptions
-  through existing props. SearchInput keeps ref-based focus and its separate
-  listbox/active-option identifiers.
-- Baseline HelpIcon.for is **not only text**: it selects its default accessible
-  name, supplies `data-help-for`, and adds a phantom `${for}-help` described-by
-  token when truthy. Tooltip independently appends its actual body useId.
-  The approved v3 root fix below removes only the phantom HelpIcon token.
-  Tooltip itself remains read-only and unchanged.
-- Empty `help.for=""` retains the generic More info label and empty data
-  attribute, with only Tooltip's generated described-by token. Empty
-  `help.ariaLabel=""` remains explicit (not converted to a derived name).
-  Explicit nonempty field IDs keep ID-based default help names. Only implicit
-  IDs with no explicit help target receive the readable label-derived name.
+16px body remains appropriate for comfortable reading/forms; avoid promoting
+everything to display/bold. Existing 10px micro token is not the default for
+essential instructions/data. Do not add per-page scales, font packages or fixed
+pixel overrides that bypass user scaling. Preserve full rich captions and units.
+Owners: `web\src\lib\tokens.ts:169–234`, `web\tailwind.config.js:145–185`,
+`web\src\index.css:18–26`, `web\src\components\ui\FontProvider.tsx`.
 
-Exact bounded trace/readback, limitations and source hashes are delivered in
-`compatibility-trace.SOURCE.json`, `compatibility-evidence.md` and the raw
-source-only receipts. The source/browser/heavy window has been explicitly
-released for live implementation. Heavy validation still belongs to the
-parent's serialized baton; no writer runs project-wide validation during
-concurrent source edits.
+### Spacing, shape and elevation — MDC-014 / MDC-015
 
-### Approved description root fix — MDC-052
+Use existing Tailwind 4px rhythm: 4/8/12/16/24/32/48px; 4–8px within controls,
+12–16px within related content, 24px between sections, 32px between major groups.
+Use normal shell gutters, 12–16px narrow-container panel padding and 16–24px
+larger-panel padding through existing primitives, not arbitrary page overrides.
+Density remains comfortable (44px row, 16/12px padding, 12px gap, 14px text),
+compact (32px row, 10/6px padding, 8px gap, 13px text), spacious
+(56px row, 24/20px padding, 16px gap, 16px text). Do not rename saved choices or
+force globally larger rows; keep non-overlapping reachable mobile controls.
 
-Source proof: `HelpIcon.tsx:42–46,92` promises/supplies `${for}-help`, but
-`Tooltip.tsx:142,203–212,222–226` generates, appends and renders its own
-body ID. HelpIcon does not render any derived-ID body. Thus the fabricated
-token never resolves to the help body produced by this composition.
+Existing radii: xs 4, sm 6, md 8, lg 10, xl 14px; pill 9999px only for true
+chips/toggles. Controls use shape-sm, panels shape-lg via `--panel-radius`;
+do not silently redefine Tailwind's unrelated radii. Card/GlassPanel share
+panel surface/border/radius/elevation, retaining names and print markers.
+Panel blur stays **0px**. Default panels use e1, embedded sections e0, transient
+raised content e2, dialogs/drawers e3; never glowing shadows or lift on every card.
+Existing dark e1 is 0 1px 2px black/32%; e2 0 2px 6px black/36% plus
+0 1px 2px/24%; e3 0 8px 24px/44% plus 0 2px 6px/28%.
+Keep the softer light-mode ladder at `index.css:632–634` and token-backed
+`shadow-e1/e2/e3`; no page-defined shadows.
 
-The reviewed v3 adds only HelpIcon.tsx and its existing focused test to ownership:
-remove the fabricated trigger attribute and correct its stale prop comment.
-Canonical Tooltip alone supplies the actual body association. No second ID,
-provider, caller-control description wiring or global Tooltip change is added.
-Default/explicit/empty target names, audit data, explicit/empty ariaLabel,
-contextual-help preferences, translated body, placement/classes and Escape
-blur remain unchanged. Exact normalized source preservation is checked.
+Owners: `web\src\index.css:91–96,131–204,209–227`,
+`web\tailwind.config.js:56–87,187–208`, `web\src\lib\tokens.ts` table/surface tokens.
 
-Focused authored tests use real Tooltip on hover/focus, require every
-described-by token to resolve to its rendered body and reject phantom tokens.
-They cover omitted/nonempty/empty targets, caller names (including empty),
-target rerenders, preference-off and translated body plus keyboard Escape.
-Execution is NOTRUN; jsdom interaction/DOM association assertions would not
-prove CSS open/closed visibility, global closed-tooltip semantics or actual
-screen-reader behavior. Centralized full validation and no premature commit
-remain mandatory. v1/v2 and the reviewed v3 remain exact archived snapshots;
-the nine reviewed targets are integrated live, not runtime accepted.
+### Iconography and motion — MDC-016 / MDC-042
 
-## Catalog/reference integration and unknowns — MDC-060
+Use Lucide's existing family, default **2px stroke**, aligned/shrink-free boxes:
+xs 12, sm 14, md 16, lg 20, xl 24px through existing Icon/iconSize.
+Decorative icons are hidden; icon-only actions have localized names and target
+sizes independent of glyph size. Logos retain their existing branded owner.
 
-Consume, do not recreate:
+**Icon locality resolution:** `web\src\lib\icons.ts` is semantic mapping
+authority, not a mandatory eager runtime dependency. Route-local named
+`lucide-react` imports are allowed when matching the canonical concept and
+rendered through existing Icon. Type-only imports remain erased. Shell uses
+existing `web\src\lib\sidebarGlyphs.ts`; deferred collection glyphs remain
+deferred at their actual owner. Do not pull the whole registry into startup via
+a wrapper/barrel. This resolves the contradictory “registry only” examples in
+`docs\ICON_GUIDELINES.md`; its startup bundle constraint remains mandatory.
+No second registry or icon family. Owners: `web\src\components\ui\Icon.tsx`,
+`web\src\lib\tokens.ts:49–59`, existing route-local mappings.
 
-- `parallel-modernization-preparation\snapshot.json`,
-  `catalog-crosswalk.integrated.json`, `crosswalk-reconciliation.md`.
-- `parallel-layout-stat-preparation` canonical route/page/JSX/stat manifests.
-- `parallel-mobile-grid-preparation` original grid/list/route source records.
-- `parallel-mobile-grid-reference-implementation\HANDOFF.md`, `public-api.json`.
-- `parallel-layout-reference-implementation\HANDOFF.md`,
-  `LAYOUT-SPEC.PROPOSED.md`.
-- `parallel-stat-reference-implementation\HANDOFF.md`, `public-api.json`,
-  `adoption-policy.json`, `preservation-evidence.json`.
-- `parallel-dev-reference-native-specs\HANDOFF.json`: staged native specs,
-  zero executed cases at its read snapshot; not borrowed acceptance.
+Motion is feedback, not decoration: fast **150ms** hover/focus, normal **250ms**
+disclosure/overlay, slow **400ms** only for justified major transition.
+Use existing standard `cubic-bezier(0.2,0,0,1)` and named easing/duration utilities.
+Do not unify the distinct legacy `animationDuration` seconds API silently
+(0.15/0.2/0.3, stagger 0.06); audit consumers before any timing migration.
+No ambient pulse/glow/bounce or animated numeric theater. Keep necessary busy
+feedback without confusing “busy” with unknown.
+OS reduced motion **or low bandwidth** invokes `useMotionPreference()`:
+JS entrance `initial=false`, duration 0, static values instead of infinite loops;
+CSS reduced-motion remains the safety net. Remove nonessential loops in normal
+mode too. Owners: `web\src\hooks\useMotionPreference.ts:44–48`,
+`web\src\lib\tokens.ts:108–163`, `web\src\index.css` reduced-motion rules.
 
-The prior integrated crosswalk reports 234 page references, 289 exact mobile
-joins and 1,694 stat joins, with 807 mobile-coordinate unknowns. These are
-historical SOURCE-reference results, not fresh rendered counts. This batch
-hashes its read inputs, never rebuilds route/metric inventories or upgrades
-unknown coordinates into accepted consumers.
+## Existing interaction and layout owners
 
-Remaining preservation/runtime unknowns (not prior approval/commit ENTRY
-blockers): actual route reachability/record IDs/mounts; mobile adapters
-for loaded/sorted rows/export/cumulative pages; precision/specialist semantics;
-shell focus and 320px controls; actual contrast/forced colors/JS motion;
-post-parent Modal behavior and current source drift. Parent-owned work may
-continue changing; archived baselines are evidence, not a lock on other writers.
+| Stable ID | Decision / preserved API | Exact existing owner |
+| --- | --- | --- |
+| MDC-020 buttons | Existing primary/secondary/outline/danger/ghost; destructive uses danger. Icon is a prop, not a new variant. Native links retain navigation semantics with BUTTON_BASE. Default/hover/active/focus/disabled/loading and aria-busy survive. One dominant action; wrap long labels via wrapLabel. Existing sm/md/lg heights are 36/40/48px, auto density-aware; do not claim default md already meets 44px mobile. | `web\src\components\ui\Button.tsx:9–80` |
+| MDC-021 fields | Input/Textarea/Select/Checkbox/RadioCard/Toggle and existing specialist inputs; FormSection/FormField/ValidationSummary compose forms. Visible localized labels, required/native values/ref/events, hints/errors/external descriptions survive. Unique locale-independent implicit IDs; explicit id/name/settings keys unchanged. Field error + summary can focus the real control; placeholder is not a label. | `web\src\components\ui\Input.tsx`, `Textarea.tsx`, `Select.tsx`; `web\src\components\forms\FormSection.tsx`, `FormField.tsx`, `ValidationSummary.tsx` |
+| MDC-022 help | HelpIcon/Tooltip own localized human-readable help, keyboard/open behavior and contextual-help preference. Explicit help.for/ariaLabel (including empty overrides) retain priority. Only real rendered body IDs belong in aria-describedby. | `web\src\components\ui\HelpIcon.tsx`, `Tooltip.tsx` |
+| MDC-023 tables | DataTable is the filtering/sorting/selection/pagination/persistence/export pipeline; Table is the semantic matrix primitive. Preserve tableId, source order, columns and matchingLoaded/selectedLoaded/fullResult distinctions. Mobile adapter or contained table scroll preserves every field/action/detail; never infer full results from loaded rows. Standalone/embedded remain existing variants. | `web\src\components\ui\DataTable.tsx`, `Table.tsx`, `MobileDataTableAdapter.types.ts`; `docs\TABLE_GUIDELINES.md` |
+| MDC-024 overlays | Modal/Drawer/Popover/ConfirmDialog/useDialogFocus own focus/restore/Escape/labels and scroll. Preserve Modal fullscreen versus full distinction; viewport-contained body scroll, persistent reachable footer, safe-area/chrome offsets. Mobile sheet presentation must use existing owner, not a new engine. Nonmodal popovers retain their appropriate semantics, not indiscriminate aria-modal. | `web\src\components\ui\Modal.tsx`, `Drawer.tsx`, `Popover.tsx`, `ConfirmDialog.tsx`; `web\src\hooks\useDialogFocus.ts` |
+| MDC-025 statuses | Badge/severityTokens and vehicle StatusBadge/FSM definitions remain authorities. Online/success/complete use success; warning/stale warning; error/failed danger; connecting/queued/processing info; offline/unknown neutral with distinct text/icons; charging keeps actual domain mapping. No global remap of domain thresholds or universal status registry. Color never conveys state alone. | `web\src\components\ui\Badge.tsx`; `web\src\components\data-display\StatusBadge.tsx`; `web\src\lib\tokens.ts` |
+| MDC-030 shell | Layout/Sidebar/WorkspaceHeader/CommandDeck/BottomTabBar own navigation, breadcrumbs/search/notifications/account and workspace controls. Preserve active/nested/collapsed/mobile navigation, pins/recents/preferences, routes/aliases, auth/native/report/kiosk behavior and destinations. | `web\src\components\layout\Layout.tsx`, `Sidebar.tsx`, `WorkspaceHeader.tsx`, `BottomTabBar.tsx`, `sidebar\CommandDeck.tsx` |
+| MDC-031 composition | PageContainer/PageHeader/PageActions/Grid/Stack plus existing PageLayout/Section/CardGrid/LayoutCard/ChartCard/SourceContent/AboutPanel/LockedNotice. Analytics fills allocated width, aligned with header and normal shell gutters; constrain prose/forms individually, not the whole page. No new local width engine or duplicate header chrome. | `web\src\components\layout\PageContainer.tsx`; `web\src\components\layout\layout-reference\PageLayout.tsx`, `CardGrid.tsx`, `Section.tsx`; category `web\src\components\layout\index.ts` |
+| MDC-032 scope | Header/mobile View settings and vehicle picker own workspace range/vehicle state. Consume startInstant/endInstantExclusive and selected vehicle/VIN hooks, register real route scope, pass both bounds to server lists AND whole-range aggregates. Preserve rolling/custom/calendar/DST/timezone semantics. No second page picker or scope=local bypass. Fleet/admin routes with intentionally hidden header vehicle selection retain required local selection; independent business dates/year navigation/chart zoom remain independent. | `web\src\lib\workspaceScope.ts`; `web\src\hooks\useRangeState.ts`, `useSelectedVehicle.ts`, `useVehicleVinFilter.ts` |
+| MDC-034 charts/maps | Canonical ChartContainer/ChartCard and category chart/map boundaries. Preserve all series, axes, missing gaps, annotations, zoom/brush, legend IDs/preferences, fullscreen/export and accessible table/text alternatives. Line 2px primary / 1px reference, point 3px when needed, subtle grid, neutral tooltip. Area tint at most 8%; no glow/3D/unnecessary gradients. Never change aggregates, scales or sample away source data for looks. | `web\src\components\charts\ChartContainer.tsx`; `web\src\components\layout\layout-reference\ChartCard.tsx`; `web\src\lib\tokens.ts` chartTokens; `web\src\lib\colors.ts`; `web\src\hooks\useChartPalette.ts` |
 
-## Feature-agent entry and acceptance — MDC-070
+Chart series use only as many distinguishable hues as data needs; repeated series
+keep their identities/order. Target palette starts with the blue/green/amber/rose/
+purple foreground pairs above, then neutral (`#abb4bf` dark / `#4f5f70` light)
+and ochre (`#c0a384` / `#775c37`) only when necessary. Distinguish series with
+labels/dashes/markers as well as color; semantic warning/error colors must not
+mislabel arbitrary series. Preserve saved palette IDs, including opt-in neon,
+while deriving restrained presentation. Existing `chartTokens.series`,
+`CHART_COLORS*`, theme builders and preference hook must be reconciled by their
+owners, not supplemented with a page palette. Chart brush/cursor are neutral
+and theme-aware; their current fixed cyan/white values are followups.
 
-For every concurrent and subsequent implementation batch:
+Chart-frame audit resolves imports through barrels and requires actual incoming
+children inside the canonical frame. Renaming a raw wrapper, unrelated framed
+siblings, duplicated children or an unused helper do not pass. Keep existing
+parser regressions for `audit:chart-frame` and `audit:datatable-tableid`.
 
-1. Read this contract, applicable instructions and authoritative feature
-   source/handoffs. Record concern IDs and exact source hashes.
-2. Obtain parent-assigned exclusive targets; inspect APIs first, reuse an
-   existing implementation when it meets the need.
-3. Reference original catalog identities instead of inventing a route/metric
-   inventory or treating snapshot line/offset as a production hook.
-4. Implement the authorized modernization now within assigned write scope.
-   Do not reintroduce staged-only/prior-approval/prerequisite-commit ENTRY
-   blockers. Retain source/reference evidence and preserve desktop/mobile
-   functionality, all preferences and every data/action/export capability.
-5. Keep every metric/section/action/explanation/export and all specialist
-   formatting, raw values and query/period/trust semantics. Any unsupported
-   mapping is KEEP/UNKNOWN, not an EmptyState deletion.
-6. Record changed public APIs, callers, explicit/automatic DOM identities and
-   test expectations. Never weaken an existing behavioral assertion.
-7. Reserve validation with parent. During disjoint parallel writes, do not run
-   project TypeScript/build/full tests. Focused tests require an explicit
-   validation baton and one worker. Parent centralizes full validation after
-   the whole-app batch stabilizes; no premature commit.
+## States, numeric data and preservation
 
-The existing preservation CLI is `node web\scripts\check-modernization-preservation.mjs`:
-use `capture --root <repo> --scope <scope.json> --out <baseline.json>`
-with optional `--catalogs <pinned-inputs.json>` for bounded SOURCE evidence,
-then `check --root <repo> --baseline <baseline.json>` with optional
-`--report <report.json>`. Canonical catalog/source inputs are read-only citations
-and reconciliation inputs, not inventories to recreate. Retain the frozen
-original baseline; never auto-regenerate or replace it to hide regressions.
-Check exit 2 explicitly means unresolved source evidence, not a clean pass.
-Even source-match results and checker selftests are not full runtime,
-accessibility or no-data/feature-loss proof; parent centralized validation
-remains required. This adds no preimplementation approval blocker.
+### Asynchronous trust — MDC-026
 
-Acceptance checklist (all runtime items PENDING for this delivery):
+Use `web\src\api\dataState.ts:130–177`, `web\src\hooks\useDataState.ts` and existing
+SourceContent/feedback APIs. Provenance (live/cached/historical/inferred/repaired/
+unknown) is orthogonal to initial/ok/stale/partial/unavailable/initialFailure.
+Initial loading uses source-shaped skeleton geometry, not fabricated readings.
+Authoritatively empty means explain what/why/next; filtered no-match differs from
+no records. Unknown is a missing fact, not zero/offline/error.
 
-- [x] Nine foundation targets integrated after exact baseline hash refresh;
-      source-only post-apply readback is recorded in the session handoff.
-- [ ] Explicit IDs, labels, external descriptions, focus/help and form
-      values/ref/events verified in integration; implicit IDs stay unique.
-- [ ] Existing and authored regressions execute; TypeScript/lint/build pass
-      with raw logs (syntax-only is not typechecking).
-- [ ] Relevant ten-width/theme/RTL/200%-text/long-content/open-state reviews.
-- [ ] Keyboard/focus/screen reader/effective contrast/forced-colors/motion
-      checked on actual UI, including retained-data and offline cases.
-- [ ] No new default or persistence changes; full content/data/action/export
-      parity and actual server-bound/metric invariants proven.
-- [ ] Whole-app modernization batch stable; parent centralized full validation
-      completed with raw evidence, no data/feature loss and no premature commit.
-- [ ] Parent explicitly accepts; no source-only/global completion claim.
+Only `fatalError` **without retained data** may replace that source's content.
+Refresh failures retain usable payload/last-success time, show nonblocking
+warning and individual retry; paused/offline uses isRefreshBlocked, not an
+invented server failure. Independent sources/sections stay visible and recover
+independently. No all-page `{data && ...}` gate, blank placeholder component or
+generic error that erases neighbors. Announce meaningful outcomes without
+re-announcing every live telemetry tick; preserve existing boundary/toast policy.
 
-Rollback is parent-owned: restore only exact owned baseline bytes if this
-integrated delta fails. Never revert inherited work, reset theme settings,
-strip content, loosen audits or rewrite expected screenshots to hide failures.
+`useSignalEvidenceBundle().sources` in `web\src\api\hooks\useTelemetry.ts` retains
+**every normalized signal identity**, including pending/failed history, payload,
+last-success timestamp, fatal/refresh distinction and individual retry.
+Resolved empty history is unavailable, not measured zero. Never infer identities
+from only successful series or drop retained series on refresh failure.
+
+### Statistics / OperationalBrief numeric API — MDC-033
+
+Reuse `web\src\components\data-display\stat-reference\StatStrip.tsx`, `StatGroup.tsx`,
+`web\src\lib\metric-reference\formatMetric.ts`, `types.ts`,
+`web\src\components\data-display\OperationalBrief.tsx`,
+`web\src\hooks\useOperationalMetrics.tsx` and `usePublicOperationalMetrics.ts`.
+No competing KPI grid/glossary/converter. Retain raw input, numeric accessible
+output, missing/invalid reasons, context, comparisons, period/provenance and links.
+Do not turn source measurements into text to bypass numeric validation.
+
+- `bytes`: bytes, existing binary formatBytes; signed net growth valid, negative
+  data sizes invalid. `byteRate`: bytes/second; display.byteRatePeriod s/d changes
+  only presentation. `latency`: nonnegative seconds; milliseconds/adaptive display.
+- `mass`: kilograms; `multiplier`: dimensionless ×, not percent. `countTotal`:
+  nonnegative safe integer; unknown numerator remains unknown with known total.
+- `display.formatter`: validated numeric source plus effective preferences before
+  default physical conversion; value/unit strings preserve specialist formatting.
+  Missing/invalid input never reaches it, including invalid negative durations
+  with roundedMinutes. `notation: 'source'` retains unrounded numeric representation.
+- `rate`: explicit source rate unit, not a physical preference change;
+  `identifier`: safe nonnegative integer without grouping/rounding, optional prefix.
+  Preserve precision/locale/currency symbol-versus-ISO semantics; never guess ISO
+  currency from a symbol or replace valid negative/zero values.
+
+OperationalBrief captions remain fully visible, including rich specialist
+context. Loading never fabricates values; its details drawer honors the summary's
+loading suppression. Status/scope/freshness/review actions come from real sources,
+not copied example labels. Keep calculation ownership in domain adapters.
+Public reports use `usePublicOperationalMetrics(metrics, preferences)` with
+explicit existing viewer/source preferences and the same pure formatter, without
+authenticated settings/workspace subscriptions or new public data exposure.
+
+### Localization, SI, persistence and privacy — MDC-044 / MDC-045 / MDC-046
+
+Localize labels/help/errors/actions with canonical catalogs and existing split
+tools (`docs\I18N_GUIDELINES.md`); interpolation/plurals, not concatenation.
+Locale drives numbers/dates; retain user's units, currency, timezone and 12/24h
+choices. Use existing `web\src\lib\dateFormat.ts`, display hooks/formatters and
+range semantics; show period/timezone when interpretation depends on it.
+RTL uses logical alignment/spacing and meaningful directional icons; do not
+mirror logos, data or charts blindly. No translated DOM identities, user-data
+recasing or competing production catalog.
+
+Raw SI remains on wire/cache/hooks; convert **only at display** with existing
+`useUnits()` / `useFormatting()` / current unitConversion helpers. No deprecated
+useSettings converter or source-unit compatibility engine. API hook URLs omit
+the client-added `/api/v1`; query parameters match snake_case server contracts.
+Unknown backend units/bounds/totals/authorization stay integration unknowns.
+
+Retain QueryClient/request/SSE/queryBroadcast, cancellation/retries/cache keys,
+theme/table/chart/navigation IDs and consent. Commands/mutations remain live-only,
+with existing confirmation, auth/capability checks and success-only lifecycle
+transitions; no fake completion, offline mutation queue or unsolicited production
+action. Preserve route-specific capabilities, public privacy, session/demo/native
+boundaries, redaction and exports. No browser token storage or sensitive logging.
+
+## Responsive and accessibility acceptance
+
+### Breakpoints and container/mobile strategy — MDC-043
+
+Existing Tailwind viewport bands: base <640px; sm 640; md 768; lg 1024; xl 1280;
+2xl 1536; custom 3xl 1920px. Do not introduce a competing breakpoint engine.
+Preserve actual custom 640–1023 branches, not a blanket tablet rewrite. Shell
+desktop navigation activates at 1280px; narrower allocated cards must still reflow
+on wide screens using existing container queries/CardGrid placement policy.
+
+Use `w-full`, `min-w-0`, bounded grids, wrapping toolbars and stacked narrow forms.
+No accidental page horizontal scrolling; tables/charts may own clearly labeled,
+keyboard-reachable contained scroll regions. Mobile summary/details/disclosure
+must keep **every** original field/action/section reachable, not delete “secondary”
+metadata to satisfy mission shorthand. No hover-only help, collapsed inaccessible
+actions or fixed footer hiding content. Retain safe-area and shell bottom-chrome
+offsets, zoom/fullscreen/export and independent scroll ownership.
+
+Existing shell `web\src\components\layout\shellFocusTrap.ts` owns mobile isolation:
+aside/scrim reuse activateShellOverlayGuard; Tab/Shift+Tab containment,
+ancestor inert/aria-hidden, clickable exempt data-sidebar-backdrop, 44px Close,
+release on desktop/report/kiosk and deferral to nested portaled aria-modal.
+Preserve hidden/inert-ancestor filtering and explicit child visibility behavior.
+These source contracts do not prove browser focus/restoration acceptance.
+
+### Accessibility / forced colors — MDC-040 / MDC-041
+
+WCAG 2.2 AA: semantic headings/landmarks/table headers/sort state, keyboard
+order/reachability, localized names, visible unclipped focus, form associations,
+chart alternatives and no color-only meaning. Use existing skip/route-focus/
+announcement owners; no positive tabindex or duplicate landmarks/live messages.
+Text target 4.5:1 and meaningful UI/focus 3:1 on composed backgrounds.
+Mobile default **44×44px below md**; smaller desktop/compact controls require
+documented 24×24px/spacing WCAG exceptions and no overlapping hit areas.
+
+Forced-colors maps to Canvas/CanvasText/ButtonFace/ButtonText/Highlight/
+HighlightText through existing `web\src\index.css` remaps and Tailwind variant.
+System-color overrides outrank ordinary theme inline properties; ThemeProvider
+must never set important theme variables. Do not suppress forced-color adjustment
+globally; preserve focus/borders/selected indicators and chart/table alternatives.
+System-mode contrast exceptions are deliberate, not permission for normal-mode
+pure-white decoration. Validate actual OS/open states, not source presence.
+
+## Historical foundation compatibility — MDC-050 / MDC-051 / MDC-052
+
+Retain implemented Input/Textarea implicit React useId identity; explicit caller
+fallback semantics remain Input `||`, Textarea `??`. Labels/feedback suffixes,
+refs/native names/values/events/external descriptions remain. Implicit IDs are
+opaque, not persistence keys; automation needing stable IDs passes an explicit
+id or uses semantic labels. Keep FormField/caller identity and specialist-input
+forwarding; dynamic/external slug selectors remain a compatibility risk.
+
+HelpIcon does not fabricate `${for}-help`; Tooltip alone supplies its rendered
+body ID. Explicit help targets/names, empty overrides, localized human names and
+contextual-help preferences retain their existing distinctions. Keep focused
+identity/help/cold-real-i18n regression coverage, not stale label-slug assertions.
+Earlier authored/archived receipts and native attempts are not a fresh pass;
+the historical frozen5241 native attempt redirected to authentication, not
+successful application acceptance. No obsolete nine-file cohort owns this phase.
+
+## Evidence reuse and acceptance workflow — MDC-060 / MDC-070
+
+Reuse current inventory report/source identities and historical source catalogs,
+not a replacement route/stat inventory. Historical crosswalk counts (234 page
+references, 289 mobile joins, 1,694 stat joins, 807 unknown coordinates) remain
+historical source evidence only. Existing handoffs/catalogs may guide preservation;
+unresolved route mounts/record IDs/auth, mobile adapters/export completeness,
+specialist precision, contrast, motion, focus and source drift remain explicit.
+
+Workers read relevant mission/instructions, inspect existing APIs, capture bounded
+source/preservation evidence, implement only assigned files, and report exact
+commands/results or NOTRUN. Heartbeat at start/every three minutes/before release:
+`UTC timestamp | current step | files touched`. One atomic item, no Git, queue,
+unassigned shared edits, installs or unrequested full-repository gates. Page
+workers report shared gaps instead of patching global owners. Stats decisions
+are delegated under NO DATA LOSS, not repeated adoption/naming permission loops.
+
+Orchestrator verifies DONE evidence, scoped sequential commits and phase checkpoints;
+serializes health/full gates on stable inputs without expanding its source-write
+role. Focused affected tests accompany API changes; documentation-only items
+need bounded document validation, not a full application build. Commit cadence
+typecheck still includes documentation commits. Required implementation phase
+gates and mission §§43–45 cannot be waived by a source-ready label.
+
+Existing preservation CLI: `node web\scripts\check-modernization-preservation.mjs`
+`capture --root <repo> --scope <scope.json> --out <baseline.json>` (optional
+`--catalogs <pinned-inputs.json>`), then `check --root <repo> --baseline
+<baseline.json>` (optional `--report <report.json>`). Keep frozen originals;
+never regenerate baselines/screenshots to hide regressions. Exit 2 is unresolved
+source evidence, not a pass. Extraction counts include page plus owned components;
+retain ≥70% original total unless genuinely simpler with explicit parity evidence.
+Retain section/action/series/export coverage, not just line count.
+
+Future acceptance requires raw receipts for supported-runtime `npx tsc --noEmit`,
+`npm run build`, required tests/lint/audits and relevant preservation checks,
+plus mounted functional/visual/keyboard/accessibility QA. Reuse `web\playwright.config.ts`,
+existing DEV routes/e2e tooling and chart/table/palette/chunk-cycle gates.
+QA matrix: **320/375/390/430/768/1024/1280/1440/1920/2560px**, narrow allocated
+containers, dark/light/saved custom modes, RTL, 200% text, long labels/addresses,
+zero/negative-valid/huge/null data, large tables, open/nested overlays, forced
+colors, reduced motion/low bandwidth, retained/offline sources and individual retry.
+Fixtures stay in DEV/QA, never production. Authentication redirects or mocks
+cannot establish real runtime acceptance. Profile before virtualization/sampling/
+memoization; keep lazy routes, bundle budgets and startup icon locality — MDC-047.
+Rollback is scoped/orchestrator-owned; never revert unrelated inherited work.
+
+## Bounded implementation followups / deferred acceptance — MDC-080
+
+No source, style, configuration, catalog or queue changes are made by this item.
+Followups use current semantic review scopes, not 244 approved components:
+
+1. **Neutral/semantic foundations:** `web\src\index.css`,
+   `web\src\lib\tokens.ts`, `web\tailwind.config.js`,
+   `web\src\components\ui\ThemeProvider.tsx`, `themePresets.ts`: implement the
+   MDC-010–015 role targets, off-white light panels/OLED presentation, restrained
+   derived saved hues, contrast-adjusted text/control/focus, and remove decorative
+   neon/glow/loop usage without changing settings IDs/default density/font behavior.
+   Reconcile neonColorMap/semanticToNeon's colored “neutral”, severityTokens,
+   gaugeTone, typography.error and fixed-white glassCardClasses at these owners.
+2. **Charts:** `web\src\lib\colors.ts`, `web\src\lib\tokens.ts`,
+   `web\src\hooks\useChartPalette.ts` and existing chart owners reconcile
+   chartTokens.series, CHART_COLORS_CB_SAFE/NEON and theme builders into restrained
+   preference-preserving roles. Brush/cursor become neutral/theme-aware; preserve
+   identities, accessible alternatives and data. Mode/custom/CVD/composed contrast
+   must be checked before this is called visually accepted.
+3. **Icon policy/tooling:** reconcile contradictory registry-only prose in
+   `docs\ICON_GUIDELINES.md` and `web\src\components\ui\Icon.tsx` documentation
+   through their assigned owners, retaining concept mappings, type-only imports
+   and measured startup locality. No eager registry migration.
+4. **Existing primitive/composite review:** current inventory G001/G005/G007/G028/
+   G032/G068 and other assigned scopes resolve Select identity, named table
+   expansion, complete mobile detail/export adoption, retained-source behavior,
+   reachable targets and conditional useCardPlacement export. Its real owner is
+   `web\src\components\layout\layout-reference\CardPlacementContext.ts`, not .tsx.
+   Missing Commands tile frame remains unresolved/local G187, not a new global API.
+5. **Health and QA:** orchestrator locates/verifies Node >=26 and dispatches
+   inherited compiler repairs, runs cadence 255 and mandatory implementation
+   phase gates, then the full matrix/runtime acceptance. Backend bounds/totals/
+   route capabilities, historical signal recovery and public privacy remain
+   integration proof obligations, not assumptions resolved by design.
+
+This document update establishes decisions only. Foundation implementation,
+effective contrast across presets, supported-runtime gates and full application
+acceptance remain deferred to the explicitly assigned implementation/QA phases.
+
+**Documentation-only verification:** scoped PowerShell checks found 43 exact
+`web\...` file citations, zero missing files, all 20 mission §2 topics and all
+retained MDC IDs; exit 0 after correcting the checker's `.json` matching.
+An inline Python luminance check of the seven target semantic/series foreground
+pairs against opaque surface-3 returned dark 6.30–7.50:1 and light 5.05–5.81:1,
+exit 0. This is mathematical pair evidence only, not composed/custom-theme,
+forced-colors, CVD, visual or browser acceptance. Typecheck/build/lint/tests and
+runtime gates were NOTRUN here: this assigned item changes documentation only
+and prohibits full-repository gates.
