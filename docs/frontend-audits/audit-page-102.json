@@ -1,0 +1,450 @@
+{
+  "item": "audit-page-102",
+  "page": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+  "routes": ["/diagnostics/service-evidence"],
+  "purpose": "Review and generate a canonical, privacy-bounded service evidence JSON document containing statistical signal evidence, ranked hypotheses, limitations, optional software history and an offline-verifiable SHA-256 integrity digest.",
+  "primaryGoal": "Choose a focal signal and analysis window for the selected workspace vehicle, review readiness and privacy, generate a defensible point-in-time evidence pack, copy its digest and download the exact previewed JSON. Neither the analysis nor digest is a diagnosis, causal proof or digital signature.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /vehicles",
+      "endpointOwner": "web\\src\\api\\hooks\\useVehicles.ts:73-79",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "sourceOwnership": "Existing workspace URL/store/first-vehicle precedence; vehicle identity and display name. Header vehicle scope remains enabled for this route.",
+      "behavior": "No local vehicle selector. Hooks are called before the no-vehicle return. The vehicle reference exported by the builder is reconstructed as id and displayName only."
+    },
+    {
+      "hook": "useRootCauseWorkspace -> useSignals",
+      "file": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+      "line": 78,
+      "endpoint": "GET /signals/{vehicleID}/available",
+      "endpointOwner": "web\\src\\api\\hooks\\useTelemetry.ts:98-125",
+      "routeEvidence": "internal\\api\\router.go:4886,4911,4929",
+      "sourceOwnership": "Signal-history catalog read; normalized names only, not a source of current live measurements.",
+      "behavior": "Query key ['signals', vehicleId], enabled only for positive vehicle IDs, standard stale time, safeArray normalization and AbortSignal forwarding."
+    },
+    {
+      "hook": "useRootCauseWorkspace -> useSignalEvidenceBundle",
+      "file": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+      "line": 92,
+      "endpoint": "GET /signals/{vehicleID}/{encodedSignalName}/history?hours={boundedHours}&limit={boundedLimit}",
+      "endpointOwner": "web\\src\\api\\hooks\\useTelemetry.ts:232-287",
+      "routeEvidence": "internal\\api\\router.go:4886,4914,4932",
+      "sourceOwnership": "Independent historical responses and per-signal DataState identities; derived client-side root-cause analysis, not a backend diagnosis endpoint.",
+      "behavior": "At most eight trimmed/deduplicated identities; default 10000-point limit, bounded to 1-10000; hours bounded to 1-8760. Independent ['signal-evidence-history', vehicleId, signal, hours, limit] caches, cancellation, moderate stale time and no interval polling. Retained responses remain in aggregate data; failed/pending identities remain in sources. Resolved empty histories are marked unavailable.",
+      "backendUnknowns": "Handler execution, actual time-bound filtering, sampling/truncation/completeness and physical units of individual signal identities were not verified. The audit does not assert complete-range coverage or guess units."
+    },
+    {
+      "hook": "useSoftwareUpdates",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 118,
+      "endpoint": "GET /software-updates?vehicle_id={vehicleId}",
+      "endpointOwner": "web\\src\\api\\hooks\\useVehicleSystems.ts:118-129",
+      "routeEvidence": "internal\\api\\router.go:4164",
+      "sourceOwnership": "Optional vehicle-scoped software update context, independently queried and trust-annotated.",
+      "behavior": "['software-updates', vehicleId] key, nonempty ID enablement, snake_case vehicle_id, AbortSignal and safeArray. Builder normalizes version/status and installedAt or installed_at; unavailable context stays null, distinct from a known empty array. Server filtering and returned history completeness were not exercised."
+    },
+    {
+      "hook": "useMemo/buildServiceEvidencePackCore; user-triggered buildServiceEvidencePack",
+      "file": "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts",
+      "line": 233,
+      "endpoint": null,
+      "sourceOwnership": "Pure domain derivation plus browser-local Web Crypto and Blob download; no server write or upload.",
+      "behavior": "Copies statistical evidence, ranked hypotheses, summary, quality, limitations and optional update context into schema 1.0.0. SHA-256 hashes recursively key-sorted core JSON, preserves array ordering and excludes the integrity block. Missing secure-context crypto throws CryptoUnavailableError; no weaker fallback."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 8,
+      "kind": "existing layout",
+      "contract": "PageContainer props, inherited shell/header ownership and full-width min-w-0 container. PageContainer owns page title/focus target, query freshness metadata and announcements. This page passes the catalog query, not loading/error props that would replace all children."
+    },
+    {
+      "name": "DiagnosticEvidenceBrief -> OperationalBrief / useOperationalMetrics",
+      "owner": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx",
+      "line": 25,
+      "kind": "existing feature adapter to shared composite",
+      "contract": "Typed StatMetric measurements; loading/error/retry, scope, source trust, summary and limitations. Four metrics with stable occurrence IDs; no replacement KPI engine."
+    },
+    {
+      "name": "SignalWindowPicker",
+      "owner": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+      "line": 36,
+      "kind": "existing shared diagnostic selector",
+      "contract": "Catalog, loading/error/retry, focal signal and hours callbacks; default 72h, presets 24/72/168/720. GlassPanel, PanelTitle and two labeled native-backed Select primitives."
+    },
+    {
+      "name": "EvidenceSourceNotice / SignalEvidenceSourceList",
+      "owner": "web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.tsx",
+      "line": 8,
+      "kind": "existing diagnostic trust renderer",
+      "contract": "state, label, hasChosenSignal, optional sources only. Complete identities, per-source sample counts, timestamps, loading/fatal/refresh/offline/unavailable states and retry; no summary or limitations props."
+    },
+    {
+      "name": "ServiceEvidenceInventoryTable",
+      "owner": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx",
+      "line": 28,
+      "kind": "existing page-specific presentation",
+      "contract": "DataTable with stable tableId diagnostics:service-evidence-signals and signal key. Five columns: signal, role, domains, samples, corroborating. Source-local unavailable counts render em dash/Unknown rather than zero."
+    },
+    {
+      "name": "ServiceEvidencePrivacyPanel",
+      "owner": "web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx",
+      "line": 21,
+      "kind": "existing page-specific presentation",
+      "contract": "Included/excluded constants from the actual pack builder, responsive two-column manifest and statistical-summary-only explanation."
+    },
+    {
+      "name": "ServiceEvidenceIntegrityPanel",
+      "owner": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+      "line": 32,
+      "kind": "existing page-specific presentation",
+      "contract": "Generate with loading/disabled state, generation failure dismissal, digest/schema/time explanation, CopyButton with toast and Download JSON. Generated content is conditional within a persistent section shell."
+    },
+    {
+      "name": "ServiceEvidencePackPreview",
+      "owner": "web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx",
+      "line": 17,
+      "kind": "existing page-specific presentation",
+      "contract": "Shared CodeBlock with JSON language, wrapping, ariaLabel and max-h-96 pre; pre-generation guidance remains visible."
+    },
+    {
+      "name": "GlassPanel / PanelTitle / Text / Caption / Badge / Button / Select / CopyButton / DataTable / CodeBlock",
+      "owner": "web\\src\\components\\ui",
+      "kind": "existing primitives and composites",
+      "contract": "Reuse category barrel in feature consumers; semantic status variants, token-backed surfaces/text, current table persistence and existing clipboard/code pipeline. Do not create a competing card, table, formatter or overlay."
+    },
+    {
+      "name": "QueryError / StaleRefreshWarning / Skeleton / EmptyState / AlertBanner / NoVehicleSelected / FadeIn",
+      "owner": "Existing feedback, onboarding and motion owners",
+      "kind": "existing state and motion composition",
+      "contract": "Independent recovery and retained-content warnings, actionable onboarding guidance, generation errors and reduced-motion-aware entrance wrappers."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Five uniform panel headers decorate unrelated headings with fixed cyan icons.",
+      "file": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+      "line": 59,
+      "existingOwner": "GlassPanel and PanelTitle in components/ui",
+      "recommendation": "Reuse the current surfaces/typography and neutral semantic tokens. This is a styling adoption task, not evidence for a new generic panel library."
+    },
+    {
+      "pattern": "Local browser timestamp formatting in integrity metadata and per-source freshness.",
+      "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+      "line": 98,
+      "existingOwner": "web\\src\\hooks\\useDateFormat.ts:73-94",
+      "recommendation": "Adopt the existing locale/timezone-aware formatter, not a new date utility."
+    },
+    {
+      "pattern": "Root-cause analysis workspace is already centralized.",
+      "file": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+      "line": 73,
+      "existingOwner": "useRootCauseWorkspace",
+      "recommendation": "Keep the bounded related-signal analysis and shared workspace rather than copying state/query logic into this page."
+    }
+  ],
+  "responsive": {
+    "verified": "source inspection only",
+    "observations": [
+      "PageLayout supplies w-full/min-w-0 and an allocated @container; no local maximum-page-width constraint.",
+      "Picker and privacy manifest stack below sm and become two columns at sm; digest/copy row stacks below sm and wraps its digest with break-all.",
+      "Signal names use break-all; preview wraps and caps the internal pre height.",
+      "All sections and actions are structurally retained; no mobile-only section deletion."
+    ],
+    "issues": [
+      {
+        "id": "R102-01",
+        "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx",
+        "line": 61,
+        "rule": "MDC-023/MDC-043; mission 15-17",
+        "detail": "domains sets visibleOnMobile:false, but no column sets true and no mobileColumns prop is supplied. DataTable derives an allow-list from truthy values; an empty list becomes null (DataTable.tsx:714-725), so this flag does not hide the domains column. Actual strategy is all-five-column horizontal table scrolling, not column prioritization. Overflow and small-width usability are unverified.",
+        "fix": "Choose and document the existing DataTable scrolling/mobile presentation strategy explicitly. Preserve access to all five fields; do not merely add an allow-list that silently deletes domains from mobile. Exercise long signal/domain labels and the full details path before accepting a mobile alternative.",
+        "owner": "page",
+        "confidence": "high for source behavior; runtime unverified",
+        "priority": "P2"
+      }
+    ],
+    "viewports": "320/375/390/430/768/1024/1280/1440/1920/2560 not exercised; RTL, 200% text and long labels not exercised."
+  },
+  "accessibility": {
+    "verified": "source inspection only; no keyboard, screen-reader or contrast exercise",
+    "observations": [
+      "Metrics section has a localized aria-label; PageContainer owns the semantic page title and route focus target.",
+      "Shared Select supplies labels, hint association, native keyboard behavior and focus-visible styles; page passes translated labels.",
+      "Panel-header icons are aria-hidden; badges combine visible text and semantic variants instead of conveying state only by color.",
+      "Button forwards loading to aria-busy and disabled; preview provides a localized ariaLabel; per-source failures have role=alert and initial loading has role=status.",
+      "FadeIn.tsx:24-34 suppresses its initial transform and delay when useMotionPreference reduces motion. Browser/OS/low-bandwidth behavior remains unverified."
+    ],
+    "issues": [
+      {
+        "id": "A102-01",
+        "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+        "line": 65,
+        "rule": "MDC-040; mission 30",
+        "detail": "Generate and Download JSON opt into size=sm (also line 101). Current Button.tsx:39 uses h-9, nominally 36 CSS px; picker Select defaults to min-h-10, nominally 40 px (Select.tsx:34,47). These are below the contract's stronger 44px mobile default. Actual target dimensions/spacing exceptions were not measured; this is not a claimed WCAG failure.",
+        "fix": "Use existing sizing/class composition to achieve appropriate mobile targets while preserving density preferences and long-label reachability; measure real target geometry and any documented spacing exception.",
+        "owner": "page",
+        "confidence": "high for specified source sizing; effective targets unverified",
+        "priority": "P2"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Catalog picker uses Skeleton; initial history loading reaches the brief and inventory. Privacy, integrity guidance and preview remain mounted. Optional software history has independent warning/error presentation.",
+    "empty": "No vehicle shows existing onboarding guidance. Empty catalog explains telemetry prerequisites. Unchosen focal signal retains inventory and generation guidance. Preview retains guidance before generation.",
+    "fatalError": "Catalog and evidence failures have retry surfaces; updates failure has a separate QueryError panel. Main children are not placed behind a global data conditional.",
+    "refreshAndOffline": "Retained histories are preserved by useSignalEvidenceBundle; complete source identities expose individual refresh errors, blocked refreshes, timestamps and retry. DiagnosticEvidenceBrief derives retained/partial labels from source states. Updates has its own StaleRefreshWarning.",
+    "generation": "Chosen-signal + isAnalysisDefensible gates the visible generation button. generating supplies loading/disabled state. CryptoUnavailableError produces secure-context guidance; generic failures are dismissible. Download and exact JSON preview require a generated pack.",
+    "issues": [
+      {
+        "id": "S102-01",
+        "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+        "line": 167,
+        "rule": "MDC-026/MDC-045; unknown or unavailable evidence is not measured quality",
+        "detail": "available tests aggregate entry presence, not nonempty historical evidence. The hook includes successful responses with data:[] in evidenceBundle.data while their sources are unavailable (useTelemetry.ts:266-280). The page consequently exposes an Insufficient evidence quality metric and corroborating count even when every resolved history is empty (lines 170-182), although inventory correctly withholds unavailable sample counts and focal hypothesis count is withheld. The brief also treats unavailable sources as partial (DiagnosticEvidenceBrief.tsx:35-37). This is an inconsistent source-trust presentation, not an actual measured zero.",
+        "fix": "Derive quality/corroboration availability from the complete historical source contract, retaining catalog inventory identities and existing analysis/export payload. Keep known empty, partial, pending and unavailable distinct; do not rewrite missing histories as zero or remove successful neighbors.",
+        "owner": "page",
+        "confidence": "high from source trace; not runtime reproduced",
+        "priority": "P2"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "id": "V102-01",
+      "file": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+      "line": 59,
+      "rule": "MDC-010/MDC-012/MDC-016; mission 5-8",
+      "detail": "Fixed text-cyan-300 decorates every panel-header icon without source/status meaning. Same styling occurs in inventory:87, privacy:27, integrity:47 and preview:23. It is less noisy than neon/glow, but repeats accent intensity and is not theme-semantic.",
+      "fix": "Use existing neutral secondary/muted icon tokens for decorative headers; reserve semantic hue for actual quality, failure and export readiness. Retain icon meanings, labels and saved theme IDs. No new palette or global theme reset.",
+      "owner": "page",
+      "confidence": "high for source pattern; composed contrast/visual appearance unverified",
+      "priority": "P3"
+    },
+    {
+      "id": "V102-02",
+      "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+      "line": 207,
+      "rule": "MDC-042; mission 7/31",
+      "detail": "Six sections use separate entrance wrappers with successive delays through 0.5s (last at line 293). Shared FadeIn already honors reduced motion, but the cascading reveal is decorative overhead for a technician's evidence workflow.",
+      "fix": "Consider restrained entry timing through the existing FadeIn API, keeping every section and honoring saved/OS motion and low-bandwidth behavior. Do not introduce another animation owner.",
+      "owner": "page",
+      "confidence": "high for source delays; perceived distraction unverified",
+      "priority": "P3"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "id": "C102-01",
+      "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+      "line": 224,
+      "rule": "MDC-002; mission 34; existing typed component contract",
+      "detail": "Inherited EvidenceSourceNotice invocation passes summary and limitations (lines 224-225), but EvidenceSourceNoticeProps defines only state, label, hasChosenSignal and sources (EvidenceSourceNotice.tsx:8-14). The renderer does not consume either extra prop. This is the explicitly assigned inherited prop error, reported only; no TypeScript run or source repair was performed.",
+      "fix": "In a separately authorized implementation, align this invocation with the current notice contract. Preserve narrative summary/limitations through their existing DiagnosticEvidenceBrief props at lines 255-256; do not widen the shared notice merely to silence this caller.",
+      "owner": "page",
+      "confidence": "high from both source contracts; compiler output unverified",
+      "priority": "P1"
+    },
+    {
+      "id": "C102-02",
+      "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+      "line": 111,
+      "rule": "MDC-032/MDC-046; vehicle/signal/window snapshot integrity",
+      "detail": "The effect clears pack/error after a vehicle, focal signal or hours change (82-86), but an earlier async build still unconditionally calls setPack(doc) after awaiting crypto (105-111). Controls remain usable during generation. A scope change during the digest can therefore republish the old vehicle/signal/window document into the new page, with Download enabled whenever pack exists. Error/finally updates are likewise not generation-scoped.",
+      "fix": "Scope each generation result to a current request/snapshot identity and discard late success/error/finally results after scope changes or unmount. Preserve the deliberate point-in-time snapshot, digest algorithm, filename and normal generation gate; do not alter analysis calculations or disable workspace ownership.",
+      "owner": "page",
+      "confidence": "high from async source ordering; race not runtime exercised",
+      "priority": "P1"
+    },
+    {
+      "id": "C102-03",
+      "file": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+      "line": 76,
+      "rule": "MDC-032; header-owned workspace range",
+      "detail": "Historical analysis window is local useState, default 72h; SignalWindowPicker.tsx:81-86 renders another date-window selector and queries send hours only. /diagnostics/service-evidence is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77), so the shared header range is currently hidden rather than a visible duplicate. The page does not consume useRangeState or URL from/to. Whether this specialist bounded analysis is an explicitly independent business window is not established in the inspected source.",
+      "fix": "Integration owner must reconcile this route with the shared range contract before modernization: retain the 24/72/168/720 presets/default semantics and bounded analysis, establish whether the window is independent, or adopt header scope with both bounds and server coverage. Do not merely register a header control the existing hooks cannot consume, filter only loaded points, or silently remove the current functionality.",
+      "owner": "integration",
+      "confidence": "high for source wiring; medium for intended independent-window classification",
+      "priority": "P2"
+    },
+    {
+      "id": "C102-04",
+      "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+      "line": 98,
+      "rule": "MDC-044; mission 26; central locale/timezone formatting",
+      "detail": "Generated time uses new Date(...).toLocaleString() with browser defaults. Per-signal freshness repeats this at SignalEvidenceSourceList.tsx:51. Both bypass useDateFormat.ts:73-94, which resolves saved locale and timezone mode. Export timestamps are correctly retained ISO values; this concern is display only.",
+      "fix": "Reuse useDateFormat.formatDateTime at the presentation boundary without changing generatedAt, updatedAt, canonical JSON or hash inputs.",
+      "owner": "page",
+      "confidence": "high from source comparison",
+      "priority": "P2"
+    }
+  ],
+  "priority": {
+    "overall": "P1",
+    "first": ["C102-01", "C102-02"],
+    "next": ["C102-03", "C102-04", "S102-01", "R102-01", "A102-01"],
+    "polish": ["V102-01", "V102-02"],
+    "basis": "Existing caller contract mismatch and late-result scope integrity precede cosmetic adoption. Findings are source-backed, not a runtime acceptance claim."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Diagnostics workspace-range ownership reconciliation",
+      "existingOwner": "web\\src\\lib\\workspaceScope.ts; web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts; web\\src\\api\\hooks\\useTelemetry.ts",
+      "propsVariantsStates": "Existing RANGE_ENABLED_PATHS/getWorkspaceRouteScope and selected vehicle remain canonical. If analysis adopts header range, useRangeState startInstant/endInstantExclusive and typed bounded history hook coverage must preserve rolling/custom/timezone semantics, all four existing presets and empty/partial/retained states. Confirm independent-business-window status instead if intentional.",
+      "usedBy": ["/diagnostics/service-evidence", "useRootCauseWorkspace shared diagnostic consumers"],
+      "dependsOn": ["C102-03", "Integration decision about specialist window ownership", "Verified history endpoint bound/limit coverage", "Separately authorized shared/config ownership"],
+      "status": "Integration requirement only; no shared/config/source writes authorized or performed. Other consumers were not independently audited."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Local analysis-hour scope versus shared header range",
+      "file": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+      "line": 81,
+      "existingOwner": "web\\src\\lib\\workspaceScope.ts",
+      "finding": "C102-03",
+      "disposition": "Reconcile ownership; current header range is hidden, not an observed duplicate control."
+    },
+    {
+      "name": "Browser-local date rendering versus saved locale/timezone formatter",
+      "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+      "line": 98,
+      "existingOwner": "web\\src\\hooks\\useDateFormat.ts",
+      "finding": "C102-04",
+      "disposition": "Adopt existing formatter; no replacement implementation."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "0D9963F880BF6109FFAC75B608DF2A4004516BF8405206B20F940DE0F11329B0",
+    "hashAlgorithm": "SHA-256",
+    "hashScope": "Current root page bytes, not a historical receipt or composite hash",
+    "currentLineCount": 298,
+    "pagePlusInspectedPresentationLineCount": 915,
+    "presentationLineCounts": {
+      "ServiceEvidencePackPage.tsx": 298,
+      "SignalWindowPicker.tsx": 91,
+      "ServiceEvidenceInventoryTable.tsx": 114,
+      "ServiceEvidencePrivacyPanel.tsx": 64,
+      "ServiceEvidenceIntegrityPanel.tsx": 109,
+      "ServiceEvidencePackPreview.tsx": 42,
+      "EvidenceSourceNotice.tsx": 42,
+      "SignalEvidenceSourceList.tsx": 70,
+      "DiagnosticEvidenceBrief.tsx": 85
+    },
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Focal signal and analysis window", "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx", "line": 206},
+      {"name": "Evidence/readiness summary and four metrics", "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx", "line": 236},
+      {"name": "Evidence inventory", "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx", "line": 262},
+      {"name": "Privacy manifest", "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx", "line": 275},
+      {"name": "Integrity and export", "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx", "line": 280},
+      {"name": "Exact pack preview", "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx", "line": 292}
+    ],
+    "ancillarySurfaces": ["Per-signal trust/source list", "Catalog and software refresh warnings", "Independent optional software fatal-error panel", "No-vehicle onboarding guidance"],
+    "sourceCounts": {"GlassPanel": 6, "ChartContainer": 0, "PanelTitle": 5, "DataTable": 1, "Select": 2, "FadeIn": 6, "summaryMetrics": 4},
+    "countExplanation": "Case-sensitive JSX occurrence counts across root and eight inspected presentation dependencies. Five normal panel shells plus the conditional software error GlassPanel; KPI brief is the sixth principal section. Root itself has one GlassPanel. These are source counts, not mounted counts.",
+    "actions": [
+      "Choose a catalog-backed focal signal",
+      "Choose 24/72/168/720-hour analysis window, default 72",
+      "Retry catalog",
+      "Retry catalog and evidence together",
+      "Retry independent failed/unavailable/paused signal histories",
+      "Retry optional software update history",
+      "Generate pack only after chosen-signal and existing defensibility gate",
+      "Dismiss generation failure",
+      "Copy digest with existing clipboard/toast behavior",
+      "Download canonical JSON with vehicle ID and digest-prefix filename",
+      "Read wrapped exact JSON preview and existing CodeBlock interactions",
+      "Use existing DataTable interactions/persistence under diagnostics:service-evidence-signals",
+      "Use existing no-vehicle onboarding link"
+    ],
+    "data": [
+      "Preserve workspace vehicle selection precedence and vehicle identity; do not add competing selectors.",
+      "Keep complete normalized source identities, independent cancellation/cache keys/retries, retained payload and source trust; failed/pending identities must not disappear.",
+      "Keep all signal roles, domain lists, source sample counts, corroboration evidence, ranked hypothesis ordering, lag/shift statistics, quality score/band, summary and limitations.",
+      "Retain schema 1.0.0, generatedAt, requested window hours and earliestMs/latestMs, focal identity/domains/shift, software update normalization, privacy manifest and disclaimer.",
+      "Retain id/displayName-only vehicle boundary and excluded VIN/location/auth/raw payload fields.",
+      "Retain recursive key sorting, array order, SHA-256 over core only, isSignature:false, secure-context error and no weak fallback.",
+      "Retain one pretty-printed document for both preview and Blob export; revoke object URL after download and preserve deterministic filename.",
+      "Preserve SI/raw historical measurements through hooks, cache and export. Do not invent signal units or migrate existing millisecond timestamp/lag metadata as part of visual modernization.",
+      "Preserve missing versus empty software context, unknown versus zero signal counts, all independent error/empty states, theme/density/motion/locale preferences and stable table/metric IDs."
+    ],
+    "baselineComparison": "No implementation delta. Root SHA-256 matched at initial and pre-report inspection; no source files were written. No historical line-count baseline was substituted."
+  },
+  "evidenceLimits": {
+    "scope": "Read-only atomic audit of the assigned mounted route and its page-specific data/presentation dependencies. Shared files were inspected only to resolve contracts used by this page; no foundation-wide or neighboring-page audit.",
+    "route": "App.tsx:218 lazy import and :754 SafeRoute mapping establish source mount registration, not an exercised authenticated mount.",
+    "runtime": "UNVERIFIED; no server/browser navigation, Web Crypto generation, clipboard, download or retry exercised.",
+    "visual": "UNVERIFIED; no screenshots, theme rendering, viewport review, RTL, zoom or effective contrast measurement.",
+    "accessibility": "UNVERIFIED; keyboard order, focus/restoration, assistive technology, touch geometry, forced colors and OS reduced motion not exercised.",
+    "typescript": "NOT RUN under explicit audit scope. Inherited EvidenceSourceNotice mismatch is source evidence only, not fabricated compiler output.",
+    "testsBuildLint": "NOT RUN. No full builds, lint, tests or Git commands. The skill audit.sh was inspected but not executed because its unconditional npx tsc --noEmit step violates this phase's validation restrictions; bounded read-only source scans were used instead.",
+    "sourceScans": {
+      "method": "PowerShell Select-String over exactly root and eight inspected presentation dependencies; case-sensitive correction for native controls",
+      "exitCode": 0,
+      "output": [
+        "inlineStyles: 0",
+        "directLibraries: 0",
+        "legacyApi: 0",
+        "neonOrFixedWhite: 0",
+        "fixedCyan: 5",
+        "panels: 6",
+        "case-sensitive raw controls: 0",
+        "assigned hook double prefix: 0"
+      ],
+      "limitations": "String scans are not AST/type/runtime proof. Initial PowerShell invocation failed to parse quoting (exit 1) and made no writes. Corrected first scan's case-insensitive raw-control result matched six capitalized shared controls/comment occurrences and was superseded by the case-sensitive zero result. Hook endpoint contracts were verified by direct source/router reads, not by blanket URL regex."
+    },
+    "verificationCommands": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 'web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx'; (Get-Content 'web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx').Count",
+        "exitCode": 0,
+        "output": "SHA256 0D9963F880BF6109FFAC75B608DF2A4004516BF8405206B20F940DE0F11329B0; 298"
+      }
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-102.json", ".agent-status\\audit-page-102.txt"],
+    "writeRestrictions": "Only assigned report and heartbeat; no source/shared/queue/config/catalog edits, Git, production mutation, dependency installs or user questions."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+    "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+    "web\\src\\features\\diagnostics\\components\\index.ts",
+    "web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.tsx",
+    "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx",
+    "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx",
+    "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+    "web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx",
+    "web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx",
+    "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+    "web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx",
+    "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts",
+    "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts",
+    "web\\src\\features\\diagnostics\\lib\\signalEvidenceAvailability.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
