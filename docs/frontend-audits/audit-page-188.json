@@ -1,0 +1,1196 @@
+{
+  "item": "audit-page-188",
+  "phase": "Phase0",
+  "mode": "READ-ONLY source audit; only report and heartbeat are writable",
+  "page": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+  "routes": [
+    "/help"
+  ],
+  "identity": {
+    "repositoryRoot": "F:\\github\\TeslaSync",
+    "component": "HelpPage",
+    "mountEvidence": [
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 298,
+        "detail": "Lazy import of assigned HelpPage."
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 698,
+        "detail": "Route help mounts Help through SafeRoute."
+      }
+    ],
+    "rootSha256": "8c6a49937a2e6ca6f02011bf9f0fdd55f099fbf528e5422fba0721afabd25d91",
+    "rootSha256Meaning": "SHA-256 of exact assigned page bytes, not a Git revision or repository-tree hash."
+  },
+  "purpose": "An always-available deterministic help hub with search, glossary, guided help, release notes, privacy-safe diagnostics, dashboard presets, canonical navigation and separately gated AI assistance.",
+  "primaryGoal": "Find trustworthy explanations and next actions without requiring AI, and review exactly what support diagnostics will contain before sharing them.",
+  "dataSources": [
+    {
+      "name": "Deterministic help index",
+      "owner": "web\\src\\lib\\helpIndex.ts",
+      "consumer": "web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+      "hooks": [
+        "useMemo",
+        "useLocation in HelpPage"
+      ],
+      "endpoints": [],
+      "evidence": [
+        {
+          "file": "web\\src\\lib\\helpIndex.ts",
+          "line": 21
+        },
+        {
+          "file": "web\\src\\lib\\helpIndex.ts",
+          "line": 241
+        },
+        {
+          "file": "web\\src\\lib\\helpIndex.ts",
+          "line": 269
+        }
+      ],
+      "behavior": "Builds static index from routeRegistry, helpGlossary, emptyStateGuidance, onboardingTasks and dataUnavailability; fixed scoring, stable id tie-breaks, default 12 search results and six route suggestions. No network or model.",
+      "limits": "Registry consumers/imports inspected, but the imported registries other than glossary were not individually audited. Search scores English fallback titles/terms, not translated labels."
+    },
+    {
+      "name": "Glossary",
+      "owner": "web\\src\\lib\\helpGlossary.ts",
+      "hooks": [],
+      "endpoints": [],
+      "behavior": "Seven definitions retain term, definition, measurement provenance, aliases and optional context route; always visible independently of contextual-help preference.",
+      "evidence": [
+        {
+          "file": "web\\src\\lib\\helpGlossary.ts",
+          "line": 42
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+          "line": 30
+        }
+      ]
+    },
+    {
+      "name": "Release notes",
+      "owner": "web\\src\\lib\\releaseNotes.ts",
+      "hooks": [
+        "useMemo"
+      ],
+      "endpoints": [],
+      "behavior": "Uses generated changelog; three releases by default and five action-first summary items per release. Audience/action/migration inference is deliberately conservative. Uses existing formatDate.",
+      "evidence": [
+        {
+          "file": "web\\src\\lib\\releaseNotes.ts",
+          "line": 22
+        },
+        {
+          "file": "web\\src\\lib\\releaseNotes.ts",
+          "line": 171
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+          "line": 40
+        }
+      ],
+      "limits": "Generated changelog and date-format internals not inspected; no claim of complete changelog coverage or date/time runtime correctness."
+    },
+    {
+      "name": "Support bundle",
+      "owner": "web\\src\\api\\hooks\\useSupport.ts",
+      "hooks": [
+        "useSupportBundle",
+        "useVersionInfo",
+        "useSystemHealth",
+        "useOnlineStatus"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/system/version",
+          "hookFile": "web\\src\\api\\hooks\\useSettings.ts",
+          "hookLine": 367,
+          "routerFile": "internal\\api\\router.go",
+          "routerLine": 4393,
+          "parentRouteLine": 4352,
+          "match": "source-confirmed"
+        },
+        {
+          "method": "GET",
+          "path": "/system/health",
+          "hookFile": "web\\src\\api\\hooks\\useAdmin.ts",
+          "hookLine": 190,
+          "routerFile": "internal\\api\\router.go",
+          "routerLine": 4363,
+          "parentRouteLine": 4352,
+          "match": "source-confirmed"
+        }
+      ],
+      "behavior": "Browser-only explicit redacted projection; source unknown stays unknown. Health accepts 503 response bodies and continues standard polling. Version/health read hooks forward signal. Bundle includes coarse browser capability, online flag, viewport bucket, reduced-motion, redacted recent error digests and demo marker. JSON preview matches copy/download serialization.",
+      "evidence": [
+        {
+          "file": "web\\src\\api\\hooks\\useSupport.ts",
+          "line": 59
+        },
+        {
+          "file": "web\\src\\lib\\supportBundle.ts",
+          "line": 212
+        }
+      ],
+      "limits": "No backend response or privacy runtime test executed; support input projection inspected but privacy helper internals not audited."
+    },
+    {
+      "name": "Problem report",
+      "owner": "web\\src\\api\\hooks\\useSupport.ts",
+      "hooks": [
+        "useSubmitProblemReport",
+        "useSupportBundle"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/feedback",
+          "hookFile": "web\\src\\api\\hooks\\useSupport.ts",
+          "hookLine": 136,
+          "routerFile": "internal\\api\\router.go",
+          "routerLine": 4676,
+          "match": "source-confirmed"
+        }
+      ],
+      "behavior": "User-opened modal only; title/description validation, per-submission diagnostics consent false by default, normalized route template, exact preview/copy, pending-submit guards, inline failure and mutation toast. Existing feedback route is reused; audit did not invoke it.",
+      "evidence": [
+        {
+          "file": "web\\src\\components\\feedback\\ProblemReportModal.tsx",
+          "line": 39
+        },
+        {
+          "file": "web\\src\\components\\feedback\\ProblemReportModal.tsx",
+          "line": 156
+        },
+        {
+          "file": "web\\src\\components\\feedback\\ProblemReportModal.tsx",
+          "line": 225
+        }
+      ]
+    },
+    {
+      "name": "Dashboard presets",
+      "owner": "web\\src\\lib\\dashboardPresets.ts",
+      "hooks": [
+        "useState",
+        "useEffect",
+        "useCallback"
+      ],
+      "endpoints": [],
+      "behavior": "Four roles with eight widget IDs each. Help panel preserves selected/applied/pending distinctions, toggle-to-clear and explicit reapply after divergence. Listens to storage, preset-applied event and visibilitychange; dashboard owns actual adoption.",
+      "evidence": [
+        {
+          "file": "web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+          "line": 37
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+          "line": 174
+        }
+      ],
+      "limits": "Only first 180 lines of preset registry read; underlying persistence and dashboard write path not fully traced, and no selection or reapply action executed."
+    },
+    {
+      "name": "AI assistance and eligibility",
+      "owner": "web\\src\\components\\ai\\AIRAGHelp.tsx",
+      "hooks": [
+        "useAiStream",
+        "useAiEnabled",
+        "useSettings"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/settings",
+          "hookFile": "web\\src\\hooks\\useSettings.ts",
+          "hookLine": 84,
+          "adapterFile": "web\\src\\api\\settings.ts",
+          "adapterLine": 24,
+          "routerFile": "internal\\api\\router.go",
+          "routerLine": 3659,
+          "match": "source-confirmed"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/help/query",
+          "hookFile": "web\\src\\components\\ai\\AIRAGHelp.tsx",
+          "hookLine": 22,
+          "routerFile": "internal\\api\\router.go",
+          "routerLine": 5053,
+          "handlerWiringLine": 5065,
+          "mountFile": "internal\\api\\ai_routes.go",
+          "mountLine": 1177,
+          "match": "source-confirmed via mountAIRoutes"
+        }
+      ],
+      "behavior": "Fail-closed rag-help gate; off mode emits no AI wrapper. Explicit ask uses trimmed prompt, canonical stream and shared output/evidence renderer, without affecting deterministic siblings.",
+      "limits": "Stream implementation read through line 240 only; cancellation/parser remainder, backend retrieval/citations and authentication behavior are unverified. Settings read adapter inspected; no endpoint invoked."
+    },
+    {
+      "name": "Guided help",
+      "owner": "web\\src\\features\\system\\components\\help-index\\GuidedHelpPanel.tsx",
+      "hooks": [
+        "useState"
+      ],
+      "endpoints": [],
+      "behavior": "Opt-in product intro and tour-launcher dispatch, never auto-opened. Wizard close marks onboarding completed and broadcasts completion; preserve this existing side effect.",
+      "evidence": [
+        {
+          "file": "web\\src\\features\\system\\components\\help-index\\GuidedHelpPanel.tsx",
+          "line": 35
+        },
+        {
+          "file": "web\\src\\components\\feedback\\OnboardingWizard.tsx",
+          "line": 98
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "kind": "existing layout",
+      "contract": "PageContainer props; allocated width, min-w-0 and container queries, shell owns navigation/workspace."
+    },
+    {
+      "name": "GlassPanel",
+      "owner": "web\\src\\components\\ui\\GlassPanel.tsx",
+      "kind": "existing primitive",
+      "contract": "Neutral shared panel surface, print marker, forced-colors and hover; glow='cyan' means hover border tint, not literal bloom."
+    },
+    {
+      "name": "Text / PanelTitle / SectionTitle",
+      "owner": "web\\src\\components\\ui\\Typography.tsx",
+      "kind": "existing typography; owner identified, implementation not read",
+      "contract": "Use role wrappers and as overrides rather than arbitrary per-page text scale."
+    },
+    {
+      "name": "Input / Textarea / Button / CopyButton / Badge / Modal",
+      "owner": "web\\src\\components\\ui",
+      "kind": "existing category primitives",
+      "contract": "Retain native names, labels, focus, loading/disabled semantics and copy/modal behavior; internals not individually inspected."
+    },
+    {
+      "name": "IconBox",
+      "owner": "web\\src\\components\\ui\\IconBox.tsx",
+      "kind": "existing primitive",
+      "contract": "Color/size map, fallback guard; toned foreground with existing neon-named translucent chip tokens, no shadow class applied by IconBox."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "kind": "existing motion",
+      "contract": "Preference hook, reduced-motion initial=false, bounded delay and duration; eight page wrappers retained."
+    },
+    {
+      "name": "HelpLinkCard and six help-index panels",
+      "owner": "web\\src\\features\\system\\components",
+      "kind": "existing domain presentation",
+      "contract": "Local stable links, deterministic search, glossary, guided entry, release summaries, diagnostics and presets; do not replace with fixtures."
+    },
+    {
+      "name": "AIRAGHelp / AIFeatureCard / AiOutputPanel",
+      "owner": "web\\src\\components\\ai",
+      "kind": "existing shared AI pipeline",
+      "contract": "withAiFeature gating, inputSlot, canStart, stream lifecycle, result and evidence display."
+    },
+    {
+      "name": "SystemSummaryBrief",
+      "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+      "kind": "existing domain adapter",
+      "contract": "OperationalBrief plus useOperationalMetrics; metrics/textMetrics, available/loading/retained/statusLabel/freshness."
+    },
+    {
+      "name": "ProblemReportModal / OnboardingWizard",
+      "owner": "web\\src\\components\\feedback",
+      "kind": "existing shared interactions",
+      "contract": "Lazy open-state mount; consent/report submission and guided introduction must survive. Wizard uses useDialogFocus but custom overlay chrome."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Panel header/title/prose/spacing",
+      "files": [
+        "web\\src\\features\\system\\components\\help-index\\GuidedHelpPanel.tsx",
+        "web\\src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+        "web\\src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx"
+      ],
+      "recommendation": "Reuse existing Section/LayoutCard contract if it covers semantic headings and domain data-testid; do not introduce HelpCard or replacement surface engine."
+    },
+    {
+      "pattern": "Small metadata chips and navigational text styling",
+      "files": [
+        "web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+        "web\\src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+        "web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx"
+      ],
+      "recommendation": "Existing Badge/Caption/Text and native Link composition first; no new status registry."
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; all viewport behavior unverified",
+    "positiveEvidence": [
+      {
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 186,
+        "detail": "Hero stacks, then uses xl three-column layout."
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 277,
+        "detail": "Curated navigation grid clamps its 17rem minimum to 100%."
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+        "line": 37,
+        "detail": "Header/actions wrap; JSON has own overflow owner."
+      }
+    ],
+    "issues": [
+      {
+        "id": "H188-R1",
+        "file": "web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+        "line": 107,
+        "rule": "MDC-043 / mission 15-16",
+        "detail": "Preset grid minmax(17rem,1fr) lacks the min(100%,17rem) clamp used by the curated-link grid. With shell/panel/card gutters, a 320px container can allocate less than 272px and the track cannot shrink.",
+        "fix": "Use the existing allocated-width-safe grid pattern or accepted CardGrid adapter, keeping all four cards and all widgets/actions.",
+        "owner": "page",
+        "confidence": "high source risk; overflow not browser reproduced",
+        "priority": "P1"
+      }
+    ],
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "additionalChecks": [
+      "Long translated preset/button labels",
+      "RTL",
+      "200% text",
+      "Open wizard/report modal",
+      "JSON horizontal overflow constrained to pre",
+      "Light/dark/custom themes",
+      "Reduced motion and forced colors"
+    ]
+  },
+  "accessibility": {
+    "status": "source-only; keyboard, focus, assistive technology, touch targets and contrast unverified",
+    "positiveEvidence": [
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+        "line": 103,
+        "detail": "Labeled combobox, controls/active-descendant, listbox/option, result live region and arrow/Enter navigation."
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+        "line": 30,
+        "detail": "Native dl/dt/dd term-definition pairing."
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\HelpLinkCard.tsx",
+        "line": 47,
+        "detail": "Whole-card native Link and explicit focus-visible ring; decorative icons hidden."
+      },
+      {
+        "file": "web\\src\\components\\feedback\\OnboardingWizard.tsx",
+        "line": 127,
+        "detail": "Shared useDialogFocus plus dialog name/description; runtime trap/restoration not verified."
+      }
+    ],
+    "issues": [
+      {
+        "id": "H188-A1",
+        "file": "web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+        "line": 79,
+        "rule": "MDC-040",
+        "detail": "onKeyDown returns whenever results are empty before handling Escape; a zero-result search therefore cannot use the documented Escape-to-clear behavior.",
+        "fix": "Process Escape before the results guard; keep result wrapping, Enter navigation, active-descendant and deterministic ranking unchanged.",
+        "owner": "page",
+        "confidence": "high",
+        "priority": "P1"
+      },
+      {
+        "id": "H188-A2",
+        "file": "web\\src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+        "line": 52,
+        "rule": "MDC-040",
+        "detail": "Context links use inline text-xs with no explicit target padding/min-height or focus-visible treatment at this call site; similarly dashboard link at DashboardPresetPanel.tsx:123. Actual computed target size/focus may be supplied globally and is not measured.",
+        "fix": "Compose existing native-link/button-link treatment with documented target spacing/focus while retaining all hrefs and descriptions; verify effective target reachability rather than replacing links with click-only elements.",
+        "owner": "page",
+        "confidence": "medium",
+        "priority": "P2"
+      }
+    ]
+  },
+  "states": {
+    "static": "Welcome, channels, index, glossary, guided actions, release summaries, presets and curated links are not gated by network/AI data.",
+    "loading": "Support actions disable while version/health initially load; SystemSummaryBrief receives loading. AI shared card renders streaming label/output state. Static sources need no invented skeleton.",
+    "empty": "HelpSearch has translated no-match message; ReleaseNotesPanel has translated empty message; AiOutputPanel has completed-no-output message.",
+    "error": "Problem report retains form and inline error; support source errors are not surfaced; AI failure branch replaces visible result with error.",
+    "offline": "Static index remains local. Support bundle records online flag. No source-specific offline/retry UI is exposed by useSupportBundle.",
+    "stale": "Support hook may retain TanStack cached version/health data but drops source timestamps and refresh errors before presentation.",
+    "unknown": "Bundle projections use unknown for unavailable version/health; this must never become zero or measured health.",
+    "issues": [
+      {
+        "id": "H188-S1",
+        "file": "web\\src\\api\\hooks\\useSupport.ts",
+        "line": 59,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "useSupportBundle destructures only data/isLoading from version and health, then returns only assembled bundle and loading. SupportBundlePanel.tsx:99 passes available unconditionally. A constructed bundle can exist while upstream health/version fail or retained values are stale, without source-specific error, last-success or retry.",
+        "fix": "Preserve always-usable redacted bundle and copy/download; extend existing hook result with per-source DataState/retry/freshness and feed accurate source context to SystemSummaryBrief. Distinguish bundle construction availability from live health evidence; do not turn unknown into healthy/zero.",
+        "owner": "integration",
+        "confidence": "high",
+        "priority": "P1"
+      },
+      {
+        "id": "H188-S2",
+        "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+        "line": 84,
+        "rule": "MDC-026",
+        "detail": "Error branch renders only error even when text is nonempty, hiding accumulated partial output on terminal stream failure. AIRAGHelp uses this shared renderer via AIFeatureCard.",
+        "fix": "Extend the existing renderer to display usable partial text with explicit partial/error indication alongside recovery. Preserve escaped plain text and privacy-safe evidence trail; do not assert failed output is complete.",
+        "owner": "shared",
+        "confidence": "high",
+        "priority": "P1"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "id": "H188-V1",
+      "file": "web\\src\\components\\feedback\\OnboardingWizard.tsx",
+      "line": 155,
+      "rule": "MDC-010 / MDC-015 / MDC-024 / mission 5,7,8",
+      "detail": "Help-launched intro uses custom overlay/card, fixed white-alpha border, blur and cyan bloom; additional glowing progress at line 187, colored icon shadow at line 202 and cyan/purple gradient action at line 235. These remain contrary to the restrained surface contract.",
+      "fix": "Shared owner should compose canonical Modal/Button/typography and neutral semantic tokens, retaining all four steps, close/skip/next/final actions, completion broadcast, explicit invocation and focus behavior.",
+      "owner": "shared",
+      "confidence": "high",
+      "priority": "P1"
+    },
+    {
+      "id": "H188-V2",
+      "file": "web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+      "line": 165,
+      "rule": "MDC-013 / mission 9",
+      "detail": "Ad-hoc text-2xs chip styling repeats in ReleaseNotesPanel.tsx:111 and DashboardPresetPanel.tsx:286; additional text-xs summary/pre styling in SupportBundlePanel.tsx:111-116 bypasses typography roles.",
+      "fix": "Adopt existing Caption/Text/Code/Badge roles while preserving metadata, copyable JSON formatting and semantic markup. Do not create another typography component.",
+      "owner": "page",
+      "confidence": "high",
+      "priority": "P2"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "id": "H188-I1",
+      "file": "web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+      "line": 288,
+      "rule": "MDC-044",
+      "detail": "Preset widget names render widget.labelFallback directly. Other role/audience/rationale strings use t(), but all 32 widget-label occurrences stay English. PresetWidget currently has widgetId and labelFallback but no translation key at dashboardPresets.ts:30-34.",
+      "fix": "Use existing widget translation ownership or a typed translation-key contract without eagerly importing dashboard widget implementations. Catalog/shared integration owner must preserve stable widget IDs and fallback labels; page owns rendering through t().",
+      "owner": "integration",
+      "confidence": "high",
+      "priority": "P2"
+    },
+    {
+      "id": "H188-I2",
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 169,
+      "rule": "MDC-032",
+      "detail": "/help is absent from RANGE_ENABLED_PATHS and vehicle-disabled sets. getWorkspaceRouteScope therefore yields range=false, vehicle=true although HelpPage and AIRAGHelp consume no selected vehicle and no range. The header vehicle control can imply scope that does not affect this general-help page.",
+      "fix": "Workspace integration owner should decide and explicitly document general-help vehicle ownership, normally disable misleading vehicle scope; do not add a local picker or vehicle payload to RAG merely to make an irrelevant control appear functional.",
+      "owner": "integration",
+      "confidence": "high source mismatch; header runtime unverified",
+      "priority": "P2"
+    },
+    {
+      "id": "H188-I3",
+      "file": "web\\src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+      "line": 7,
+      "rule": "MDC-002 component-first imports",
+      "detail": "Feature directly imports shared ProblemReportModal module; GuidedHelpPanel.tsx:6 likewise imports OnboardingWizard directly rather than category barrel.",
+      "fix": "Use existing feedback category export when it exposes the same implementation; otherwise report an exclusive barrel-owner addition. Preserve lazy open-state mounting and do not introduce wrappers.",
+      "owner": "page",
+      "confidence": "high",
+      "priority": "P2"
+    },
+    {
+      "id": "H188-I4",
+      "file": "web\\src\\lib\\helpIndex.ts",
+      "line": 207,
+      "rule": "MDC-044",
+      "detail": "Search ranks titleFallback, summaryFallback and English-derived terms, even though displayed results are localized through t(). Non-English visible labels are not automatically searchable.",
+      "fix": "Shared help-index owner should define an explicit locale-aware searchable-text adapter that preserves deterministic ranking, route/id identity, offline operation and English aliases. No AI-backed ranking or competing index.",
+      "owner": "shared",
+      "confidence": "high",
+      "priority": "P2"
+    }
+  ],
+  "priority": {
+    "overall": "P1 bounded modernization follow-up",
+    "first": [
+      "H188-R1",
+      "H188-A1",
+      "H188-S1",
+      "H188-S2",
+      "H188-V1"
+    ],
+    "second": [
+      "H188-A2",
+      "H188-V2",
+      "H188-I1",
+      "H188-I2",
+      "H188-I3",
+      "H188-I4"
+    ],
+    "rationale": "Fix narrow-container risk and documented keyboard defect, then preserve source trust/partial results and canonical intro chrome. No wholesale page replacement."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Support bundle source-evidence contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useSupport.ts",
+      "changeType": "extend",
+      "propsVariantsStates": [
+        "Keep bundle/json/filename/download/isLoading",
+        "Add distinct version/health retained-data, fatal/refresh error, last-success and retry via existing DataState",
+        "Keep unknown/offline and redacted payload separate from healthy/available evidence"
+      ],
+      "usedBy": [
+        "SupportBundlePanel on /help",
+        "ProblemReportModal opened from /help"
+      ],
+      "dependsOn": [
+        "Existing useVersionInfo/useSystemHealth query identity and cancellation",
+        "Existing DataState contract",
+        "SystemSummaryBrief available/retained/freshness props"
+      ],
+      "issueIds": [
+        "H188-S1"
+      ]
+    },
+    {
+      "name": "Retained partial AI output",
+      "existingOwnerFile": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "changeType": "extend",
+      "propsVariantsStates": [
+        "Preserve text/state/error/activity/usage/pendingChild",
+        "Render nonempty text in error state with partial/failure semantics",
+        "Keep idle/streaming/done-empty and escaped prose",
+        "Recovery must use canonical stream start/cancel policy, not a new transport"
+      ],
+      "usedBy": [
+        "AIRAGHelp through AIFeatureCard",
+        "Other AIFeatureCard consumers, not independently inventoried"
+      ],
+      "dependsOn": [
+        "useAiStream lifecycle",
+        "Existing HelixEvidenceTrail",
+        "Shared-owner focused tests and central runtime validation"
+      ],
+      "issueIds": [
+        "H188-S2"
+      ]
+    },
+    {
+      "name": "Canonical product introduction presentation",
+      "existingOwnerFile": "web\\src\\components\\feedback\\OnboardingWizard.tsx",
+      "changeType": "reuse existing Modal and Button; modernize shared owner",
+      "propsVariantsStates": [
+        "Keep open/onClose",
+        "Four localized steps",
+        "Next/final/skip/close/backdrop and cross-tab close",
+        "Preserve completion mark/broadcast and focus restoration",
+        "Neutral surface; no cyan bloom or gradient CTA"
+      ],
+      "usedBy": [
+        "GuidedHelpPanel on /help",
+        "Other callers not inventoried"
+      ],
+      "dependsOn": [
+        "Existing Modal/useDialogFocus contract",
+        "markOnboardingCompleted",
+        "broadcast/subscribe",
+        "Existing Typography and Button"
+      ],
+      "issueIds": [
+        "H188-V1"
+      ]
+    },
+    {
+      "name": "Localized preset widget-label ownership",
+      "existingOwnerFile": "web\\src\\lib\\dashboardPresets.ts",
+      "changeType": "extend typed data contract",
+      "propsVariantsStates": [
+        "Stable widgetId",
+        "Existing labelFallback",
+        "Existing canonical widget translation key or explicit key field",
+        "No eager widget-library import"
+      ],
+      "usedBy": [
+        "DashboardPresetPanel on /help"
+      ],
+      "dependsOn": [
+        "Canonical dashboard widget/i18n owners",
+        "Catalog owner; no audit catalog edits"
+      ],
+      "issueIds": [
+        "H188-I1"
+      ]
+    },
+    {
+      "name": "General-help workspace scope decision",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "changeType": "integration decision",
+      "propsVariantsStates": [
+        "Keep range=false for non-dated help",
+        "Explicit vehicle applicability; no local selectors",
+        "Do not add fabricated vehicle context"
+      ],
+      "usedBy": [
+        "/help header controls"
+      ],
+      "dependsOn": [
+        "WorkspaceHeader/shell owner",
+        "Actual getWorkspaceRouteScope consumer validation"
+      ],
+      "issueIds": [
+        "H188-I2"
+      ]
+    },
+    {
+      "name": "Locale-aware deterministic help search",
+      "existingOwnerFile": "web\\src\\lib\\helpIndex.ts",
+      "changeType": "extend existing index/search",
+      "propsVariantsStates": [
+        "Typed resolved searchable label/summary text",
+        "Locale input or adapter",
+        "Retain English aliases, stable IDs, ranking tie-breaks, limits and offline behavior"
+      ],
+      "usedBy": [
+        "HelpSearch on /help"
+      ],
+      "dependsOn": [
+        "Canonical locale and i18n catalogs",
+        "Current route/glossary/task/unavailability registry identity"
+      ],
+      "issueIds": [
+        "H188-I4"
+      ]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\components\\feedback\\OnboardingWizard.tsx",
+      "line": 137,
+      "detail": "Existing custom intro overlay/card/buttons competes with canonical Modal/Button presentation; focus already reuses useDialogFocus, so preserve that behavior rather than invent another focus system."
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\HelpLinkCard.tsx",
+      "line": 54,
+      "detail": "Not a competing surface engine: existing GlassPanel's cyan glow prop is only border tint. Do not falsely report actual glowing Help cards based on the prop name."
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+      "line": 235,
+      "detail": "Deterministic index and AI help are intentionally complementary, not duplicate implementations to consolidate away."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "8c6a49937a2e6ca6f02011bf9f0fdd55f099fbf528e5422fba0721afabd25d91",
+    "currentLineCount": 289,
+    "sectionCount": 10,
+    "sectionCountingRule": "Count welcome and channels as separate visible blocks, then index, optional AI, glossary, guided help, release notes, support bundle, presets and curated links. Page comments duplicate number 5; do not use those labels as an accurate count.",
+    "sections": [
+      {
+        "name": "Welcome",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 188
+      },
+      {
+        "name": "Ways to get help; three channels",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 198
+      },
+      {
+        "name": "Deterministic help index",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 224
+      },
+      {
+        "name": "Optional self-gated RAG assistant",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 237
+      },
+      {
+        "name": "Glossary; seven terms/provenance",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 241
+      },
+      {
+        "name": "Guided help",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 246
+      },
+      {
+        "name": "Release notes; three releases/five-item summaries",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 251
+      },
+      {
+        "name": "Support bundle and problem report",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 256
+      },
+      {
+        "name": "Four dashboard presets",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 261
+      },
+      {
+        "name": "Explore; five canonical links",
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "line": 266
+      }
+    ],
+    "counts": {
+      "rootGlassPanelOpeningTags": 3,
+      "rootChartContainerOpeningTags": 0,
+      "rootSectionTags": 2,
+      "rootFadeInOpeningTags": 8,
+      "curatedLinks": 5,
+      "helpChannels": 3,
+      "glossaryTerms": 7,
+      "presetRoles": 4,
+      "widgetsPerPreset": 8
+    },
+    "actions": [
+      "Search typing/arrow navigation/Enter/Escape and option click",
+      "Glossary see-in-context links",
+      "Replay intro, close/skip/next/final and browse tours",
+      "Copy/download exact redacted support JSON and native details disclosure",
+      "Open/cancel/report submit, consent, exact preview/copy and error retry",
+      "Choose/clear preset, explicitly reapply diverged preset, open dashboard",
+      "Ask AI with nonempty trimmed prompt only when opted in",
+      "/docs/status-api, /onboarding, /system-status, /search, /chatbot curated navigation"
+    ],
+    "stableIdentities": [
+      "help-baseline-links",
+      "help-baseline-link-docs-status-api",
+      "help-baseline-link-onboarding",
+      "help-baseline-link-system-status",
+      "help-baseline-link-search",
+      "help-baseline-link-chatbot",
+      "rag-help feature gate/test identity",
+      "help-index/glossary entry IDs",
+      "preset role/widget IDs",
+      "support bundle schema and filename"
+    ],
+    "dataBehavior": [
+      "Static baseline survives AI-off, unresolved settings and network failures; no all-content data gate.",
+      "No vehicle/range-dependent measurement data or new unit conversion is introduced. Prose unit examples are source explanations, not authorization to mutate SI.",
+      "Keep existing query keys, retry/stale/polling and cancellation policies.",
+      "Unknown version/health remains unknown, never zero/healthy; keep source provenance and partial/stale meanings.",
+      "Preserve redaction, route-template normalization, bounded bundle projections, explicit consent and closed attachment policy.",
+      "Preserve chosen/applied/queued/diverged dashboard state and do not automatically overwrite customized dashboards.",
+      "Preserve public source/explanations, current three-release/five-item summary behavior and translated role/context wording.",
+      "Do not reset persisted themes, units, locale, motion or contextual-help preferences."
+    ],
+    "sourceInventory": [
+      {
+        "file": "docs\\frontend-design-contract.md",
+        "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255",
+        "lineCount": 394,
+        "inspection": "view ranges 1-240,185-235,235-410; first output truncated near line 190, remainder subsequently read"
+      },
+      {
+        "file": "docs\\frontend-worker-conventions.md",
+        "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3",
+        "lineCount": 80,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "docs\\frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "inspection": "view ranges 1-240,237-440,506-810,920-1080; heading search"
+      },
+      {
+        "file": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46",
+        "lineCount": 141,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\HelpPage.tsx",
+        "sha256": "8c6a49937a2e6ca6f02011bf9f0fdd55f099fbf528e5422fba0721afabd25d91",
+        "lineCount": 289,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\HelpLinkCard.tsx",
+        "sha256": "7e356d7145b29ec5a20ac0157fc2b48ac80cab62eeb33722a029d04de7c8b09a",
+        "lineCount": 80,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\index.ts",
+        "sha256": "51b39517779c3fb1d5b77cca7e8872303d2ef86a88a7737ebcae13905b76488d",
+        "lineCount": 6,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+        "sha256": "d1316ab52cde2ad164f5bc28789cf640c9393324013be524f7d374c53e8f8da7",
+        "lineCount": 189,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+        "sha256": "5ec59a90cdd074cb6ad1fe33351297ea3fcdacf0322b5c4f91f783e7da977ba3",
+        "lineCount": 63,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\GuidedHelpPanel.tsx",
+        "sha256": "1ae3faa71f174509fe83298d78d2b82fa0d56a326faebd348c4a6f2008e61ff9",
+        "lineCount": 58,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+        "sha256": "84005f095ed80e09ce7437d47a1142ca3f1927d873c76d00e15da2e93712ada2",
+        "lineCount": 142,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+        "sha256": "d7f639603601fda7f163ae537d846f2ec78ed60b05f4b5ca8d5d72c000ff485d",
+        "lineCount": 129,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+        "sha256": "0e2bafa2de3686b3b134ff54f1f1781402e71a8bb64090b5ad1d650a916ffd4e",
+        "lineCount": 367,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+        "sha256": "f57825bef8b213e4987373b6d1ea03a089906170e0098d4d6686ded3bfe99326",
+        "lineCount": 63,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\ai\\AIRAGHelp.tsx",
+        "sha256": "5e7671f152fba5a86e7c89d6be5f3d14ccd39b112c9ad4c8573dcc14891bf734",
+        "lineCount": 55,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+        "sha256": "0da96a5ce3df7cb980ae9cccf8d028062ab5c66a5c846d718ba39c2e37ad7111",
+        "lineCount": 353,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\ai\\withAiFeature.tsx",
+        "sha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+        "lineCount": 60,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+        "sha256": "bcaab4059f10c3a14d4d6bbc709701e0fd13e86afa1898a790ef5c48a8d851ea",
+        "lineCount": 116,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\ui\\GlassPanel.tsx",
+        "sha256": "0666debf2a501c29c1748e34e34793a25cc8784b10e1dc0e9ec26dc2055ccfc5",
+        "lineCount": 84,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\ui\\IconBox.tsx",
+        "sha256": "559e3eb82cc83c17e98a68a769f61a9a92cdf7504d582ce4cd1d332bb2bbc9c6",
+        "lineCount": 36,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\motion\\FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "lineCount": 39,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6",
+        "lineCount": 17,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\feedback\\ProblemReportModal.tsx",
+        "sha256": "d11d22e8654e6223946df9f5c921de719daaa635ac5a82ecd659543d0fc82950",
+        "lineCount": 244,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\components\\feedback\\OnboardingWizard.tsx",
+        "sha256": "bacf35372c4c07bf31de5a9ae06dd3016b7eb84090da9c12c9e2e8a98e53ff0f",
+        "lineCount": 248,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useSupport.ts",
+        "sha256": "0292a460554cf1f61c3b55fc0f532077234b01df0faf2d793dd34b19a793a818",
+        "lineCount": 146,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useSettings.ts",
+        "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+        "lineCount": 381,
+        "inspection": "rg settings/version query excerpts"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useAdmin.ts",
+        "sha256": "483433a3c072fa6f1b32d61c1d807f5c1f2834463efdb08d4b5747a0a9d82b6f",
+        "lineCount": 399,
+        "inspection": "rg useSystemHealth excerpt lines 186-208"
+      },
+      {
+        "file": "web\\src\\api\\settings.ts",
+        "sha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+        "lineCount": 133,
+        "inspection": "view 1-40"
+      },
+      {
+        "file": "web\\src\\hooks\\useAiStream.ts",
+        "sha256": "3cfa502372bb3c43fe5049d8a04e3ebeb9727d58b25d2d9704e9359e2b419c0e",
+        "lineCount": 598,
+        "inspection": "view 1-240"
+      },
+      {
+        "file": "web\\src\\hooks\\useAiEnabled.ts",
+        "sha256": "afb5dddd9edc3f024249d1ba97f04a8c9c9a5d5b9bc09be672113fe155069250",
+        "lineCount": 39,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\hooks\\useSettings.ts",
+        "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+        "lineCount": 146,
+        "inspection": "view 1-90"
+      },
+      {
+        "file": "web\\src\\lib\\helpIndex.ts",
+        "sha256": "da1ca2af6714809f346e555e82c9d5f30247888934e3a1996d5cbb8e4bd92d9c",
+        "lineCount": 287,
+        "inspection": "view 1-200 and 198-310"
+      },
+      {
+        "file": "web\\src\\lib\\helpGlossary.ts",
+        "sha256": "040ec649ee5a1e4f1add0522d798aa204b6c45be02effcf5f964f91eff58aab9",
+        "lineCount": 173,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\lib\\releaseNotes.ts",
+        "sha256": "3d3d3a5f40a4efb90d5b8b783094a7e264d5a3c33ea3a1958eda9464c3b4da54",
+        "lineCount": 172,
+        "inspection": "view 1-200"
+      },
+      {
+        "file": "web\\src\\lib\\supportBundle.ts",
+        "sha256": "932c5460ef2af6f2210b5caf5e81039133a700abc865e61009cdb393babe8110",
+        "lineCount": 286,
+        "inspection": "view 1-250"
+      },
+      {
+        "file": "web\\src\\lib\\dashboardPresets.ts",
+        "sha256": "206b485380bd339e5cc25db33d01e62b1a2ff3161f8815342e48108188c2ae22",
+        "lineCount": 459,
+        "inspection": "view 1-180"
+      },
+      {
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "inspection": "view source, complete file"
+      },
+      {
+        "file": "web\\src\\lib\\tokens.ts",
+        "sha256": "e5178c85697f9913646670f8023668b9574b6f5a281c947ddb51141cdba5a5c9",
+        "lineCount": 441,
+        "inspection": "view 1-48,260-340"
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+        "lineCount": 918,
+        "inspection": "rg lazy mount and canonical link routes"
+      },
+      {
+        "file": "internal\\api\\router.go",
+        "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+        "lineCount": 5366,
+        "inspection": "rg route matches/parent groups plus view 5030-5075"
+      },
+      {
+        "file": "internal\\api\\ai_routes.go",
+        "sha256": "f0bcbd1b33717f76efa91855587a239b03e8111956862f4906842251baac54b3",
+        "lineCount": 1831,
+        "inspection": "rg mountAIRoutes and help/query"
+      }
+    ],
+    "mutationEvidence": "No source, shared components, routing, catalogs, queue or Git operations were performed. Only owned report/heartbeat written.",
+    "scopedPageAndPresentationLineCount": 1317
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified at all ten required widths",
+    "backend": "Route registration source only; no request/response, auth, mutation or retrieval tests.",
+    "validation": "No TypeScript, full lint, build or tests run: assignment prohibits full gates. audit.sh inspected but not executed because it unconditionally runs project-wide npx tsc --noEmit. Scoped read-only pattern scan and JSON/schema/hash validation only; results recorded in verification.",
+    "sourceCoverage": "Assigned root and immediate presentation/data dependencies inspected; shared-owner inspection bounded to contracts relevant to /help. Large files were range-read or searched as recorded. No claim of transitive whole-app coverage.",
+    "uninspectedDependencies": [
+      "Typography, Input, Button, Modal, CopyButton internals",
+      "PageContainer and shell header runtime",
+      "OperationalBrief/useOperationalMetrics internals",
+      "routeRegistry/emptyStateGuidance/onboardingTasks/dataUnavailability registry contents",
+      "generated/changelog contents",
+      "privacy/routeTemplate/problemReport implementation internals",
+      "dashboard preset persistence/application remainder",
+      "AI stream parser/cancellation remainder and backend RAG strategy",
+      "Tour launcher/overlay implementation",
+      "Existing page/component tests"
+    ],
+    "historicalEvidence": "No historical acceptance reused as current proof.",
+    "sourceDrift": "Hashes describe bytes at final source inventory time; concurrent writers are not locked."
+  },
+  "verification": {
+    "performedAtUtc": "2026-10-07T10:28:29.8994214Z",
+    "commands": [
+      {
+        "command": "Get-FileHash -LiteralPath <each filesRead entry> -Algorithm SHA256; [System.IO.File]::ReadAllLines(...).Count",
+        "exitCode": 0,
+        "output": "Hashed 41 inspected files; root 8c6a49937a2e6ca6f02011bf9f0fdd55f099fbf528e5422fba0721afabd25d91; root lines 289"
+      },
+      {
+        "command": "Select-String -LiteralPath <HelpPage, HelpLinkCard, six help-index TSX files> -Pattern <six scoped violation patterns> -CaseSensitive",
+        "exitCode": 0,
+        "output": "{\"staticInlineVar\":{\"count\":0,\"matches\":[]},\"rawControls\":{\"count\":0,\"matches\":[]},\"directLibraries\":{\"count\":0,\"matches\":[]},\"oldApiImports\":{\"count\":0,\"matches\":[]},\"doubleApiPrefix\":{\"count\":0,\"matches\":[]},\"camelCaseQuery\":{\"count\":0,\"matches\":[]}}"
+      },
+      {
+        "command": "ConvertFrom-Json audit-page-188.json; validate required conventions fields and source inventory",
+        "exitCode": 0,
+        "output": "VALID JSON; 19 required fields; exact identity/routes; 41 hashed inspected inputs; root hash rechecked"
+      }
+    ],
+    "scan": {
+      "staticInlineVar": {
+        "count": 0,
+        "matches": []
+      },
+      "rawControls": {
+        "count": 0,
+        "matches": []
+      },
+      "directLibraries": {
+        "count": 0,
+        "matches": []
+      },
+      "oldApiImports": {
+        "count": 0,
+        "matches": []
+      },
+      "doubleApiPrefix": {
+        "count": 0,
+        "matches": []
+      },
+      "camelCaseQuery": {
+        "count": 0,
+        "matches": []
+      }
+    },
+    "scanScope": [
+      "web\\src\\features\\system\\pages\\HelpPage.tsx",
+      "web\\src\\features\\system\\components\\HelpLinkCard.tsx",
+      ".\\web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+      ".\\web\\src\\features\\system\\components\\help-index\\GuidedHelpPanel.tsx",
+      ".\\web\\src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+      ".\\web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+      ".\\web\\src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+      ".\\web\\src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx"
+    ],
+    "scanLimit": "Simple line-pattern scan, not AST or full dependency audit. Does not cover shared onboarding violations described separately; zero pattern matches does not mean zero findings.",
+    "notRun": [
+      "audit.sh: includes prohibited project-wide TypeScript gate",
+      "npx tsc --noEmit",
+      "full lint/build/tests",
+      "browser/runtime checks"
+    ],
+    "correctionEvidence": "Initial Select-String scan was case-insensitive and falsely matched shared <Button>/<Input> as raw controls (7). Re-run with -CaseSensitive produced 0 raw controls. Initial output was not used as a violation claim."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\HelpPage.tsx",
+    "web\\src\\features\\system\\components\\HelpLinkCard.tsx",
+    "web\\src\\features\\system\\components\\help-index\\index.ts",
+    "web\\src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+    "web\\src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+    "web\\src\\features\\system\\components\\help-index\\GuidedHelpPanel.tsx",
+    "web\\src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+    "web\\src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+    "web\\src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\components\\ai\\AIRAGHelp.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\feedback\\ProblemReportModal.tsx",
+    "web\\src\\components\\feedback\\OnboardingWizard.tsx",
+    "web\\src\\api\\hooks\\useSupport.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useAdmin.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\lib\\helpIndex.ts",
+    "web\\src\\lib\\helpGlossary.ts",
+    "web\\src\\lib\\releaseNotes.ts",
+    "web\\src\\lib\\supportBundle.ts",
+    "web\\src\\lib\\dashboardPresets.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-188.json",
+    ".agent-status\\audit-page-188.txt"
+  ]
+}
