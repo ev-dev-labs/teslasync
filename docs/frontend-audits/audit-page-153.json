@@ -1,0 +1,479 @@
+{
+  "item": "audit-page-153",
+  "page": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+  "routes": [
+    {
+      "path": "/ownership/charging-reconciliation",
+      "file": "web\\src\\App.tsx",
+      "line": 777,
+      "detail": "SafeRoute wraps the lazy ChargingReconciliation page; lazy import at line 245. Source registration confirmed, mounted reachability unverified."
+    }
+  ],
+  "purpose": "Compare imported charging statements with recorded vehicle sessions, explain variance, retain evidence and record dispute claims without sending them to a provider.",
+  "primaryGoal": "Select or import a vehicle statement, understand billed versus measured amounts and matching confidence, and assemble a defensible reconciliation/dispute record.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "sourceOwner": "Existing workspace vehicle store and URL precedence; page consumes vehicleId at page line 69.",
+      "endpoint": null,
+      "boundary": "Vehicle list and selection remain shared owners; no second vehicle picker."
+    },
+    {
+      "hook": "useChargingInvoices(vehicleId, 50, 0)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 246,
+      "endpoint": "GET /api/v1/charging-reconciliation/invoices?vehicle_id={vehicleId}&limit=50&offset=0",
+      "sourceOwner": "ownershipKeys.invoices; useVehicleQuery forwards AbortSignal and enables only a positive selected vehicle.",
+      "routeEvidence": "internal\\api\\router.go:3918 delegates MountRoutes; internal\\handler\\v1\\ownershipintel\\handler.go:127-128 registers GET.",
+      "boundary": "Loaded first 50 items only. Server total is not fetched by exports; no financial interpretation inferred."
+    },
+    {
+      "hook": "useReconciliationReport(activeInvoice)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 254,
+      "endpoint": "GET /api/v1/charging-reconciliation/invoices/{invoiceId}/report",
+      "sourceOwner": "ownershipKeys.invoiceReport; enabled by positive invoice ID, forwards AbortSignal.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:131; composition internal\\api\\router.go:3918.",
+      "boundary": "Returned report owns matching, expected cost, recoverability, variance buckets, measured sessions, digest, disputes, quality and evidence. No engine algorithm, tolerance or database correctness inspected."
+    },
+    {
+      "hook": "useCreateInvoice",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 268,
+      "endpoint": "POST /api/v1/charging-reconciliation/invoices",
+      "sourceOwner": "Typed CreateInvoiceRequest, ownership query invalidation and existing mutation toast.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:129",
+      "boundary": "Page submits vehicle_id, currency minor amounts, ISO instants and billed_energy_wh. Not executed."
+    },
+    {
+      "hook": "useDeleteInvoice",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 286,
+      "endpoint": "DELETE /api/v1/charging-reconciliation/invoices/{id}",
+      "sourceOwner": "Existing mutation invalidation/toast; page-owned destructive confirmation.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:130",
+      "boundary": "Not executed; no assertion about server cascade or authorization behavior."
+    },
+    {
+      "hook": "useCreateDispute(activeInvoice)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 299,
+      "endpoint": "POST /api/v1/charging-reconciliation/invoices/{invoiceId}/disputes",
+      "sourceOwner": "Existing typed mutation validates positive invoice ID, invalidates ownership keys and publishes toast.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:132",
+      "boundary": "Page submits claimed_minor, note, reasons and confirmed:true at lines 160-171. Recording is not provider submission; no mutation performed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard / SourceContent",
+      "owner": "Existing @/components/layout contracts",
+      "citations": [
+        "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:469-477",
+        "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx:38-74",
+        "web\\src\\components\\layout\\index.ts:15",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:9-72"
+      ],
+      "contract": "Persistent page and source-specific section shells; query array contains invoice and report queries. Domain adapter forwards fatal retry, empty/editor policy and retained content."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "citations": [
+        "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:696-716",
+        "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:823-917",
+        "web\\src\\components\\ui\\DataTable.tsx:184-192",
+        "web\\src\\components\\ui\\DataTable.tsx:715-725"
+      ],
+      "contract": "Sole loaded-row table/export/filter pipeline; four stable tableIds. Existing mobilePresentation and standalone/embedded variants; current callers use only mobileColumns."
+    },
+    {
+      "name": "OwnershipBrief / specialistDisplay",
+      "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+      "citations": [
+        "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:736-805",
+        "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx:25-82",
+        "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts:3-10"
+      ],
+      "contract": "Existing OperationalBrief/useOperationalMetrics bridge retains eight raw measurements, specialist display, selected invoice bounds, source status and unknown source freshness."
+    },
+    {
+      "name": "EvidencePanel / VerdictBadge / MoneyInput / MutationError",
+      "owner": "web\\src\\features\\ownership\\components\\index.ts",
+      "citations": [
+        "web\\src\\features\\ownership\\components\\EvidencePanel.tsx:33-194",
+        "web\\src\\features\\ownership\\components\\VerdictBadge.tsx:12-75",
+        "web\\src\\features\\ownership\\components\\MoneyInput.tsx:21-52",
+        "web\\src\\features\\ownership\\components\\MutationError.tsx:9-23"
+      ],
+      "contract": "Existing ownership-domain evidence/status/minor-money/write-error owners; reuse rather than cloning."
+    },
+    {
+      "name": "Button / Input / Textarea / Badge / Text / ConfirmDialog / AlertBanner / FadeIn",
+      "owner": "Existing category barrels @/components/ui, @/components/feedback and @/components/motion",
+      "citations": [
+        "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:11-16",
+        "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:95-109",
+        "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:1056"
+      ],
+      "contract": "Keep shared focus/dialog/motion/field behavior; underlying primitive runtime behavior not tested here."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 604,
+      "rule": "MDC-002/MDC-015",
+      "detail": "Statement line, packet digest and dispute-history containers repeat hand-styled fixed-white borders/surfaces at lines 604, 959 and 1013; EvidencePanel repeats this at line 129.",
+      "fix": "Use existing surface/border tokens or existing card composition, without creating a new reconciliation surface component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 698,
+      "rule": "MDC-023/MDC-043; mission sections 15-17",
+      "detail": "Invoice mobileColumns excludes actions, period and line count. DataTable.tsx:725 applies hidden md:table-cell to excluded columns. Audit/Remove live only in actions at page lines 213-234; no page mobilePresentation/detail fallback is supplied. Source indicates these actions disappear below md, potentially preventing invoice selection and downstream work on mobile.",
+      "fix": "Reuse existing DataTable mobile presentation with invoice identity, period, count, status and accessible Audit/Remove actions; preserve all values and exports. Verify actions at narrow allocated widths before acceptance.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 826,
+      "rule": "MDC-023/MDC-043",
+      "detail": "Line audit keeps ref/match/variance only; billed/measured energy, deltas, expected/billed money and attribution are hidden below md. Bucket table omits line count/share at line 870; uninvoiced table omits narrative at line 906. No expansion or mobile detail configuration is present.",
+      "fix": "Use the existing table's complete mobile detail strategy for all original columns, retaining raw-value filters, source row order and loaded/selected export semantics; no lossy mobile simplification.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 517,
+      "rule": "MDC-043; mission section 15",
+      "detail": "Forms reflow at md/xl, digest has break-all at line 963 and history wraps at line 1013. Source suggests deliberate reflow but does not establish ten-width behavior, long labels, large text, RTL or toolbar overflow.",
+      "fix": "Exercise 320/375/390/430/768/1024/1280/1440/1920/2560 and allocated-width cases with complete lines/disputes, both forms open, 200% text and long provider/reference values.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "accessibility": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 503,
+      "rule": "MDC-040; mission section 30",
+      "detail": "Import toggle has localized name but no aria-expanded or aria-controls association to the editor. Same pattern for dispute toggle at line 939. Shared controls and hidden decorative icons are positive source evidence; actual keyboard/focus behavior is unverified.",
+      "fix": "Give each editor a stable unique target identity and associate its toggle's expanded state without replacing shared controls; test focus, cancel and completion transitions.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 311,
+      "rule": "MDC-010/MDC-040",
+      "detail": "Energy threshold (>5%) and signed money use fixed amber/rose/emerald classes; numeric deltas provide non-color text. Effective contrast on light/dark/custom themes, badge severity, small buttons and dynamic share bar cannot be proved from source.",
+      "fix": "Apply restrained semantic tokens and verify actual 4.5:1 text/3:1 UI contrast, 44px mobile target expectations and readable numeric/status alternatives. Preserve threshold and sign meanings.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "states": {
+    "observed": [
+      {
+        "state": "initial loading / fatal failure / empty / retained / recovery",
+        "citations": [
+          "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx:38-71",
+          "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:41-72"
+        ],
+        "detail": "Domain panel derives source state, preserves shell, supplies source retry, retains content on stale and can render summaries during loading/empty/fatal states. SourceContent provides polite retained status and nonblocking retry."
+      },
+      {
+        "state": "selection prerequisite",
+        "citations": [
+          "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:491-502",
+          "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:724-734",
+          "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx:36-49"
+        ],
+        "detail": "Source enablement follows vehicle/invoice prerequisites; summaries distinguish Selection required, Source unavailable, Not computed and retained/loading states."
+      },
+      {
+        "state": "mutation pending / failure / success",
+        "citations": [
+          "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:138-174",
+          "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:689-717",
+          "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:1002-1005"
+        ],
+        "detail": "Loading buttons, inline MutationError and hook toasts; create selects returned invoice and closes import, dispute success closes editor, confirmed delete clears active ID before mutation. No success or failure exercised."
+      },
+      {
+        "state": "unknown / missing",
+        "citations": [
+          "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx:280-338",
+          "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx:61-72",
+          "web\\src\\features\\ownership\\formatters.ts:15-31"
+        ],
+        "detail": "Nullable measured/expected values render dashes; source freshness is explicitly unknown without observedAt, client load time is separate. Money formatter distinguishes missing/nonfinite from zero."
+      }
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+        "line": 46,
+        "rule": "MDC-026; mission section 25",
+        "detail": "Refresh failure, age staleness and paused/offline source all collapse to retained and SourceContent's generic recovery message. Adapter does not forward refreshError or isRefreshBlocked context; retained data is correctly kept.",
+        "fix": "Reuse SourceContent.retainedMessage and existing DataState fields to explain source-specific stale/offline/refresh-error distinctions without replacing retained data or creating a parallel state engine.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+        "line": 79,
+        "rule": "MDC-026/MDC-045",
+        "detail": "Quality sample_count falls back to zero whereas coverage renders unknown as a dash. If a partial runtime payload omits sample_count, unknown appears measured as zero. Types alone do not prove that this malformed/partial payload can occur.",
+        "fix": "Render missing/nonfinite sample counts as unavailable while retaining genuine zero; verify source contract before changing valid returned values.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "runtimeStatus": "All states inspected in source only; offline/paused, partial data, refresh failure, success and failure rendering remain unverified."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 959,
+      "rule": "MDC-010/MDC-012/MDC-015; mission sections 7 and 43",
+      "detail": "Three page class lines use fixed pure-white-derived borders/backgrounds at 604, 959 and 1013, including digest decoration. EvidencePanel.tsx:129 repeats fixed-white evidence cards. These are theme-dependent noise risks, not measured screenshot failures.",
+      "fix": "Replace fixed-white surface/border decoration with existing neutral tokens; retain digest legibility and all line/history/evidence information.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 398,
+      "rule": "MDC-010/MDC-013; mission section 43",
+      "detail": "Share bar uses fixed amber-400/70; digest uses cyan-300 with raw text-sm at 963; metadata uses raw text-xs at 262/403. Financial variance colors at 350 and bucket amount at 386 have semantic purpose but fixed saturation merits restraint, especially light themes. No literal neon or glow/shadow classes found in assigned page.",
+      "fix": "Reuse semantic severity and typography roles; reserve accent emphasis for actionable variance rather than the opaque digest. Keep dynamic share width and signed values. Do not reset user theme preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 177,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Evidence limitations combine fixed amber border/background with amber/cyan icons at lines 64, 120 and 166. Semantic caution is valid; saturation and theme contrast remain visually unverified.",
+      "fix": "Reuse existing subdued semantic warning/information styling in the domain evidence owner, retaining explicit unsupported caveats.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 70,
+      "rule": "MDC-032/MDC-046 source ownership",
+      "detail": "activeInvoice is independent local state. Changing selected vehicle refetches the list at line 88, but reportQuery remains keyed only by activeInvoice at line 89; no page reset or membership check exists. A displayed report can therefore retain a previous vehicle's invoice context. Similarly, open dispute state/reasons are not bound to an invoice identity when Audit changes selection at line 220.",
+      "fix": "Review and explicitly bind selected report/editor identity to invoice and vehicle scope, preserving unsaved notes safely and preventing claims from silently switching targets. Do not infer a server authorization flaw or execute financial writes to test this.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 88,
+      "rule": "MDC-023 completeness and export scope",
+      "detail": "Only 50 invoices at offset 0 are loaded; no server next-page controller is present. Invoice export correctly states loaded-only scope at lines 704-711. DataTable client pagination must not be represented as full server coverage.",
+      "fix": "Preserve loaded-only export disclosure; separately assess a typed server-pagination extension if complete statement navigation is required. Do not claim all statements or reinterpret server totals.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+      "line": 39,
+      "rule": "MDC-002/MDC-044",
+      "detail": "Large 1059-line orchestration includes four column definitions and two editors. Existing domain adapters already avoid competing systems. Raw reason/status prettification at 365 and 985, plus VerdictBadge.tsx:68, is not localized vocabulary.",
+      "fix": "Extract feature-owned editors/column preparation only if needed, retaining total section/action coverage; route known enum labels through existing localization while keeping unknown source text intact. Do not invent a new status registry.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-confirmed mobile loss of Audit/Remove and specialist detail access obstructs the central reconciliation flow. Invoice/vehicle/editor identity boundaries merit integration review before cosmetic adoption; token cleanup is secondary.",
+    "runtimeAcceptance": "not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "OwnershipPanel retained-source explanation extension",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "propsVariantsStates": "Keep source/sourceEnabled/editing/preserveSummary; derive localized retainedMessage from existing DataState.refreshError/isRefreshBlocked and pass SourceContent.retainedMessage. Keep fatalError/retry, retained children and disabled/editor behavior.",
+      "usedBy": [
+        "ChargingReconciliationPage's six OwnershipPanel sections",
+        "EvidencePanel's OwnershipPanel wrapper"
+      ],
+      "dependsOn": [
+        "web\\src\\hooks\\useDataState.ts",
+        "web\\src\\api\\dataState.ts",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"
+      ],
+      "evidence": "OwnershipPanel.tsx:38-60; SourceContent.tsx:31-32,59-69; dataState.ts:135-146,237-249",
+      "owner": "shared"
+    },
+    {
+      "name": "EvidencePanel neutral surfaces and unknown sample-count handling",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Retain quality/evidence/limitations/unsupported/source/sourceEnabled, sufficient/limited/insufficient labels, genuine zero samples, missing metadata, source-level retry and all three evidence sections; tokenized neutral cards and subdued warning callout.",
+      "usedBy": [
+        "ChargingReconciliationPage evidence trailer at lines 1039-1053"
+      ],
+      "dependsOn": [
+        "Existing @/components/ui Table/Badge/Text",
+        "OwnershipPanel",
+        "Existing theme surface/border/severity tokens"
+      ],
+      "evidence": "EvidencePanel.tsx:79,129,177; no second independent consumer audited in this one-page scope.",
+      "owner": "shared"
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "detail": "No competing request, query, money, chart, date-range, vehicle-selector or overlay engine introduced in this page. Existing formatters and shared domain adapters are reused. Repeated surface decoration is an adoption gap, not evidence of a second library.",
+    "reuseContracts": [
+      {
+        "name": "Complete mobile invoice/reconciliation presentation",
+        "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+        "propsVariantsStates": "Reuse mobilePresentation, variant='embedded' where appropriate, existing columns/filterValue/onExport/controls and stable tableId. Preserve row identity, all detail fields, actions and loading/empty/retained states.",
+        "usedBy": [
+          "ownership-reconcile-invoices",
+          "ownership-reconcile-lines",
+          "ownership-reconcile-buckets",
+          "ownership-reconcile-uninvoiced"
+        ],
+        "dependsOn": [
+          "Existing DataTable mobile renderer and loaded-row pipeline",
+          "Page invoice/line/bucket/session column contracts"
+        ],
+        "evidence": "DataTable.tsx:184-192,715-725; page:696-917",
+        "changeNeeded": "Page adoption first; no shared DataTable API gap proven by this audit."
+      }
+    ]
+  },
+  "preservation": {
+    "sourceSha256": "7df3dbff056f2c8ba8cd8328e41e46a203c2069baf85a022d1f7a44a330525de",
+    "currentLineCount": 1059,
+    "counts": {
+      "pageLayouts": 1,
+      "ownershipPanelsDirect": 6,
+      "evidencePanels": 1,
+      "majorSectionsIncludingEvidence": 7,
+      "contextNotices": 1,
+      "operationalBriefs": 2,
+      "briefMetrics": 8,
+      "dataTables": 4,
+      "forms": 2,
+      "confirmationDialogRenderSites": 1,
+      "chartContainers": 0,
+      "glassPanelsDirect": 0
+    },
+    "sections": [
+      { "name": "Telemetry reference notice", "line": 479, "count": 1 },
+      { "name": "Provider statements, import editor and invoice table", "line": 488, "count": 1 },
+      { "name": "Reconciliation result, money brief and matching/energy brief", "line": 721, "count": 1 },
+      { "name": "Line-by-line audit", "line": 813, "count": 1 },
+      { "name": "Variance attribution", "line": 853, "count": 1 },
+      { "name": "Sessions the provider never billed", "line": 889, "count": 1 },
+      { "name": "Dispute desk, digest, claim editor and history", "line": 924, "count": 1 },
+      { "name": "Evidence, quality and limitations", "line": 1039, "count": 1 }
+    ],
+    "actions": [
+      { "name": "Open/cancel import statement editor", "line": 507 },
+      { "name": "Edit provider/reference/currency/independent billing dates/statement total", "line": 518 },
+      { "name": "Add and edit statement lines, local occurrence time, location, raw Wh and minor-unit totals", "line": 594 },
+      { "name": "Import and reconcile; select created invoice and reset reference/lines only", "line": 138 },
+      { "name": "Audit selected invoice", "line": 220 },
+      { "name": "Confirm destructive removal; pending-row indicator and error feedback", "line": 95 },
+      { "name": "Export all loaded invoice statements as CSV/JSON with scope disclosure", "line": 114 },
+      { "name": "Line/session raw-value filters, existing client search/sort and table pipeline controls", "line": 825 },
+      { "name": "Export line audit, variance attribution and uninvoiced source rows through CSV/JSON callbacks", "line": 833 },
+      { "name": "Open/cancel dispute editor, prefill recoverable amount/reasons, edit amount/note", "line": 945 },
+      { "name": "Record dispute with confirmed:true and close on success; never provider submission", "line": 160 },
+      { "name": "Independent read-source retry and retained-source recovery", "line": 60, "file": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx" }
+    ],
+    "dataBehavior": [
+      "Currencies remain statement-specific ISO-4217 minor units; formatCurrencyMinor respects locale and currency fraction digits. Invoice table uses each row's own currency.",
+      "Wh and seconds remain canonical raw wire/filter/export values; useUnits formats energy only at display boundaries. MoneyInput edits integer minor amounts, not major units.",
+      "Reconciliation matching, confidence, signed variance, recoverability and causal attribution remain returned-source decisions; no new tolerance/cost calculations.",
+      "Eight summary metrics: billed total, expected total, net variance, disputable amount, matched lines, unmatched lines, billed energy and energy variance with measured-energy context.",
+      "Invoice export fields remain invoice_ref/provider/period_start/period_end/billed_total_minor/currency/line_count/status; export all loaded items independent of visible columns/search as currently disclosed.",
+      "Other table exports retain current callback scope and source fields, including match confidence, measured energy, time delta, recoverability/reasons, category shares and uninvoiced narratives; no claim of unseen/full-server rows.",
+      "Preserve statement billing dates as independent business dates, not header workspace date selection. Keep local datetime ISO round trip and UTC date-input semantics.",
+      "Null arrays default to empty; unknown nullable measurements show dashes rather than zero. Draft zero defaults are editable inputs, not measured telemetry.",
+      "Keep existing query keys, enablement, AbortSignal forwarding, ownership invalidation and inherited retry/cache policies; preserve confirmed deletion and mutation feedback.",
+      "Dispute packet digest and recorded claimed/recovered amounts, opened time, notes and status remain visible. Explicit unsupported caveats retain prepared-not-sent provider boundary and tax/idle legality limits.",
+      "Preserve quality status/reasons/sample counts/coverage/window, evidence source/summary/sample count/observed time and limitations; do not invent absent source metadata.",
+      "Table IDs ownership-reconcile-invoices/lines/buckets/uninvoiced and existing preference/localization/unit formatting ownership remain stable."
+    ],
+    "sourceChange": "None; report and heartbeat only."
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source audit",
+    "runtime": "Not exercised; no browser, authenticated session, endpoint request or production/financial mutation.",
+    "visual": "Unverified screenshot appearance, actual saturation, contrast, viewport overflow and composed theme styling.",
+    "keyboard": "Unverified Tab/Shift+Tab order, focus trap/restoration, assistive technology and touch targets.",
+    "backend": "Only route registration/composition inspected. No authorization, database, reconciliation engine, legal validity, cost algorithm, financial outcome or provider submission proof.",
+    "sharedScope": "Only direct page dependencies and bounded implementation excerpts inspected; shared API redesign requires its owner. No whole-app inventory or independent second-consumer review.",
+    "validation": [
+      "Get-FileHash -Algorithm SHA256 and Get-Content line count: source hash recorded, 1059 lines.",
+      "Scoped Select-String counts: neon=0; glow/shadow classes=0; fixed-white class lines=3; dynamic inline-style sites=1; raw control tags=0 with CaseSensitive; direct prohibited library imports=0; old API imports=0; static var inline-style matches=0.",
+      "Scoped section counts: OwnershipPanel=6, EvidencePanel=1, DataTable=4, OwnershipBrief=2, ChartContainer=0.",
+      "Initial case-insensitive raw-control search counted capitalized shared controls (17); corrected CaseSensitive count is 0, not a violation.",
+      "Audit skill script inspected but not executed: its mandatory final step runs project TypeScript. Phase 0/design-contract restrictions prohibit project-wide validation in this concurrent audit.",
+      "No TypeScript, lint, build, full-repo scan, Git, agents or actual submissions run."
+    ],
+    "reportReadback": {
+      "command": "PowerShell Get-Content -Raw | ConvertFrom-Json; check 19 required fields and issue properties, Test-Path and citation bounds; Get-FileHash -Algorithm SHA256 and Get-Content source line count",
+      "exitCode": 0,
+      "output": [
+        "PASS JSON parse; requiredFields=19; issueRecords=14; sharedRequirements=2",
+        "PASS unchanged source SHA256=7df3dbff056f2c8ba8cd8328e41e46a203c2069baf85a022d1f7a44a330525de; lines=1059",
+        "PASS owned outputs: docs\\frontend-audits\\audit-page-153.json; .agent-status\\audit-page-153.txt"
+      ],
+      "limit": "Structural/citation-bound validation only; does not validate runtime behavior or every proposed fix."
+    },
+    "contractCitations": [
+      "docs\\frontend-worker-conventions.md:Phase 0 audit report",
+      "docs\\frontend-design-contract.md:41-69,110-119,172-189,339-367",
+      "docs\\frontend-mission.md:0/1,145-238,340-388,529-596,704-778,921-962,1416-1463"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx",
+    "web\\src\\features\\ownership\\components\\index.ts",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MoneyInput.tsx",
+    "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\App.tsx (scoped route/import matches)",
+    "internal\\api\\router.go (scoped ownership composition matches)",
+    "internal\\handler\\v1\\ownershipintel\\handler.go (MountRoutes excerpt)",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts (scoped data trust matches)",
+    "web\\src\\api\\client.ts (scoped prefix matches)",
+    "web\\src\\components\\ui\\DataTable.tsx (mobile props/hiding excerpts)",
+    "web\\src\\components\\layout\\index.ts (SourceContent export)",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"
+  ]
+}
