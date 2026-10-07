@@ -1,0 +1,681 @@
+{
+  "item": "audit-page-112",
+  "phase": 0,
+  "page": "web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx",
+  "routes": [
+    "/drivetrain-health"
+  ],
+  "purpose": "Explain drivetrain health proxies, current returned motor readings, thermal indicators and historical power/temperature evidence without treating unknown values as measured zero.",
+  "primaryGoal": "Assess available thermal/motor evidence for the workspace vehicle and inspect supporting history, source limits and specialist care recommendations.",
+  "identity": {
+    "routeEvidence": "web\\src\\App.tsx:123,823",
+    "workspaceRangeEvidence": "web\\src\\lib\\workspaceScope.ts:41",
+    "rootSha256": "3d459d553c21728e7976528b56b13cb8b0865da38ac5b2444b8c8537f339daec",
+    "rootLineCount": 116,
+    "snapshotKind": "Current working-tree source only; no Git operations or historical equivalence claim."
+  },
+  "dataSources": [
+    {
+      "hook": "useDrivetrainHealth",
+      "endpoint": "/drivetrain/health?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:256-267",
+      "routeEvidence": "internal\\api\\router.go:3496",
+      "behavior": "Vehicle-enabled, retry false, AbortSignal forwarded; page marks provenance inferred. Methodology describes module-temperature proxies, not direct motor measurements. Producer implementation not inspected."
+    },
+    {
+      "hook": "useDrives",
+      "endpoint": "/drives?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:104-130",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "behavior": "Vehicle-enabled, safeArray, FAST stale time, AbortSignal; page supplies no server window or limit. Local calendar filtering, chronological ordering and last-30 cap feed drive charts/power summary."
+    },
+    {
+      "hook": "useDrivingStats",
+      "endpoint": "/drives/stats?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:218-227",
+      "routeEvidence": "internal\\api\\router.go:3465",
+      "behavior": "Vehicle-enabled, retry false, AbortSignal; unbounded statistics explicitly described as independent of chart range. model.statsSI converts declared km/kmh response fields into display-bridge SI; backend unit comments not independently verified."
+    },
+    {
+      "hook": "useMotorLatest",
+      "endpoint": "/motor/latest?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts:368-374",
+      "routeEvidence": "internal\\api\\router.go:4104-4106",
+      "behavior": "Positive vehicle enables query; page requests 5000ms polling; response observation timestamp and source retained."
+    },
+    {
+      "hook": "useMotorHistory",
+      "endpoint": "/motor?vehicle_id={id}&limit=200",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts:385-410",
+      "routeEvidence": "internal\\api\\router.go:4104-4105",
+      "behavior": "Positive vehicle enables query, safeArray and AbortSignal; page passes 200 with no bounds. Existing hook supports start/end; motor mapping retains source order and front-or-rear fallback."
+    },
+    {
+      "hook": "useVehicleLive / useVehicleLiveSignals / useRealtimeEvents",
+      "endpoint": [
+        "/signals/{id}/live",
+        "/api/v1/events"
+      ],
+      "owner": "web\\src\\hooks\\useVehicleLive.ts:447-505",
+      "routeEvidence": "internal\\api\\router.go:4908,4345",
+      "behavior": "REST bootstrap/reconnect recovery and SSE patches supply isolationResistance separately from motor snapshots. Shared live hook returns scalar state and transport connected flag; page does not receive individual isolation trust/observation metadata."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState / useDataState",
+      "endpoint": "Workspace/query adapters, not page-owned endpoints",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts; web\\src\\hooks\\useRangeState.ts; web\\src\\hooks\\useDataState.ts",
+      "behavior": "Existing header vehicle/range owner consumed without a duplicate picker. Range adapter exposes exact rolling instants but page only takes calendar dates. DataState retains successful payload on refresh failure and paused/offline status."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "role": "Full-width container, existing header/focus/busy contract; no page-wide blocking gate."
+    },
+    {
+      "name": "OperationalBrief / DrivingSummaryBrief / NestedDrivingBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "role": "Canonical raw metric formatting, compact summary and source-details drawer; feature wrappers supply source context."
+    },
+    {
+      "name": "CardGrid / LayoutCard / ChartCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "role": "Existing placement/layout and canonical embedded chart pipeline; several feature callers bypass category barrels."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui",
+      "role": "Three table identities, mobile roles, complete record details and history pagination; implementation/export behavior not independently exercised."
+    },
+    {
+      "name": "LinearGauge / KVList / Badge / Text",
+      "owner": "Existing charts, data-display and UI categories",
+      "role": "Thermal/status/detail primitives, semantic labels and unknown-value display."
+    },
+    {
+      "name": "SourceBoundary / PreservedChartFrame",
+      "owner": "web\\src\\features\\driving\\components\\drivetrain-health-modernization",
+      "role": "Feature-local trust adapters around canonical feedback/chart hosts."
+    },
+    {
+      "name": "SourceContent / StaleRefreshWarning",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx; web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "role": "Existing shared recovery and retained/offline surfaces; reuse rather than create another boundary."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\SourceBoundary.tsx",
+      "line": 17,
+      "rule": "MDC-002",
+      "detail": "Feature-local fatal/loading/empty branch overlaps the existing SourceContent contract, while also correctly composing StaleRefreshWarning.",
+      "fix": "Map this adapter to SourceContent plus existing StaleRefreshWarning, retaining independent shells/retries and all body content; do not add another shared boundary.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx",
+      "line": 34,
+      "rule": "mission-7; preservation",
+      "detail": "Four sensor gauges repeat in Temperature Gauges and Thermal Load Indicators; temperature and power details also repeat below. These are existing sections, not deletion permission.",
+      "fix": "Reuse a local sensor presentation helper if layout changes require it; keep both named sections, source policy and every reading reachable.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "DrivetrainHealthPage.tsx:70,72 retains w-full/min-w-0 and shared layout.",
+      "ThermalPanels.tsx:37 uses container-query two-column gauge reflow.",
+      "HistoryRecords.tsx:45-79 supplies mobile column roles and all field display values.",
+      "LiveMotorPanel.tsx:163-168 retains all thirteen fields via mobile table.",
+      "PreservedChartFrame.tsx:22-25 derives mobile chart height from placement."
+    ],
+    "findings": [],
+    "unverified": "All required 320/375/390/430/768/1024/1280/1440/1920/2560 widths, allocated-width behavior, touch targets, long labels, RTL, 200% text and clipping. No viewport success claimed."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "StatorHistory.tsx:26-38 provides chart description, aliases and accessible tabular data.",
+      "HistoryRecords.tsx:48,70 and LiveMotorPanel.tsx:164 provide captions.",
+      "RecommendationsPanel.tsx:61-66 communicates priority with text as well as semantic badge color.",
+      "StaleRefreshWarning.tsx:88-90 uses role=status and aria-live=polite.",
+      "PageContainer.tsx:186-190 retains route-focus target."
+    ],
+    "findings": [],
+    "unverified": "Keyboard navigation, focus restoration, chart/drawer open states, screen readers, actual contrast/forced-colors and reduced-motion execution. Source semantics alone are not acceptance."
+  },
+  "states": {
+    "sourceEvidence": [
+      "SourceBoundary.tsx:19-30 keeps fatal recovery, retained-content warnings, initial skeleton and retryable empty state local.",
+      "PreservedChartFrame.tsx:24-29 uses fatalError only; refresh errors do not replace chart data.",
+      "model.ts:13-15,22-26,99-108 distinguishes unknown from measured zero and refuses incomplete average power.",
+      "MethodologyPanel.tsx:49-119 explains proxy scores, aliases, coverage and unknown policy.",
+      "RecommendationsPanel.tsx:37-56 preserves unconditional care recommendations without an assessment."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx",
+        "line": 84,
+        "rule": "MDC-026",
+        "detail": "Independent drive and stats SourceBoundary calls omit loading; nested power brief also omits loading/empty status. During first load they can show unknown placeholders under Returned evidence rather than Loading source (NestedDrivingBrief.tsx:58-65). DetailPanels.tsx:37,46 repeats the omitted initial state.",
+        "fix": "Pass each source's initial state and resolved emptiness independently; do not use the health loading flag for drive/stat neighbors. Preserve unknown readings and partial neighbors.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.tsx",
+        "line": 155,
+        "rule": "MDC-026; MDC-046",
+        "detail": "Separate live isolation evidence is inside the motorLatest fatal/loading/empty gate. A missing/failed motor response hides a valid isolation reading; the combined brief only receives the motor query trust state.",
+        "fix": "Keep the thirteen-field record capability but annotate/render isolation with its own source trust and independent recovery, rather than letting the snapshot query decide its availability.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\hooks\\useVehicleLive.ts",
+        "line": 447,
+        "rule": "MDC-032; MDC-046",
+        "detail": "useState initializes once; SSE and REST updates merge into previous state at lines 471-477 and 497-503, with no vehicle-change reset in this hook. The page stays mounted across workspace selection and displays isolationResistance from that state, so an old vehicle's isolation value can persist until the new vehicle supplies that field.",
+        "fix": "Shared live-state owner must scope/reset retained state by vehicle identity and retain observation/source metadata. Verify switching from a vehicle with isolation to one without it, including no selected vehicle; do not patch only this scalar with invented zero.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TorqueHistory.tsx",
+      "line": 35,
+      "rule": "MDC-010; MDC-034; mission-5",
+      "detail": "Torque area uses fixed electric cyan #00f0ff at lines 35,45. Other mounted history charts hardcode saturated multi-hue strokes/gradients and reference labels rather than existing chart tokens. Source scan found 22 hex color occurrences.",
+      "fix": "Consume restrained existing palette/theme chart tokens without resetting saved chart preferences or changing series/thresholds; subdue reference lines, keep primary data distinct and all table/export controls.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\StatorHistory.tsx",
+      "line": 44,
+      "rule": "MDC-013; MDC-040",
+      "detail": "Chart tick/reference font sizes are hardcoded to 10px across all four history charts; small text may be difficult to read at narrow allocated widths. Actual readability and contrast were not tested.",
+      "fix": "Reuse existing chart typography/tick policy and validate narrow/200%-text views; retain all labels and accessible tables.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx",
+      "line": 37,
+      "rule": "MDC-032",
+      "detail": "Header range is registered, but useDrives receives no start/end and motor history receives only limit=200. driveSeries filters the already-loaded subset using local calendar dates, not useRangeState precise rolling instants. A rolling 24h selection therefore behaves like inclusive calendar days; server history coverage remains unbounded/default-limited. The scope limits are disclosed but do not satisfy workspace-range semantics.",
+      "fix": "Integration owner should use startInstant/endInstantExclusive in typed history hooks and establish complete server-window chart coverage or explicitly bounded subsets. Keep latest snapshot and intentional unbounded statistics distinct; preserve source ordering, existing cap and semantics unless authorized coverage work changes them.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts",
+      "line": 63,
+      "rule": "MDC-032",
+      "detail": "Inclusive local end at 23:59:59 drops records in the final fractional second of a selected calendar day. This is coupled to the calendar-only local filter above.",
+      "fix": "Compare exact lower/exclusive-upper instants from the canonical range adapter, not a page-owned end-of-day string; add final-millisecond and timezone/DST cases.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PowerHistory.tsx",
+      "line": 51,
+      "rule": "MDC-033; MDC-045",
+      "detail": "Series names and regen table heading hardcode kW while formatPower uses saved unitPrefs.power. Main subtitle/aria label call the measured average-power source peak power although the specialist description correctly explains the alias.",
+      "fix": "Retain series IDs and legacy aliases but visibly append selected power unit and average-power provenance; do not rename saved hidden-series keys or reinterpret the measurement.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx",
+      "line": 2,
+      "rule": "MDC-002; component-first production imports",
+      "detail": "Feature dependencies import layout-reference/stat-reference internals directly instead of production category barrels. Scoped source scan found 11 such import statements, including type-only imports; the page's own layout import is canonical.",
+      "fix": "Use existing category exports for presentation components; verify whether required public types are already exported before requesting a barrel extension. Do not replace the existing reference implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Workspace date semantics and possible cross-vehicle live-value retention affect evidence integrity before aesthetic cleanup.",
+    "order": [
+      "Vehicle-scoped live trust",
+      "Exact server/time range and independent source states",
+      "Unit/provenance labeling",
+      "Canonical imports and restrained chart palette",
+      "Centralized runtime/responsive/accessibility QA"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Vehicle-scoped live evidence",
+      "existingOwnerFile": "web\\src\\hooks\\useVehicleLive.ts",
+      "propsVariantsStates": "Existing vehicleId input; scope/reset state by identity; expose known/missing scalar, observation time and retained/offline trust independently of transport connected. Preserve REST bootstrap, reconnect recovery and SSE patch behavior.",
+      "usedBy": [
+        "DrivetrainHealthPage / LiveMotorPanel isolationResistance"
+      ],
+      "dependsOn": [
+        "Existing useVehicleLiveSignals metadata contract",
+        "Existing DataState trust vocabulary",
+        "Vehicle-switch and absent-field regression cases"
+      ],
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "name": "Workspace-bound history integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useDriving.ts; web\\src\\api\\hooks\\useVehicles.ts; web\\src\\hooks\\useRangeState.ts",
+      "propsVariantsStates": "Already available useDrives(vehicleId,{start,end,limit}) and useMotorHistory(vehicleId,{limit,start,end}); consume startInstant/endInstantExclusive. No new range control, query store or unit engine. Complete coverage requires backend/aggregation verification outside this audit.",
+      "usedBy": [
+        "DrivetrainHealthPage drive charts",
+        "DrivetrainHealthPage motor history",
+        "Power summary and history records"
+      ],
+      "dependsOn": [
+        "Page integration ownership",
+        "Actual server bound/pagination behavior",
+        "Rolling/calendar/timezone preservation decisions"
+      ],
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Local SourceBoundary versus canonical SourceContent",
+      "evidence": "SourceBoundary.tsx:17-30; SourceContent.tsx:9-37,43-86",
+      "decision": "Reuse existing shared recovery contract where equivalent; retain the nonblocking StaleRefreshWarning companion."
+    },
+    {
+      "name": "Legacy HealthSummary barrel export versus mounted DrivetrainSummary",
+      "evidence": "drivetrain-health-modernization\\index.ts:1; DrivetrainHealthPage.tsx:19,74",
+      "decision": "Page mounts DrivetrainSummary. HealthSummary implementation/test bodies were not inspected; do not count their visuals as mounted or remove their functionality on this evidence."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "3d459d553c21728e7976528b56b13cb8b0865da38ac5b2444b8c8537f339daec",
+    "currentLineCount": 116,
+    "scopedPresentationModelFileCount": 19,
+    "scopedPresentationModelLines": 1491,
+    "historicalOriginalLineCount": null,
+    "historicalParity": "unverified; Git/history forbidden; no 70% original comparison claimed",
+    "sections": [
+      "Health overview",
+      "Temperature metric brief",
+      "Power metric brief",
+      "Health score",
+      "Motor details",
+      "Drive statistics",
+      "Temperature gauges",
+      "Thermal load indicators",
+      "Live motor status",
+      "Stator temperature history",
+      "Motor torque history",
+      "Outside temperature trend",
+      "Power output history",
+      "History record details",
+      "Temperature details",
+      "Power details",
+      "Health recommendations",
+      "Health methodology and source limits"
+    ],
+    "sectionCount": 18,
+    "sectionCountDefinition": "Mounted named outer feature surfaces: 6 summary + 2 thermal + 1 live + 4 charts + 1 history-record shell + 3 detail + 1 methodology. Two history tables and nested briefs are not added to this count.",
+    "chartCount": 4,
+    "tableIds": [
+      "drivetrain-health:live-details",
+      "drivetrain-health:motor-history",
+      "drivetrain-health:drive-history"
+    ],
+    "actions": [
+      "Existing shared header workspace selection",
+      "Per-source fatal/refresh/empty recovery",
+      "OperationalBrief source-details drawer",
+      "Chart toolbar and formatted-data export",
+      "Hidden-series toggles with stator-temp-chart and drivetrain-power-output persistence keys",
+      "Chart accessible data tables",
+      "History table pagination and mobile details"
+    ],
+    "dataBehavior": [
+      "Preserve all five independent REST queries, vehicle enablement, cancellation, inherited policy and 5000ms latest polling until authorized integration changes.",
+      "Keep four health sensor proxies, fixed Celsius ceilings and 65%/85% gauge bands; good/warning/critical score mapping remains 95/60/25, with no assessment without finite sensor evidence.",
+      "Keep all thirteen motor record fields, front/rear torque and axle fallback, source and observation timestamp; nonpositive isolation remains the disclosed existing unknown policy pending shared source contract.",
+      "Keep raw nullable SI drive measurements and display-only formatters; do not fabricate regen power or direct motor power-history signals.",
+      "Model presently converts declared legacy km/kmh stats and kW snapshots to SI display bridge. Do not silently alter these exceptions based on field names; producer verification is outstanding.",
+      "Keep retained data on refresh failure, independent neighbors, specialist proxy/alias disclosures and all recommendation ordering.",
+      "Keep chronological last-30 drive cap and source-order 200 motor request documented; range repair needs explicit integration decisions, not accidental deletion or claiming complete aggregates."
+    ],
+    "sourceInventory": [
+      {
+        "path": "docs\\frontend-design-contract.md",
+        "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255",
+        "lineCount": 394,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "docs\\frontend-worker-conventions.md",
+        "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3",
+        "lineCount": 80,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "docs\\frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46",
+        "lineCount": 141,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx",
+        "sha256": "3d459d553c21728e7976528b56b13cb8b0865da38ac5b2444b8c8537f339daec",
+        "lineCount": 116,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\index.ts",
+        "sha256": "06da771d302e75ef197a81b70f2e82937d9eba10f3038c2a71f94283fe58dc1c",
+        "lineCount": 7,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts",
+        "sha256": "ad8792699e4b82d1bf9e792222856fbb40f0c6302bd7865602e14a7c7e7d07ad",
+        "lineCount": 130,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx",
+        "sha256": "74ac7e59d72fd0850da3f0cb446d73be9cb78eef0e52bd9b3006885d62c17e30",
+        "lineCount": 106,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.tsx",
+        "sha256": "1290150664850b07839de613429c441401188c3ebcf8ec57375c5cdf8722b3e1",
+        "lineCount": 172,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ChartPanels.tsx",
+        "sha256": "4a054bd638069eee92de80ef445970c369beca4aac37a8cfd97101c58d349d85",
+        "lineCount": 48,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\HistoryRecords.tsx",
+        "sha256": "67f4f4d3f827ead4ccbc1baa8c151c1890dc9caadef05b02a8636231ba40169b",
+        "lineCount": 77,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\DetailPanels.tsx",
+        "sha256": "d012e43675f43eaf62ed65c8cd852a2e9ea8fc185e9c15e2bc6bd2434e4a1971",
+        "lineCount": 64,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\MethodologyPanel.tsx",
+        "sha256": "938d5a8dc1fcf70d57fd3afb61173bfb96f7c145cd151076180712b56bf996aa",
+        "lineCount": 115,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\RecommendationsPanel.tsx",
+        "sha256": "ea5ddbf1978495619544411d34dcd2966fa73d9fe2619e94aa02dad34a7b3b50",
+        "lineCount": 61,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\SourceBoundary.tsx",
+        "sha256": "e0cc6abdb5815e93e424617c1dd0eb93b8213b8d4377e363efc248d484737b63",
+        "lineCount": 31,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PreservedChartFrame.tsx",
+        "sha256": "40d66aecad85a65964b3e7fe17e873d147836478dccca03c09ff3f117a2bced6",
+        "lineCount": 30,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\StatorHistory.tsx",
+        "sha256": "0adbba0c3581640ecb99dc9f3bc03693af958b3d38d3ad5818d775c1feb9e718",
+        "lineCount": 94,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TorqueHistory.tsx",
+        "sha256": "bda81d4298997a46f9a65bcbb52e500a369d0e17ad07dbd307b96003d5237a9f",
+        "lineCount": 53,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TemperatureHistory.tsx",
+        "sha256": "45fdb19fe4efb7db57d6ec49805429d0dc16773e1fbab3e193694f85df8add29",
+        "lineCount": 71,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PowerHistory.tsx",
+        "sha256": "75a9cf4a5118ebf2d2b2d2e7915fb429c353e6082fde9c86384ab68540ea3afa",
+        "lineCount": 69,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\drivetrain-health\\constants.ts",
+        "sha256": "fd15d467333ccf9df2235d43066c2ad060f16986fe2c937b26b7350bd74e6c8b",
+        "lineCount": 66,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivetrainSummary.tsx",
+        "sha256": "87572b2c9c71db287cdcd88f20564a4dabd54887016d5a119f2ba68b176de0cf",
+        "lineCount": 134,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+        "sha256": "923829e75b61d6bb799a1935b28518c145bc07cd1f0536327b02953abc584b4f",
+        "lineCount": 53,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+        "sha256": "b635ec674e709607c2a75cf35569636df6aad9570e78b358353b3713c7fd0b8a",
+        "lineCount": 60,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useDriving.ts",
+        "sha256": "0583322bde1f20be6a08388ca791cdb24c5c4db2734849b8d416bb8cd7d60bb9",
+        "lineCount": 446,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useVehicles.ts",
+        "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "lineCount": 1898,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useTelemetry.ts",
+        "sha256": "5d042611bb8cfccc88904d1acd2f29ed27b09cc29647e218809d88df29850e50",
+        "lineCount": 665,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\api\\dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "lineCount": 434,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lineCount": 65,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\hooks\\useRangeState.ts",
+        "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+        "lineCount": 694,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "lineCount": 174,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\hooks\\useVehicleLive.ts",
+        "sha256": "ab269899148d1014b7a284a7c6388e1ebf191aae4d621e575651a8a2f8cc63e5",
+        "lineCount": 506,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\hooks\\useRealtimeEvents.ts",
+        "sha256": "b2eef18a8ce3ae4109004125543adc2f493c81bbba67420d6e961ded9266530a",
+        "lineCount": 102,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\App.tsx",
+        "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+        "lineCount": 918,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "internal\\api\\router.go",
+        "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+        "lineCount": 5366,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\components\\layout\\PageContainer.tsx",
+        "sha256": "0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55",
+        "lineCount": 259,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6",
+        "lineCount": 17,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+        "sha256": "504c70538b666eccac09537ef59bd5f1e3d3ed4d4930a8493d94b05c5c77fb0e",
+        "lineCount": 48,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "sha256": "283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43",
+        "lineCount": 72,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "sha256": "6103ced7af551c52dd32499d8c62ab3ad479a8adf230d3c8059fa8b5199e87d0",
+        "lineCount": 115,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      },
+      {
+        "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "sha256": "b24b19024effebb6d8457171be61e6899672cd8f668b41bb3814aeb29ada42e5",
+        "lineCount": 303,
+        "evidence": "File or relevant cited ranges inspected; hash/line count captured at release, not semantic review of every line."
+      }
+    ],
+    "rootHashAtRelease": "3d459d553c21728e7976528b56b13cb8b0865da38ac5b2444b8c8537f339daec",
+    "rootUnchangedDuringAudit": true
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Router declarations only; handlers/queries not inspected or exercised. Backend units, proxy calculations, slash normalization and complete historical filtering are not independently proven.",
+    "tests": "NOTRUN: TypeScript, lint, build, preservation tests, accessibility script and audit.sh. audit.sh includes full TypeScript, prohibited by this assignment; bounded equivalent source pattern counts were performed instead.",
+    "sourceOnlyCounts": {
+      "inlineStyle": 0,
+      "rawControls": 0,
+      "directLibraries": 0,
+      "oldApi": 0,
+      "referenceImports": 11,
+      "hexColors": 22
+    },
+    "sourceCountScope": "19 explicitly inspected production presentation/model files; regex occurrences, not runtime or whole-app violations acceptance. No hook-wide double-prefix count claimed; inspected endpoint calls use request-relative paths, while SSE correctly uses direct /api/v1/events.",
+    "commandEvidence": "PowerShell Select-String bounded patterns exited 0: inlineStyle 0; rawControls 0; directLibraries 0; oldApi 0; referenceImports 11; hexColors 22; inspected production presentation/model files 19; root lines 116; total scoped production presentation/model lines 1491.",
+    "scope": "Only assigned root and its dependencies plus mandated docs and actual route declarations. No source/shared/queue edits, Git operations, full gates, browser/API mutations or fixture execution."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\index.ts",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ChartPanels.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\HistoryRecords.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\DetailPanels.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\MethodologyPanel.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\RecommendationsPanel.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\SourceBoundary.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PreservedChartFrame.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\StatorHistory.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TorqueHistory.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TemperatureHistory.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PowerHistory.tsx",
+    "web\\src\\features\\driving\\components\\drivetrain-health\\constants.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivetrainSummary.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useVehicleLive.ts",
+    "web\\src\\hooks\\useRealtimeEvents.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-112.json",
+    ".agent-status\\audit-page-112.txt"
+  ]
+}
