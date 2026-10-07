@@ -1,0 +1,254 @@
+{
+  "item": "audit-page-101",
+  "page": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx",
+  "routes": ["/diagnostics/root-cause"],
+  "purpose": "Selected-vehicle, client-derived root-cause evidence analysis of a focal signal and up to seven deterministically related signals.",
+  "primaryGoal": "Choose a signal and historical analysis window, inspect normalized timelines, temporal-association graph and ranked hypotheses, and understand evidence quality and limitations without treating association as diagnosis or causal proof.",
+  "dataSources": [
+    {
+      "name": "Signal-name catalog",
+      "hook": "useSignals(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/available",
+      "sourceOwner": "internal\\api\\signalinspect\\handler.go",
+      "evidence": ["web\\src\\api\\hooks\\useTelemetry.ts:98-120", "internal\\api\\router.go:4896-4932", "internal\\api\\signalinspect\\handler.go:438-466"],
+      "behavior": "Hook normalizes rich catalog entries into signal names and forwards cancellation. Actual server catalog is global protomodel metadata, not proof this vehicle has recorded history. Vehicle parameter maintains routing symmetry."
+    },
+    {
+      "name": "Independent historical evidence sources",
+      "hook": "useSignalEvidenceBundle(id, [focal, ...related], windowHours)",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 232,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/{signalName}/history?hours={hours}&limit=10000",
+      "sourceOwner": "internal\\api\\signalinspect\\handler.go",
+      "evidence": ["web\\src\\api\\hooks\\useTelemetry.ts:232-289", "internal\\api\\router.go:4914,4932", "internal\\api\\signalinspect\\handler.go:243-318,404-436"],
+      "behavior": "Trim/dedupe and cap eight identities; independent vehicle/signal/hours/limit query keys; AbortSignal forwarded; positive vehicle enablement; MODERATE stale policy; no polling. Every pending/failed identity remains in sources; retained responses remain in aggregate data. Empty successful histories are unavailable. Backend returns ascending typed signal_log rows, bounded by limit, with from/to/count/expected_kind and per-row ingest provenance. DB unavailable can return successful empty data, so empty is not proof of no vehicle activity.",
+      "units": "History source explicitly follows normalize.toSI. Preserve typed scalar values and source metadata; numeric analysis stays on raw source scale. Timestamp/lag calculations use milliseconds internally; normalized timeline and scores are dimensionless. No display conversion may enter query cache or statistical ranking.",
+      "runtimeVerified": false
+    },
+    {
+      "name": "Pure local analysis",
+      "hook": "useRootCauseWorkspace(vehicleId)",
+      "file": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+      "line": 70,
+      "sourceOwner": "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts",
+      "evidence": ["web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts:70-111", "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:142-178,230-242,300-312,601-652,679-716,728-787,890-1024"],
+      "behavior": "Default 72h with 24/72/168/720 presets; deterministic name/domain related-signal selection <=7. Numeric finite timestamp/value rows sorted; malformed or nonnumeric rows excluded. Robust median/spread shifts, minimum sample/effect/window gates, temporal lead/lag/concurrent association, weighted rank and stable tie breaks. Timeline resampled to <=240 points, normalized independently with null gaps; quality is not probability. Summary and limitations explicitly hedge causation. Shared workspace is also used by ServiceEvidencePackPage; this audit does not inspect or own that page."
+    },
+    {
+      "name": "Workspace vehicle and representative freshness",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "sourceOwner": "web\\src\\lib\\workspaceScope.ts",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50-87", "web\\src\\lib\\workspaceScope.ts:22-85,156-175", "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx:46-52,143"],
+      "behavior": "Vehicle comes from shared URL/store/fleet precedence. Route receives shell vehicle selection but is absent from RANGE_ENABLED_PATHS. Page owns a local historical-hours selector rather than shared from/to URL range. Header query is catalog freshness, not historical evidence freshness; source list is authoritative for individual histories."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-17", "web\\src\\components\\layout\\PageContainer.tsx:124-171"], "contract": "Existing full-width min-w-0 container and shell/header scope; query freshness distinct from loading/busy announcements."},
+    {"name": "SignalWindowPicker / Select", "kind": "domain/forms", "owner": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx", "evidence": ["web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx:57-89", "web\\src\\components\\ui\\Select.tsx:32-107"], "contract": "Catalog error/retry/loading/empty/content; localized labeled native selects with hint and focus, stacked below sm. Preserve focal signal and all hour presets pending shared-range alignment."},
+    {"name": "EvidenceSourceNotice / SignalEvidenceSourceList", "kind": "domain/source trust", "owner": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx", "evidence": ["web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.tsx:8-42", "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:12-68"], "contract": "Complete source identities, sample counts, last successful retrieval timestamps, pending/unavailable/stale/offline/fatal/refresh failure, individual retry. Do not derive identities only from successful series."},
+    {"name": "DiagnosticEvidenceBrief / OperationalBrief", "kind": "domain/composite", "owner": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx", "evidence": ["web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx:30-84", "web\\src\\components\\data-display\\OperationalBrief.tsx:144-173"], "contract": "Five typed metrics via useOperationalMetrics, actual scope/status/provenance, not_scored narrative confidence, limitations, Review details action. Raw measurements and true missing values remain in existing metric pipeline."},
+    {"name": "RootCauseSignalTimelineChart / ChartContainer", "kind": "domain/chart", "owner": "web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx", "evidence": ["web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx:62-137", "web\\src\\components\\charts\\ChartContainer.tsx:158-182,302-321,424-436,628-640"], "contract": "Normalized source-derived rows and accessibility columns, chart name/description, tooltip and persistent series legend diagnostics-root-cause-timeline. Shared image export defaults resolved by ChartContainer; no exportData, fullscreen or annotations passed by page."},
+    {"name": "RootCauseEvidenceGraph", "kind": "domain/visualization", "owner": "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx", "evidence": ["web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx:102-196"], "contract": "Bounded radial graph, palette-indexed candidates, focal theme color, edge strength and relation dash patterns, hollow uncorroborated nodes and visible text legend with unknown history labels."},
+    {"name": "RootCauseHypothesisList / RootCauseInterpretationPanel / QualityBadge", "kind": "domain/analysis", "owner": "web\\src\\features\\diagnostics\\components\\RootCauseHypothesisList.tsx", "evidence": ["web\\src\\features\\diagnostics\\components\\RootCauseHypothesisList.tsx:54-115", "web\\src\\features\\diagnostics\\components\\RootCauseInterpretationPanel.tsx:45-92", "web\\src\\features\\diagnostics\\components\\QualityBadge.tsx:6-38"], "contract": "Ordered rank, exact identity, relation/status badges, before/after medians, direction, score/effect/samples/lag, rationale, quality band, coverage, summary and every limitation."},
+    {"name": "Feedback and motion", "kind": "shared", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "evidence": ["web\\src\\components\\feedback\\StaleRefreshWarning.tsx:57-115", "web\\src\\components\\motion\\FadeIn.tsx:24-38"], "contract": "Historical retained-data warning and retry; existing empty/error/skeleton components; FadeIn respects reduced motion. Page has no destructive or production mutation."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\diagnostics\\components\\RootCauseInterpretationPanel.tsx", "line": 53, "rule": "MDC-026 shared feedback reuse", "detail": "Graph, hypothesis and interpretation panels repeat error/loading/empty branching, but their empty predicates and source meanings differ. Existing feedback primitives are already reused; no evidence justifies another universal wrapper.", "fix": "Retain independent domain states; reuse current primitives instead of creating a competing panel-state engine.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "verifiedAtRuntime": false,
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx", "line": 72, "detail": "Selectors stack below sm, then two columns; no deliberate mobile loss."},
+      {"file": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx", "line": 17, "detail": "Source grid one/two columns, min-w-0, wrapped status header and break-all identities."},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx", "line": 117, "detail": "Graph/legend stacked below lg; SVG width=320 but CSS w-full max-w-xs with viewBox; exact allocated-width rendering untested."},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseHypothesisList.tsx", "line": 95, "detail": "Hypothesis headings and detail footer wrap; names break-all."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx", "line": 156, "rule": "MDC-043 narrow allocation", "detail": "Focal legend row stays flex with signal and trailing tag; its text has break-all but no explicit min-w-0/wrap like candidate rows. Long source names/localizations may crowd the focal tag at 320px.", "fix": "Test narrow shell/container widths and long translations; allow the existing row to wrap without dropping signal identity or focal tag.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx", "line": 114, "rule": "MDC-043 chart responsiveness", "detail": "340px chart with up to eight legend entries, 40px minTickGap and no page-specific mobileHeight is source-confirmed; legend reachability and axes at narrow allocated widths are unverified.", "fix": "Exercise existing ChartContainer/legend at required widths and text zoom; use its existing height/reflow contracts if needed, retaining all series and accessible rows.", "owner": "page", "confidence": "medium"}
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "runtimeKeyboardContrastAndAssistiveTechnologyVerified": false,
+    "positiveEvidence": [
+      "Native Select labels/hints/focus styles (Select.tsx:66-106); no raw form controls in feature source.",
+      "Normalized timeline provides ariaLabel, ariaDescription and actual data/dataColumns (RootCauseSignalTimelineChart.tsx:64-78,108-119).",
+      "Graph hides decorative SVG and provides visible text relations/unknown states (RootCauseEvidenceGraph.tsx:123-195).",
+      "Hypotheses are an ordered list; relation/direction/quality have text and are not hue-only (RootCauseHypothesisList.tsx:92-112).",
+      "Source loading role=status, fatal role=alert, and retries use shared Button (SignalEvidenceSourceList.tsx:34-64).",
+      "Shared retained warning is polite live status; FadeIn honors reduced motion."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx", "line": 137, "rule": "MDC-040 async announcements", "detail": "PageLayout receives query but not loading/busy/error. PageContainer's shared load announcer consumes loading/error, not query; therefore analysis transition announcements and page busy state are not connected to that contract. Child source announcements are present but not proven equivalent.", "fix": "Use non-destructive scoped busy/announcement wiring without making every section disappear behind one fatal gate.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx", "line": 129, "rule": "MDC-042 chart motion preference", "detail": "Recharts Line has no explicit isAnimationActive/reduced-motion setting; FadeIn honors preference but that does not prove chart animation suppression.", "fix": "Wire existing useMotionPreference to series animation without changing data or geometry; verify OS and low-bandwidth settings.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\components\\ui\\Select.tsx", "line": 59, "rule": "MDC-021 stable field identity", "detail": "Shared Select derives id from localized label when explicit id absent, and this picker omits ids. The label-derived identity contrasts with design contract's stable non-translated field identity rule.", "fix": "Picker can provide stable explicit ids; shared owner should inventory consumers before changing default identity. Preserve label, hint and external aria-describedby.", "owner": "shared", "confidence": "high"},
+      {"file": "web\\src\\components\\ui\\Select.tsx", "line": 34, "rule": "MDC-040 mobile target", "detail": "Default md min-h-10 is 40px, below stronger 44px mobile target. This alone is not a measured WCAG failure; spacing/actual control height were not exercised.", "fix": "Validate target and spacing; use existing suitable size/density contract or coordinate shared target policy without shrinking reachability.", "owner": "shared", "confidence": "medium"}
+    ]
+  },
+  "states": {
+    "runtimeVerified": false,
+    "inventory": [
+      {"name": "No vehicle", "evidence": "RootCauseIntelligencePage.tsx:46-61; useRootCauseWorkspace.ts:71; useTelemetry.ts:261", "behavior": "All hooks called before early NoVehicleSelected return; history disabled for id zero."},
+      {"name": "Catalog loading/fatal/empty", "evidence": "RootCauseIntelligencePage.tsx:148-161; SignalWindowPicker.tsx:62-71", "behavior": "Independent picker skeleton, QueryError/refetch or catalog-empty message; analysis sections remain."},
+      {"name": "No chosen signal", "evidence": "RootCauseIntelligencePage.tsx:64-69,81-82; rootCauseIntelligence.ts:739-740", "behavior": "No history identities requested; missing brief metrics; each analysis panel has choice prompt."},
+      {"name": "Initial history loading", "evidence": "RootCauseIntelligencePage.tsx:64-67; SignalEvidenceSourceList.tsx:34-38", "behavior": "Global analysis loading only while aggregate has no retained responses; per-source pending skeletons remain."},
+      {"name": "Fatal history failure", "evidence": "RootCauseIntelligencePage.tsx:49-52,68-69; useTelemetry.ts:274-283", "behavior": "When no aggregate response retained, analysis error with all-source retry; source list also exposes individual errors/retry."},
+      {"name": "Partial / pending neighbors / retained failure / offline", "evidence": "useTelemetry.ts:265-283; SignalEvidenceSourceList.tsx:21-64; DiagnosticEvidenceBrief.tsx:33-46", "behavior": "Successful and retained series survive failed neighbors. Source list preserves every identity; brief derives partial and retained status from sources. Aggregate adapter lacks dataUpdatedAt/fetchStatus, so source list, not aggregate, carries full freshness/offline trust."},
+      {"name": "Resolved empty history", "evidence": "useTelemetry.ts:267-278; signalEvidenceAvailability.ts:9-10", "behavior": "Response remains in aggregate but source marked unavailable; focalAvailable requires nonempty history, preventing missing focal effect/samples/hypothesis metrics from becoming measured zero."},
+      {"name": "Measured stable/no corroboration", "evidence": "RootCauseHypothesisList.tsx:54-61; rootCauseIntelligence.ts:742-756", "behavior": "Separate no robust focal shift versus qualifying shift with no candidate corroboration; never invent hypotheses."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseInterpretationPanel.tsx", "line": 78, "rule": "MDC-026 unknown is not negative evidence", "detail": "When focal history is unavailable but another history or empty response resolved, page can stop loading and render analysis.summary. focalHistoryAvailable only masks displayed sample count, not the summary 'No robust shift was found'. Brief explicitly says focal unavailable, but interpretation may still imply an observed stability/shift conclusion.", "fix": "Keep interpretation/limits mounted and show neutral focal-unavailable explanation instead of observed-shift wording until numeric focal evidence is actually available; retain independent neighbors, source identities and raw analysis.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx", "line": 81, "rule": "MDC-026 nonnumeric history availability", "detail": "hasSignalHistory checks row count, while toNumericPoints drops nonnumeric rows. A global catalog permits enum/string/bool signals; a nonempty but entirely nonnumeric history is available under the row predicate yet yields zero numeric samples and insufficient quality.", "fix": "Preserve the real history and expose analysis numeric eligibility separately from fetch availability; do not relabel a recorded nonnumeric signal as absent, measured zero or healthy.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx", "line": 69, "rule": "MDC-026 source truth", "detail": "Catalog-empty text claims no telemetry recorded for vehicle, while server AvailableSignals is a global protomodel catalog. Catalog membership/absence cannot establish recorded history.", "fix": "Use catalog-specific availability wording, keeping per-signal history states authoritative for recorded evidence.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx", "line": 91, "rule": "MDC-010/MDC-034 restrained data palette", "detail": "Graph uses existing chartTokens.series and 0.85-opacity nodes/edges, while every panel repeats fixed cyan-300 icon accents. No local glow/neon/white utility was found; actual composed visual intensity and contrast remain unmeasured.", "fix": "Preserve relation/strength/candidate palette identity and chart preferences; subdue nonsemantic repeated icon accents via existing tokens rather than invent another palette.", "owner": "page", "confidence": "medium"},
+    {"file": "web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx", "line": 84, "rule": "MDC-031/MDC-026 stable section hierarchy", "detail": "Timeline returns GlassPanel without its named ChartContainer title in empty/fatal states, unlike graph/hypothesis/interpretation titles which stay mounted.", "fix": "Keep the existing timeline title and purpose reachable in empty/error/loading states using current composite contract; retain all recovery actions and data alternatives.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx", "line": 151, "rule": "MDC-013 typography roles", "detail": "SVG focal label hardcodes fontSize=10; chart ticks hardcode 10/11px. These are visualization labels, not raw body typography, but font preference/zoom legibility requires focused QA.", "fix": "Reuse existing chart typography tokens where supported and validate legibility without removing signal labels or widening source scope.", "owner": "page", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx", "line": 166, "rule": "MDC-002 typed component contract / health-triage ownership", "detail": "EvidenceSourceNotice call passes summary and limitations, but inspected EvidenceSourceNoticeProps at lines 8-13 accepts only state/label/hasChosenSignal/sources. This is a source-confirmed prop mismatch, not a reproduced compiler diagnostic. Dedicated health-typecheck-triage owns current TypeScript diagnosis and repairs.", "fix": "Route this exact caller/contract mismatch to health triage; preserve summary/limitations already rendered by brief/interpretation. Do not blindly add speculative shared props or duplicate typecheck investigation.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts", "line": 73, "rule": "MDC-032 one workspace range owner", "detail": "Historical hours picker and local window state replace shared range state on an unregistered dated route. Backend History already accepts from/to, but evidence hook key/request carries hours only. Whether an independent diagnostic horizon exemption is intended is undocumented; source behavior is not changed by audit.", "fix": "Coordinate workspace/evidence-hook owners to distinguish analysis horizon from data scope. If normal historical scope applies, register route and forward shared bounds with correct query identity while preserving all presets, rolling/custom/timezone semantics and ServiceEvidencePack behavior; do not add a second shell selector.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts", "line": 73, "rule": "MDC-046 scope transition consistency", "detail": "Local focal signal/window state persist across vehicle changes; no validation/reset against newly loaded catalog. Queries are correctly vehicle-keyed and canceled, but retained focal choice may not exist in next catalog.", "fix": "Document and test sticky selection versus reset policy, validating selection against resolved catalog without silently dropping user choices during temporary loading.", "owner": "page", "confidence": "medium"},
+    {"file": "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts", "line": 742, "rule": "MDC-044 generated narrative localization", "detail": "Summary, limitations and hypothesis rationale are English strings generated in pure analysis; translated component labels do not localize these specialist explanations.", "fix": "Use structured narrative identities/arguments and existing catalogs at presentation boundary, retaining every disclaimer, evidence predicate and raw signal name; keep pure calculations unchanged.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\diagnostics\\components\\RootCauseHypothesisList.tsx", "line": 108, "rule": "MDC-045 source-unit presentation", "detail": "Before/after medians use fmtNumber with no signal unit metadata or display-unit conversion, also page focal effect context at lines 113-116. Numeric raw SI is preserved, but physical scale is not explained and saved display units are not applied. Global catalog supports nonphysical types, so units must not be guessed from signal name.", "fix": "Use existing rich signal metadata/formatting boundary for eligible physical medians, explicitly label source SI when specialized support is unproven. Keep effect/rank/quality dimensionless and lag display conversion local; never convert analysis/cache inputs.", "owner": "integration", "confidence": "high"},
+    {"file": "internal\\api\\signalinspect\\handler.go", "line": 316, "rule": "MDC-026 evidence completeness / provenance", "detail": "History returns earliest ascending <=10000 rows without truncation flag; workspace ignores returned from/to/count and per-row kind/ingest/time/normalization metadata in its derived numeric series. No cap-hit/actual-covered-window explanation is presented. Per-source lastUpdated is retrieval freshness, not newest observation time.", "fix": "Expose requested versus actual observation coverage and potential cap limitations through existing source detail contracts; retain raw response and all provenance fields. Any explicit truncation field must be owned by backend/hook integration, not invented in UI.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve focal-unavailable versus observed conclusions and typed caller mismatch first, then range ownership, source coverage/provenance/numeric eligibility, localization/unit context, stable states and mobile/a11y validation. Presentation cannot change statistical diagnosis thresholds.",
+    "runtimeReleaseGate": "Not verified; this report is Phase 0 source audit, not production acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Historical evidence scope contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "propsVariantsStates": "Coordinate optional explicit from/to request/key representation with existing hours presets, AbortSignal, eight-source bound, independent retry/retention/empty states; preserve existing callers until owner-approved contract.",
+      "usedBy": ["web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts:90", "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx:47", "ServiceEvidencePackPage (shared consumer documented in useRootCauseWorkspace.ts:15-22; not audited)"],
+      "dependsOn": ["MDC-032 range/horizon decision", "web\\src\\lib\\workspaceScope.ts", "existing useRangeState timezone and URL contract", "internal\\api\\signalinspect\\handler.go:404-422"]
+    },
+    {
+      "name": "Evidence numeric eligibility, observation coverage and source-scale context",
+      "existingOwnerFile": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+      "propsVariantsStates": "Distinct fetched/empty/nonnumeric/usable numeric/retained/partial states; requested versus actual observation bounds, possible cap limit, original source metadata and typed unit context. Use complete sources, not successful-only identities; do not invent causal confidence.",
+      "usedBy": ["RootCauseIntelligencePage.tsx:81-134", "RootCauseInterpretationPanel.tsx:68-89", "RootCauseHypothesisList.tsx:108", "ServiceEvidencePackPage (shared workspace consumer; not audited)"],
+      "dependsOn": ["web\\src\\api\\hooks\\useTelemetry.ts:56-68,232-289", "existing rich signal catalog/unit formatter owners", "internal\\api\\signalinspect\\handler.go typed provenance and cap contract", "pure rootCauseIntelligence analysis owner"]
+    },
+    {
+      "name": "Select stable identity and mobile target policy",
+      "existingOwnerFile": "web\\src\\components\\ui\\Select.tsx",
+      "propsVariantsStates": "Retain explicit id/ref/name/native change/required/disabled/label/help/hint/error/external description; inventory label-derived default identity and md 40px target before shared changes. Page may use existing explicit id/size props.",
+      "usedBy": ["web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx:73-86"],
+      "dependsOn": ["MDC-021 field identity", "MDC-040 target/spacing policy", "shared UI owner consumer inventory"]
+    }
+  ],
+  "competingImplementations": {
+    "confirmedNewCompetingLibraries": [],
+    "detail": "Existing shared query/DataState/workspace/layout/metric/chart/feedback/UI/motion components are used through category barrels. The radial SVG and robust analysis are specialized domain implementations, not justification for a second generic graph/query/theme engine. Local historical-hours selection is a shared range ownership tension, not a newly proposed library."
+  },
+  "preservation": {
+    "sourceHash": "e3908fbbe2c622d3a1e5e958f35d62948b1a9c8d7fa2fa4db828d3e87a80859d",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Root-relative page file bytes only",
+    "currentLineCount": 251,
+    "directFeaturePresentationDependencies": [
+      {"file": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx", "lineCount": 91},
+      {"file": "web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.tsx", "lineCount": 42},
+      {"file": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx", "lineCount": 70},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx", "lineCount": 139},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx", "lineCount": 199},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseHypothesisList.tsx", "lineCount": 118},
+      {"file": "web\\src\\features\\diagnostics\\components\\RootCauseInterpretationPanel.tsx", "lineCount": 94},
+      {"file": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx", "lineCount": 85}
+    ],
+    "combinedInspectedPageAndDirectFeatureLineCount": 1089,
+    "sectionCount": 7,
+    "sections": [
+      {"name": "Focal signal and analysis window", "count": 1, "evidence": "RootCauseIntelligencePage.tsx:145-162", "preserve": "Catalog identity, focal selection, four presets/default72h, catalog independent states/retry."},
+      {"name": "Per-signal source evidence", "count": 1, "evidence": "RootCauseIntelligencePage.tsx:163-171; SignalEvidenceSourceList.tsx:17-68", "preserve": "All pending/failed/empty/retained identities, source state, sample count, retrieval timestamp, individual recovery."},
+      {"name": "Evidence metrics and details brief", "count": 1, "evidence": "RootCauseIntelligencePage.tsx:83-134,173-198", "preserve": "Evidence quality/overall score/effect/ranked count/focal samples, before-after context, candidate count, scope/window, provenance, limitations and details action."},
+      {"name": "Normalized multi-signal timeline", "count": 1, "evidence": "RootCauseIntelligencePage.tsx:200-213", "preserve": "Actual derived normalized series/null gaps, focal emphasis, legend persistence, tooltip, accessible data and image exports."},
+      {"name": "Evidence graph", "count": 1, "evidence": "RootCauseIntelligencePage.tsx:215-227", "preserve": "Focal/candidate identities, bounded layout, relation dash encoding, strength, hollow states, samples, unknown labels and visible text alternative."},
+      {"name": "Ranked hypotheses", "count": 1, "evidence": "RootCauseIntelligencePage.tsx:229-239", "preserve": "Order, identity, relation/direction, exact medians/rank/effect/samples/lag/rationale, separate unavailable/no shift/no corroboration states."},
+      {"name": "Interpretation and limits", "count": 1, "evidence": "RootCauseIntelligencePage.tsx:241-248", "preserve": "Actual hedged summary, quality/coverage/score and every limitation; no causal-proof or diagnostic assertions."}
+    ],
+    "sourceComponentCounts": {"pageGlassPanelOpeningTags": 0, "pageChartContainerOpeningTags": 0, "pageFadeInOpeningTags": 6, "scopedDependencyGlassPanelOpeningTags": 6, "scopedDependencyChartContainerOpeningTags": 1},
+    "countInterpretation": "Page delegates presentation. Six dependency GlassPanel sites include mutually exclusive timeline empty/error branches; these are not six simultaneous panels. Seven sections includes the source notice beyond the page's six numbered presentation blocks. Counts do not claim mounted coverage.",
+    "actions": [
+      {"name": "Shared vehicle selection", "evidence": "RootCauseIntelligencePage.tsx:46", "preserve": "Shell URL/store vehicle owner; no duplicated local picker."},
+      {"name": "Choose focal signal / window", "evidence": "SignalWindowPicker.tsx:73-86", "preserve": "Native labeled controls and 24/72/168/720 presets, subject to coordinated range ownership."},
+      {"name": "Retry catalog / all evidence / individual sources", "evidence": "RootCauseIntelligencePage.tsx:54-57,151; SignalEvidenceSourceList.tsx:60-64", "preserve": "Independent catalog and source recovery plus aggregate retry; retained data stays visible."},
+      {"name": "Review details", "evidence": "OperationalBrief.tsx:154-166", "preserve": "Existing shared details trigger and narrative/source data; drawer closure/runtime not exercised."},
+      {"name": "Inspect chart / toggle legend / export image", "evidence": "RootCauseSignalTimelineChart.tsx:123-137; ChartContainer.tsx:424-428,628-634", "preserve": "Tooltip, stable diagnostics-root-cause-timeline legend key, shared PNG/SVG/copy-image export eligibility. No CSV data/fullscreen/annotations are passed here."}
+    ],
+    "dataBehavior": [
+      "Keep raw SI typed history and source provenance, cancellation/query keys/enablement/stale-time and independent retained failures; no cache unit conversion.",
+      "Preserve deterministic related selection, gates, robust statistics, score weights/order, concurrent tolerance and limitations; no fabricated hypotheses or backend AI capabilities.",
+      "Preserve <=8 source fetches, <=10000 history rows per source, <=240 normalized timeline points and null gaps; expose bounds rather than claiming full history.",
+      "Unknown/unavailable/pending/nonnumeric are not stable, healthy, causal confidence or measured zero. Actual zero scores remain valid numeric outputs with explicit source explanation.",
+      "Preserve all seven semantic sections on mobile, existing shared preferences/formatting/i18n/chart key and no-vehicle onboarding behavior.",
+      "No production mutations, CSV exports, fullscreen, annotations, service scheduling or additional diagnostic capabilities may be invented by modernization."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded page/dependency source inspection, route/handler matching, targeted regex/count/hash commands; report and heartbeat are the only writes.",
+    "runtime": "Unverified: no mounted browser, live API, screenshots, viewport/keyboard/screen-reader/forced-colors/contrast tests or production action.",
+    "tests": "Not run. Separate health-typecheck-triage owns TypeScript. Full-repository lint/build and duplicated whole typecheck are outside this assignment. audit.sh was inspected but not executed because it unconditionally invokes full frontend TypeScript.",
+    "healthTriage": "Inspected .agent-status\\health-typecheck-triage.txt: 2026-10-07T07:39:21.4080610Z | composing one-file repair assignments. No current compiler receipt available in this audit; relevant source prop mismatch recorded, no fixes or duplicate investigation.",
+    "commandReceipts": [
+      {"command": "Get-FileHash web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx).Count", "exitCode": 0, "output": "E3908FBBE2C622D3A1E5E958F35D62948B1A9C8D7FA2FA4DB828D3E87A80859D\n251"},
+      {"command": "Scoped Get-Content line counts and [regex]::Matches across page plus eight named feature dependencies", "exitCode": 0, "output": "RootCauseIntelligencePage.tsx lines=251 GlassPanel=0 ChartContainer=0\nSignalWindowPicker.tsx lines=91 GlassPanel=1\nEvidenceSourceNotice.tsx lines=42 GlassPanel=0\nSignalEvidenceSourceList.tsx lines=70 GlassPanel=0\nRootCauseSignalTimelineChart.tsx lines=139 GlassPanel=2 ChartContainer=1\nRootCauseEvidenceGraph.tsx lines=199 GlassPanel=1\nRootCauseHypothesisList.tsx lines=118 GlassPanel=1\nRootCauseInterpretationPanel.tsx lines=94 GlassPanel=1\nDiagnosticEvidenceBrief.tsx lines=85 GlassPanel=0\nneonGlow=0\noldApi=0\npureWhite=0\ndirectLibraries=0\nrawControls=0\ninlineStyle=0"},
+      {"command": "Scoped router inspection: /signals/{vehicleID}/available and /{signalName}/history", "exitCode": 0, "output": "Both request paths are mounted in telemetry-handler and DB-only branches; internal\\api\\router.go:4911,4914,4930,4932."},
+      {"command": "Initial discovery using PowerShell rg", "exitCode": 1, "output": "rg executable not recognized; continued with available glob/rg tool and scoped source reads. No audit counts taken from this failed discovery."}
+    ],
+    "routeEvidence": "web\\src\\App.tsx:217,753: lazy RootCauseIntelligencePage mounted at diagnostics/root-cause within SafeRoute.",
+    "scopeLimits": "Not a full-repository style/duplicate/security audit. Shared component source ranges are inspected only for page-used contracts. Global CSS/theme palettes, export runtime, drawer focus/closure, unit registry coverage and exact TS diagnostics are not validated. Numeric analysis code was read in selected ranges, not executed.",
+    "historicalAcceptanceUsed": false,
+    "sourceEdits": false,
+    "gitUsed": false,
+    "nestedAgentsUsed": false
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-100.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".agent-status\\health-typecheck-triage.txt",
+    "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx",
+    "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+    "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts",
+    "web\\src\\features\\diagnostics\\lib\\signalEvidenceAvailability.ts",
+    "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+    "web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.tsx",
+    "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx",
+    "web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx",
+    "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx",
+    "web\\src\\features\\diagnostics\\components\\RootCauseHypothesisList.tsx",
+    "web\\src\\features\\diagnostics\\components\\RootCauseInterpretationPanel.tsx",
+    "web\\src\\features\\diagnostics\\components\\QualityBadge.tsx",
+    "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\signalinspect\\handler.go"
+  ]
+}
