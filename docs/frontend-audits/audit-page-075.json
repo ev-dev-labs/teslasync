@@ -1,0 +1,376 @@
+{
+  "item": "audit-page-075",
+  "page": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+  "routes": ["/vampire-drain", "/charging/vampire-drain"],
+  "purpose": "Explain parked battery loss using deterministic statistics, historical parked windows, current Park evidence, plugged/unplugged attribution and optional AI narration.",
+  "primaryGoal": "Identify the observed parked-drain rate and likely actionable culprit without confusing missing evidence, live Park status and historical sample coverage.",
+  "dataSources": [
+    {
+      "name": "Drain statistics",
+      "hook": "Page-local useQuery<VampireDrainStats> and useDataState",
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 113,
+      "endpoint": "GET /api/v1/vampire-drain/stats?vehicle_id=<selected>",
+      "sourceOwner": "internal\\api\\vampiredrain\\handler.go",
+      "routeEvidence": "internal\\api\\router.go:4183-4186",
+      "behavior": "Enabled only with selected vehicle; key ['vampire-drain-stats', activeId]; AbortSignal forwarded. Handler fixes sample to 90 days and caps raw statistic events at 5000 (handler.go:47-69,118-120,217-219). Nullable mean/median/P95 remain unknown; observed hours become seconds only for the duration presentation metric."
+    },
+    {
+      "name": "Parked-drain sessions and charts",
+      "hook": "Page-local useQuery<VampireDrainEventsResponse> and useDataState",
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 118,
+      "endpoint": "GET /api/v1/vampire-drain?vehicle_id=<selected>&limit=200",
+      "sourceOwner": "internal\\api\\vampiredrain\\handler.go",
+      "routeEvidence": "internal\\api\\router.go:4183-4185",
+      "behavior": "Vehicle-keyed and cancellable; no server offset or client date bounds sent. Handler uses a fixed 365-day event lookback (handler.go:54-59,167-169), not the statistics' 90-day coverage. Successful absent event slice normalized to [] by handler.go:176-178. Same loaded rows feed sorting, rate trend and vehicle-timezone daily rollup; not a full-range chart."
+    },
+    {
+      "name": "Current Park evidence",
+      "hook": "useParkTruth(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 79,
+      "endpoint": "GET /api/v1/physics/park-truth?vehicle_id=<selected>",
+      "sourceOwner": "physicsHandler.ParkTruth",
+      "routeEvidence": "internal\\api\\router.go:3515-3519",
+      "behavior": "Live query policy, vehicle-scoped key, enablement and cancellation preserved; feeds VampireCulpritPanel. ParkTruth includes confirmed Park, reported versus counted switches, rejected reasons and honesty (web\\src\\types\\teslaPhysics.ts:60-73). Backend freshness and derivation were not exercised."
+    },
+    {
+      "name": "Complete-plugged versus unplugged windows",
+      "hook": "useVampireSplit(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 89,
+      "endpoint": "GET /api/v1/physics/vampire?vehicle_id=<selected>",
+      "sourceOwner": "physicsHandler.Vampire",
+      "routeEvidence": "internal\\api\\router.go:3515-3519",
+      "behavior": "Historical policy; same query key reused by culprit and split panels, not two competing server caches. Complete-plugged rows precede unplugged rows; nullable split percentages, server honesty and raw duration_s retained. Exact server bounds unknown."
+    },
+    {
+      "name": "Optional narration",
+      "hook": "withAiFeature('vampire-drain-explanation') and useAiStream",
+      "file": "web\\src\\components\\ai\\AIVampireDrainExplanation.tsx",
+      "line": 122,
+      "endpoint": "POST /api/v1/ai/charging/vampire-drain/explain",
+      "sourceOwner": "AI feature registry / aiVampireDrainExplanationHandler",
+      "routeEvidence": "internal\\api\\router.go:1971,5075 identifies handler wiring; exact generated route registration not inspected",
+      "behavior": "Opt-in gate; vehicle_id plus positive lookback_days from statistic sample; stream identity includes both. Scope changes abort and clear narration. Shared AIFeatureCard owns start button, streaming disablement and output state. Narration never replaces deterministic panels; backend POST success unverified."
+    },
+    {
+      "name": "Workspace and display preferences",
+      "hook": "useSelectedVehicle, useTimezone('vehicle'), useUnits, useNumberFormatting, useMetricPreferences, useTranslation",
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 103,
+      "sourceOwner": "Existing workspace/preferences/formatting/i18n owners",
+      "behavior": "No competing vehicle selector. Both aliases have vehicle scope and no header date range according to web\\src\\lib\\workspaceScope.ts:23-77,171-178. Celsius converted only when displayed; localDayKey assigns complete events to their start day. Date helper timezone behavior beyond inspected callers unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Section / CardGrid / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "evidence": "VampireDrainPage.tsx:9,248-254,266,295,392,473; PageLayout.tsx:5-15; CardGrid.tsx:9-40",
+      "props": "Page title/subtitle/secondaryActions/query/dataSources; Section id/title; CardGrid labeled items with stable id/size/content; LayoutCard title/actions.",
+      "role": "Existing full-width orchestration and allocated-container reflow; no replacement surface/layout engine."
+    },
+    {
+      "name": "BatteryEvidenceBrief / OperationalBrief / StatGroup",
+      "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "evidence": "BatteryEvidenceBrief.tsx:8-64; web\\src\\components\\data-display\\OperationalBrief.tsx:45-65,89-94",
+      "props": "id/title/description/metrics/period/loading/retained/secondary bridged to compact OperationalBrief; raw measurements, source reason, status, scope and review drawer remain.",
+      "role": "Shared evidence summary reused for four primary KPIs, five culprit readings and two split readings. Gauge retains median/P95 in StatGroup."
+    },
+    {
+      "name": "VampireCulpritPanel / VampireSplitPanel / SourceRecovery",
+      "owner": "web\\src\\features\\battery\\components\\vampire-drain-modernization",
+      "evidence": "VampireCulpritPanel.tsx:42-100; VampireSplitPanel.tsx:15-85; SourceRecovery.tsx:7-33",
+      "props": "Panels take vehicleId: string | undefined; SourceRecovery takes DataState<unknown> and localized label.",
+      "role": "Page-specific attribution and independent recovery; no speculative universal culprit component."
+    },
+    {
+      "name": "EmbeddedChart / LinearGauge",
+      "owner": "web\\src\\components\\charts",
+      "evidence": "VampireDrainPage.tsx:316-346,371-380,413-451; EmbeddedChart.tsx:6-39; LinearGauge.tsx:11-100,145-151",
+      "props": "Charts retain toolbar/exportable/fullscreen/dataColumns/exportData/chartKey/height/mobileHeight/hiddenSeries; gauge supports value/max/tone/status/preserveReadingAndScale/decimals.",
+      "role": "Canonical chart framing, accessible data alternatives and measurement visualization."
+    },
+    {
+      "name": "DataTable / sessionPresentation / useSortToggle",
+      "owner": "web\\src\\components\\ui (DataTable implementation not directly inspected)",
+      "evidence": "VampireDrainPage.tsx:147-155,210-224,499-512; sessionPresentation.ts:20-45; VampireSplitPanel.tsx:56-77",
+      "props": "Stable tableId/caption/columns/data/keyExtractor/mobilePresentation; sessions retain sorting/compact/pagination. Split retains name and original grouping order.",
+      "role": "Single production table pipeline; mobile adapter preserves hidden battery fields through table-owned details, pending runtime proof."
+    },
+    {
+      "name": "AIVampireDrainExplanation / AIFeatureCard / withAiFeature",
+      "owner": "web\\src\\components\\ai",
+      "evidence": "VampireDrainPage.tsx:257-261; AIVampireDrainExplanation.tsx:100-176; withAiFeature.tsx:45-58; AIFeatureCard.tsx:79-194",
+      "props": "vehicleId/lookbackDays; shared title/description/buttonLabel/badgeLabel/emptyHint/canStart/stream.",
+      "role": "Existing opt-in narration and streaming UI; disabled no-vehicle/in-flight action, error/output lifecycle delegated."
+    },
+    {
+      "name": "Button / Badge / Caption / Text / EmptyState / Skeleton / FadeIn",
+      "owner": "Existing UI, feedback and motion category barrels",
+      "evidence": "VampireDrainPage.tsx:10,22-23,215-219,235-242,270-275,305-306,456-464",
+      "role": "Localized controls, semantic severity, typography and explicit no-vehicle/empty/loading states. Underlying focus/motion behavior not exercised."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 380,
+      "rule": "MDC-033 / mission 0 information hierarchy",
+      "detail": "Median and P95 appear in both summary metrics and gauge StatGroup. Culprit honesty is repeated in brief description and caption (VampireCulpritPanel.tsx:90,97); split honesty appears above and inside its brief (VampireSplitPanel.tsx:51-52). These are source-backed noise candidates, not permission to delete measurements or limitations.",
+      "fix": "Give summary, gauge and evidence notes distinct jobs; retain every metric/context in the canonical brief and its accessible details while removing only redundant visible prose after parity review.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; all viewport behavior unverified",
+    "strategies": [
+      "CardGrid uses allocated container width, packing and shared Grid (CardGrid.tsx:25-39), not hardcoded viewport-only feature grids.",
+      "Both charts specify desktop height 288 and mobile height 224 (VampireDrainPage.tsx:330-331,433-434).",
+      "Refresh has min-h-11/min-w-11 (VampireDrainPage.tsx:239); source retry uses min-h-11, max-w-full and wrapping (SourceRecovery.tsx:24).",
+      "Session mobile roles include hidden start/end percentages and visible rate, ambient and duration; allDetails adds ended_at (sessionPresentation.ts:35-44). Split details add end time, duration, start/end SOC and Park confirmation (VampireSplitPanel.tsx:68-74)."
+    ],
+    "requiredReview": "Exercise 320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocated width, long translated labels, RTL and 200% text. Verify chart toolbars, table details, review drawers, empty/error states and no horizontal page clipping.",
+    "issues": []
+  },
+  "accessibility": {
+    "status": "runtime keyboard, focus, screen reader, contrast, forced colors and target geometry unverified",
+    "sourceStrengths": [
+      "Localized accessible name on refresh; icon aria-hidden (VampireDrainPage.tsx:241-242).",
+      "Three stable labeled Section IDs and labeled CardGrids; chart ariaLabel/dataColumns and table captions supplied.",
+      "Localized recovery group and independent retry; onboarding links supplied for no-vehicle states.",
+      "Semantic badges communicate severity in addition to numeric loss readings; shared evidence drawer retained."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+        "line": 371,
+        "rule": "MDC-025 / MDC-040",
+        "detail": "Gauge passes threshold-dependent color but no status prop. The thresholds 1.5 and 3 at lines 206-208 are not communicated as a qualitative label; shared LinearGauge explicitly supports an accessible status (LinearGauge.tsx:76-88). Caption explains only the approximately 5%/day reference.",
+        "fix": "Pass a localized qualitative status and existing semantic tone using the same thresholds; retain numeric reading, explicit reference and all gauge context.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "loading": "Stats and events independently classified by useDataState. Summary brief loading, chart/gauge/session skeletons; culprit loading only while both sources initial, so partial sources remain useful. Split has own skeleton.",
+    "empty": "All main analytical sections stay mounted. No selected vehicle offers /onboarding. Empty successful events give chart placeholders and table emptyMessage; null mean gives gauge EmptyState. Split null payload gives unavailable measurements message.",
+    "error": "SourceRecovery shows fatal errors or retained refresh warning plus retry; sessions include fatal retry action. Statistics failure does not remove events, culprit or split; physics recovery remains panel-local.",
+    "staleOffline": "Retained payloads stay present; summary/culprit/split expose retained badges, refresh failures/paused recovery use SourceRecovery. SourceRecovery does not display age-only stale status without a refresh error/paused flag; this is an observation, not proof of global trust omission because PageContainer was not inspected.",
+    "disabled": "Statistics/events and physics queries disabled without selected vehicle; AI gate independent and action disabled without valid positive ID or while streaming. Refresh button itself remains enabled when no vehicle is selected.",
+    "partial": "Culprit derivation retains independently available Park and split evidence; missing measurements use null/status placeholders rather than inventing watts.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\lib\\vampireCulprits.ts",
+        "line": 82,
+        "rule": "MDC-044 / mission 33",
+        "detail": "Derived honesty appends a fixed English sentence, then VampireCulpritPanel.tsx:90,97 presents it directly. Locale fallback values are not the same as this unconditional English user-visible text.",
+        "fix": "Keep server honesty verbatim and preserve its evidence meaning; localize only the frontend-authored explanatory sentence using the existing catalog/translation owner without moving queries into renderers.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 206,
+      "rule": "MDC-010 / MDC-025 / mission 43",
+      "detail": "Gauge health uses positional CHART_COLORS[2/3/5] as success/warning/danger despite a semantic tone API already existing. This couples status presentation to series palette choices. No page-local neon, glow or fixed white styling was found by the scoped count.",
+      "fix": "Use LinearGauge tone='success'|'warning'|'danger' for the unchanged thresholds plus localized status; preserve theme/custom/chart palette preferences and keep categorical chart series distinct.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\vampire-drain-modernization\\VampireCulpritPanel.tsx",
+      "line": 90,
+      "rule": "MDC-015 / mission 0 restrained hierarchy",
+      "detail": "A LayoutCard contains a compact BatteryEvidenceBrief which itself renders OperationalBrief's GlassPanel; split does likewise at VampireSplitPanel.tsx:52. Nested surfaces plus repeated explanation can increase chrome relative to the readings. Actual visual severity unverified.",
+      "fix": "Review an existing-owner embedded evidence presentation rather than introducing another card; retain all readings, source recovery, review drawer and honesty.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 113,
+      "rule": "mission 33 / MDC-002",
+      "detail": "Two requests and response interfaces are owned by the 518-line page rather than domain API hooks; charts, rollup utility, columns and rendering share the orchestrator. Existing cancellation/vehicle keys are sound and must not be rewritten gratuitously.",
+      "fix": "Extract the two typed domain queries to the existing battery API hook owner and pure daily bucketing to a battery utility; retain enablement, keys, default query policies, signal forwarding, rows, bounds and behavior. Decompose only with complete feature inventory.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\vampire-drain-modernization\\VampireSplitPanel.tsx",
+      "line": 4,
+      "rule": "MDC-002 component-first category imports",
+      "detail": "Split and culprit feature files import LayoutCard from @/components/layout/layout-reference rather than the documented @/components/layout production barrel. Stat preferences/types also use stat-reference subpaths (page:13; culprit:4).",
+      "fix": "Use supported category exports where available; do not replace current implementations or create wrappers solely to rename imports.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 371,
+      "rule": "MDC-033 / MDC-045 preserve source readings",
+      "detail": "GAUGE_MAX=5 is a reference, but page does not pass preserveReadingAndScale. LinearGauge.tsx:147-151 clamps and prints clamped value by default: averages greater than 5 would display 5 rather than the actual average. This follows source logic; no mounted reproduction performed.",
+      "fix": "Use the existing preserveReadingAndScale API so out-of-reference readings stay accurate without publishing invalid meter ranges; retain the approximate 5%/day explanatory caption and source value.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 175,
+      "rule": "MDC-032 / MDC-045 scope preservation",
+      "detail": "Both aliases lack header range enablement, use no useRangeState and have independently scoped 90-day stats versus 365-day/200-row events. Page honestly states server/loaded-window limitations; changing this is an endpoint/integration dependency, not a presentation-only date picker fix.",
+      "fix": "Preserve present sample coverage now. If workspace range is adopted, extend server list/stats with both bounds, wire typed keys and both aliases through workspaceScope, retain rolling/custom/timezone semantics and disclose loaded versus full-range charts. Do not filter only 200 loaded rows or invent supported bounds.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 90,
+      "rule": "MDC-026 unknown is not zero",
+      "detail": "Daily rollup null-coalesces event loss and hours to zero even though local interfaces declare them required. Malformed/partial event data could become a measured-zero chart. Backend repository nullability/guarantees were not inspected; risk is conditional.",
+      "fix": "Verify actual event contract first; preserve valid-event start-day grouping and sums. If missing values are possible, represent incomplete buckets explicitly through the existing data-state/chart path rather than inventing zero or dropping unrelated known readings.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+      "line": 240,
+      "rule": "MDC-026 source ownership",
+      "detail": "Header 'Refresh vampire drain' refetches only stats/events, while culprit and split use Park and physics vampire queries. dataSources lists only the two local queries (129-145), so page-level refresh/source inventory is narrower than the full page.",
+      "fix": "Either clearly name the limited refresh scope or register independent physics sources using existing query/source ownership; avoid duplicate caches, always retain source-local retries and do not refresh optional AI automatically.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Source-confirmed gauge can truncate high readings and threshold meaning lacks accessible status. Existing modernization primitives are mostly in place; broader visual acceptance is still pending.",
+    "order": ["Accurate and semantic gauge", "Localize frontend-authored honesty", "Clarify source/refresh and sample coverage", "Reduce redundant prose/nested surfaces", "Centralized runtime and responsive QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Typed parked-drain domain hook extraction and source integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useTeslaPhysics.ts (related physics owner); dedicated baseline parked-drain hook owner missing in inspected graph",
+      "props": "Numeric/string selected vehicle; separate stats and events queries; optional events limit remains 200; preserve original keys, enabled, AbortSignal and inherited policy. Return typed queries usable by useDataState and PageLayout dataSources. Preserve duration_hours/total_observed_hours current payload without silent wire conversion.",
+      "variants": ["statistics", "parked events", "existing Park truth", "existing split"],
+      "states": ["disabled without vehicle", "initial", "empty", "fatal failure", "retained refresh error", "paused/offline", "success"],
+      "usedBy": ["VampireDrainPage", "VampireCulpritPanel", "VampireSplitPanel"],
+      "dependsOn": ["Confirmed existing query contracts", "Source registry owner", "Backend bounds support only if workspace range is added"],
+      "disposition": "Integration change; no shared source edited."
+    },
+    {
+      "name": "Embedded evidence surface review",
+      "existingOwnerFile": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx and web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "props": "Reuse current metrics/period/loading/retained/title/description/source reason and drawer; evaluate explicit embedded presentation only if needed, retaining standalone compact defaults.",
+      "variants": ["standalone compact evidence", "embedded in existing LayoutCard (proposed, not currently implemented)"],
+      "states": ["loading", "available", "unavailable", "retained"],
+      "usedBy": ["VampireCulpritPanel", "VampireSplitPanel"],
+      "dependsOn": ["Actual visual review", "Shared surface owner approval", "Independent-consumer evidence before expanding global API", "OperationalBrief drawer preservation"],
+      "disposition": "Do not add a speculative global variant from this page-only audit; owner review needed."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "observations": [
+      "Two calls to useVampireSplit share the same physics key and policy, not distinct implementations.",
+      "Page-local baseline requests duplicate query orchestration responsibility but target different endpoints than physics split.",
+      "No alternate table, date picker, chart engine, token engine or vehicle selector introduced by inspected page.",
+      "BatteryEvidenceBrief already consolidates evidence rendering; retain it rather than copying OperationalBrief markup."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "24aa8a81582cadcf87509540b24d2afe74a70c63087e705c15d4ffdfdcd1218e",
+    "currentLineCount": 518,
+    "sectionCount": 7,
+    "sectionCountingMethod": "Seven top-level content groups; nine leaf user-facing panels counting the two cards in each trend/daily group. AI group is legitimately conditional on feature gate. JSX contains three explicit Section, six LayoutCard and two EmbeddedChart calls in the page; the no-vehicle summary LayoutCard is an alternative, not an extra simultaneous panel.",
+    "sectionNames": ["Optional drain narration", "Drain summary", "Vampire culprit", "Complete-plugged vs unplugged drain", "Drain rate trend and gauge", "Daily drain and reduction tips", "Drain sessions"],
+    "sections": [
+      {"name": "Optional drain narration", "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "line": 257, "preserve": "Feature gate, opt-in start, scope abort, vehicle/lookback body, streaming/disabled/error/output, deterministic independence."},
+      {"name": "Drain summary", "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "line": 266, "preserve": "Mean/median/P95 drain per day, observed hours, event count, help descriptions, sample window reason, unavailable/retained state and review drawer."},
+      {"name": "Vampire culprit", "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "line": 284, "preserve": "Sentry, cabin overheat, precondition, plugged complete, unplugged leak; first active tonight action; unknown, source provenance, Park-only honesty and two independent recoveries."},
+      {"name": "Complete-plugged vs unplugged drain", "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "line": 288, "preserve": "Both totals and both window groups, honesty, table kind/started/drain columns and end/duration/start-SOC/end-SOC/Park details."},
+      {"name": "Drain rate trend and gauge", "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "line": 293, "preserve": "Chronological per-window rate line, accessible/export data, average gauge, same thresholds, median/P95 and 5% reference."},
+      {"name": "Daily drain and reduction tips", "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "line": 392, "preserve": "Vehicle-calendar start-day rollup, battery-loss/parked-hours separate axes, both bars and four localized educational tips (Sentry, polling, wake cycles, energy saving)."},
+      {"name": "Drain sessions", "file": "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "line": 473, "preserve": "Session count, seven sortable columns, end-time mobile detail, initial/fatal/empty state, same row key, pagination and compact table."}
+    ],
+    "actions": [
+      {"name": "Refresh statistics and events", "evidence": "VampireDrainPage.tsx:235-243", "scope": "Two baseline queries only; not AI or physics."},
+      {"name": "Retry source", "evidence": "SourceRecovery.tsx:21-30; VampireDrainPage.tsx:489-497", "scope": "Independent stats/events/Park/split query retry; refreshing retry disabled."},
+      {"name": "Set up TeslaSync", "evidence": "VampireDrainPage.tsx:273; VampireCulpritPanel.tsx:82; VampireSplitPanel.tsx:45", "scope": "/onboarding no-vehicle recovery."},
+      {"name": "Ask Helix / Narrate drain", "evidence": "AIVampireDrainExplanation.tsx:144-157; AIFeatureCard.tsx:35-55", "scope": "Manual opt-in narration, no deterministic mutation."},
+      {"name": "Evidence review/details drawers", "evidence": "BatteryEvidenceBrief.tsx:36-61; OperationalBrief.tsx:89-94", "scope": "Summary, culprit and split evidence."},
+      {"name": "Chart toolbar, data alternative, export, fullscreen and series visibility", "evidence": "VampireDrainPage.tsx:316-345,413-450", "scope": "Both EmbeddedCharts; stable chartKey values vampire-drain-rate-trend and vampire-drain-daily. Toolbar behavior delegated and unexercised."},
+      {"name": "Sort / page / mobile row details", "evidence": "VampireDrainPage.tsx:147-155,499-512; sessionPresentation.ts:35-44; VampireSplitPanel.tsx:64-74", "scope": "Session sort and pagination; both table mobile adapters. Additional table export/preferences behavior delegated, not inspected or asserted."},
+      {"name": "Workspace vehicle and display preferences", "evidence": "VampireDrainPage.tsx:103-111", "scope": "Header-selected vehicle, locale, precision, temperature units and vehicle timezone; no page-owned selector."}
+    ],
+    "dataBehavior": [
+      "Keep both route aliases mounted to identical lazy page through SafeRoute (App.tsx:76,654-661).",
+      "Keep request paths unprefixed and snake_case vehicle_id; preserve response wire/cache values and abort signals.",
+      "Keep mean/median/P95 nullable, loss threshold badges (>5 danger, >2 warning, otherwise success), gauge threshold boundaries <=1.5/<=3, and independently known source evidence.",
+      "Keep current baseline server lookbacks, 200 loaded event limit and explicit period uncertainty until supported integration changes are assigned.",
+      "Keep invalid start-date omission and chronological/local start-day aggregation; do not reinterpret events as midnight-split windows without separate behavioral authority.",
+      "Keep sort default started_at, trend oldest-first, tables' stable identities battery:vampire-drain-sessions and vampire-split, row identity started_at and kind-started_at.",
+      "Preserve duration_hours and total_observed_hours current backend shapes; UI duration metric multiplies by 3600 and split duration_s divides only for display.",
+      "Keep data-source failures local; retained observations must survive refresh errors and optional AI must never displace measurements.",
+      "No vehicle command is executed by educational tips or culprit action text."
+    ]
+  },
+  "evidenceLimits": {
+    "auditMode": "Atomic Phase0 read-only source audit; only owned report and heartbeat written.",
+    "runtime": "unverified; no application route or endpoint exercised",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "testsTypecheckBuildLint": "not run; assignment forbids full build/lint and this audit does not establish runtime acceptance",
+    "skillExecution": "audit-violations skill loaded and audit.sh inspected; not executed because it unconditionally runs project-wide TypeScript. Bounded source counts used instead.",
+    "sourceChecks": {
+      "command": "PowerShell regex counts on Get-Content web\\src\\features\\battery\\pages\\VampireDrainPage.tsx -Raw; Get-FileHash -Algorithm SHA256; (Get-Content page).Count",
+      "exitCode": 0,
+      "output": "SHA256 24AA8A81582CADCF87509540B24D2AFE74A70C63087E705C15D4FFDFDCD1218E; lines 518; style=: 0; raw button/input/textarea/select/table: 0; direct recharts/react-leaflet/framer-motion imports: 0; text-neon|shadow-neon|text-white|bg-white: 0; Section: 3; LayoutCard: 6; EmbeddedChart: 2",
+      "scope": "Sole page file; counts are not a whole-feature or comprehensive guideline pass."
+    },
+    "backend": "Baseline handler parameters/window defaults and router physics registrations inspected. Database repository, physics implementation, generated AI route registration, full source freshness and current query default runtime behavior remain unknown.",
+    "sharedOwners": "DataTable, ChartContainer, PageContainer, useAiStream, global palette and motion internals not deeply audited. Prop-level evidence does not prove inherited keyboard/export/contrast/offline behavior.",
+    "sourceSnapshot": "Page source hash rechecked before release and matched the recorded SHA-256; unrelated concurrent changes are not owned or modified.",
+    "acceptance": "Mission 44 is not satisfied by this report; all runtime, full validation and visual QA gates remain pending centralized execution."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\VampireDrainPage.tsx",
+    "web\\src\\features\\battery\\components\\vampire-drain-modernization\\VampireCulpritPanel.tsx",
+    "web\\src\\features\\battery\\components\\vampire-drain-modernization\\VampireSplitPanel.tsx",
+    "web\\src\\features\\battery\\components\\vampire-drain-modernization\\SourceRecovery.tsx",
+    "web\\src\\features\\battery\\components\\vampire-drain-modernization\\sessionPresentation.ts",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\battery\\lib\\vampireCulprits.ts",
+    "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\teslaPhysics.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\ai\\AIVampireDrainExplanation.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\LinearGauge.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "internal\\api\\vampiredrain\\handler.go",
+    "internal\\api\\router.go"
+  ]
+}
