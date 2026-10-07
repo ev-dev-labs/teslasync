@@ -1,0 +1,355 @@
+{
+  "item": "audit-page-197",
+  "page": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx",
+  "routes": ["/system-status"],
+  "purpose": "Operator health dashboard combining instance health, source freshness, actionable warnings, incidents, AI spend, infrastructure diagnostics, authentication, telemetry, workers, SLO evidence and maintenance controls.",
+  "primaryGoal": "Determine whether the instance is healthy, identify the affected subsystem, and reach the appropriate recovery or diagnostic action without mistaking missing evidence for health or failure.",
+  "dataSources": [
+    {
+      "name": "useSystemHealth",
+      "owner": "web\\src\\api\\hooks\\useAdmin.ts",
+      "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx",
+      "line": 92,
+      "endpoints": ["GET /system/health"],
+      "behavior": "Shared admin query; standard polling, AbortSignal and accepted HTTP 503 payloads. useDataState live provenance with two-minute max age. Overall hero also incorporates maintenance, extended database, workers and authentication.",
+      "routeEvidence": "internal\\api\\router.go:4352,4363",
+      "sourceEvidence": "web\\src\\api\\hooks\\useAdmin.ts:186-196",
+      "verification": "Source matched; runtime unverified."
+    },
+    {
+      "name": "Page-local extended/version/update/backup-stat/worker queries",
+      "owner": "web\\src\\api\\devtools.ts",
+      "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx",
+      "line": 108,
+      "endpoints": ["GET /system/health", "GET /system/version", "GET /system/update-check", "GET /system/backup/stats", "GET /system/workers"],
+      "behavior": "system-status query-key prefix; extended health, backup stats and workers poll every 30 seconds, version every minute, updates hourly with hourly staleTime. Extended health accepts 503. Functions do not accept or forward query cancellation.",
+      "routeEvidence": "internal\\api\\router.go:4363,4381,4393-4395",
+      "sourceEvidence": "web\\src\\api\\devtools.ts:149-165; page:108-137,155-159",
+      "verification": "Source matched; backend payload semantics and runtime unverified."
+    },
+    {
+      "name": "Authentication, backup history/configuration, maintenance and vehicles",
+      "owner": "web\\src\\api\\hooks\\useAdmin.ts; web\\src\\api\\hooks\\useSettings.ts; web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx",
+      "line": 140,
+      "endpoints": ["GET /auth/status", "GET /backup/runs", "GET /backup/configs", "GET /admin/maintenance", "GET /vehicles"],
+      "behavior": "Shared typed hooks and safeArray backup responses; successful-backup recency uses first completed run, expiry warnings use floor days and seven-day threshold, backup stale threshold is strictly greater than seven days. Maintenance takes precedence in overall status. Fleet-wide operator view does not introduce a competing workspace picker.",
+      "routeEvidence": "internal\\api\\router.go:3240,3246,3319,4660,4940-4949",
+      "sourceEvidence": "useAdmin.ts:169-184,231-237; useSettings.ts:59-62; useVehicles.ts:73-76; page:259-277,291-333,410-417",
+      "verification": "Endpoint registrations inspected; list ordering and actual payloads unverified."
+    },
+    {
+      "name": "useStatusLiveSSE",
+      "owner": "web\\src\\features\\system\\hooks\\useStatusLiveSSE.ts",
+      "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx",
+      "line": 106,
+      "endpoints": ["GET /api/v1/status/live"],
+      "behavior": "Direct EventSource endpoint, not request() prefixing; credentialed stream, object-frame parser, retained snapshot, reconnecting/offline/live states and exponential retry capped at 30 seconds. Page reads connection state and event time but ignores snapshot; ordinary polling continues when connected.",
+      "routeEvidence": "internal\\api\\router.go:4522,4529",
+      "sourceEvidence": "web\\src\\features\\system\\hooks\\useStatusLiveSSE.ts:103-204",
+      "verification": "Source matched; stream traffic and reconnection unverified."
+    },
+    {
+      "name": "Active incidents, recent incident history and manual incident logging",
+      "owner": "web\\src\\api\\hooks\\useIncidents.ts",
+      "file": "web\\src\\features\\system\\components\\status\\IncidentsCard.tsx",
+      "line": 67,
+      "endpoints": ["GET /status/incidents?active=1", "GET /status/incidents?limit=10", "POST /status/incidents"],
+      "behavior": "Independent 30-second polling lists; normalizes nullable arrays; mutation invalidates status-incidents. Modal collects title, severity, status, affected component names and initial message; validation, pending state, toast and dirty-close confirmation retained.",
+      "routeEvidence": "internal\\api\\router.go:4531-4534",
+      "sourceEvidence": "useIncidents.ts:45-58,74-80,143-150,173-178; IncidentHistory.tsx:12; IncidentForm.tsx:30-92",
+      "verification": "Source registered child slash paths; actual slash normalization and mutation behavior unverified; no writes exercised."
+    },
+    {
+      "name": "AI spend watch",
+      "owner": "web\\src\\api\\hooks\\useAiUsage.ts; web\\src\\hooks\\useSettings.ts",
+      "file": "web\\src\\features\\system\\components\\status\\AiSpendWatch.tsx",
+      "line": 12,
+      "endpoints": ["GET /ai/usage/spend-insights"],
+      "behavior": "Enabled only for local/cloud AI mode. UTC today, prior seven-day average, midnight projection, largest contributor and cap risk are distinct evidence. Micro-cent values become USD display amounts only; retains insufficient-history, quiet, unusual-pace and new-paid-spend explanations.",
+      "sourceEvidence": "web\\src\\api\\hooks\\useAiUsage.ts:109,116; AiSpendWatch.tsx:16-31,47-63,77-139",
+      "verification": "Frontend endpoint inspected; exact backend registration not located in the bounded router search; backend owner and behavior unverified, not asserted missing."
+    },
+    {
+      "name": "Telemetry polling and streaming",
+      "owner": "web\\src\\api\\polling.ts; web\\src\\api\\hooks\\useTelemetry.ts",
+      "file": "web\\src\\features\\system\\components\\status\\TelemetryPipelineCard.tsx",
+      "line": 221,
+      "endpoints": ["GET /polling/status", "GET /telemetry"],
+      "behavior": "15-second polling status plus shared MQTT query; per-VIN join uses newest valid stream/poll timestamp. Sending <5 minutes, slow <30 minutes, stale thereafter; no valid timestamp is labelled offline but explicitly caveated as missing evidence. Battery, vehicle state, VIN tail and next poll retained.",
+      "routeEvidence": "internal\\api\\router.go:4620-4621,4739",
+      "sourceEvidence": "polling.ts:103; useTelemetry.ts:415-419; TelemetryPipelineCard.tsx:111-153,221-309,368-433",
+      "verification": "Route groups source-inspected; conditional polling-handler availability, mounted payloads and history semantics unverified."
+    },
+    {
+      "name": "AnomalyInlineRow",
+      "owner": "web\\src\\features\\system\\components\\status\\AnomalyInlineRow.tsx",
+      "file": "web\\src\\features\\system\\components\\status\\AnomalyInlineRow.tsx",
+      "line": 37,
+      "endpoints": ["GET /analytics/anomalies?vehicle_id=<first vehicle id>&days=1"],
+      "behavior": "Uses first configured vehicle only; query enabled only with vehicle ID, shared slow staleTime, AbortSignal. Shows count, top signal, relative timestamp and anomaly-detection navigation; null/no anomaly hides row.",
+      "routeEvidence": "internal\\api\\router.go:3897",
+      "verification": "Source matched; intentionally sampled scope, not all-fleet anomaly coverage."
+    },
+    {
+      "name": "SLO history and personal target",
+      "owner": "web\\src\\features\\system\\components\\status\\SLOTrackingCard.tsx",
+      "file": "web\\src\\features\\system\\components\\status\\SLOTrackingCard.tsx",
+      "line": 76,
+      "endpoints": ["GET /status/uptime?window=<24h|7d|30d|90d|1y>"],
+      "behavior": "Independent 60-second query, default 30d, target default 99 persisted under teslasync.status.slo.target. Historical percentage only rendered for historical_source=series; finite current healthy/total counts remain independent. Local target edit/save/cancel and Enter/Escape; controls suppressed for snapshot-only evidence.",
+      "routeEvidence": "internal\\api\\router.go:4526",
+      "verification": "Source matched; backend series support and persisted-browser behavior unverified. Specialist SLO window is not assumed to be the workspace date range."
+    },
+    {
+      "name": "Maintenance scheduling and clearing",
+      "owner": "web\\src\\api\\hooks\\useAdmin.ts; web\\src\\features\\system\\components\\status\\ScheduledMaintenanceCard.tsx",
+      "file": "web\\src\\features\\system\\components\\status\\ScheduledMaintenanceCard.tsx",
+      "line": 53,
+      "endpoints": ["GET /admin/maintenance", "POST /admin/maintenance"],
+      "behavior": "Shared current-state query. Operator can enter local start, duration and message; submitted mode=maintenance and until=start+duration, with no submitted start field. Clear sends mode=ok and null until. Live-only mutation, read-only notice, validation, pending, toast and discard guard remain.",
+      "routeEvidence": "internal\\api\\router.go:4660",
+      "sourceEvidence": "useAdmin.ts:245-263; ScheduledMaintenanceCard.tsx:112-184,247-360",
+      "verification": "Frontend writes inventoried only. Future activation semantics are unverified and must not be inferred from the component comment."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / SourceContent / Masonry", "owner": "web\\src\\components\\layout", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 30, "role": "Existing category layout, header metadata/actions, independent source recovery and responsive diagnostic columns; implementations not inspected."},
+    {"name": "GlassPanel / Button / Badge / typography roles", "owner": "web\\src\\components\\ui", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 32, "role": "Existing surfaces, controls and semantic labels, not replacement card/status engines."},
+    {"name": "StatusHero", "owner": "web\\src\\components\\status\\StatusHero.tsx", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 521, "props": ["status", "subline", "cta", "id"], "role": "Overall health; shared owner needs reduced-noise correction."},
+    {"name": "HealthRow / ResourcesPanel / ActionItemsPanel / ActionItem", "owner": "web\\src\\components\\status", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 36, "role": "Shared triage, resources and recovery actions; existing concrete contracts inspected."},
+    {"name": "KVList", "owner": "web\\src\\components\\data-display", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 913, "props": ["items", "layout=responsive", "wrap", "className=tabular-nums"], "role": "Canonical details matrix; local DefList delegates rather than recreates it."},
+    {"name": "SystemSummaryBrief / OperationalBrief bridge", "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "file": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "line": 22, "props": ["metrics", "textMetrics", "scope", "freshness", "available", "loading", "retained", "metricTones"], "role": "Already shared by mounted telemetry, worker, AI spend and SLO consumers; numeric metrics through useOperationalMetrics, no new KPI pipeline required."},
+    {"name": "AccordionSection / native operator-details", "owner": "web\\src\\features\\system\\components\\status\\AccordionSection.tsx", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 658, "role": "Native top-level disclosure and four existing Accordion adapters; preserve anchor IDs and defaultOpen."},
+    {"name": "IncidentForm / ScheduledMaintenanceCard", "owner": "web\\src\\features\\system\\components\\status", "file": "web\\src\\features\\system\\components\\status\\IncidentForm.tsx", "line": 96, "role": "Domain forms compose Modal/Input/Select/Textarea/ConfirmDialog and discard guard. Maintenance also composes operational write controls."},
+    {"name": "Data-state and feedback owners", "owner": "web\\src\\hooks\\useDataState.ts; web\\src\\components\\feedback", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 103, "role": "Independent retained-data warnings, SourceContent retry, skeletons and QueryError; generic implementations not re-audited."},
+    {"name": "FadeIn / LiveStatusPill / StatusPageSkeleton", "owner": "web\\src\\components\\motion; web\\src\\features\\system\\components\\status", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 452, "role": "Entrance motion, stream metadata and initial geometry; global reduced-motion behavior unverified."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 916, "rule": "MDC-033", "detail": "SystemInfoRows still builds formatted uptime/count strings while worker, telemetry, AI and SLO summaries already reuse SystemSummaryBrief.", "fix": "Reuse existing number/duration presentation owners where equivalence is proven; preserve system versions/platform as identifiers and keep KVList metadata.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 891, "rule": "MDC-020", "detail": "Local DetailLink repeats cyan action chrome also found in TeslaAuthCard:103 and TelemetryPipelineCard:446.", "fix": "Compose existing navigation semantics with canonical button classes; do not add a second LinkButton library.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 108, "rule": "MDC-002 / mission 33", "detail": "Independent health queries hit the same /system/health endpoint; useExtendedSystemHealth exists in useAdmin.ts:198, and useVersionInfo/useUpdateCheck exist in useSettings.ts:363-377.", "fix": "Integrate existing typed hook owners only with explicit query-key, cadence, accepted-503 and invalidation preservation; avoid silent cache behavior changes.", "owner": "integration", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceEvidence": ["page:555-560 component grid stacks then sm:2/xl:3", "page:639-645 operator disclosure wraps diagnostics", "page:654 columns-1/lg:2/xl:3", "page:731 columns-1/xl:2/2xl:3", "page:830 columns-1/lg:2", "BackgroundWorkersCard.tsx:270-274 stacked replica rows; host/error break-all", "TeslaAuthCard.tsx:101-105 wrapping max-width action"],
+    "issues": [
+      {"file": "web\\src\\features\\system\\components\\status\\UpdateAvailableCallout.tsx", "line": 32, "rule": "MDC-043 / mission 15", "detail": "Single non-wrapping flex row combines icon, narrow text and shrink-0 release-notes action; source risk for 320px and long translations.", "fix": "Wrap/stack action within existing panel without truncating version, checked time or release guidance.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\components\\status\\ResourcesPanel.tsx", "line": 96, "rule": "MDC-043", "detail": "Resource labels truncate and measured value/meta are shrink-0 on one row; long storage/table context can crowd narrow columns.", "fix": "Permit label/value/meta wrap or stack inside the existing owner and retain full accessible content.", "owner": "shared", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\status\\StatusPageSkeleton.tsx", "line": 35, "rule": "MDC-026 / MDC-031", "detail": "Skeleton is max-w-3xl and models an absent eight-chip bar and four accordions rather than current full-width component list plus collapsed diagnostics.", "fix": "Match actual initial geometry and independent-source loading without adding obsolete navigation.", "owner": "page", "confidence": "high"}
+    ],
+    "verification": "All ten contract viewport sizes, allocated-container widths, long content, RTL and 200% text are unverified; no browser mounted."
+  },
+  "accessibility": {
+    "sourceEvidence": ["page:464-466 refresh accessible name/busy state", "page:639-643 native summary visible focus", "HealthRow.tsx:82-84 44px minimum and canonical button focus", "IncidentForm.tsx:62-69 field-associated validation", "SLOTrackingCard.tsx:128-141 Enter/Escape and tabs/tabpanel association", "IncidentHistory.tsx:43-44 visible focus", "TeslaAuthCard.tsx:89 polite live region"],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 247, "rule": "MDC-042 / MDC-040", "detail": "Programmatic navigation always uses smooth scrolling; it does not consult existing motion preference.", "fix": "Use the current shared motion preference to select auto versus smooth without changing anchor destinations.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\components\\status\\ActionItem.tsx", "line": 87, "rule": "MDC-040", "detail": "Recovery CTA minimum is 36px, below contract's stronger 44px target default, and action is shrink-0.", "fix": "Use existing Button/link chrome with 44px default and wrapping reachability; validate any spacing exception.", "owner": "shared", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\status\\UpdateAvailableCallout.tsx", "line": 53, "rule": "MDC-040", "detail": "Release-notes action has 36px minimum; external icon is not marked decorative and no explicit new-tab announcement is supplied.", "fix": "Use canonical external-navigation pattern with 44px target, localized new-tab context and aria-hidden decorative icon.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\status\\LiveStatusPill.tsx", "line": 66, "rule": "MDC-040 / MDC-044", "detail": "Polite live status announces a raw English accessible sentence and relative-time text that changes every five seconds.", "fix": "Localize names and relative time; keep visible freshness while announcing connection transitions rather than every tick where appropriate.", "owner": "page", "confidence": "high"}
+    ],
+    "verification": "Keyboard order, target measurements, disclosure focus, screen reader output, effective contrast, forced colors and actual reduced motion are unverified."
+  },
+  "states": {
+    "initialLoading": "PageLayout is intentionally not a global loading/error boundary. Eleven source banners render individually, but page:513 initial health loading replaces the entire substantive page with StatusPageSkeleton.",
+    "empty": "Components remain visible with unavailable text; worker and telemetry cards distinguish unloaded versus empty lists; IncidentHistory states no recorded incidents does not establish uptime. ResourcesPanel owns an empty-text prop.",
+    "error": "SourceContent retries fatal or absent primary sources; StaleRefreshWarning preserves retained data. Incident/history/AI/SLO/maintenance/telemetry add their own source-specific recovery.",
+    "staleOffline": "Hero becomes unknown when health errors or exceeds two minutes; SSE pill separates live/reconnecting/offline. Worker/telemetry summaries receive retained flags. Other dependent health summaries can still use retained raw values; no claim they prove current health.",
+    "successDisabled": "Refresh is disabled while health fetches, maintenance controls use operational canWrite and pending states, incident form has pending and dirty-close handling; SLO keeps target editing validation.",
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 513, "rule": "MDC-026", "detail": "Initial health fetch gates independently loaded incidents, AI, history and diagnostics behind the whole-page skeleton.", "fix": "Keep independent sections mounted with source-specific initial state; retain hero skeleton and avoid exposing invented zero measurements.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 570, "rule": "MDC-026 / action preservation", "detail": "hasAttention hides ActionItemsPanel even though shared owner has an explicit empty state; absence of warnings can also mean prerequisite sources are missing.", "fix": "Keep the section reachable and distinguish verified no-actions from unresolved sources; do not call unknown evidence healthy.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\status\\IncidentsCard.tsx", "line": 77, "rule": "Action preservation", "detail": "Successful zero-active response returns null and removes the only mounted Log incident action supplied by this page.", "fix": "Preserve a reachable log action when empty while keeping the supplementary active list low-noise.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\status\\AnomalyInlineRow.tsx", "line": 49, "rule": "MDC-026 / MDC-032", "detail": "Unavailable/error anomaly query is indistinguishable from zero anomalies and uses first-vehicle sampling without visible scope disclosure.", "fix": "Show sampled vehicle/source trust through existing HealthRow/feedback patterns; preserve first-vehicle behavior unless separately authorized.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\components\\status\\StatusHero.tsx", "line": 71, "rule": "MDC-010 / mission 43", "detail": "Every status applies a 60px colored glow; configuration also supplies saturated colored headline/icon/ring emphasis.", "fix": "Remove default glow in existing owner and use restrained surface, semantic Badge/icon and primary text; preserve all five statuses and CTA.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 896, "rule": "MDC-010 / MDC-012 / MDC-020", "detail": "Detail links use hardcoded cyan tint/ring/focus while footer at 855 uses fixed-white surface effects; diagnostic dependencies also use fixed-white divider/surface classes.", "fix": "Use canonical surface/border/focus/button tokens; keep semantic warning accents only where they convey severity.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\UpdateAvailableCallout.tsx", "line": 37, "rule": "MDC-013 / MDC-044", "detail": "Raw typography classes and English update/notes copy bypass existing typography/localization owners.", "fix": "Adopt PanelTitle/Text/Caption and existing translation mechanism while retaining current/latest versions, checked time and release warning.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 722, "rule": "MDC-044", "detail": "ResourcesPanel is supplied only rows, leaving title and empty message at raw-English shared defaults; StatusHero at 521 likewise receives no localized headline.", "fix": "Pass localized title/emptyText/headline through existing props instead of inventing another renderer.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\AnomalyInlineRow.tsx", "line": 62, "rule": "MDC-044", "detail": "Anomalies label, in-24h summary and relative-time units are hardcoded; LiveStatusPill:28-41 and IncidentsCard:49-56 have separate English relative formatters.", "fix": "Reuse current date/relative-time localization mechanisms while preserving source timestamps and sampling context.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\BackgroundWorkersCard.tsx", "line": 229, "rule": "MDC-010 / MDC-012", "detail": "Worker instance/group panels repeat fixed-white fill/border/divider classes instead of theme-aware neutral hierarchy.", "fix": "Use existing neutral surface/border variables, retain status labels and per-instance diagnostic errors.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 108, "rule": "Mission 33 / MDC-002", "detail": "Five read queries are defined in the page with devtools functions lacking AbortSignal; SLO and telemetry polling also define queries in presentation components.", "fix": "Move orchestration through existing domain hook owners, forward signal, and explicitly preserve cache identities, accepted-status policy, intervals and enablement.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 102, "rule": "MDC-046 / evidence integrity", "detail": "Comment says SSE drops polling, but snapshot is unused and no query interval depends on liveState.", "fix": "Document actual independent stream metadata versus REST measurement behavior; do not disable polling without a validated equivalent snapshot/cache integration.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 83, "rule": "Action reachability", "detail": "Hash effect opens operator diagnostics, but scrollToSection at 242 does not open disclosures before calculating target coordinates. Direct initial hash scrolling into hidden content needs validation.", "fix": "Open owning details/accordion before scroll/focus using existing disclosure APIs, preserve all IDs and route hashes.", "owner": "page", "confidence": "medium"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 505, "rule": "MDC-002 / print preservation", "detail": "Page injects global print CSS; details { open: true } is not a valid CSS mechanism for expanding disclosures and may affect panels beyond this page.", "fix": "Integrate scoped print behavior with the existing print owner; verify diagnostic disclosures expand without changing normal open state.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\ScheduledMaintenanceCard.tsx", "line": 140, "rule": "Mission 0: no invented backend capability", "detail": "UI accepts a future local start but sends only current maintenance mode and end timestamp. Source cannot substantiate comment's future-activation promise.", "fix": "Integration owner must verify backend contract and accurately communicate current capability before altering workflow; retain all user-entered details until resolved.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\components\\status\\ResourcesPanel.tsx", "line": 78, "rule": "MDC-025 / MDC-045", "detail": "Generic percentage maps >=90 to critical usage, yet page:382 passes healthy-workers percentage; 100% healthy is therefore red critical, opposite of source meaning.", "fix": "Add an explicit utilization versus healthy-ratio semantic variant to this owner, or omit usage bars for health ratios; preserve counts and unknown percent.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 324, "rule": "MDC-045", "detail": "vehicleCount uses undefined -> 0 for the triage summary, although telemetry detail preserves missing list as unknown; formatUptime in helpers.tsx:49 maps invalid values to 0m.", "fix": "Keep unknown distinct from measured zero at display boundaries with existing numeric validation/formatting, without changing raw payloads.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Operator trust and recovery reachability come before cosmetic changes: healthy-workers bar severity is inverted, empty incidents remove logging, maintenance scheduling semantics are unresolved. Then remove hero glow and theme-fixed chrome.",
+    "sequence": ["Resolve shared resource semantics and integration evidence", "Retain all actions and independently sourced sections in empty/loading/error states", "Apply shared reduced-noise foundations and existing typography/link patterns", "Centralized runtime, responsive and accessibility acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained existing StatusHero",
+      "owner": "web\\src\\components\\status\\StatusHero.tsx",
+      "file": "web\\src\\components\\status\\StatusHero.tsx",
+      "line": 71,
+      "rule": "MDC-010",
+      "detail": "Default glow is a source-confirmed reduced-noise gap; no replacement hero needed.",
+      "fix": "Remove default colored box-shadow and align neutral surface/headline with canonical tokens.",
+      "confidence": "high",
+      "props": {"preserve": ["status=healthy|degraded|unhealthy|unknown|maintenance", "headline", "subline", "live", "cta.label/onClick/loading", "id", "className"], "states": ["unknown", "maintenance", "stale-derived unknown", "loading CTA"]},
+      "usedBy": ["SystemStatusPage.tsx:521"],
+      "dependsOn": ["Existing GlassPanel and typography/semantic token owners", "Localized headline caller wiring", "Shared-owner approval and focused regression tests; other consumers not enumerated"]
+    },
+    {
+      "name": "ResourcesPanel semantic bar and wrapping contract",
+      "owner": "web\\src\\components\\status\\ResourcesPanel.tsx",
+      "file": "web\\src\\components\\status\\ResourcesPanel.tsx",
+      "line": 78,
+      "rule": "MDC-025 / MDC-043",
+      "detail": "Utilization thresholds invert health percentages; row wrapping and neutral progress track need shared ownership.",
+      "fix": "Extend existing ResourceRow with explicit bar meaning or tone and support non-truncated narrow presentation.",
+      "confidence": "high",
+      "props": {"existing": ["rows.label/valueText/metaText/percent/icon", "title", "emptyText", "footnote", "id", "className"], "proposed": ["bar semantic: utilization versus healthyRatio, or explicit validated severity"], "states": ["unknown percent: no measured bar", "zero", "full healthy ratio", "high utilization", "empty rows", "long labels and metadata"]},
+      "usedBy": ["SystemStatusPage.tsx:377-384,722"],
+      "dependsOn": ["Existing Badge/severityTokens and neutral surface tokens", "Preserve current utilization default for other callers", "Shared-owner focused regression for 100% healthy versus 100% utilization", "No new raw metric unit conversion"]
+    },
+    {
+      "name": "Existing ActionItem action chrome and reachability",
+      "owner": "web\\src\\components\\status\\ActionItem.tsx",
+      "file": "web\\src\\components\\status\\ActionItem.tsx",
+      "line": 87,
+      "rule": "MDC-020 / MDC-040",
+      "detail": "36px minimum and bespoke cyan focus/raw click button compete with canonical control patterns.",
+      "fix": "Compose canonical Button and native Link/external anchor classes with 44px default and narrow-width wrapping.",
+      "confidence": "high",
+      "props": {"preserve": ["severity=info|warn|error", "title", "description", "cta.label/to/external/onClick"], "states": ["route", "external with new-tab text", "onClick", "no CTA", "long localized CTA"]},
+      "usedBy": ["SystemStatusPage.tsx:580-625"],
+      "dependsOn": ["Existing Button/BUTTON_BASE/BUTTON_VARIANTS and focus tokens", "No second action-link library", "Shared-owner validation of other callers and keyboard/mobile behavior"]
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 868, "rule": "MDC-025", "detail": "Local SystemStatus StatusBadge wraps canonical Badge, while workers, telemetry and LiveStatusPill each have domain-specific tone tables.", "fix": "Reuse shared semantic variants and tokens, but do not replace vehicle FSM or telemetry liveness definitions with a speculative universal registry.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\status\\LiveStatusPill.tsx", "line": 28, "rule": "MDC-044", "detail": "Independent relative-time formatters coexist in page, incidents, anomalies and telemetry.", "fix": "Adopt existing localized date/time mechanisms while preserving each source's timestamp, future-skew behavior and tick ownership.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "line": 37, "rule": "MDC-033", "detail": "Existing shared bridge already covers four independent mounted source families; it is not a competing stats engine.", "fix": "Reuse it rather than introducing ModernCard or another stats glossary/formatter.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "4B509E5B7D49A22B63A239E68F23F95B611FAD2718FFFE149300844F4852628C",
+    "hashAlgorithm": "SHA-256 of current page file bytes",
+    "currentLineCount": 950,
+    "sourceSectionCounts": {"sectionElements": 16, "GlassPanelOpen": 2, "ChartContainerOpen": 0, "AccordionSectionOpen": 4, "operatorDetailsDisclosure": 1},
+    "sectionCountDefinition": "16 literal section opening tags include three diagnostic group headings. Hero/update/active-incidents/AI panels and source warnings are additional component mounts, not literal page section tags. No rendered count is claimed.",
+    "sections": [
+      {"name": "Header and live stream metadata/refresh", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 446},
+      {"name": "Eleven independent source feedback rows", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 480},
+      {"name": "Initial health skeleton", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 513},
+      {"name": "Overall status hero", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 521},
+      {"name": "Update available release callout (conditional)", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 531},
+      {"name": "Active incidents and incident modal", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 542},
+      {"name": "Helix spend watch (AI-mode conditional)", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 545},
+      {"name": "Current component status and live-monitor link", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 548},
+      {"name": "Operator action items (conditional eight branches)", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 570},
+      {"name": "Recent incident history", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 653},
+      {"name": "Operator diagnostics disclosure", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 658},
+      {"name": "Health & triage grouping", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 666},
+      {"name": "Health rows: services, database, telemetry, workers, sampled anomaly, Tesla auth", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 673},
+      {"name": "Server resources", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 721},
+      {"name": "Systems & services grouping", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 733},
+      {"name": "Database & connections accordion", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 740},
+      {"name": "Telemetry pipeline accordion", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 763},
+      {"name": "Tesla authentication card", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 784},
+      {"name": "Worker groups/replicas accordion", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 793},
+      {"name": "System info accordion", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 810},
+      {"name": "Reliability & history grouping", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 825},
+      {"name": "Personal SLO tracking", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 832},
+      {"name": "Scheduled maintenance", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 837},
+      {"name": "Status API documentation footer and print snapshot styling", "file": "web\\src\\features\\system\\pages\\SystemStatusPage.tsx", "line": 850}
+    ],
+    "actions": [
+      "Refresh header / run health check hero / global unmodified R key: refetchHealth, invalidate system-status prefix, reconnect SSE; not all independent hook families are invalidated.",
+      "Retry each failed source through its own existing query refetch.",
+      "Native operator-details disclosure and four default-open diagnostic accordions; hash entry opens containing operator-details.",
+      "Health-row scroll to services/database/telemetry/workers/tesla-auth; anomaly row navigates /anomaly-detection.",
+      "Open /live-monitor and /db-health.",
+      "Update release notes https://github.com/ev-dev-labs/teslasync/releases/latest in a new tab from callout or action item.",
+      "Maintenance manage hash /system-status#maintenance.",
+      "Connect/re-authenticate/manage /tesla-account; backup configure/manage /backup.",
+      "Log incident modal: title, severity, status, component list, initial message; submit, cancel, dirty-discard confirmation and pending/toast/error feedback.",
+      "Active/history incident detail /system-status/incidents/<id>.",
+      "Telemetry navigation /vehicles/<id>, /admin/telemetry/coverage, /mqtt-inspector, /vehicles and empty-state /tesla-account.",
+      "Worker API logs /api-logs and complete instance host/error detail.",
+      "SLO windows 24h/7d/30d/90d/1y; edit/save/cancel personal target, Enter/Escape; target persistence key unchanged.",
+      "Maintenance local start/duration/message fields; schedule/clear/cancel/discard with live-only/read-only guards.",
+      "Status documentation /docs/status-api; preserve print content even though current expansion implementation is unresolved."
+    ],
+    "dataBehavior": [
+      "Preserve status precedence and normalization, canonical snake_case component-key deduplication, component names/counts and unknown status.",
+      "Retain two-minute hero staleness, five-second clock tick, source-specific freshness/provenance and retained payload warnings.",
+      "Retain current query keys, polling/refetch/stale policy, enabled guards, accepted 503 health bodies and credentials; no automatic SSE cache rewrite.",
+      "Retain token expiry dates and seven-day warnings; successful backup recency and config-dependent no-backup warning; unhealthy worker names.",
+      "Resources: acquired/total/idle pool connections, storage source string, table/row/position counts, goroutines, healthy/total workers and uptime. Database also shows latency; never invent CPU/memory/disk capacity.",
+      "System metadata: app/chart/Go version, OS/architecture, uptime and goroutines.",
+      "Telemetry: five source counts, four liveness counts, newest stream-or-poll source/time, VIN tail/name/state, battery and next poll. Unknown timestamp is not measured outage.",
+      "Workers: type and instance rollups, replicated types, per-instance host/status/latency/error and scaling environment-variable guidance.",
+      "Incidents: manual fields, status/severity, affected components, timestamps, update count and recent-ten history caveat.",
+      "AI: audit-only spend caveats, separate UTC windows, provider/model/feature driver, cap and projection explanations; preserve source micro-cent precision.",
+      "SLO: historical_source distinction and finite values; no uptime inferred from missing history.",
+      "Maintenance: current state/message/until, source write guards and local date handling; future activation remains an integration unknown.",
+      "Use current number/date/unit preferences only at display boundary; no API, backend, raw SI or cache value changes authorized."
+    ],
+    "lineCountPolicy": "No implementation or extraction performed. Future page plus extracted same-feature components must retain at least 70% of original baseline unless genuinely simpler with complete capability evidence."
+  },
+  "evidenceLimits": {
+    "auditMode": "Atomic Phase 0 read-only source inspection. Only owned JSON and heartbeat written; no source edits, Git, full lint/build, tests or application writes.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "routeMount": "App.tsx:293,689 source confirms lazy SafeRoute registration; actual browser/auth reachability unverified.",
+    "scope": "Sole SystemStatusPage and its mounted presentation/data dependencies. Unmounted sibling status components were not semantically audited. Shared implementations inspected only as listed; generic layout/theme/query/focus engines not re-audited.",
+    "readRanges": "Mission sections 0,1,15,33,43,44 and complete worker report field contract read. Design contract read in ranges covering the full file. API files and router inspected only bounded relevant ranges/search matches.",
+    "checks": [
+      {"command": "Get-FileHash web\\src\\features\\system\\pages\\SystemStatusPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\system\\pages\\SystemStatusPage.tsx).Count", "exitCode": 0, "output": "4B509E5B7D49A22B63A239E68F23F95B611FAD2718FFFE149300844F4852628C; 950"},
+      {"command": "PowerShell [regex]::Matches on current page text for static inline var style, raw controls, direct library imports, old API imports and JSX opening tags", "exitCode": 0, "output": "AccordionSectionOpen=4\nChartContainerOpen=0\ndirectLibraries=0\nGlassPanelOpen=2\noldApiImports=0\nrawControls=0\nSectionOpen=16\nstaticInlineStyle=0"},
+      {"command": "audit.sh / npx tsc --noEmit / full lint / build", "exitCode": null, "output": "NOT RUN: audit.sh includes project-wide TypeScript. Assignment is read-only source audit without full gates; zero page regex matches do not mean zero visual/state/accessibility issues or passing TypeScript."}
+    ],
+    "unknowns": ["Actual backend ordering for backup runs", "Exact AI endpoint registration outside bounded router search", "Conditional polling service availability", "Real initial hash/disclosure scrolling and print output", "Maintenance future-start capability", "Current theme/RTL/mobile/focus behavior and composed contrast"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\SystemStatusPage.tsx",
+    "web\\src\\features\\system\\hooks\\useStatusLiveSSE.ts",
+    "web\\src\\features\\system\\components\\status\\AccordionSection.tsx",
+    "web\\src\\features\\system\\components\\status\\AnomalyInlineRow.tsx",
+    "web\\src\\features\\system\\components\\status\\AiSpendWatch.tsx",
+    "web\\src\\features\\system\\components\\status\\BackgroundWorkersCard.tsx",
+    "web\\src\\features\\system\\components\\status\\TeslaAuthCard.tsx",
+    "web\\src\\features\\system\\components\\status\\TelemetryPipelineCard.tsx",
+    "web\\src\\features\\system\\components\\status\\UpdateAvailableCallout.tsx",
+    "web\\src\\features\\system\\components\\status\\StatusPageSkeleton.tsx",
+    "web\\src\\features\\system\\components\\status\\LiveStatusPill.tsx",
+    "web\\src\\features\\system\\components\\status\\IncidentsCard.tsx",
+    "web\\src\\features\\system\\components\\status\\IncidentHistory.tsx",
+    "web\\src\\features\\system\\components\\status\\IncidentForm.tsx",
+    "web\\src\\features\\system\\components\\status\\ScheduledMaintenanceCard.tsx",
+    "web\\src\\features\\system\\components\\status\\SLOTrackingCard.tsx",
+    "web\\src\\features\\system\\components\\status\\helpers.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\components\\status\\StatusHero.tsx",
+    "web\\src\\components\\status\\HealthRow.tsx",
+    "web\\src\\components\\status\\ResourcesPanel.tsx",
+    "web\\src\\components\\status\\ActionItem.tsx",
+    "web\\src\\components\\status\\ActionItemsPanel.tsx",
+    "web\\src\\api\\devtools.ts",
+    "web\\src\\api\\hooks\\useAdmin.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useIncidents.ts",
+    "web\\src\\api\\hooks\\useAiUsage.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\polling.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
