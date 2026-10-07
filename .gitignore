@@ -75,6 +75,8 @@ coverage.txt
 coverage-by-package.txt
 web/coverage/
 *.test.log
+.agent-status/
+qa-screenshots/
 
 PROMPT_COMMANDS.txt
 

@@ -1,6 +1,19 @@
 # TeslaSync agent-loop state
 
-## USER STOP - current
+## Restart - 2026-10-07 06:54 UTC (current authority)
+
+The latest user directive resumes the complete frontend mission, with an
+orchestrator-only role, up to 32 rolling workers, and scoped sequential
+commits. No push or deployment is authorized. `migration-queue.md` now owns
+dispatch decisions; the stop and no-commit rules below are historical.
+Baseline checkpoint: `e7ae82d9dc` (`checkpoint: before modernization`),
+created from the clean user-saved HEAD `a2b106dd78`.
+The existing root `docs` and root queue remain canonical. The missing
+mission is restored verbatim from the original session mission document.
+Prior source migrations are preserved; audit is not a demand to rewrite
+already-correct pages. Fresh gates are still required.
+
+## USER STOP - historical
 
 User explicitly requested "stop everyhting". Execution is PAUSED.
 Schedule19 stopped. Actual stop inventory:0running agents,31retained idle
